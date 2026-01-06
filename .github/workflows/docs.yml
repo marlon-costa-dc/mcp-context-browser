@@ -1,0 +1,207 @@
+name: Documentation
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'docs/**'
+      - 'ARCHITECTURE.md'
+      - 'src/**'
+      - 'Makefile'
+      - 'scripts/docs/**'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'docs/**'
+      - 'ARCHITECTURE.md'
+      - 'src/**'
+      - 'Makefile'
+      - 'scripts/docs/**'
+
+jobs:
+  validate-diagrams:
+    name: Validate PlantUML Diagrams
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Install PlantUML
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y plantuml
+
+      - name: Validate PlantUML syntax
+        run: |
+          bash scripts/docs/generate-diagrams.sh validate
+
+  generate-diagrams:
+    name: Generate Architecture Diagrams
+    runs-on: ubuntu-latest
+    needs: validate-diagrams
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Install PlantUML
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y plantuml
+
+      - name: Generate diagrams
+        run: |
+          bash scripts/docs/generate-diagrams.sh all
+
+      - name: Upload diagram artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: architecture-diagrams
+          path: docs/diagrams/generated/
+          retention-days: 30
+
+  validate-architecture-docs:
+    name: Validate Architecture Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install markdownlint
+        run: |
+          npm install -g markdownlint-cli
+
+      - name: Lint documentation
+        run: |
+          markdownlint docs/ --ignore docs/diagrams/generated/
+
+      - name: Check ADR format
+        run: |
+          # Validate ADR files have required sections
+          for adr_file in docs/adr/*.md; do
+            if [ -f "$adr_file" ] && [ "$(basename "$adr_file")" != "README.md" ] && [ "$(basename "$adr_file")" != "TEMPLATE.md" ]; then
+              echo "Validating ADR: $(basename "$adr_file")"
+
+              # Check for required sections
+              if ! grep -q "^## Status" "$adr_file"; then
+                echo "❌ Missing Status section in $adr_file"
+                exit 1
+              fi
+
+              if ! grep -q "^## Context" "$adr_file"; then
+                echo "❌ Missing Context section in $adr_file"
+                exit 1
+              fi
+
+              if ! grep -q "^## Decision" "$adr_file"; then
+                echo "❌ Missing Decision section in $adr_file"
+                exit 1
+              fi
+
+              echo "✅ ADR format valid: $(basename "$adr_file")"
+            fi
+          done
+
+  build-docs:
+    name: Build Documentation
+    runs-on: ubuntu-latest
+    needs: [generate-diagrams, validate-architecture-docs]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Generate Rust documentation
+        run: |
+          cargo doc --no-deps --document-private-items
+
+      - name: Download diagram artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: architecture-diagrams
+          path: docs/diagrams/generated/
+
+      - name: Create documentation archive
+        run: |
+          mkdir -p docs/build
+          cp -r target/doc docs/build/api-docs
+          cp -r docs/diagrams/generated docs/build/diagrams
+          cp ARCHITECTURE.md docs/build/
+          cp README.md docs/build/
+          cp docs/adr/README.md docs/build/adr-index.md
+
+          # Create index page
+          cat > docs/build/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>MCP Context Browser - Documentation</title>
+              <style>
+                  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 40px; }
+                  .doc-section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+                  .doc-link { display: inline-block; margin: 10px; padding: 10px; background: #f0f0f0; text-decoration: none; border-radius: 4px; }
+              </style>
+          </head>
+          <body>
+              <h1>MCP Context Browser - Documentation</h1>
+              <div class="doc-section">
+                  <h2>📚 Documentation</h2>
+                  <a href="ARCHITECTURE.html" class="doc-link">🏗️ Architecture Overview</a>
+                  <a href="adr-index.html" class="doc-link">📋 Architecture Decisions</a>
+                  <a href="README.html" class="doc-link">📖 README</a>
+              </div>
+              <div class="doc-section">
+                  <h2>🔧 API Documentation</h2>
+                  <a href="api-docs/mcp_context_browser/index.html" class="doc-link">🦀 Rust API Docs</a>
+              </div>
+              <div class="doc-section">
+                  <h2>📊 Architecture Diagrams</h2>
+                  <a href="diagrams/index.html" class="doc-link">🎨 View Diagrams</a>
+              </div>
+          </body>
+          </html>
+          EOF
+
+      - name: Upload documentation artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentation
+          path: docs/build/
+          retention-days: 30
+
+  deploy-docs:
+    name: Deploy Documentation
+    runs-on: ubuntu-latest
+    needs: build-docs
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Download documentation artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: documentation
+          path: docs-site/
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: docs-site
+          cname: docs.mcp-context-browser.dev

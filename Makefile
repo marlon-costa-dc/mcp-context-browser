@@ -1,191 +1,190 @@
-# MCP Context Browser - Development Makefile
+# MCP Context Browser - Build and Development Makefile
 
-.PHONY: help build test run clean check lint format doc release install deps update
+.PHONY: all build test clean docs diagrams help git-status git-add-all git-commit-force git-push-force git-force-all
 
 # Default target
-help: ## Show this help message
-	@echo "MCP Context Browser - Development Commands"
-	@echo ""
-	@echo "Available commands:"
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-15s %s\n", $$1, $$2}'
+all: build test
 
-# Build commands
-build: ## Build the project in release mode
-	cargo build --release
-
-build-dev: ## Build the project in development mode
+# Build targets
+build:
 	cargo build
 
-# Testing
-test: ## Run all tests
-	cargo test
-
-test-unit: ## Run unit tests only
-	cargo test --lib
-
-test-integration: ## Run integration tests
-	cargo test --test integration
-
-# Running
-run: ## Run the application
-	cargo run
-
-run-release: ## Run the application in release mode
-	cargo run --release
-
-# Code quality
-check: ## Check code without building
-	cargo check
-
-lint: ## Run clippy linter
-	cargo clippy -- -D warnings
-
-format: ## Format code with rustfmt
-	cargo fmt
-
-format-check: ## Check if code is formatted
-	cargo fmt --check
-
-# Documentation
-doc: ## Generate documentation
-	cargo doc --open --no-deps
-
-# Dependencies
-deps: ## Show dependency tree
-	cargo tree
-
-update: ## Update dependencies
-	cargo update
-
-# Cleaning
-clean: ## Clean build artifacts
-	cargo clean
-
-clean-all: ## Clean everything including Cargo.lock
-	cargo clean
-	rm -f Cargo.lock
-
-# Development workflow
-dev: format lint test build ## Run full development workflow
-
-# CI commands
-ci: format-check lint test build ## Run CI checks locally
-
-ci-full: clean deps update format-check lint test build doc ## Run full CI pipeline locally
-
-# Release
-release: clean format lint test build ## Prepare for release
-
-# Installation
-install: ## Install the binary
-	cargo install --path .
-
-# Docker (future)
-docker-build: ## Build Docker image
-	docker build -t mcp-context-browser .
-
-docker-run: ## Run Docker container
-	docker run --rm -it mcp-context-browser
-
-# Git operations
-git-status: ## Show git status
-	git status
-
-git-add: ## Add all files to git
-	git add .
-
-git-commit: ## Commit with message (usage: make git-commit MSG="your message")
-	@echo "Committing with message: $(MSG)"
-	git commit -m "$(MSG)"
-
-git-push: ## Push to remote repository
-	GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no" git push origin main
-
-git-force-push: ## Force push to remote repository (use with caution)
-	GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no" git push -f origin main
-
-# Version management
-version-show: ## Show current version
-	@grep '^version' Cargo.toml | head -1 | cut -d'"' -f2
-
-version-bump-patch: ## Bump patch version (0.0.1 -> 0.0.2)
-	@CURRENT=$$(grep '^version' Cargo.toml | head -1 | cut -d'"' -f2); \
-	PATCH=$$(echo $$CURRENT | cut -d. -f3); \
-	NEW_PATCH=$$(expr $$PATCH + 1); \
-	NEW_VERSION=$$(echo $$CURRENT | sed "s/\.[0-9]*$$/.$$NEW_PATCH/"); \
-	sed -i "s/version = \"$$CURRENT\"/version = \"$$NEW_VERSION\"/" Cargo.toml; \
-	echo "Version bumped: $$CURRENT -> $$NEW_VERSION"
-
-version-bump-minor: ## Bump minor version (0.0.1 -> 0.1.0)
-	@CURRENT=$$(grep '^version' Cargo.toml | head -1 | cut -d'"' -f2); \
-	MINOR=$$(echo $$CURRENT | cut -d. -f2); \
-	NEW_MINOR=$$(expr $$MINOR + 1); \
-	NEW_VERSION=$$(echo $$CURRENT | sed "s/\.[0-9]*\.[0-9]*$$/.$$NEW_MINOR.0/"); \
-	sed -i "s/version = \"$$CURRENT\"/version = \"$$NEW_VERSION\"/" Cargo.toml; \
-	echo "Version bumped: $$CURRENT -> $$NEW_VERSION"
-
-version-bump-major: ## Bump major version (0.0.1 -> 1.0.0)
-	@CURRENT=$$(grep '^version' Cargo.toml | head -1 | cut -d'"' -f2); \
-	MAJOR=$$(echo $$CURRENT | cut -d. -f1); \
-	NEW_MAJOR=$$(expr $$MAJOR + 1); \
-	NEW_VERSION="$$NEW_MAJOR.0.0"; \
-	sed -i "s/version = \"$$CURRENT\"/version = \"$$NEW_VERSION\"/" Cargo.toml; \
-	echo "Version bumped: $$CURRENT -> $$NEW_VERSION"
-
-# Release management
-release-patch: version-bump-patch release-commit release-tag release-push ## Create patch release
-release-minor: version-bump-minor release-commit release-tag release-push ## Create minor release
-release-major: version-bump-major release-commit release-tag release-push ## Create major release
-
-release-commit: ## Commit version changes
-	@VERSION=$$(grep '^version' Cargo.toml | head -1 | cut -d'"' -f2); \
-	git add Cargo.toml; \
-	git commit -m "chore: bump version to $$VERSION"
-
-release-tag: ## Create git tag for current version
-	@VERSION=$$(grep '^version' Cargo.toml | head -1 | cut -d'"' -f2); \
-	git tag -a "v$$VERSION" -m "Release version $$VERSION"
-
-release-push: ## Push commits and tags
-	GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no" git push origin main --tags
-
-# Package management
-package-build: ## Build release package
+build-release:
 	cargo build --release
 
-package-tar: ## Create source tarball
-	@VERSION=$$(grep '^version' Cargo.toml | head -1 | cut -d'"' -f2); \
-	tar -czf mcp-context-browser-$$VERSION.tar.gz --exclude='.git' --exclude='target' --exclude='*.bak' .
+# Testing
+test:
+	cargo test
 
-package-zip: ## Create source zip
-	@VERSION=$$(grep '^version' Cargo.toml | head -1 | cut -d'"' -f2); \
-	zip -r mcp-context-browser-$$VERSION.zip . -x '.git/*' 'target/*' '*.bak'
+test-integration:
+	cargo test --test integration
 
-# GitHub release (requires gh CLI)
-github-release: ## Create GitHub release
-	@VERSION=$$(grep '^version' Cargo.toml | head -1 | cut -d'"' -f2); \
-	gh release create "v$$VERSION" --title "MCP Context Browser v$$VERSION" --generate-notes
+test-unit:
+	cargo test --lib
 
-# Full workflow
-workflow-dev: format lint test build ## Run full development workflow
-workflow-release: workflow-dev package-build package-tar github-release ## Run full release workflow
+# Linting and formatting
+fmt:
+	cargo fmt
 
-# Project info
-info: ## Show project information
-	@echo "MCP Context Browser v$(shell cargo pkgid | cut -d# -f2 | cut -d: -f2)"
-	@echo "Rust version: $(shell rustc --version)"
-	@echo "Cargo version: $(shell cargo --version)"
+clippy:
+	cargo clippy -- -D warnings
 
-# Performance
-bench: ## Run benchmarks
+lint: fmt clippy
+
+# Documentation generation
+docs: diagrams
+	@echo "Generating comprehensive documentation..."
+	@cargo doc --no-deps --document-private-items
+	@echo "Documentation generated in target/doc/"
+
+diagrams:
+	@echo "Generating architecture diagrams..."
+	@bash scripts/docs/generate-diagrams.sh all
+
+validate-diagrams:
+	@echo "Validating PlantUML diagrams..."
+	@bash scripts/docs/generate-diagrams.sh validate
+
+# ADR management
+adr-list:
+	@echo "Architecture Decision Records:"
+	@ls -1 docs/adr/ | grep -E '\.md$$' | sed 's/\.md$$//' | sort
+
+adr-new:
+	@echo "Creating new ADR..."
+	@read -p "ADR Title: " title; \
+	slug=$$(echo "$$title" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-\|-$//g'); \
+	count=$$(ls docs/adr/ | grep -E '^[0-9]+\.md$$' | wc -l); \
+	num=$$(printf "%03d" $$((count + 1))); \
+	file="docs/adr/$${num}-$${slug}.md"; \
+	cp docs/adr/TEMPLATE.md "$$file"; \
+	echo "Created ADR: $$file"; \
+	echo "Edit the file to add your ADR content"
+
+# Development setup
+dev-setup:
+	@echo "Setting up development environment..."
+	@rustup component add rustfmt clippy
+	@rustup component add llvm-tools-preview
+	@cargo install cargo-watch
+	@cargo install cargo-tarpaulin
+	@echo "Development environment ready!"
+
+# Run development server
+dev:
+	cargo watch -x run
+
+# Performance profiling
+profile:
+	cargo build --release --features profiling
+	@echo "Binary built with profiling: target/release/mcp-context-browser"
+	@echo "Run with perf: perf record -F 99 -g ./target/release/mcp-context-browser"
+	@echo "Analyze with: perf report -g"
+
+# Benchmarking
+bench:
 	cargo bench
 
-flamegraph: ## Generate flamegraph (requires cargo-flamegraph)
-	cargo flamegraph --bin mcp-context-browser
+# Security scanning
+audit:
+	cargo audit
 
-# Coverage (requires tarpaulin)
-coverage: ## Generate test coverage report
-	cargo tarpaulin --out Html
+# Coverage reporting
+coverage:
+	cargo tarpaulin --out Html --output-dir target/coverage
+
+# Docker targets
+docker-build:
+	docker build -t mcp-context-browser .
+
+docker-run:
+	docker run -p 3000:3000 mcp-context-browser
+
+# Cleaning
+clean:
+	cargo clean
+	rm -rf target/
+	rm -rf docs/diagrams/generated/
+
+clean-docs:
+	rm -rf docs/diagrams/generated/
+	rm -rf target/doc/
 
 # CI/CD simulation
-ci: clean format-check lint test build ## Simulate CI pipeline
+ci: lint test build docs
+	@echo "CI pipeline completed successfully!"
+
+# Release preparation
+release-prep: clean lint test build-release docs
+	@echo "Release preparation completed!"
+
+# Git operations
+git-status:
+	@echo "Git repository status:"
+	@git status --short
+
+git-add-all:
+	@echo "Adding all changes to git..."
+	@git add -A
+	@echo "All changes added"
+
+git-commit-force:
+	@echo "Committing all changes with force..."
+	@git commit --allow-empty -m "Force commit: $(shell date '+%Y-%m-%d %H:%M:%S') - Automated update" || echo "No changes to commit"
+
+git-push-force:
+	@echo "Pushing changes with force..."
+	@git push --force-with-lease origin main || git push --force origin main
+	@echo "Changes pushed successfully"
+
+git-force-all: git-add-all git-commit-force git-push-force
+	@echo "Force commit and push completed!"
+
+# Help target
+help:
+	@echo "MCP Context Browser - Development Makefile"
+	@echo ""
+	@echo "Available targets:"
+	@echo "  all              - Build and test (default)"
+	@echo "  build            - Build debug version"
+	@echo "  build-release    - Build release version"
+	@echo "  test             - Run all tests"
+	@echo "  test-unit        - Run unit tests only"
+	@echo "  test-integration - Run integration tests only"
+	@echo "  lint             - Format and lint code"
+	@echo "  fmt              - Format code with rustfmt"
+	@echo "  clippy           - Run clippy linter"
+	@echo "  docs             - Generate all documentation"
+	@echo "  diagrams         - Generate architecture diagrams"
+	@echo "  validate-diagrams - Validate PlantUML syntax"
+	@echo "  adr-list         - List all ADRs"
+	@echo "  adr-new          - Create new ADR interactively"
+	@echo "  dev-setup        - Setup development environment"
+	@echo "  dev              - Run with auto-reload"
+	@echo "  profile          - Build for performance profiling"
+	@echo "  bench            - Run benchmarks"
+	@echo "  audit            - Run security audit"
+	@echo "  coverage         - Generate test coverage report"
+	@echo "  docker-build     - Build Docker image"
+	@echo "  docker-run       - Run Docker container"
+	@echo "  clean            - Clean build artifacts"
+	@echo "  clean-docs       - Clean documentation artifacts"
+	@echo "  ci               - Simulate CI pipeline"
+	@echo "  release-prep     - Prepare for release"
+	@echo "  git-status       - Show git repository status"
+	@echo "  git-add-all      - Add all changes to git"
+	@echo "  git-commit-force - Force commit all changes"
+	@echo "  git-push-force   - Force push to remote repository"
+	@echo "  git-force-all    - Add, commit and push all changes with force"
+	@echo "  help             - Show this help message"
+	@echo ""
+	@echo "Examples:"
+	@echo "  make build && make test          # Build and test"
+	@echo "  make diagrams                    # Generate diagrams"
+	@echo "  make docs                        # Generate full docs"
+	@echo "  make adr-new                     # Create new ADR"
+	@echo "  make git-status                  # Check git status"
+	@echo "  make git-force-all               # Force commit and push all changes"
+
+# Default target reminder
+.DEFAULT_GOAL := help

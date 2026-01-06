@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Embedding vector representation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Embedding {
     pub vector: Vec<f32>,
     pub model: String,
@@ -11,7 +11,7 @@ pub struct Embedding {
 }
 
 /// Code chunk with metadata
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CodeChunk {
     pub id: String,
     pub content: String,
@@ -23,7 +23,7 @@ pub struct CodeChunk {
 }
 
 /// Programming language detection
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum Language {
     Rust,
     Python,
@@ -67,7 +67,7 @@ impl Language {
 }
 
 /// Search result from semantic code search
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SearchResult {
     pub file_path: String,
     pub line_number: u32,
