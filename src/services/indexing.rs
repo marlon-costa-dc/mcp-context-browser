@@ -5,7 +5,7 @@ use crate::error::{Error, Result};
 use crate::services::context::ContextService;
 use crate::snapshot::{SnapshotManager, SnapshotChanges};
 use crate::sync::SyncManager;
-use crate::types::CodeChunk;
+use crate::core::types::CodeChunk;
 use std::path::Path;
 use std::sync::Arc;
 

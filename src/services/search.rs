@@ -2,7 +2,7 @@
 
 use crate::error::Result;
 use crate::services::context::ContextService;
-use crate::types::SearchResult;
+use crate::core::types::SearchResult;
 
 /// Simple search service for MVP
 pub struct SearchService {

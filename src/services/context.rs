@@ -2,7 +2,7 @@
 
 use crate::error::{Error, Result};
 use crate::providers::{EmbeddingProvider, VectorStoreProvider};
-use crate::types::{CodeChunk, Embedding, SearchResult};
+use crate::core::types::{CodeChunk, Embedding, SearchResult};
 use std::collections::HashMap;
 use std::sync::Arc;
 

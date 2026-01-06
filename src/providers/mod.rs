@@ -15,14 +15,28 @@ pub trait EmbeddingProvider: Send + Sync {
 /// Vector store provider trait
 #[async_trait]
 pub trait VectorStoreProvider: Send + Sync {
-    async fn store(&self, collection: &str, embeddings: &[Embedding]) -> Result<()>;
-    async fn search(
+    async fn create_collection(&self, name: &str, dimensions: usize) -> Result<()>;
+    async fn delete_collection(&self, name: &str) -> Result<()>;
+    async fn collection_exists(&self, name: &str) -> Result<bool>;
+    async fn insert_vectors(
         &self,
         collection: &str,
-        query: &[f32],
+        vectors: &[Embedding],
+        metadata: Vec<std::collections::HashMap<String, serde_json::Value>>,
+    ) -> Result<Vec<String>>;
+    async fn search_similar(
+        &self,
+        collection: &str,
+        query_vector: &[f32],
         limit: usize,
-    ) -> Result<Vec<(f32, Embedding)>>;
-    async fn clear(&self, collection: &str) -> Result<()>;
+        filter: Option<&str>,
+    ) -> Result<Vec<crate::core::types::SearchResult>>;
+    async fn delete_vectors(&self, collection: &[String], ids: &[String]) -> Result<()>;
+    async fn get_stats(
+        &self,
+        collection: &str,
+    ) -> Result<std::collections::HashMap<String, serde_json::Value>>;
+    async fn flush(&self, collection: &str) -> Result<()>;
     fn provider_name(&self) -> &str;
 }
 
@@ -31,5 +45,5 @@ pub mod embedding;
 pub mod vector_store;
 
 // Re-export implementations
-pub use embedding::MockEmbeddingProvider;
+pub use embedding::NullEmbeddingProvider as MockEmbeddingProvider; // Backward compatibility
 pub use vector_store::InMemoryVectorStoreProvider;

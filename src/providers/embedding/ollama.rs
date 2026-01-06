@@ -1,8 +1,8 @@
 //! Ollama embedding provider implementation
 
-use crate::error::{Error, Result};
-use crate::providers::embedding::EmbeddingProvider;
-use crate::types::Embedding;
+use crate::core::error::{Error, Result};
+use crate::core::types::Embedding;
+use crate::providers::EmbeddingProvider;
 use async_trait::async_trait;
 
 /// Ollama embedding provider
@@ -22,7 +22,9 @@ impl OllamaEmbeddingProvider {
 impl EmbeddingProvider for OllamaEmbeddingProvider {
     async fn embed(&self, text: &str) -> Result<Embedding> {
         let embeddings = self.embed_batch(&[text.to_string()]).await?;
-        embeddings.into_iter().next()
+        embeddings
+            .into_iter()
+            .next()
             .ok_or_else(|| Error::embedding("No embedding returned".to_string()))
     }
 
@@ -43,7 +45,10 @@ impl EmbeddingProvider for OllamaEmbeddingProvider {
 
             let client = reqwest::Client::new();
             let response = client
-                .post(&format!("{}/api/embeddings", self.base_url.trim_end_matches('/')))
+                .post(&format!(
+                    "{}/api/embeddings",
+                    self.base_url.trim_end_matches('/')
+                ))
                 .header("Content-Type", "application/json")
                 .json(&payload)
                 .send()
@@ -53,15 +58,22 @@ impl EmbeddingProvider for OllamaEmbeddingProvider {
             if !response.status().is_success() {
                 let status = response.status();
                 let error_text = response.text().await.unwrap_or_default();
-                return Err(Error::embedding(format!("Ollama API error {}: {}", status, error_text)));
+                return Err(Error::embedding(format!(
+                    "Ollama API error {}: {}",
+                    status, error_text
+                )));
             }
 
-            let response_data: serde_json::Value = response.json().await
+            let response_data: serde_json::Value = response
+                .json()
+                .await
                 .map_err(|e| Error::embedding(format!("Failed to parse response: {}", e)))?;
 
             let embedding_vec = response_data["embedding"]
                 .as_array()
-                .ok_or_else(|| Error::embedding("Invalid response format: missing embedding array".to_string()))?
+                .ok_or_else(|| {
+                    Error::embedding("Invalid response format: missing embedding array".to_string())
+                })?
                 .iter()
                 .map(|v| v.as_f64().unwrap_or(0.0) as f32)
                 .collect::<Vec<f32>>();
@@ -77,19 +89,23 @@ impl EmbeddingProvider for OllamaEmbeddingProvider {
         Ok(results)
     }
 
-    fn model(&self) -> &str {
-        &self.model
-    }
-
     fn dimensions(&self) -> usize {
         4096 // Typical Ollama embedding dimensions
     }
 
-    fn max_tokens(&self) -> usize {
-        8192
-    }
-
     fn provider_name(&self) -> &str {
         "ollama"
+    }
+}
+
+impl OllamaEmbeddingProvider {
+    /// Get the model name for this provider
+    pub fn model(&self) -> &str {
+        &self.model
+    }
+
+    /// Get the maximum tokens supported by this provider
+    pub fn max_tokens(&self) -> usize {
+        8192
     }
 }

@@ -1,8 +1,8 @@
 //! VoyageAI embedding provider implementation
 
-use crate::error::{Error, Result};
-use crate::providers::embedding::EmbeddingProvider;
-use crate::types::Embedding;
+use crate::core::error::{Error, Result};
+use crate::core::types::Embedding;
+use crate::providers::EmbeddingProvider;
 use async_trait::async_trait;
 
 /// VoyageAI embedding provider
@@ -22,7 +22,9 @@ impl VoyageAIEmbeddingProvider {
 impl EmbeddingProvider for VoyageAIEmbeddingProvider {
     async fn embed(&self, text: &str) -> Result<Embedding> {
         let embeddings = self.embed_batch(&[text.to_string()]).await?;
-        embeddings.into_iter().next()
+        embeddings
+            .into_iter()
+            .next()
             .ok_or_else(|| Error::embedding("No embedding returned".to_string()))
     }
 
@@ -49,49 +51,70 @@ impl EmbeddingProvider for VoyageAIEmbeddingProvider {
         if !response.status().is_success() {
             let status = response.status();
             let error_text = response.text().await.unwrap_or_default();
-            return Err(Error::embedding(format!("VoyageAI API error {}: {}", status, error_text)));
+            return Err(Error::embedding(format!(
+                "VoyageAI API error {}: {}",
+                status, error_text
+            )));
         }
 
-        let response_data: serde_json::Value = response.json().await
+        let response_data: serde_json::Value = response
+            .json()
+            .await
             .map_err(|e| Error::embedding(format!("Failed to parse response: {}", e)))?;
 
-        let data = response_data["data"].as_array()
-            .ok_or_else(|| Error::embedding("Invalid response format: missing data array".to_string()))?;
+        let data = response_data["data"].as_array().ok_or_else(|| {
+            Error::embedding("Invalid response format: missing data array".to_string())
+        })?;
 
         if data.len() != texts.len() {
-            return Err(Error::embedding(format!("Response data count mismatch: expected {}, got {}", texts.len(), data.len())));
+            return Err(Error::embedding(format!(
+                "Response data count mismatch: expected {}, got {}",
+                texts.len(),
+                data.len()
+            )));
         }
 
-        let embeddings = data.iter().enumerate().map(|(i, item)| {
-            let embedding_vec = item["embedding"].as_array()
-                .ok_or_else(|| Error::embedding(format!("Invalid embedding format for text {}", i)))?
-                .iter()
-                .map(|v| v.as_f64().unwrap_or(0.0) as f32)
-                .collect::<Vec<f32>>();
+        let embeddings = data
+            .iter()
+            .enumerate()
+            .map(|(i, item)| {
+                let embedding_vec = item["embedding"]
+                    .as_array()
+                    .ok_or_else(|| {
+                        Error::embedding(format!("Invalid embedding format for text {}", i))
+                    })?
+                    .iter()
+                    .map(|v| v.as_f64().unwrap_or(0.0) as f32)
+                    .collect::<Vec<f32>>();
 
-            Ok(Embedding {
-                vector: embedding_vec,
-                model: self.model.clone(),
-                dimensions: self.dimensions(),
+                Ok(Embedding {
+                    vector: embedding_vec,
+                    model: self.model.clone(),
+                    dimensions: self.dimensions(),
+                })
             })
-        }).collect::<Result<Vec<_>>>()?;
+            .collect::<Result<Vec<_>>>()?;
 
         Ok(embeddings)
-    }
-
-    fn model(&self) -> &str {
-        &self.model
     }
 
     fn dimensions(&self) -> usize {
         1024 // VoyageAI voyage-code-3
     }
 
-    fn max_tokens(&self) -> usize {
-        4096
-    }
-
     fn provider_name(&self) -> &str {
         "voyageai"
+    }
+}
+
+impl VoyageAIEmbeddingProvider {
+    /// Get the model name for this provider
+    pub fn model(&self) -> &str {
+        &self.model
+    }
+
+    /// Get the maximum tokens supported by this provider
+    pub fn max_tokens(&self) -> usize {
+        4096
     }
 }

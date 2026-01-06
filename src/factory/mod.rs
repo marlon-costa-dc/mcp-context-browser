@@ -4,12 +4,10 @@ use crate::core::{
     error::{Error, Result},
     types::{EmbeddingConfig, VectorStoreConfig},
 };
-use crate::providers::{
-    embedding::MockEmbeddingProvider,
-    EmbeddingProvider, VectorStoreProvider,
-};
+use crate::providers::{EmbeddingProvider, VectorStoreProvider};
 
 // Import individual providers that exist
+use crate::providers::embedding::null::NullEmbeddingProvider;
 use crate::providers::embedding::ollama::OllamaEmbeddingProvider;
 use crate::providers::embedding::openai::OpenAIEmbeddingProvider;
 use crate::providers::embedding::voyageai::VoyageAIEmbeddingProvider;
@@ -77,7 +75,7 @@ impl ProviderFactory for DefaultProviderFactory {
                     config.model.clone(),
                 )))
             }
-            "mock" => Ok(Arc::new(MockEmbeddingProvider::new())),
+            "mock" => Ok(Arc::new(NullEmbeddingProvider::new())),
             _ => Err(Error::config(format!(
                 "Unsupported embedding provider: {}",
                 config.provider
