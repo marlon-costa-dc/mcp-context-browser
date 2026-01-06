@@ -2,7 +2,7 @@
 
 ## 🚀 Local Development Setup
 
-MCP Context Browser currently supports local deployment for development and testing purposes.
+MCP Context Browser currently supports local deployment for development and testing. The system is designed as an MCP server that communicates via stdio with AI assistants.
 
 ## 📦 Installation
 
@@ -18,7 +18,7 @@ MCP Context Browser currently supports local deployment for development and test
 git clone https://github.com/marlonsc/mcp-context-browser.git
 cd mcp-context-browser
 
-# Build in debug mode
+# Build in debug mode (recommended for development)
 cargo build
 
 # Or build optimized release
@@ -28,14 +28,14 @@ cargo build --release
 ### Run the Server
 
 ```bash
-# Run in debug mode
+# Run in debug mode (shows more output)
 cargo run
 
 # Or run the release build
 ./target/release/mcp-context-browser
 ```
 
-The server will start and listen for MCP protocol messages on stdin/stdout.
+The server will start and listen for MCP protocol messages on stdin/stdout. It currently provides placeholder responses for MCP tools.
 
 ## ⚙️ Configuration
 

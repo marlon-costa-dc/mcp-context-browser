@@ -7,13 +7,20 @@
 
 **Model Context Protocol Server** - Provides semantic code search and analysis capabilities to AI assistants through a standardized MCP interface.
 
-## 🎯 Current Capabilities
+## 🎯 Current Capabilities (v0.0.1)
 
-- **🔍 Semantic Code Search**: Vector-based similarity search using embeddings
-- **📁 Codebase Indexing**: Process and index code files for efficient retrieval
-- **🔗 MCP Protocol Support**: Standardized interface for AI assistant integration
-- **💾 Extensible Storage**: Pluggable storage backends (file system, vector databases)
-- **🎨 Modular Architecture**: Clean separation of concerns with provider pattern
+### Core Features
+- **🔍 Vector-Based Search**: Semantic similarity search using embeddings
+- **💾 In-Memory Storage**: Fast vector storage for development and testing
+- **🎭 Mock Embeddings**: Fixed-dimension embedding generation for testing
+- **🔧 MCP Protocol**: Basic MCP server implementation with stdio transport
+- **📁 File Processing**: Simple text-based code file reading and chunking
+
+### Architecture
+- **🏗️ Modular Design**: Clean separation with core, providers, services, and server layers
+- **🔌 Provider Pattern**: Extensible system for embeddings and vector storage
+- **⚡ Async Processing**: Tokio-based asynchronous operations
+- **🛡️ Error Handling**: Comprehensive error types with detailed diagnostics
 
 ## 📋 Documentation
 

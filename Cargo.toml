@@ -1,6 +1,6 @@
 [package]
 name = "mcp-context-browser"
-version = "0.0.1"
+version = "0.0.2"
 edition = "2021"
 description = "A Model Context Protocol server for semantic code analysis using vector embeddings"
 authors = ["Marlon Carvalho <marlonsc@proton.me>"]

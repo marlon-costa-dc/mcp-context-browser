@@ -109,8 +109,9 @@ mod tests {
 ### Before Submitting
 
 - [ ] Tests pass: `cargo test`
-- [ ] Code formats correctly: `cargo fmt`
-- [ ] No linting errors: `cargo clippy`
+- [ ] Code formats correctly: `cargo fmt --check`
+- [ ] No linting errors: `cargo clippy -- -D warnings`
+- [ ] CI checks pass: `make ci`
 - [ ] Documentation updated if needed
 
 ### PR Description

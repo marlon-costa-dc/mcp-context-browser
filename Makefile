@@ -68,6 +68,11 @@ clean-all: ## Clean everything including Cargo.lock
 # Development workflow
 dev: format lint test build ## Run full development workflow
 
+# CI commands
+ci: format-check lint test build ## Run CI checks locally
+
+ci-full: clean deps update format-check lint test build doc ## Run full CI pipeline locally
+
 # Release
 release: clean format lint test build ## Prepare for release
 
