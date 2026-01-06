@@ -3,7 +3,7 @@
 //! Simple metrics collection without HTTP server for initial implementation.
 
 use serde::{Deserialize, Serialize};
-use sysinfo::{CpuExt, System, SystemExt};
+use sysinfo::System;
 
 /// CPU usage metrics
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -37,7 +37,7 @@ pub struct SystemMetricsCollector {
 impl SystemMetricsCollector {
     /// Create a new system metrics collector
     pub fn new() -> Self {
-        let mut system = System::new_all();
+        let mut system = System::new();
         system.refresh_all();
 
         Self { system }
@@ -48,17 +48,20 @@ impl SystemMetricsCollector {
         self.system.refresh_cpu();
 
         let cpus = self.system.cpus();
-        if cpus.is_empty() {
-            return CpuMetrics {
-                usage: 0.0,
-                cores: 0,
-                model: "Unknown".to_string(),
-            };
-        }
-
-        let usage = cpus.iter().map(|cpu| cpu.cpu_usage()).sum::<f32>() / cpus.len() as f32;
         let cores = cpus.len();
-        let model = cpus[0].brand().to_string();
+
+        // For older sysinfo versions, CPU usage might not be available
+        let usage = if cores > 0 {
+            cpus.iter().map(|cpu| cpu.cpu_usage()).sum::<f32>() / cores as f32
+        } else {
+            0.0
+        };
+
+        let model = if cores > 0 {
+            cpus[0].brand().to_string()
+        } else {
+            "Unknown".to_string()
+        };
 
         CpuMetrics {
             usage,
@@ -73,7 +76,7 @@ impl SystemMetricsCollector {
 
         let total = self.system.total_memory();
         let used = self.system.used_memory();
-        let free = self.system.free_memory();
+        let free = total.saturating_sub(used);
         let usage_percent = if total > 0 { (used as f32 / total as f32) * 100.0 } else { 0.0 };
 
         MemoryMetrics {

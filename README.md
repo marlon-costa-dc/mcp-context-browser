@@ -3,8 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange)](https://www.rust-lang.org/)
 [![MCP](https://img.shields.io/badge/MCP-2024--11--05-blue)](https://modelcontextprotocol.io/)
-[![Version](https://img.shields.io/badge/version-0.0.3-blue)](https://github.com/marlonsc/mcp-context-browser/releases)
-[![Claude Context Compatible](https://img.shields.io/badge/Claude%20Context-Compatible-green)](IMPLEMENTATION_GUIDE_v0.0.3.md)
+[![Version](https://img.shields.io/badge/version-0.0.2-blue)](https://github.com/marlonsc/mcp-context-browser/releases)
 [![CI](https://github.com/marlonsc/mcp-context-browser/actions/workflows/ci.yml/badge.svg)](https://github.com/marlonsc/mcp-context-browser/actions/workflows/ci.yml)
 
 **Model Context Protocol Server** - Provides semantic code search and analysis capabilities to AI assistants through a standardized MCP interface.

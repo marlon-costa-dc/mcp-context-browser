@@ -39,6 +39,8 @@ validate: ## Validate everything
 	@bash scripts/docs/check-sync.sh
 	@echo "📋 Validating ADRs..."
 	@bash scripts/docs/validate-adrs.sh
+	@echo "📝 Linting markdown..."
+	@make lint-md
 	@echo "✅ All validations passed"
 
 ci: clean validate test build docs ## Run full CI pipeline
@@ -64,6 +66,16 @@ fmt: ## Format code
 
 lint: ## Lint code
 	cargo clippy -- -D warnings
+
+lint-md: ## Lint markdown files
+	@echo "🔍 Linting markdown files..."
+	@markdownlint docs/ --config .markdownlint.json || (echo "❌ Markdown linting failed. Run 'make fix-md' to auto-fix issues."; exit 1)
+	@echo "✅ Markdown linting passed"
+
+fix-md: ## Auto-fix markdown linting issues
+	@echo "🔧 Auto-fixing markdown issues..."
+	@markdownlint docs/ --config .markdownlint.json --fix
+	@echo "✅ Markdown auto-fix completed"
 
 setup: ## Setup development tools
 	cargo install cargo-watch
@@ -124,7 +136,7 @@ audit: ## Security audit
 bench: ## Run benchmarks
 	cargo bench
 
-quality: fmt lint test audit validate ## Run all quality checks
+quality: fmt lint lint-md test audit validate ## Run all quality checks
 
 # =============================================================================
 # GIT COMMANDS - Force commit operations
