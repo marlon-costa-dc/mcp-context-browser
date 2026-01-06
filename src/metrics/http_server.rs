@@ -8,13 +8,7 @@
 
 use crate::core::error::{Error, Result};
 use crate::metrics::{global_metrics_collector, SystemMetricsCollector};
-use axum::{
-    extract::State,
-    http::StatusCode,
-    response::Json,
-    routing::get,
-    Router,
-};
+use axum::{extract::State, http::StatusCode, response::Json, routing::get, Router};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -59,9 +53,9 @@ pub struct StatusResponse {
 /// Health status for each component
 #[derive(Debug, Serialize, Deserialize)]
 pub struct HealthStatus {
-    pub cpu: String,      // "healthy", "warning", "critical"
-    pub memory: String,   // "healthy", "warning", "critical"
-    pub disk: String,     // "healthy", "warning", "critical"
+    pub cpu: String,    // "healthy", "warning", "critical"
+    pub memory: String, // "healthy", "warning", "critical"
+    pub disk: String,   // "healthy", "warning", "critical"
 }
 
 /// Key metrics for status overview
@@ -119,15 +113,33 @@ impl MetricsApiServer {
 
         Router::new()
             .route("/api/health", get(Self::health_handler))
-            .route("/api/context/metrics", get(Self::comprehensive_metrics_handler))
+            .route(
+                "/api/context/metrics",
+                get(Self::comprehensive_metrics_handler),
+            )
             .route("/api/context/status", get(Self::status_handler))
             .route("/api/context/metrics/cpu", get(Self::cpu_metrics_handler))
-            .route("/api/context/metrics/memory", get(Self::memory_metrics_handler))
+            .route(
+                "/api/context/metrics/memory",
+                get(Self::memory_metrics_handler),
+            )
             .route("/api/context/metrics/disk", get(Self::disk_metrics_handler))
-            .route("/api/context/metrics/network", get(Self::network_metrics_handler))
-            .route("/api/context/metrics/queries", get(Self::query_metrics_handler))
-            .route("/api/context/metrics/cache", get(Self::cache_metrics_handler))
-            .route("/api/context/metrics/process", get(Self::process_metrics_handler))
+            .route(
+                "/api/context/metrics/network",
+                get(Self::network_metrics_handler),
+            )
+            .route(
+                "/api/context/metrics/queries",
+                get(Self::query_metrics_handler),
+            )
+            .route(
+                "/api/context/metrics/cache",
+                get(Self::cache_metrics_handler),
+            )
+            .route(
+                "/api/context/metrics/process",
+                get(Self::process_metrics_handler),
+            )
             .layer(CorsLayer::permissive())
             .with_state(state)
     }
@@ -198,9 +210,27 @@ impl MetricsApiServer {
         let cache = performance_metrics.get_cache_metrics();
 
         // Health thresholds
-        let cpu_health = if cpu.usage < 80.0 { "healthy" } else if cpu.usage < 90.0 { "warning" } else { "critical" };
-        let memory_health = if memory.usage_percent < 80.0 { "healthy" } else if memory.usage_percent < 90.0 { "warning" } else { "critical" };
-        let disk_health = if disk.usage_percent < 85.0 { "healthy" } else if disk.usage_percent < 95.0 { "warning" } else { "critical" };
+        let cpu_health = if cpu.usage < 80.0 {
+            "healthy"
+        } else if cpu.usage < 90.0 {
+            "warning"
+        } else {
+            "critical"
+        };
+        let memory_health = if memory.usage_percent < 80.0 {
+            "healthy"
+        } else if memory.usage_percent < 90.0 {
+            "warning"
+        } else {
+            "critical"
+        };
+        let disk_health = if disk.usage_percent < 85.0 {
+            "healthy"
+        } else if disk.usage_percent < 95.0 {
+            "warning"
+        } else {
+            "critical"
+        };
 
         let uptime = state.start_time.elapsed().as_secs();
 

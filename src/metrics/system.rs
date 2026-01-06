@@ -120,7 +120,11 @@ impl SystemMetricsCollector {
         let total = self.system.total_memory();
         let used = self.system.used_memory();
         let free = self.system.free_memory();
-        let usage_percent = if total > 0 { (used as f32 / total as f32) * 100.0 } else { 0.0 };
+        let usage_percent = if total > 0 {
+            (used as f32 / total as f32) * 100.0
+        } else {
+            0.0
+        };
 
         Ok(MemoryMetrics {
             total,
@@ -148,7 +152,11 @@ impl SystemMetricsCollector {
         }
 
         let used_space = total_space.saturating_sub(available_space);
-        let usage_percent = if total_space > 0 { (used_space as f32 / total_space as f32) * 100.0 } else { 0.0 };
+        let usage_percent = if total_space > 0 {
+            (used_space as f32 / total_space as f32) * 100.0
+        } else {
+            0.0
+        };
 
         Ok(DiskMetrics {
             total: total_space,
@@ -197,7 +205,11 @@ impl SystemMetricsCollector {
 
             // Calculate memory percentage
             let total_memory = self.system.total_memory();
-            let memory_percent = if total_memory > 0 { (memory as f32 / total_memory as f32) * 100.0 } else { 0.0 };
+            let memory_percent = if total_memory > 0 {
+                (memory as f32 / total_memory as f32) * 100.0
+            } else {
+                0.0
+            };
 
             Ok(ProcessMetrics {
                 pid,
@@ -207,12 +219,17 @@ impl SystemMetricsCollector {
                 uptime,
             })
         } else {
-            Err(Error::internal(format!("Process with PID {} not found", pid)))
+            Err(Error::internal(format!(
+                "Process with PID {} not found",
+                pid
+            )))
         }
     }
 
     /// Collect all system metrics at once
-    pub fn collect_all_metrics(&mut self) -> Result<(
+    pub fn collect_all_metrics(
+        &mut self,
+    ) -> Result<(
         CpuMetrics,
         MemoryMetrics,
         DiskMetrics,

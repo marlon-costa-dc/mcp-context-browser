@@ -7,12 +7,14 @@
 //! - Web dashboard for real-time metrics visualization
 
 pub mod http_server;
-pub mod system;
 pub mod performance;
+pub mod system;
 
 pub use http_server::MetricsApiServer;
-pub use system::{SystemMetricsCollector, CpuMetrics, MemoryMetrics, DiskMetrics, NetworkMetrics, ProcessMetrics};
-pub use performance::{PerformanceMetrics, QueryPerformanceMetrics, CacheMetrics};
+pub use performance::{CacheMetrics, PerformanceMetrics, QueryPerformanceMetrics};
+pub use system::{
+    CpuMetrics, DiskMetrics, MemoryMetrics, NetworkMetrics, ProcessMetrics, SystemMetricsCollector,
+};
 
 /// Global metrics collector singleton
 use std::sync::Arc;
