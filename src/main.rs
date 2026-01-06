@@ -27,6 +27,7 @@
 //! Licensed under the MIT License.
 
 use mcp_context_browser::server::McpToolHandlers;
+use mcp_context_browser::metrics::MetricsApiServer;
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, BufWriter};
 
@@ -62,6 +63,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         env!("CARGO_PKG_VERSION")
     );
 
+    // Start metrics HTTP server in background
+    let metrics_port = std::env::var("CONTEXT_METRICS_PORT")
+        .unwrap_or_else(|_| "3001".to_string())
+        .parse::<u16>()
+        .unwrap_or(3001);
+
+    let metrics_server = MetricsApiServer::new(metrics_port);
+    let metrics_handle = tokio::spawn(async move {
+        if let Err(e) = metrics_server.start().await {
+            eprintln!("❌ Metrics API server error: {}", e);
+        }
+    });
+
+    println!("📊 Metrics API available at http://localhost:{}", metrics_port);
 
     // Create tool handlers
     let tool_handlers = match McpToolHandlers::new() {
@@ -142,6 +157,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             }
         }
     }
+
+    // Wait for metrics server to finish
+    let _ = metrics_handle.await;
 
     println!("👋 MCP Context Browser shutdown complete");
     Ok(())

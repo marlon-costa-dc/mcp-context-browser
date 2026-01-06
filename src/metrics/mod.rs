@@ -5,8 +5,10 @@
 use serde::{Deserialize, Serialize};
 use sysinfo::System;
 
+pub mod http_server;
 pub mod performance;
 
+pub use http_server::MetricsApiServer;
 pub use performance::{PerformanceMetrics, QueryPerformanceMetrics, CacheMetrics};
 
 /// CPU usage metrics

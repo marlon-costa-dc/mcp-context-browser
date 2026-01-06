@@ -8,11 +8,11 @@
 
 **Model Context Protocol Server** - Provides semantic code search and analysis capabilities to AI assistants through a standardized MCP interface.
 
-**🎯 v0.0.2: Production-Ready MCP Server** - Complete semantic code search implementation with comprehensive documentation and testing.
 
-## 🎯 Current Capabilities (v0.0.2)
+## 🎯 Current Capabilities (v0.0.3)
 
-### ✅ Production-Ready Features (v0.0.2)
+### 🏆 Features
+
 
 -   **🧠 Semantic Code Search**: Hybrid BM25 + vector search using natural language queries
 -   **🔄 Incremental Sync**: Automatic background synchronization with change detection
@@ -87,7 +87,7 @@ make validate
 
 ### Claude Context Compatibility ✅
 
-**v0.0.2 provides complete MCP protocol implementation:**
+**v0.0.3 implements all core Claude Context features:**
 
 | Feature | Status | Implementation |
 |---------|--------|----------------|
