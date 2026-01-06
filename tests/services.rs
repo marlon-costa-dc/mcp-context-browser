@@ -139,7 +139,9 @@ mod tests {
         let temp_dir = tempfile::tempdir().unwrap();
         let collection = "test-collection";
 
-        let result = indexing_service.index_directory(temp_dir.path(), collection).await;
+        let result = indexing_service
+            .index_directory(temp_dir.path(), collection)
+            .await;
         assert!(result.is_ok());
 
         let chunk_count = result.unwrap();
@@ -155,7 +157,9 @@ mod tests {
         let non_existent_path = std::path::Path::new("/non/existent/path");
         let collection = "test-collection";
 
-        let result = indexing_service.index_directory(non_existent_path, collection).await;
+        let result = indexing_service
+            .index_directory(non_existent_path, collection)
+            .await;
         assert!(result.is_ok()); // MVP implementation doesn't fail
     }
 
@@ -249,7 +253,9 @@ mod tests {
         let temp_dir = tempfile::tempdir().unwrap();
         let collection = "integration-test";
 
-        let index_result = indexing_service.index_directory(temp_dir.path(), collection).await;
+        let index_result = indexing_service
+            .index_directory(temp_dir.path(), collection)
+            .await;
         assert!(index_result.is_ok());
 
         // Search in the indexed collection

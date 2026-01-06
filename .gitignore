@@ -29,9 +29,33 @@ Thumbs.db
 
 # Test coverage
 *.profraw
+coverage/
 
 # Documentation build
 book/
 
 # Backup files from refactoring
 *.bak
+
+# Development artifacts
+.cargo/
+.coverage/
+*.lcov
+
+# CI/CD artifacts
+.github/workflows/*.log
+
+# Local development
+.envrc
+.direnv/
+
+# Performance profiling
+*.perf
+perf.data*
+
+# Fuzzing artifacts
+fuzz/artifacts/
+fuzz/corpus/
+
+# Benchmark results
+benchmark_results/

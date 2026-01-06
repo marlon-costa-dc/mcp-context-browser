@@ -2,7 +2,7 @@
 //!
 //! This module tests the MCP protocol handlers and message processing.
 
-use mcp_context_browser::server::{McpToolHandlers, CallToolResponse, CallToolResultContent, Tool};
+use mcp_context_browser::server::{CallToolResponse, CallToolResultContent, McpToolHandlers, Tool};
 use serde_json::json;
 
 #[cfg(test)]
@@ -18,7 +18,10 @@ mod tests {
         // Check index_codebase tool
         let index_tool = &tools[0];
         assert_eq!(index_tool.name, "index_codebase");
-        assert_eq!(index_tool.description, "Index a codebase directory for semantic search");
+        assert_eq!(
+            index_tool.description,
+            "Index a codebase directory for semantic search"
+        );
         assert!(index_tool.input_schema.is_object());
 
         let schema = index_tool.input_schema.as_object().unwrap();
@@ -33,7 +36,10 @@ mod tests {
         // Check search_code tool
         let search_tool = &tools[1];
         assert_eq!(search_tool.name, "search_code");
-        assert_eq!(search_tool.description, "Search for code using natural language queries");
+        assert_eq!(
+            search_tool.description,
+            "Search for code using natural language queries"
+        );
         assert!(search_tool.input_schema.is_object());
 
         let search_schema = search_tool.input_schema.as_object().unwrap();
