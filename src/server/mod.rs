@@ -1,9 +1,13 @@
 //! MCP Server implementation
 
 use crate::core::error::{Error, Result};
+use crate::factory::ProviderFactory;
+use crate::metrics::PERFORMANCE_METRICS;
 use crate::services::{ContextService, IndexingService, SearchService};
+use crate::sync::SyncManager;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use std::time::Instant;
 
 /// MCP tool response
 #[derive(Debug, Serialize, Deserialize)]
@@ -29,19 +33,39 @@ pub struct Tool {
     pub input_schema: serde_json::Value,
 }
 
-/// MCP tool handlers - simplified for MVP
+/// MCP tool handlers with real providers and metrics
 pub struct McpToolHandlers {
     indexing_service: Arc<IndexingService>,
     search_service: Arc<SearchService>,
 }
 
 impl McpToolHandlers {
-    /// Create new MCP tool handlers
+    /// Create new MCP tool handlers with configured providers
     pub fn new() -> Result<Self> {
-        // For MVP, create services directly
-        let service_provider = crate::factory::ServiceProvider::new();
-        let context_service = Arc::new(ContextService::new(&service_provider)?);
-        let indexing_service = Arc::new(IndexingService::new(context_service.clone()));
+        Self::with_config(None)
+    }
+
+    /// Create handlers with sync manager for coordination
+    pub fn with_sync_manager(sync_manager: Arc<SyncManager>) -> Result<Self> {
+        Self::with_config(Some(sync_manager))
+    }
+
+    /// Internal constructor with optional sync manager
+    fn with_config(sync_manager: Option<Arc<SyncManager>>) -> Result<Self> {
+        // Load configuration from environment
+        let config = crate::config::Config::from_env()
+            .map_err(|e| Error::config(format!("Failed to load configuration: {}", e)))?;
+
+        // Create context service with real providers
+        let context_service = Arc::new(ProviderFactory::create_context_service(&config)?);
+
+        // Create indexing service with sync coordination
+        let indexing_service = Arc::new(if let Some(sync_mgr) = sync_manager {
+            IndexingService::with_sync_manager(context_service.clone(), sync_mgr)?
+        } else {
+            IndexingService::new(context_service.clone())?
+        });
+
         let search_service = Arc::new(SearchService::new(context_service));
 
         Ok(Self {
@@ -103,6 +127,8 @@ impl McpToolHandlers {
     }
 
     async fn handle_index_codebase(&self, args: serde_json::Value) -> Result<CallToolResponse> {
+        let start_time = Instant::now();
+
         let path = args
             .get("path")
             .and_then(|v| v.as_str())
@@ -111,16 +137,25 @@ impl McpToolHandlers {
         let path = std::path::Path::new(path);
         let collection = "default";
 
-        match self
+        let result = self
             .indexing_service
             .index_directory(path, collection)
-            .await
-        {
+            .await;
+
+        let duration = start_time.elapsed();
+        let latency_ms = duration.as_millis() as f64;
+        let success = result.is_ok();
+
+        // Record performance metrics
+        PERFORMANCE_METRICS.record_query(latency_ms, success);
+
+        match result {
             Ok(chunk_count) => {
                 let message = format!(
-                    "✅ Successfully indexed {} code chunks from '{}'",
+                    "✅ Successfully indexed {} code chunks from '{}' in {:.2}s",
                     chunk_count,
-                    path.display()
+                    path.display(),
+                    duration.as_secs_f64()
                 );
 
                 Ok(CallToolResponse {
@@ -140,6 +175,8 @@ impl McpToolHandlers {
     }
 
     async fn handle_search_code(&self, args: serde_json::Value) -> Result<CallToolResponse> {
+        let start_time = Instant::now();
+
         let query = args
             .get("query")
             .and_then(|v| v.as_str())
@@ -149,9 +186,19 @@ impl McpToolHandlers {
 
         let collection = "default";
 
-        match self.search_service.search(collection, query, limit).await {
+        let result = self.search_service.search(collection, query, limit).await;
+
+        let duration = start_time.elapsed();
+        let latency_ms = duration.as_millis() as f64;
+        let success = result.is_ok();
+
+        // Record performance metrics
+        PERFORMANCE_METRICS.record_query(latency_ms, success);
+
+        match result {
             Ok(results) => {
                 let mut message = format!("🔍 **Search Results for:** \"{}\"\n\n", query);
+                message.push_str(&format!("⚡ **Search completed in:** {:.2}s\n\n", duration.as_secs_f64()));
 
                 if results.is_empty() {
                     message.push_str("❌ No relevant results found.");
@@ -164,7 +211,7 @@ impl McpToolHandlers {
                             i + 1,
                             result.file_path,
                             result.line_number,
-                            result.content.chars().take(100).collect::<String>(),
+                            result.content.chars().take(150).collect::<String>(),
                             result.score
                         ));
                     }

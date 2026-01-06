@@ -29,7 +29,9 @@
 use mcp_context_browser::daemon::ContextDaemon;
 use mcp_context_browser::metrics::MetricsApiServer;
 use mcp_context_browser::server::McpToolHandlers;
+use mcp_context_browser::sync::SyncManager;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, BufWriter};
 
 /// MCP protocol message
@@ -111,8 +113,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         config.daemon.cleanup_interval_secs, config.daemon.monitoring_interval_secs
     );
 
-    // Create tool handlers
-    let tool_handlers = match McpToolHandlers::new() {
+    // Create sync manager for cross-process coordination
+    let sync_manager = Arc::new(SyncManager::new());
+    println!(
+        "🔄 Sync manager initialized with {}ms intervals",
+        sync_manager.config().interval_ms
+    );
+
+    // Create tool handlers with sync coordination
+    let tool_handlers = match McpToolHandlers::with_sync_manager(sync_manager) {
         Ok(handlers) => handlers,
         Err(e) => {
             eprintln!("❌ Failed to initialize tool handlers: {}", e);
