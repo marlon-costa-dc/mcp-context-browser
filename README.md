@@ -45,8 +45,46 @@ git clone https://github.com/marlonsc/mcp-context-browser.git
 cd mcp-context-browser
 
 # Run development setup
+make setup
 make dev
 ```
+
+## 🧪 Testing
+
+The project follows TDD (Test-Driven Development) principles with comprehensive test coverage:
+
+```bash
+# Run all tests
+make test
+
+# Run tests with coverage
+make coverage
+
+# Run tests in watch mode
+make test-watch
+
+# Run all validation checks
+make validate
+```
+
+### Test Structure
+
+- **Core Types**: Data structure validation and serialization
+- **Services**: Business logic testing (Context, Indexing, Search)
+- **MCP Protocol**: Protocol compliance and message handling
+- **Integration**: End-to-end functionality testing
+
+### CI/CD
+
+GitHub Actions automatically runs:
+
+- **Tests**: Multiple Rust versions (stable, beta, MSRV)
+- **Linting**: Code formatting and clippy checks
+- **Security**: Dependency vulnerability scanning
+- **Coverage**: Code coverage reporting
+- **Build**: Cross-platform binary builds
+
+[![CI](https://github.com/marlonsc/mcp-context-browser/actions/workflows/ci.yml/badge.svg)](https://github.com/marlonsc/mcp-context-browser/actions/workflows/ci.yml)
 
 ## 🤝 Contributing
 
