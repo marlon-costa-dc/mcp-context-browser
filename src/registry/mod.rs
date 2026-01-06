@@ -31,7 +31,10 @@ impl ProviderRegistry {
         let mut providers = self.embedding_providers.write().unwrap();
 
         if providers.contains_key(&name) {
-            return Err(Error::generic(format!("Embedding provider '{}' already registered", name)));
+            return Err(Error::generic(format!(
+                "Embedding provider '{}' already registered",
+                name
+            )));
         }
 
         providers.insert(name, provider);
@@ -48,7 +51,10 @@ impl ProviderRegistry {
         let mut providers = self.vector_store_providers.write().unwrap();
 
         if providers.contains_key(&name) {
-            return Err(Error::generic(format!("Vector store provider '{}' already registered", name)));
+            return Err(Error::generic(format!(
+                "Vector store provider '{}' already registered",
+                name
+            )));
         }
 
         providers.insert(name, provider);

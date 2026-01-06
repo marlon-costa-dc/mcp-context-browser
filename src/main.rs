@@ -31,7 +31,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
         .init();
 
-    println!("🚀 Starting MCP Context Browser v{}", env!("CARGO_PKG_VERSION"));
+    println!(
+        "🚀 Starting MCP Context Browser v{}",
+        env!("CARGO_PKG_VERSION")
+    );
 
     // Create tool handlers
     let tool_handlers = match McpToolHandlers::new() {
@@ -62,13 +65,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 break;
             }
             Ok(_) => {
-                let message: Result<McpMessage, _> = serde_json::from_str(&buffer.trim());
+                let message: Result<McpMessage, _> = serde_json::from_str(buffer.trim());
 
                 match message {
                     Ok(msg) => {
                         let response = handle_message(msg, &tool_handlers).await;
                         if let Ok(response_json) = serde_json::to_string(&response) {
-                            if let Err(e) = writer.write_all(format!("{}\n", response_json).as_bytes()).await {
+                            if let Err(e) = writer
+                                .write_all(format!("{}\n", response_json).as_bytes())
+                                .await
+                            {
                                 eprintln!("Failed to write response: {}", e);
                                 break;
                             }
@@ -93,7 +99,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                             }),
                         };
                         if let Ok(response_json) = serde_json::to_string(&error_response) {
-                            let _ = writer.write_all(format!("{}\n", response_json).as_bytes()).await;
+                            let _ = writer
+                                .write_all(format!("{}\n", response_json).as_bytes())
+                                .await;
                             let _ = writer.flush().await;
                         }
                     }
@@ -214,7 +222,10 @@ async fn handle_call_tool(message: McpMessage, tool_handlers: &McpToolHandlers) 
         }
     };
 
-    let arguments = params.get("arguments").cloned().unwrap_or(serde_json::Value::Null);
+    let arguments = params
+        .get("arguments")
+        .cloned()
+        .unwrap_or(serde_json::Value::Null);
 
     match tool_handlers.handle_tool_call(name, arguments).await {
         Ok(result) => {

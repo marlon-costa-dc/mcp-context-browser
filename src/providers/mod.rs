@@ -16,7 +16,12 @@ pub trait EmbeddingProvider: Send + Sync {
 #[async_trait]
 pub trait VectorStoreProvider: Send + Sync {
     async fn store(&self, collection: &str, embeddings: &[Embedding]) -> Result<()>;
-    async fn search(&self, collection: &str, query: &[f32], limit: usize) -> Result<Vec<(f32, Embedding)>>;
+    async fn search(
+        &self,
+        collection: &str,
+        query: &[f32],
+        limit: usize,
+    ) -> Result<Vec<(f32, Embedding)>>;
     async fn clear(&self, collection: &str) -> Result<()>;
     fn provider_name(&self) -> &str;
 }

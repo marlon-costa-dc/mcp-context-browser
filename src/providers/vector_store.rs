@@ -1,6 +1,6 @@
 //! Vector store provider implementations
 
-use crate::core::{error::{Error, Result}, types::Embedding};
+use crate::core::{error::Result, types::Embedding};
 use crate::providers::VectorStoreProvider;
 use async_trait::async_trait;
 use std::collections::HashMap;
@@ -29,12 +29,17 @@ impl Default for InMemoryVectorStoreProvider {
 impl VectorStoreProvider for InMemoryVectorStoreProvider {
     async fn store(&self, collection: &str, embeddings: &[Embedding]) -> Result<()> {
         let mut collections = self.collections.lock().unwrap();
-        let coll = collections.entry(collection.to_string()).or_insert_with(Vec::new);
+        let coll = collections.entry(collection.to_string()).or_default();
         coll.extend_from_slice(embeddings);
         Ok(())
     }
 
-    async fn search(&self, collection: &str, query: &[f32], limit: usize) -> Result<Vec<(f32, Embedding)>> {
+    async fn search(
+        &self,
+        collection: &str,
+        query: &[f32],
+        limit: usize,
+    ) -> Result<Vec<(f32, Embedding)>> {
         let collections = self.collections.lock().unwrap();
         if let Some(coll) = collections.get(collection) {
             let mut results: Vec<_> = coll

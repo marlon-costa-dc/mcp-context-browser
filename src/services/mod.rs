@@ -3,7 +3,6 @@
 use crate::core::types::{CodeChunk, SearchResult};
 use crate::factory::ServiceProvider;
 use crate::providers::{EmbeddingProvider, VectorStoreProvider};
-use async_trait::async_trait;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -14,9 +13,9 @@ pub struct ContextService {
 }
 
 impl ContextService {
-    pub fn new(service_provider: &ServiceProvider) -> crate::core::error::Result<Self> {
+    pub fn new(_service_provider: &ServiceProvider) -> crate::core::error::Result<Self> {
         // For MVP, use default providers
-        let embedding_config = crate::core::types::EmbeddingConfig {
+        let _embedding_config = crate::core::types::EmbeddingConfig {
             provider: "mock".to_string(),
             model: "mock".to_string(),
             api_key: None,
@@ -25,7 +24,7 @@ impl ContextService {
             max_tokens: Some(512),
         };
 
-        let vector_store_config = crate::core::types::VectorStoreConfig {
+        let _vector_store_config = crate::core::types::VectorStoreConfig {
             provider: "in-memory".to_string(),
             address: None,
             token: None,
@@ -44,29 +43,47 @@ impl ContextService {
         })
     }
 
-    pub async fn embed_text(&self, text: &str) -> crate::core::error::Result<crate::core::types::Embedding> {
+    pub async fn embed_text(
+        &self,
+        text: &str,
+    ) -> crate::core::error::Result<crate::core::types::Embedding> {
         self.embedding_provider.embed(text).await
     }
 
-    pub async fn store_chunks(&self, collection: &str, chunks: &[CodeChunk]) -> crate::core::error::Result<()> {
+    pub async fn store_chunks(
+        &self,
+        collection: &str,
+        chunks: &[CodeChunk],
+    ) -> crate::core::error::Result<()> {
         let texts: Vec<String> = chunks.iter().map(|c| c.content.clone()).collect();
         let embeddings = self.embedding_provider.embed_batch(&texts).await?;
-        self.vector_store_provider.store(collection, &embeddings).await
+        self.vector_store_provider
+            .store(collection, &embeddings)
+            .await
     }
 
-    pub async fn search_similar(&self, collection: &str, query: &str, limit: usize) -> crate::core::error::Result<Vec<SearchResult>> {
+    pub async fn search_similar(
+        &self,
+        collection: &str,
+        query: &str,
+        limit: usize,
+    ) -> crate::core::error::Result<Vec<SearchResult>> {
         let query_embedding = self.embed_text(query).await?;
-        let results = self.vector_store_provider.search(collection, &query_embedding.vector, limit).await?;
+        let results = self
+            .vector_store_provider
+            .search(collection, &query_embedding.vector, limit)
+            .await?;
 
-        let search_results = results.into_iter().map(|(score, _embedding)| {
-            SearchResult {
+        let search_results = results
+            .into_iter()
+            .map(|(score, _embedding)| SearchResult {
                 file_path: "unknown".to_string(),
                 line_number: 0,
                 content: query.to_string(),
                 score,
                 metadata: serde_json::json!({}),
-            }
-        }).collect();
+            })
+            .collect();
 
         Ok(search_results)
     }
@@ -74,6 +91,7 @@ impl ContextService {
 
 /// Indexing service for processing codebases
 pub struct IndexingService {
+    #[allow(dead_code)]
     context_service: Arc<ContextService>,
 }
 
@@ -82,7 +100,11 @@ impl IndexingService {
         Self { context_service }
     }
 
-    pub async fn index_directory(&self, path: &Path, collection: &str) -> crate::core::error::Result<usize> {
+    pub async fn index_directory(
+        &self,
+        _path: &Path,
+        _collection: &str,
+    ) -> crate::core::error::Result<usize> {
         // Simple MVP implementation
         Ok(0)
     }
@@ -98,7 +120,14 @@ impl SearchService {
         Self { context_service }
     }
 
-    pub async fn search(&self, collection: &str, query: &str, limit: usize) -> crate::core::error::Result<Vec<SearchResult>> {
-        self.context_service.search_similar(collection, query, limit).await
+    pub async fn search(
+        &self,
+        collection: &str,
+        query: &str,
+        limit: usize,
+    ) -> crate::core::error::Result<Vec<SearchResult>> {
+        self.context_service
+            .search_similar(collection, query, limit)
+            .await
     }
 }

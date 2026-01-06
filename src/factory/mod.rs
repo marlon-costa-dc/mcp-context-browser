@@ -1,15 +1,26 @@
 //! Factory implementations for creating providers
 
-use crate::core::{error::{Error, Result}, types::{EmbeddingConfig, VectorStoreConfig}};
-use crate::providers::{EmbeddingProvider, VectorStoreProvider, MockEmbeddingProvider, InMemoryVectorStoreProvider};
+use crate::core::{
+    error::{Error, Result},
+    types::{EmbeddingConfig, VectorStoreConfig},
+};
+use crate::providers::{
+    EmbeddingProvider, InMemoryVectorStoreProvider, MockEmbeddingProvider, VectorStoreProvider,
+};
 use async_trait::async_trait;
 use std::sync::Arc;
 
 /// Provider factory trait
 #[async_trait]
 pub trait ProviderFactory: Send + Sync {
-    async fn create_embedding_provider(&self, config: &EmbeddingConfig) -> Result<Arc<dyn EmbeddingProvider>>;
-    async fn create_vector_store_provider(&self, config: &VectorStoreConfig) -> Result<Arc<dyn VectorStoreProvider>>;
+    async fn create_embedding_provider(
+        &self,
+        config: &EmbeddingConfig,
+    ) -> Result<Arc<dyn EmbeddingProvider>>;
+    async fn create_vector_store_provider(
+        &self,
+        config: &VectorStoreConfig,
+    ) -> Result<Arc<dyn VectorStoreProvider>>;
     fn supported_embedding_providers(&self) -> Vec<String>;
     fn supported_vector_store_providers(&self) -> Vec<String>;
 }
@@ -25,17 +36,29 @@ impl DefaultProviderFactory {
 
 #[async_trait]
 impl ProviderFactory for DefaultProviderFactory {
-    async fn create_embedding_provider(&self, config: &EmbeddingConfig) -> Result<Arc<dyn EmbeddingProvider>> {
+    async fn create_embedding_provider(
+        &self,
+        config: &EmbeddingConfig,
+    ) -> Result<Arc<dyn EmbeddingProvider>> {
         match config.provider.as_str() {
             "mock" => Ok(Arc::new(MockEmbeddingProvider::new())),
-            _ => Err(Error::generic(format!("Unsupported embedding provider: {}", config.provider))),
+            _ => Err(Error::generic(format!(
+                "Unsupported embedding provider: {}",
+                config.provider
+            ))),
         }
     }
 
-    async fn create_vector_store_provider(&self, config: &VectorStoreConfig) -> Result<Arc<dyn VectorStoreProvider>> {
+    async fn create_vector_store_provider(
+        &self,
+        config: &VectorStoreConfig,
+    ) -> Result<Arc<dyn VectorStoreProvider>> {
         match config.provider.as_str() {
             "in-memory" => Ok(Arc::new(InMemoryVectorStoreProvider::new())),
-            _ => Err(Error::generic(format!("Unsupported vector store provider: {}", config.provider))),
+            _ => Err(Error::generic(format!(
+                "Unsupported vector store provider: {}",
+                config.provider
+            ))),
         }
     }
 
@@ -68,11 +91,17 @@ impl ServiceProvider {
         }
     }
 
-    pub async fn get_embedding_provider(&self, config: &EmbeddingConfig) -> Result<Arc<dyn EmbeddingProvider>> {
+    pub async fn get_embedding_provider(
+        &self,
+        config: &EmbeddingConfig,
+    ) -> Result<Arc<dyn EmbeddingProvider>> {
         self.factory.create_embedding_provider(config).await
     }
 
-    pub async fn get_vector_store_provider(&self, config: &VectorStoreConfig) -> Result<Arc<dyn VectorStoreProvider>> {
+    pub async fn get_vector_store_provider(
+        &self,
+        config: &VectorStoreConfig,
+    ) -> Result<Arc<dyn VectorStoreProvider>> {
         self.factory.create_vector_store_provider(config).await
     }
 

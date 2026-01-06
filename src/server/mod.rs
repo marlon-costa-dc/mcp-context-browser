@@ -103,18 +103,24 @@ impl McpToolHandlers {
     }
 
     async fn handle_index_codebase(&self, args: serde_json::Value) -> Result<CallToolResponse> {
-        let path = args.get("path")
+        let path = args
+            .get("path")
             .and_then(|v| v.as_str())
             .ok_or_else(|| Error::invalid_argument("Missing path argument"))?;
 
         let path = std::path::Path::new(path);
         let collection = "default";
 
-        match self.indexing_service.index_directory(path, collection).await {
+        match self
+            .indexing_service
+            .index_directory(path, collection)
+            .await
+        {
             Ok(chunk_count) => {
                 let message = format!(
                     "✅ Successfully indexed {} code chunks from '{}'",
-                    chunk_count, path.display()
+                    chunk_count,
+                    path.display()
                 );
 
                 Ok(CallToolResponse {
@@ -134,13 +140,12 @@ impl McpToolHandlers {
     }
 
     async fn handle_search_code(&self, args: serde_json::Value) -> Result<CallToolResponse> {
-        let query = args.get("query")
+        let query = args
+            .get("query")
             .and_then(|v| v.as_str())
             .ok_or_else(|| Error::invalid_argument("Missing query argument"))?;
 
-        let limit = args.get("limit")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(10) as usize;
+        let limit = args.get("limit").and_then(|v| v.as_u64()).unwrap_or(10) as usize;
 
         let collection = "default";
 

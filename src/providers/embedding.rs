@@ -13,6 +13,12 @@ impl MockEmbeddingProvider {
     }
 }
 
+impl Default for MockEmbeddingProvider {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[async_trait]
 impl EmbeddingProvider for MockEmbeddingProvider {
     async fn embed(&self, _text: &str) -> Result<Embedding> {
