@@ -26,51 +26,193 @@
 {% block title %}Dashboard - MCP Context Browser{% endblock %}
 
 {% block content %}
-<div x-data="dashboard()" class="space-y-6">
-    <!-- Header -->
-    <div class="flex justify-between items-center">
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">System Dashboard</h1>
-        <button @click="refresh()" class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
-            <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-            </svg>
-            Refresh
-        </button>
+<div x-data="dashboard()"
+     x-init="init()"
+     class="space-y-8"
+     @keydown.ctrl.r.prevent="refresh()"
+     @visibilitychange.window="handleVisibilityChange()">
+
+    <!-- Header with Advanced Controls -->
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div class="flex items-center space-x-4">
+            <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                System Dashboard
+            </h1>
+            <div class="flex items-center space-x-2" x-show="isOnline" x-transition>
+                <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span class="text-sm text-green-600 font-medium">Live</span>
+            </div>
+            <div class="flex items-center space-x-2" x-show="!isOnline" x-transition>
+                <div class="w-2 h-2 bg-red-500 rounded-full"></div>
+                <span class="text-sm text-red-600 font-medium">Offline</span>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-3">
+            <!-- Auto-refresh toggle -->
+            <div class="flex items-center space-x-2">
+                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Auto-refresh</label>
+                <button @click="autoRefresh = !autoRefresh"
+                        :class="autoRefresh ? 'bg-blue-600' : 'bg-gray-200'"
+                        class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2">
+                    <span :class="autoRefresh ? 'translate-x-5' : 'translate-x-0'"
+                          class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
+                </button>
+            </div>
+
+            <!-- Refresh button with loading state -->
+            <button @click="refresh()"
+                    :disabled="loading"
+                    class="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200">
+                <svg x-show="!loading" class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+                <svg x-show="loading" x-cloak class="animate-spin w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span x-text="loading ? 'Refreshing...' : 'Refresh'"></span>
+            </button>
+        </div>
     </div>
 
-    <!-- Metrics Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {{ metric_card(
-            '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>',
-            'System Status',
-            health.status|title,
-            'Uptime: ' + health.uptime|format_duration + ' • PID: ' + health.pid,
-            'green'
-        ) }}
+    <!-- Metrics Grid with Advanced Animations -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+         x-init="$nextTick(() => $el.classList.add('animate-fade-in'))">
 
-        {{ metric_card(
-            '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>',
-            'Providers',
-            active_providers + ' active',
-            'of ' + total_providers + ' total',
-            'blue'
-        ) }}
+        <!-- System Status Card -->
+        <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-lg rounded-xl border border-gray-200 dark:border-gray-700 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 group"
+             x-data="{ isHovered: false }"
+             @mouseenter="isHovered = true"
+             @mouseleave="isHovered = false">
+            <div class="p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                            <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">System Status</dt>
+                            <dd class="text-2xl font-bold text-gray-900 dark:text-white" x-text="health.status.charAt(0).toUpperCase() + health.status.slice(1)"></dd>
+                            <dd class="text-sm text-gray-500 dark:text-gray-400">
+                                Uptime: <span x-text="formatDuration(health.uptime)"></span> • PID: <span x-text="health.pid"></span>
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+                <div class="mt-4" x-show="isHovered" x-transition>
+                    <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                        <span>Last updated: <span x-text="new Date().toLocaleTimeString()"></span></span>
+                        <button class="text-green-600 hover:text-green-700 font-medium">
+                            View Details →
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-        {{ metric_card(
-            '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"></path>',
-            'Indexes',
-            active_indexes + ' active',
-            total_documents + ' documents',
-            'purple'
-        ) }}
+        <!-- Providers Card -->
+        <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-lg rounded-xl border border-gray-200 dark:border-gray-700 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 group"
+             x-data="{ isHovered: false }"
+             @mouseenter="isHovered = true"
+             @mouseleave="isHovered = false">
+            <div class="p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-12 h-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                            <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Providers</dt>
+                            <dd class="text-2xl font-bold text-gray-900 dark:text-white" x-text="active_providers + ' active'"></dd>
+                            <dd class="text-sm text-gray-500 dark:text-gray-400" x-text="'of ' + total_providers + ' total'"></dd>
+                        </dl>
+                    </div>
+                </div>
+                <div class="mt-4" x-show="isHovered" x-transition>
+                    <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                        <div class="bg-blue-600 h-2 rounded-full transition-all duration-1000"
+                             :style="`width: ${(active_providers / Math.max(total_providers, 1)) * 100}%`"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-        {{ metric_card(
-            '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>',
-            'Performance',
-            cpu_usage + '% CPU',
-            memory_usage + '% Memory',
-            'yellow'
-        ) }}
+        <!-- Indexes Card -->
+        <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-lg rounded-xl border border-gray-200 dark:border-gray-700 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 group"
+             x-data="{ isHovered: false }"
+             @mouseenter="isHovered = true"
+             @mouseleave="isHovered = false">
+            <div class="p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-12 h-12 bg-gradient-to-br from-purple-400 to-purple-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                            <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Indexes</dt>
+                            <dd class="text-2xl font-bold text-gray-900 dark:text-white" x-text="active_indexes + ' active'"></dd>
+                            <dd class="text-sm text-gray-500 dark:text-gray-400" x-text="formatNumber(total_documents) + ' documents'"></dd>
+                        </dl>
+                    </div>
+                </div>
+                <div class="mt-4" x-show="isHovered" x-transition>
+                    <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400">
+                        <span>Documents indexed</span>
+                        <span x-text="formatNumber(total_documents)"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Card -->
+        <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-lg rounded-xl border border-gray-200 dark:border-gray-700 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 group"
+             x-data="{ isHovered: false }"
+             @mouseenter="isHovered = true"
+             @mouseleave="isHovered = false">
+            <div class="p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-12 h-12 bg-gradient-to-br from-yellow-400 to-orange-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                            <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Performance</dt>
+                            <dd class="text-2xl font-bold text-gray-900 dark:text-white" x-text="cpu_usage + '% CPU'"></dd>
+                            <dd class="text-sm text-gray-500 dark:text-gray-400" x-text="memory_usage + '% Memory'"></dd>
+                        </dl>
+                    </div>
+                </div>
+                <div class="mt-4" x-show="isHovered" x-transition>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <div class="text-center">
+                            <div class="font-medium text-gray-900 dark:text-white" x-text="cpu_usage + '%'"></div>
+                            <div class="text-gray-500 dark:text-gray-400">CPU</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="font-medium text-gray-900 dark:text-white" x-text="memory_usage + '%'"></div>
+                            <div class="text-gray-500 dark:text-gray-400">Memory</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Charts -->
@@ -147,18 +289,19 @@ function dashboard() {
 
         async refresh() {
             try {
-                // Fetch metrics from API
-                const response = await fetch('/api/health');
-                const health = await response.json();
+                // Fetch real metrics from API
+                const response = await fetch('/admin/dashboard/metrics');
+                const data = await response.json();
 
-                // Update reactive data
-                this.active_providers = '2'; // Mock data
-                this.total_providers = '3';
-                this.active_indexes = '1';
-                this.total_documents = '1500';
-                this.cpu_usage = '15';
-                this.memory_usage = '45';
-
+                if (data.success) {
+                    // Update reactive data with real values
+                    this.active_providers = data.data.active_providers.toString();
+                    this.total_providers = data.data.total_providers.toString();
+                    this.active_indexes = data.data.active_indexes.toString();
+                    this.total_documents = data.data.total_documents.toString();
+                    this.cpu_usage = data.data.cpu_usage.toFixed(1);
+                    this.memory_usage = data.data.memory_usage.toFixed(1);
+                }
             } catch (error) {
                 console.error('Failed to refresh dashboard:', error);
             }

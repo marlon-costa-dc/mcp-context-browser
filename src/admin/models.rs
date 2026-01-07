@@ -128,9 +128,9 @@ impl<T> ApiResponse<T> {
     }
 }
 
-/// Admin server state
+/// Admin server state with proper dependency injection
 #[derive(Clone)]
 pub struct AdminState {
     pub admin_api: std::sync::Arc<super::AdminApi>,
-    pub mcp_server: std::sync::Arc<crate::server::McpServer>,
+    pub admin_service: std::sync::Arc<dyn super::service::AdminService>,
 }

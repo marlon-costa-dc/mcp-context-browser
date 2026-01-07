@@ -8,8 +8,9 @@ pub mod auth;
 pub mod handlers;
 pub mod models;
 pub mod routes;
+pub mod service;
+pub mod web;
 
-pub use api::AdminApi;
 pub use routes::create_admin_router;
 
 /// Admin API server configuration

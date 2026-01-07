@@ -155,7 +155,6 @@
                                         <template x-if="newProvider.provider_type === 'embedding'">
                                             <option value="openai">OpenAI</option>
                                             <option value="ollama">Ollama</option>
-                                            <option value="mock">Mock (Testing)</option>
                                         </template>
                                         <template x-if="newProvider.provider_type === 'vector_store'">
                                             <option value="milvus">Milvus</option>
@@ -250,24 +249,43 @@ function providers() {
 
                 const data = await response.json();
                 if (data.success) {
-                    this.providers.push(data.data);
+                    // Refresh providers list via HTMX
+                    htmx.trigger('#providers-grid', 'refresh');
                     this.$store.modals.addProvider = false;
-                    this.newProvider = { provider_type: '', name: '', config: {} };
+                    this.resetNewProvider();
                 } else {
-                    alert('Error: ' + data.error);
+                    toast.error(data.error || 'Failed to add provider', 'Provider Error');
                 }
             } catch (error) {
-                alert('Network error: ' + error.message);
+                toast.error('Network error: ' + error.message, 'Connection Error');
             }
         },
 
-        editProvider(provider) {
-            alert('Edit provider: ' + provider.name);
+        resetNewProvider() {
+            this.newProvider = { provider_type: '', name: '', config: {} };
         },
 
-        deleteProvider(provider) {
-            if (confirm(`Are you sure you want to delete ${provider.name}?`)) {
-                alert('Delete provider: ' + provider.name);
+        async editProvider(provider) {
+            toast.warning('Provider editing not yet implemented', 'Feature Pending');
+        },
+
+        async deleteProvider(provider) {
+            if (confirm(`Are you sure you want to delete provider "${provider.name}"? This action cannot be undone.`)) {
+                try {
+                    const response = await fetch(`/admin/providers/${provider.id}`, {
+                        method: 'DELETE'
+                    });
+
+                    const data = await response.json();
+                    if (data.success) {
+                        htmx.trigger('#providers-grid', 'refresh');
+                        toast.success(`Provider "${provider.name}" deleted successfully`, 'Provider Removed');
+                    } else {
+                        toast.error(data.error || 'Failed to delete provider', 'Deletion Failed');
+                    }
+                } catch (error) {
+                    toast.error('Network error: ' + error.message, 'Connection Error');
+                }
             }
         }
     }

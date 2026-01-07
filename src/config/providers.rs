@@ -163,6 +163,10 @@ impl ProviderConfigManager {
                 }
                 true
             }
+            EmbeddingProviderConfig::Mock { .. } | EmbeddingProviderConfig::FastEmbed { .. } => {
+                // Mock and FastEmbed providers are always compatible for basic requirements
+                true
+            }
         }
     }
 }

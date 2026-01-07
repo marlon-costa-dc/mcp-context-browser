@@ -250,6 +250,169 @@ impl ContextService {
     }
 }
 
+/// Generic context service using Strategy pattern with trait bounds
+///
+/// This service uses compile-time generic parameters instead of dynamic dispatch,
+/// implementing the Strategy pattern for better performance and type safety.
+pub struct GenericContextService<E, V>
+where
+    E: EmbeddingProvider + Send + Sync,
+    V: VectorStoreProvider + Send + Sync,
+{
+    embedding_provider: Arc<E>,
+    vector_store_provider: Arc<V>,
+    hybrid_search_engine: Arc<std::sync::RwLock<HybridSearchEngine>>,
+    indexed_documents: Arc<std::sync::RwLock<HashMap<String, Vec<CodeChunk>>>>,
+}
+
+impl<E, V> GenericContextService<E, V>
+where
+    E: EmbeddingProvider + Send + Sync,
+    V: VectorStoreProvider + Send + Sync,
+{
+    /// Create a new generic context service with specified provider strategies
+    pub fn new(
+        embedding_provider: Arc<E>,
+        vector_store_provider: Arc<V>,
+    ) -> Self {
+        let config = HybridSearchConfig::from_env();
+        let hybrid_search_engine = if config.enabled {
+            HybridSearchEngine::new(config.bm25_weight, config.semantic_weight)
+        } else {
+            HybridSearchEngine::new(0.0, 1.0) // Semantic-only fallback
+        };
+
+        Self {
+            embedding_provider,
+            vector_store_provider,
+            hybrid_search_engine: Arc::new(std::sync::RwLock::new(hybrid_search_engine)),
+            indexed_documents: Arc::new(std::sync::RwLock::new(HashMap::new())),
+        }
+    }
+
+    /// Generate embeddings for text using the embedding strategy
+    pub async fn embed_text(&self, text: &str) -> Result<Embedding> {
+        self.embedding_provider.embed(text).await
+    }
+
+    /// Generate embeddings for multiple texts using the embedding strategy
+    pub async fn embed_texts(&self, texts: &[String]) -> Result<Vec<Embedding>> {
+        self.embedding_provider.embed_batch(texts).await
+    }
+
+    /// Search for similar code chunks using hybrid search with both strategies
+    pub async fn search_similar(
+        &self,
+        collection: &str,
+        query: &str,
+        limit: usize,
+    ) -> Result<Vec<SearchResult>> {
+        let query_embedding = self.embedding_provider.embed(query).await?;
+
+        // Get semantic search results using the vector store strategy
+        let expanded_limit = (limit * 2).clamp(20, 100);
+        let semantic_results = self
+            .vector_store_provider
+            .search_similar(collection, &query_embedding.vector, expanded_limit, None)
+            .await?;
+
+        let semantic_search_results: Vec<SearchResult> = semantic_results
+            .into_iter()
+            .map(|result| SearchResult {
+                file_path: result
+                    .metadata
+                    .get("file_path")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("unknown")
+                    .to_string(),
+                line_number: result
+                    .metadata
+                    .get("start_line")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0) as u32,
+                content: result
+                    .metadata
+                    .get("content")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string(),
+                score: result.score,
+                metadata: result.metadata,
+            })
+            .collect();
+
+        // Apply hybrid search if available
+        let hybrid_engine = self.hybrid_search_engine.read().unwrap();
+        if hybrid_engine.has_bm25_index() {
+            let hybrid_results =
+                hybrid_engine.hybrid_search(query, semantic_search_results, limit)?;
+
+            Ok(hybrid_results
+                .into_iter()
+                .map(|hybrid_result| {
+                    let mut result = hybrid_result.result;
+                    result.score = hybrid_result.hybrid_score;
+
+                    let mut new_metadata = serde_json::Map::new();
+                    if let serde_json::Value::Object(existing) = &result.metadata {
+                        new_metadata.extend(existing.clone());
+                    }
+                    new_metadata.insert(
+                        "bm25_score".to_string(),
+                        serde_json::json!(hybrid_result.bm25_score),
+                    );
+                    new_metadata.insert(
+                        "semantic_score".to_string(),
+                        serde_json::json!(hybrid_result.semantic_score),
+                    );
+                    new_metadata.insert(
+                        "hybrid_score".to_string(),
+                        serde_json::json!(hybrid_result.hybrid_score),
+                    );
+                    result.metadata = serde_json::Value::Object(new_metadata);
+
+                    result
+                })
+                .collect())
+        } else {
+            Ok(semantic_search_results.into_iter().take(limit).collect())
+        }
+    }
+
+    /// Get embedding dimensions from the embedding strategy
+    pub fn embedding_dimensions(&self) -> usize {
+        self.embedding_provider.dimensions()
+    }
+
+    /// Get hybrid search statistics
+    pub fn get_hybrid_search_stats(&self) -> HashMap<String, serde_json::Value> {
+        let engine = self.hybrid_search_engine.read().unwrap();
+        let mut stats = HashMap::new();
+
+        stats.insert("hybrid_search_enabled".to_string(), serde_json::json!(true));
+        stats.insert(
+            "bm25_index_available".to_string(),
+            serde_json::json!(engine.has_bm25_index()),
+        );
+
+        if let Some(bm25_stats) = engine.get_bm25_stats() {
+            stats.extend(bm25_stats);
+        }
+
+        let indexed_docs = self.indexed_documents.read().unwrap();
+        stats.insert(
+            "total_collections".to_string(),
+            serde_json::json!(indexed_docs.len()),
+        );
+        stats.insert(
+            "total_indexed_documents".to_string(),
+            serde_json::json!(indexed_docs.values().map(|v| v.len()).sum::<usize>()),
+        );
+
+        stats
+    }
+}
+
 impl Default for ContextService {
     fn default() -> Self {
         // Use mock providers for default

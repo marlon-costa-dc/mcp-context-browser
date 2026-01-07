@@ -251,24 +251,24 @@ impl ConfigValidator {
         let provider_config = match config.provider.to_lowercase().as_str() {
             "milvus" => VectorStoreProviderConfig::Milvus {
                 address: config.address.clone().unwrap_or_default(),
-                database: config.database.clone(),
-                collection: config.collection.clone().unwrap_or_else(|| "default".to_string()),
+                token: config.token.clone(),
+                collection: Some(config.collection.clone().unwrap_or_else(|| "default".to_string())),
                 dimensions: config.dimensions,
             },
             "pinecone" => VectorStoreProviderConfig::Pinecone {
                 api_key: config.token.clone().unwrap_or_default(),
-                environment: config.base_url.clone().unwrap_or_else(|| "us-east-1".to_string()),
+                environment: config.address.clone().unwrap_or_else(|| "us-east-1".to_string()),
                 index_name: config.collection.clone().unwrap_or_default(),
                 dimensions: config.dimensions,
             },
             "qdrant" => VectorStoreProviderConfig::Qdrant {
                 url: config.address.clone().unwrap_or_default(),
-                collection: config.collection.clone().unwrap_or_else(|| "default".to_string()),
-                dimensions: config.dimensions,
                 api_key: config.token.clone(),
+                collection: Some(config.collection.clone().unwrap_or_else(|| "default".to_string())),
+                dimensions: config.dimensions,
             },
             "in-memory" => VectorStoreProviderConfig::InMemory {
-                dimensions: config.dimensions.unwrap_or(1536),
+                dimensions: Some(config.dimensions.unwrap_or(1536)),
             },
             _ => return Err(Error::config(format!("Unknown vector store provider: {}", config.provider))),
         };
@@ -354,15 +354,15 @@ mod tests {
 
         // Valid InMemory config
         let in_memory_config = VectorStoreProviderConfig::InMemory {
-            dimensions: 1536,
+            dimensions: Some(1536),
         };
         assert!(validator.validate_vector_store_provider(&in_memory_config).is_ok());
 
         // Invalid Milvus config (empty address)
         let invalid_milvus = VectorStoreProviderConfig::Milvus {
             address: "".to_string(),
-            database: None,
-            collection: "default".to_string(),
+            token: None,
+            collection: Some("default".to_string()),
             dimensions: Some(1536),
         };
         assert!(validator.validate_vector_store_provider(&invalid_milvus).is_err());

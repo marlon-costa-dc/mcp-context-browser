@@ -4,7 +4,7 @@ use axum::{
     extract::State,
     http::{Request, StatusCode},
     middleware::Next,
-    response::{Json, Response},
+    response::{IntoResponse, Json, Response},
 };
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
@@ -13,7 +13,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use crate::admin::models::{ApiResponse, LoginRequest, LoginResponse, UserInfo};
 
 /// JWT claims structure
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Claims {
     pub sub: String,      // username
     pub role: String,     // user role
@@ -101,23 +101,22 @@ impl AuthService {
 }
 
 /// Authentication middleware
-pub async fn auth_middleware<B>(
-    State(state): State<crate::admin::models::AdminState>,
-    mut req: Request<B>,
-    next: Next<B>,
+pub async fn auth_middleware(
+    State(_state): State<crate::admin::models::AdminState>,
+    req: Request,
+    next: Next,
 ) -> Result<Response, StatusCode> {
     // Extract token from Authorization header
-    let auth_header = req
+        let auth_header = req
         .headers()
         .get("authorization")
-        .and_then(|h| h.to_str().ok())
-        .and_then(|h| h.strip_prefix("Bearer "));
+        .and_then(|h: &str| h.to_str().ok())
+        .and_then(|h: &str| h.strip_prefix("Bearer "));
 
     let token = match auth_header {
         Some(token) => token,
         None => {
-            let response = Json(ApiResponse::<()>::error("Missing authentication token".to_string()));
-            return Ok((StatusCode::UNAUTHORIZED, response).into_response());
+            return Ok((StatusCode::UNAUTHORIZED, "Missing authentication token").into_response());
         }
     };
 
@@ -146,15 +145,14 @@ pub async fn auth_middleware<B>(
         }
     };
 
-    match claims {
+        match claims {
         Ok(claims) => {
             // Add user info to request extensions
             req.extensions_mut().insert(claims);
             Ok(next.run(req).await)
         }
         Err(_) => {
-            let response = Json(ApiResponse::<()>::error("Invalid authentication token".to_string()));
-            Ok((StatusCode::UNAUTHORIZED, response).into_response())
+            Ok((StatusCode::UNAUTHORIZED, "Invalid authentication token").into_response())
         }
     }
 }

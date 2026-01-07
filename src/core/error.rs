@@ -122,3 +122,15 @@ impl From<nix::errno::Errno> for Error {
         Self::Generic(Box::new(std::io::Error::from_raw_os_error(err as i32)))
     }
 }
+
+impl From<String> for Error {
+    fn from(s: String) -> Self {
+        Self::String(s)
+    }
+}
+
+impl From<tera::Error> for Error {
+    fn from(err: tera::Error) -> Self {
+        Self::Generic(Box::new(err))
+    }
+}
