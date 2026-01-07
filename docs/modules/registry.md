@@ -1,16 +1,16 @@
 # registry Module
 
 **Source**: `src/registry/`
-**Files**: 1
-**Lines of Code**: 99
+**Files**: 0
+**Lines of Code**: 
 **Traits**: 0
-**Structs**: 1
+**Structs**: 0
 **Enums**: 0
 **Functions**: 0
 
 ## Overview
 
-Provider registry for dependency injection
+
 
 ## Key Exports
 
@@ -19,9 +19,9 @@ Provider registry for dependency injection
 ## File Structure
 
 ```text
-mod.rs
+
 ```
 
 ---
 
-*Auto-generated from source code on qua 07 jan 2026 11:52:25 -03*
+*Auto-generated from source code on qua 07 jan 2026 15:53:56 -03*

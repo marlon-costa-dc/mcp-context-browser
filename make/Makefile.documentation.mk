@@ -1,74 +1,81 @@
 # =============================================================================
-# DOCUMENTATION - Geração de documentação e gerenciamento ADR
+# DOCUMENTATION - Automação usando ferramentas existentes
 # =============================================================================
 
-.PHONY: docs docs-auto docs-manual module-docs api-docs status-docs sync-docs sync-docs-update rust-docs index-docs adr-new adr-list diagrams
+.PHONY: docs docs-generate docs-validate docs-quality docs-check-adr docs-setup rust-docs adr-new adr-list adr-generate adr-status
 
-# Main documentation generation
-docs: docs-auto docs-manual ## Generate all documentation (auto + manual)
-	@echo "🤖 Generating auto documentation..."
-	@make docs-auto
-	@echo "📝 Generating manual documentation..."
-	@make docs-manual
-	@echo "✅ All documentation generated"
+# Main documentation targets
+docs: docs-generate docs-validate ## Generate and validate all documentation
+	@echo "🤖 Documentation automation completed"
 
-# Auto-generated documentation from source code
-docs-auto: module-docs api-docs status-docs ## Generate automated documentation from source code
-	@echo "📊 Auto-generated docs updated"
+# Generate automated documentation using existing tools
+docs-generate: ## Generate automated documentation from source code
+	@echo "📊 Generating automated documentation..."
+	@./scripts/docs/automation.sh generate
 
-# Manual documentation generation
-docs-manual: diagrams rust-docs index-docs ## Generate manually maintained documentation
-	@echo "📖 Manual docs updated"
+# Validate documentation and ADR compliance
+docs-validate: ## Validate documentation quality and ADR compliance
+	@echo "🔍 Running documentation validation..."
+	@./scripts/docs/automation.sh validate
 
-# Module documentation
-module-docs: ## Generate module documentation from source code
-	@bash scripts/docs/generate-module-docs.sh
+# Quality checks using existing tools
+docs-quality: ## Run quality checks on documentation
+	@echo "✨ Running documentation quality checks..."
+	@./scripts/docs/automation.sh quality
 
-# API reference
-api-docs: ## Generate API reference documentation
-	@bash scripts/docs/generate-module-docs.sh
-	@echo "📋 API reference generated"
+# ADR compliance checking
+docs-check-adr: ## Check ADR compliance and validation
+	@echo "📋 Checking ADR compliance..."
+	@./scripts/docs/automation.sh adr-check
 
-# Implementation status
-status-docs: ## Generate implementation status documentation
-	@bash scripts/docs/generate-module-docs.sh
-	@echo "📊 Implementation status generated"
+# Setup documentation tools
+docs-setup: ## Install and configure all documentation tools
+	@echo "🔧 Setting up documentation tools..."
+	@./scripts/docs/automation.sh setup
+
+# Interactive documentation with mdbook
+docs-book: ## Build interactive documentation with mdbook
+	@echo "📖 Building interactive documentation..."
+	@./scripts/docs/generate-mdbook.sh build
+
+docs-serve: ## Serve interactive documentation with live reload
+	@echo "🌐 Serving interactive documentation..."
+	@./scripts/docs/generate-mdbook.sh serve
+
+# Legacy aliases for backward compatibility
+docs-auto: docs-generate ## Legacy alias for docs-generate
 
 # Documentation synchronization
-sync-docs: ## Check if documentation is synchronized with code
-	@bash scripts/docs/sync-docs.sh
-
-sync-docs-update: ## Check documentation sync and update auto-generated docs
-	@bash scripts/docs/sync-docs.sh --update
+sync-docs: docs-validate ## Check documentation synchronization
+sync-docs-update: docs-generate ## Update auto-generated docs
 
 # Rust documentation
 rust-docs: ## Generate Rust API documentation
 	@echo "🦀 Generating Rust docs..."
 	@cargo doc --no-deps --document-private-items
 
-# Index generation
-index-docs: ## Generate documentation index
-	@echo "📖 Generating docs index..."
-	@bash scripts/docs/generate-index.sh
-
-# ADR management (Architecture Decision Records)
-adr-new: ## Create new ADR using professional adrs tool
+# ADR management using adrs tool
+adr-new: ## Create new ADR using adrs tool
 	@echo "📝 Creating new ADR..."
-	@~/.cargo/bin/adrs new
+	@adrs new
 
-adr-list: ## List ADRs using professional adrs tool
+adr-list: ## List ADRs using adrs tool
 	@echo "📋 ADRs:"
-	@~/.cargo/bin/adrs list
+	@adrs list
 
 adr-generate: ## Generate ADR summary documentation
 	@echo "📊 Generating ADR summary..."
-	@~/.cargo/bin/adrs generate toc > docs/adr/README.md
-	@~/.cargo/bin/adrs generate graph > docs/adr/adr-graph.md
+	@adrs generate toc > docs/adr/README.md
+	@adrs generate graph > docs/adr/adr-graph.md || true
 
 adr-status: ## Show ADR status and lifecycle
 	@echo "📈 ADR Status:"
-	@~/.cargo/bin/adrs list --status
+	@adrs list --status || echo "Status tracking not available in this version of adrs"
 
-# Diagram generation
-diagrams: ## Generate diagrams only
-	@bash scripts/docs/generate-diagrams.sh all
+# Legacy diagram generation (if scripts exist)
+diagrams: ## Generate diagrams (if available)
+	@if [ -f scripts/docs/generate-diagrams.sh ]; then \
+		bash scripts/docs/generate-diagrams.sh all; \
+	else \
+		echo "⚠️  Diagram generation script not found"; \
+	fi

@@ -1,38 +1,32 @@
 # core Module
 
 **Source**: `src/core/`
-**Files**: 12
-**Lines of Code**: 3964
+**Files**: 3
+**Lines of Code**: 242
 **Traits**: 0
-**Structs**: 48
-**Enums**: 10
-**Functions**: 9
+**Structs**: 6
+**Enums**: 2
+**Functions**: 0
 
 ## Overview
 
-Core types and traits for MCP Context Browser
+Core functionality for MCP Context Browser
+//!
+This module contains the core types, error handling, and infrastructure
+components used throughout the application.
 
 ## Key Exports
 
-``
+`error::*,types::*,`
 
 ## File Structure
 
 ```text
-mod.rs
 error.rs
+mod.rs
 types.rs
-merkle.rs
-rate_limit.rs
-http_client.rs
-crypto.rs
-auth.rs
-database.rs
-limits.rs
-cache.rs
-hybrid_search.rs
 ```
 
 ---
 
-*Auto-generated from source code on qua 07 jan 2026 11:52:25 -03*
+*Auto-generated from source code on qua 07 jan 2026 15:53:56 -03*

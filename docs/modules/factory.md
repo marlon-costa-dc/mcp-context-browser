@@ -1,16 +1,16 @@
 # factory Module
 
 **Source**: `src/factory/`
-**Files**: 1
-**Lines of Code**: 194
-**Traits**: 1
-**Structs**: 2
+**Files**: 0
+**Lines of Code**: 
+**Traits**: 0
+**Structs**: 0
 **Enums**: 0
 **Functions**: 0
 
 ## Overview
 
-Factory implementations for creating providers
+
 
 ## Key Exports
 
@@ -19,9 +19,9 @@ Factory implementations for creating providers
 ## File Structure
 
 ```text
-mod.rs
+
 ```
 
 ---
 
-*Auto-generated from source code on qua 07 jan 2026 11:52:25 -03*
+*Auto-generated from source code on qua 07 jan 2026 15:53:56 -03*

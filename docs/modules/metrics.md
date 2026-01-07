@@ -1,32 +1,27 @@
 # metrics Module
 
 **Source**: `src/metrics/`
-**Files**: 4
-**Lines of Code**: 921
+**Files**: 0
+**Lines of Code**: 
 **Traits**: 0
-**Structs**: 15
+**Structs**: 0
 **Enums**: 0
 **Functions**: 0
 
 ## Overview
 
-Basic system metrics collection for MCP Context Browser v0.0.3
-//!
-Simple metrics collection without HTTP server for initial implementation.
+
 
 ## Key Exports
 
-`http_server::MetricsApiServer,performance::PERFORMANCE_METRICS,performance::{CacheMetrics, PerformanceMetrics, QueryPerformanceMetrics},`
+``
 
 ## File Structure
 
 ```text
-mod.rs
-system.rs
-performance.rs
-http_server.rs
+
 ```
 
 ---
 
-*Auto-generated from source code on qua 07 jan 2026 11:52:25 -03*
+*Auto-generated from source code on qua 07 jan 2026 15:53:56 -03*

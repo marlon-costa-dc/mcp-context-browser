@@ -132,6 +132,92 @@ jobs:
       - name: Build documentation
         run: cargo doc --no-deps
 
+  adr-validation:
+    name: ADR Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup ADR Tools
+        run: bash scripts/setup/install-adr-tools.sh
+
+      - name: Validate ADR Compliance
+        run: bash scripts/docs/validate-adrs.sh
+
+      - name: ADR Automation Check
+        run: bash scripts/docs/automation.sh adr-check
+
+  docs-quality:
+    name: Documentation Quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Documentation Tools
+        run: |
+          bash scripts/setup/install-adr-tools.sh
+          cargo install cargo-spellcheck
+          cargo install cargo-deadlinks
+
+      - name: Validate Documentation
+        run: bash scripts/docs/automation.sh validate
+
+      - name: Run Quality Checks
+        run: bash scripts/docs/automation.sh quality
+
+      - name: Check Documentation Links
+        run: bash scripts/docs/validate-links.sh
+
+      - name: Lint Markdown Files
+        run: bash scripts/docs/lint-markdown.sh
+
+  docs-generation:
+    name: Documentation Generation
+    runs-on: ubuntu-latest
+    needs: [lint, build]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Documentation Tools
+        run: |
+          bash scripts/setup/install-adr-tools.sh
+          cargo install cargo-modules 2>/dev/null || echo "cargo-modules not available"
+
+      - name: Generate Documentation
+        run: bash scripts/docs/automation.sh generate
+
+      - name: Generate Module Documentation
+        run: bash scripts/docs/generate-module-docs.sh
+
+      - name: Upload Generated Documentation
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-docs
+          path: docs/
+          retention-days: 30
+
+      - name: Check Documentation Changes
+        run: |
+          if [ -n "$(git status --porcelain docs/)" ]; then
+            echo "📝 Documentation has been updated"
+            echo "::set-output name=docs-changed::true"
+          else
+            echo "✅ Documentation is up to date"
+            echo "::set-output name=docs-changed::false"
+          fi
+        id: check-docs
+
+      - name: Commit Documentation Changes (if any)
+        if: steps.check-docs.outputs.docs-changed == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add docs/
+          git commit -m "docs: auto-generate documentation from source code" || echo "No changes to commit"
+
   # Platform-specific builds for releases
   build-release:
     name: Build Release
@@ -183,28 +269,27 @@ jobs:
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
 
-      - name: Install documentation tools
-        run: |
-          cargo install cargo-modules
-          cargo install cargo-spellcheck
-          cargo install cargo-deadlinks
+      - name: Setup documentation tools
+        run: ./scripts/docs/automation.sh setup
 
       - name: Check documentation generation
         run: cargo doc --no-deps --document-private-items
 
-      - name: Generate module documentation
+      - name: Run documentation validation
+        run: ./scripts/docs/automation.sh validate
+
+      - name: Run quality checks
+        run: ./scripts/docs/automation.sh quality
+
+      - name: Generate automated documentation
+        run: ./scripts/docs/automation.sh generate
+
+      - name: Check for documentation changes
         run: |
-          mkdir -p docs/modules
-          cargo modules generate graph --package mcp-context-browser > docs/modules/dependencies.md || true
-
-      - name: Spell check documentation
-        run: cargo spellcheck --code 0 || true
-
-      - name: Check dead links
-        run: cargo deadlinks --check-http || true
-
-      - name: ADR validation (if framework exists)
-        run: |
-          if [ -f "src/adr_validation.rs" ]; then
-            cargo test adr_compliance --lib || true
+          if [ -n "$(git status --porcelain docs/)" ]; then
+            echo "📝 Documentation files have changed"
+            git status docs/
+            echo "This is expected during development. In production, this should be committed."
+          else
+            echo "✅ Documentation is up to date"
           fi

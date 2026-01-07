@@ -434,18 +434,13 @@ main() {
     # Create output directory
     mkdir -p "$PROJECT_ROOT/docs/modules"
 
-    # Generate docs for each module
-    extract_module_docs "$PROJECT_ROOT/src/core" "core"
-    extract_module_docs "$PROJECT_ROOT/src/providers" "providers"
-    extract_module_docs "$PROJECT_ROOT/src/services" "services"
-    extract_module_docs "$PROJECT_ROOT/src/metrics" "metrics"
-    extract_module_docs "$PROJECT_ROOT/src/daemon" "daemon"
-    extract_module_docs "$PROJECT_ROOT/src/sync" "sync"
-    extract_module_docs "$PROJECT_ROOT/src/chunking" "chunking"
-    extract_module_docs "$PROJECT_ROOT/src/factory" "factory"
-    extract_module_docs "$PROJECT_ROOT/src/registry" "registry"
-    extract_module_docs "$PROJECT_ROOT/src/server" "server"
-    extract_module_docs "$PROJECT_ROOT/src/snapshot" "snapshot"
+    # Generate docs for each module (only if they exist)
+    for module_path in "$PROJECT_ROOT/src"/*; do
+        if [ -d "$module_path" ]; then
+            local module_name=$(basename "$module_path")
+            extract_module_docs "$module_path" "$module_name"
+        fi
+    done
 
     # Generate API reference
     generate_api_reference

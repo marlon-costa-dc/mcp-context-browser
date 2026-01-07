@@ -36,6 +36,7 @@ book/
 
 # Backup files from refactoring
 *.bak
+*.broken
 
 # Development artifacts
 .cargo/

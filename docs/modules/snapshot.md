@@ -1,19 +1,16 @@
 # snapshot Module
 
 **Source**: `src/snapshot/`
-**Files**: 1
-**Lines of Code**: 403
+**Files**: 0
+**Lines of Code**: 
 **Traits**: 0
-**Structs**: 4
+**Structs**: 0
 **Enums**: 0
 **Functions**: 0
 
 ## Overview
 
-Snapshot management for incremental codebase tracking
-//!
-Tracks file changes using SHA256 hashing for efficient incremental sync.
-Avoids reprocessing unchanged files during codebase indexing.
+
 
 ## Key Exports
 
@@ -22,9 +19,9 @@ Avoids reprocessing unchanged files during codebase indexing.
 ## File Structure
 
 ```text
-mod.rs
+
 ```
 
 ---
 
-*Auto-generated from source code on qua 07 jan 2026 11:52:25 -03*
+*Auto-generated from source code on qua 07 jan 2026 15:53:56 -03*
