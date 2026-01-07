@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Embedding vector representation
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct Embedding {
     pub vector: Vec<f32>,
     pub model: String,

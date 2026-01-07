@@ -28,7 +28,7 @@ pub struct ComprehensiveMetrics {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub resource_limits: Option<crate::core::limits::ResourceStats>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub cache: Option<CacheStats>,
+    pub advanced_cache_stats: Option<CacheStats>,
 }
 
 /// Health check response
@@ -202,7 +202,7 @@ impl MetricsApiServer {
             query_performance,
             cache,
             resource_limits,
-            cache: cache_stats,
+            advanced_cache_stats: cache_stats,
         }))
     }
 

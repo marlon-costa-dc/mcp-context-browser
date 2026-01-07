@@ -143,6 +143,13 @@ impl OpenAIEmbeddingProvider {
 
 #[async_trait]
 impl EmbeddingProvider for OpenAIEmbeddingProvider {
+    async fn embed(&self, text: &str) -> Result<Embedding> {
+        let embeddings = self.embed_batch(&[text.to_string()]).await?;
+        embeddings
+            .into_iter()
+            .next()
+            .ok_or_else(|| Error::embedding("No embedding returned".to_string()))
+    }
     async fn embed_batch(&self, texts: &[String]) -> Result<Vec<Embedding>> {
         if texts.is_empty() {
             return Ok(Vec::new());
@@ -160,7 +167,11 @@ impl EmbeddingProvider for OpenAIEmbeddingProvider {
 
                 match cache_result {
                     CacheResult::Hit(embedding_data) => {
-                        cached_embeddings.push((i, Embedding::new(embedding_data)));
+                        cached_embeddings.push((i, Embedding {
+                            vector: embedding_data,
+                            model: self.model.clone(),
+                            dimensions: self.dimensions(),
+                        }));
                     }
                     _ => {
                         uncached_texts.push(text.clone());
@@ -184,7 +195,7 @@ impl EmbeddingProvider for OpenAIEmbeddingProvider {
                 for (i, embedding) in new_embeddings.iter().enumerate() {
                     let text = &uncached_texts[i];
                     let cache_key = self.generate_cache_key(text);
-                    let _ = cache_manager.set("embeddings", &cache_key, embedding.data().clone()).await;
+                    let _ = cache_manager.set("embeddings", &cache_key, embedding.vector.clone()).await;
                 }
             }
         }

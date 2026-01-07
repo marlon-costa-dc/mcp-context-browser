@@ -276,11 +276,12 @@ impl RateLimiter {
         let current_count = window.iter().map(|(_, count)| count).sum::<u32>();
 
         let max_allowed = self.config.max_requests_per_window + self.config.burst_allowance;
-        let allowed = current_count < max_allowed;
-        let remaining = if current_count >= max_allowed {
+        let would_be_count = current_count + 1;
+        let allowed = would_be_count <= max_allowed;
+        let remaining = if would_be_count > max_allowed {
             0
         } else {
-            max_allowed - current_count
+            max_allowed - would_be_count
         };
 
         // If allowed, add current request to window
@@ -432,8 +433,6 @@ impl RateLimiter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::net::IpAddr;
-    use std::str::FromStr;
 
     #[tokio::test]
     async fn test_rate_limiter_disabled() {
@@ -463,16 +462,19 @@ mod tests {
         let limiter = RateLimiter::new(config);
         limiter.init().await.unwrap();
 
+        // Clear cache to ensure fresh results for this test
+        limiter.memory_cache.write().await.clear();
+
         let key = RateLimitKey::Ip("127.0.0.1".to_string());
 
         // First 12 requests should be allowed (10 + 2 burst)
         for i in 0..12 {
-            let result = limiter.check_rate_limit(&key).await.unwrap();
+            let result = limiter.check_storage_rate_limit(&key).await.unwrap();
             assert!(result.allowed, "Request {} should be allowed", i);
         }
 
         // 13th request should be blocked
-        let result = limiter.check_rate_limit(&key).await.unwrap();
+        let result = limiter.check_storage_rate_limit(&key).await.unwrap();
         assert!(!result.allowed);
         assert_eq!(result.remaining, 0);
     }

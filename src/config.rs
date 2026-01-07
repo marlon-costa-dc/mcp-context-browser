@@ -110,6 +110,21 @@ pub enum VectorStoreProviderConfig {
         #[serde(default)]
         dimensions: Option<usize>,
     },
+    #[serde(rename = "filesystem")]
+    Filesystem {
+        #[serde(default)]
+        base_path: Option<String>,
+        #[serde(default)]
+        max_vectors_per_shard: Option<usize>,
+        #[serde(default)]
+        dimensions: Option<usize>,
+        #[serde(default)]
+        compression_enabled: Option<bool>,
+        #[serde(default)]
+        index_cache_size: Option<usize>,
+        #[serde(default)]
+        memory_mapping_enabled: Option<bool>,
+    },
 }
 
 /// Global configuration file structure (similar to ~/.context/.env in Claude Context)
@@ -335,6 +350,15 @@ impl ConfigManager {
                 crate::core::types::VectorStoreConfig {
                     provider: "in-memory".to_string(),
                     address: None,
+                    token: None,
+                    collection: None,
+                    dimensions: *dimensions,
+                }
+            }
+            VectorStoreProviderConfig::Filesystem { base_path, max_vectors_per_shard: _, dimensions, compression_enabled: _, index_cache_size: _, memory_mapping_enabled: _ } => {
+                crate::core::types::VectorStoreConfig {
+                    provider: "filesystem".to_string(),
+                    address: base_path.clone(),
                     token: None,
                     collection: None,
                     dimensions: *dimensions,

@@ -105,6 +105,18 @@ impl ProviderFactory for DefaultProviderFactory {
     ) -> Result<Arc<dyn VectorStoreProvider>> {
         match config.provider.as_str() {
             "in-memory" => Ok(Arc::new(InMemoryVectorStoreProvider::new())),
+            "filesystem" => {
+                use crate::providers::vector_store::filesystem::{FilesystemVectorStore, FilesystemVectorStoreConfig};
+                let base_path = config.address.as_ref()
+                    .map(|p| std::path::PathBuf::from(p))
+                    .unwrap_or_else(|| std::path::PathBuf::from("./data/vectors"));
+                let fs_config = FilesystemVectorStoreConfig {
+                    base_path,
+                    dimensions: config.dimensions.unwrap_or(1536),
+                    ..Default::default()
+                };
+                Ok(Arc::new(FilesystemVectorStore::new(fs_config).await?))
+            }
             "milvus" => {
                 let address = config
                     .address
@@ -132,7 +144,7 @@ impl ProviderFactory for DefaultProviderFactory {
     }
 
     fn supported_vector_store_providers(&self) -> Vec<String> {
-        vec!["in-memory".to_string(), "milvus".to_string()]
+        vec!["in-memory".to_string(), "filesystem".to_string(), "milvus".to_string()]
     }
 }
 

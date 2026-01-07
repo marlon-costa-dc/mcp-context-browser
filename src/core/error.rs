@@ -49,6 +49,12 @@ pub enum Error {
 
     #[error("Internal error: {message}")]
     Internal { message: String },
+
+    #[error("Redis error: {source}")]
+    Redis {
+        #[from]
+        source: redis::RedisError,
+    },
 }
 
 impl Error {

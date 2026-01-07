@@ -1,12 +1,14 @@
 //! Vector store provider implementations
 
 pub mod encrypted;
+pub mod filesystem;
 pub mod in_memory;
 pub mod milvus;
 pub mod null;
 
 // Re-export for convenience
 pub use encrypted::EncryptedVectorStoreProvider;
+pub use filesystem::FilesystemVectorStore;
 pub use in_memory::InMemoryVectorStoreProvider;
 pub use milvus::MilvusVectorStoreProvider;
 pub use null::NullVectorStoreProvider;

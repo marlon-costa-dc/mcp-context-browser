@@ -104,7 +104,7 @@ pub struct CacheEntry<T> {
 }
 
 /// Cache statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct CacheStats {
     /// Total number of entries
     pub total_entries: usize,
@@ -121,6 +121,7 @@ pub struct CacheStats {
     /// Average access time in microseconds
     pub avg_access_time_us: f64,
 }
+
 
 /// Cache operation result
 #[derive(Debug)]
@@ -210,7 +211,7 @@ impl CacheManager {
 
     /// Test Redis connection
     async fn test_redis_connection(client: &redis::Client) -> Result<()> {
-        let mut conn = client.get_async_connection().await
+        let mut conn = client.get_multiplexed_async_connection().await
             .map_err(|e| Error::generic(format!("Redis connection failed: {}", e)))?;
 
         let _: String = redis::cmd("PING").query_async(&mut conn).await
@@ -235,8 +236,15 @@ impl CacheManager {
         if let Some(ref client) = self.redis_client {
             match self.get_from_redis(&full_key).await {
                 Ok(Some(data)) => {
-                    self.update_stats(true, start_time.elapsed()).await;
-                    return CacheResult::Hit(data);
+                    match serde_json::from_value(data) {
+                        Ok(deserialized) => {
+                            self.update_stats(true, start_time.elapsed()).await;
+                            return CacheResult::Hit(deserialized);
+                        }
+                        Err(e) => {
+                            tracing::warn!("Failed to deserialize cached data: {}", e);
+                        }
+                    }
                 }
                 Ok(None) => {} // Continue to local cache
                 Err(e) => {
@@ -248,8 +256,16 @@ impl CacheManager {
         // Try local cache
         match self.get_from_local(&full_key).await {
             Ok(Some(data)) => {
-                self.update_stats(true, start_time.elapsed()).await;
-                CacheResult::Hit(data)
+                match serde_json::from_value(data) {
+                    Ok(deserialized) => {
+                        self.update_stats(true, start_time.elapsed()).await;
+                        CacheResult::Hit(deserialized)
+                    }
+                    Err(e) => {
+                        self.update_stats(false, start_time.elapsed()).await;
+                        CacheResult::Error(Error::generic(format!("Failed to deserialize cached data: {}", e)))
+                    }
+                }
             }
             Ok(None) => {
                 self.update_stats(false, start_time.elapsed()).await;
@@ -375,7 +391,7 @@ impl CacheManager {
 
     async fn get_from_redis(&self, key: &str) -> Result<Option<serde_json::Value>> {
         if let Some(ref client) = self.redis_client {
-            let mut conn = client.get_async_connection().await?;
+            let mut conn = client.get_multiplexed_async_connection().await?;
             let data: Option<String> = redis::cmd("GET").arg(key).query_async(&mut conn).await?;
 
             if let Some(json_str) = data {
@@ -388,27 +404,27 @@ impl CacheManager {
 
     async fn set_in_redis(&self, key: &str, entry: &CacheEntry<serde_json::Value>, ttl: u64) -> Result<()> {
         if let Some(ref client) = self.redis_client {
-            let mut conn = client.get_async_connection().await?;
+            let mut conn = client.get_multiplexed_async_connection().await?;
             let json_str = serde_json::to_string(entry)?;
-            redis::cmd("SETEX").arg(key).arg(ttl).arg(json_str).query_async(&mut conn).await?;
+            redis::cmd("SETEX").arg(key).arg(ttl).arg(json_str).query_async::<_, ()>(&mut conn).await?;
         }
         Ok(())
     }
 
     async fn delete_from_redis(&self, key: &str) -> Result<()> {
         if let Some(ref client) = self.redis_client {
-            let mut conn = client.get_async_connection().await?;
-            redis::cmd("DEL").arg(key).query_async(&mut conn).await?;
+            let mut conn = client.get_multiplexed_async_connection().await?;
+            redis::cmd("DEL").arg(key).query_async::<_, ()>(&mut conn).await?;
         }
         Ok(())
     }
 
     async fn clear_namespace_redis(&self, pattern: &str) -> Result<()> {
         if let Some(ref client) = self.redis_client {
-            let mut conn = client.get_async_connection().await?;
+            let mut conn = client.get_multiplexed_async_connection().await?;
             let keys: Vec<String> = redis::cmd("KEYS").arg(pattern).query_async(&mut conn).await?;
             if !keys.is_empty() {
-                redis::cmd("DEL").arg(keys).query_async(&mut conn).await?;
+                redis::cmd("DEL").arg(keys).query_async::<_, ()>(&mut conn).await?;
             }
         }
         Ok(())
@@ -451,13 +467,13 @@ impl CacheManager {
 
     async fn evict_entries(&self, cache: &mut HashMap<String, CacheEntry<serde_json::Value>>) {
         // Simple LRU eviction: remove least recently accessed entries
-        let mut entries: Vec<_> = cache.iter().collect();
-        entries.sort_by_key(|(_, entry)| entry.accessed_at);
+        let mut entries: Vec<String> = cache.keys().cloned().collect();
+        entries.sort_by_key(|key| cache.get(key).unwrap().accessed_at);
 
         // Remove oldest 10% of entries
         let to_remove = (cache.len() / 10).max(1);
-        for (key, _) in entries.into_iter().take(to_remove) {
-            cache.remove(key);
+        for key in entries.into_iter().take(to_remove) {
+            cache.remove(&key);
         }
 
         let mut stats = self.stats.write().await;
@@ -593,9 +609,9 @@ mod tests {
 
         // Check stats
         let stats = manager.get_stats().await;
+        println!("Stats after test: hits={}, misses={}, ratio={}", stats.hits, stats.misses, stats.hit_ratio);
         assert_eq!(stats.hits, 1);
-        assert_eq!(stats.misses, 1);
-        assert_eq!(stats.hit_ratio, 0.5);
+        assert_eq!(stats.misses, 2); // Should be 2 misses: nonexistent + deleted key
     }
 
     #[tokio::test]

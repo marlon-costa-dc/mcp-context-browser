@@ -1,0 +1,11 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: mcp-context-browser-pdb
+  labels:
+    app: mcp-context-browser
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: mcp-context-browser
