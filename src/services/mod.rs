@@ -5,7 +5,7 @@ pub mod indexing;
 pub mod search;
 
 // Re-export services from their respective modules
-pub use context::{ContextService, GenericContextService};
+pub use context::{ContextService, GenericContextService, RepositoryContextService};
 pub use indexing::IndexingService;
 pub use search::SearchService;
 

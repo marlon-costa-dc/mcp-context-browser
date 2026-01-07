@@ -61,4 +61,6 @@ pub mod vector_store;
 
 // Re-export implementations
 pub use embedding::NullEmbeddingProvider as MockEmbeddingProvider; // Backward compatibility
+pub use embedding::OllamaEmbeddingProvider;
+pub use embedding::OpenAIEmbeddingProvider;
 pub use vector_store::InMemoryVectorStoreProvider;

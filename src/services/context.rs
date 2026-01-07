@@ -1,6 +1,6 @@
 //! Context service for managing embeddings and vector storage
 
-use crate::core::error::Result;
+use crate::core::error::{Error, Result};
 use crate::core::hybrid_search::{HybridSearchConfig, HybridSearchEngine};
 use crate::core::types::{CodeChunk, Embedding, SearchResult};
 use crate::providers::{EmbeddingProvider, VectorStoreProvider};
@@ -13,6 +13,87 @@ pub struct ContextService {
     vector_store_provider: Arc<dyn VectorStoreProvider>,
     hybrid_search_engine: Arc<std::sync::RwLock<HybridSearchEngine>>,
     indexed_documents: Arc<std::sync::RwLock<HashMap<String, Vec<CodeChunk>>>>,
+}
+
+/// Repository-based context service using Repository pattern
+pub struct RepositoryContextService<C, S>
+where
+    C: crate::repository::ChunkRepository + Send + Sync,
+    S: crate::repository::SearchRepository + Send + Sync,
+{
+    chunk_repository: Arc<C>,
+    search_repository: Arc<S>,
+}
+
+impl<C, S> RepositoryContextService<C, S>
+where
+    C: crate::repository::ChunkRepository + Send + Sync,
+    S: crate::repository::SearchRepository + Send + Sync,
+{
+    /// Create a new repository-based context service
+    pub fn new(
+        chunk_repository: Arc<C>,
+        search_repository: Arc<S>,
+    ) -> Self {
+        Self {
+            chunk_repository,
+            search_repository,
+        }
+    }
+
+    /// Generate embeddings for text using repository-based approach
+    pub async fn embed_text(&self, text: &str) -> Result<Embedding> {
+        // Note: This would need access to an embedding provider
+        // For now, this is a placeholder - in practice, the repository
+        // might handle embedding internally or we'd need to inject an embedder
+        Err(Error::not_implemented("Repository-based embedding not implemented"))
+    }
+
+    /// Store code chunks using the chunk repository
+    pub async fn store_chunks(&self, collection: &str, chunks: &[CodeChunk]) -> Result<()> {
+        // Save chunks via repository
+        self.chunk_repository.save_batch(chunks).await?;
+
+        // Index for hybrid search
+        self.search_repository.index_for_hybrid_search(chunks).await?;
+
+        Ok(())
+    }
+
+    /// Search for similar code chunks using repository-based search
+    pub async fn search_similar(
+        &self,
+        collection: &str,
+        query: &str,
+        limit: usize,
+    ) -> Result<Vec<SearchResult>> {
+        // For repository-based search, we need the query vector
+        // This would typically be computed by an embedding service
+        // For now, we'll use a zero vector as placeholder
+        let query_vector = vec![0.0f32; 384]; // Mock dimension
+
+        // Perform hybrid search using the search repository
+        self.search_repository.hybrid_search(collection, query, &query_vector, limit).await
+    }
+
+    /// Clear a collection using repositories
+    pub async fn clear_collection(&self, collection: &str) -> Result<()> {
+        // Clear chunks
+        self.chunk_repository.delete_collection(collection).await?;
+
+        // Clear search index
+        self.search_repository.clear_index(collection).await?;
+
+        Ok(())
+    }
+
+    /// Get repository statistics
+    pub async fn get_repository_stats(&self) -> Result<(crate::repository::RepositoryStats, crate::repository::SearchStats)> {
+        let chunk_stats = self.chunk_repository.stats().await?;
+        let search_stats = self.search_repository.search_stats().await?;
+
+        Ok((chunk_stats, search_stats))
+    }
 }
 
 impl ContextService {

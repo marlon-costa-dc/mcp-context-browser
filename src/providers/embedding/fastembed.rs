@@ -9,10 +9,11 @@ use crate::providers::EmbeddingProvider;
 use async_trait::async_trait;
 use fastembed::{TextEmbedding, InitOptions, EmbeddingModel};
 use std::sync::Arc;
+use tokio::sync::Mutex;
 
 /// FastEmbed local embedding provider
 pub struct FastEmbedProvider {
-    model: Arc<TextEmbedding>,
+    model: Arc<Mutex<TextEmbedding>>,
     model_name: String,
 }
 
@@ -32,14 +33,14 @@ impl FastEmbedProvider {
         let model_name = format!("{:?}", model);
 
         Ok(Self {
-            model: Arc::new(text_embedding),
+            model: Arc::new(Mutex::new(text_embedding)),
             model_name,
         })
     }
 
     /// Create a new FastEmbed provider with custom initialization options
     pub fn with_options(init_options: InitOptions) -> Result<Self> {
-        let model = init_options.model.clone();
+        let model = init_options.model_name.clone();
 
         let text_embedding = TextEmbedding::try_new(init_options)
             .map_err(|e| Error::embedding(format!("Failed to initialize FastEmbed model: {}", e)))?;
@@ -47,7 +48,7 @@ impl FastEmbedProvider {
         let model_name = format!("{:?}", model);
 
         Ok(Self {
-            model: Arc::new(text_embedding),
+            model: Arc::new(Mutex::new(text_embedding)),
             model_name,
         })
     }
@@ -78,15 +79,18 @@ impl EmbeddingProvider for FastEmbedProvider {
         // Convert texts to Vec<&str> for fastembed
         let text_refs: Vec<&str> = texts.iter().map(|s| s.as_str()).collect();
 
+        // Lock the model for exclusive access
+        let mut model = self.model.lock().await;
+
         // Generate embeddings
-        let embeddings_result = self.model.embed(text_refs, None)
+        let embeddings_result = model.embed(text_refs, None)
             .map_err(|e| Error::embedding(format!("FastEmbed embedding failed: {}", e)))?;
 
         // Convert to our Embedding format
         let embeddings = embeddings_result
             .into_iter()
             .map(|vector| Embedding {
-                vector,
+                vector: vector.clone(),
                 model: self.model_name.clone(),
                 dimensions: vector.len(),
             })

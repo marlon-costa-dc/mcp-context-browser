@@ -129,8 +129,8 @@ pub async fn add_provider_handler(
     // In a real implementation, this would register the provider with the MCP server
     // For now, return success with mock data
     let provider_info = ProviderInfo {
-        id: format!("{}-{}", provider_config.provider_type, provider_config.name),
-        name: provider_config.name,
+        id: format!("{}-{}", provider_config.provider_type, provider_config.provider_type),
+        name: provider_config.provider_type.clone(),
         provider_type: provider_config.provider_type,
         status: "pending".to_string(),
         config: provider_config.config,
@@ -224,12 +224,14 @@ pub async fn get_status_handler(
     State(state): State<AdminState>,
 ) -> Result<Json<ApiResponse<serde_json::Value>>, StatusCode> {
     // Get real system information
-    let system_info = state.mcp_server.get_system_info();
+    let system_info = state.admin_service.get_system_info().await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     let providers = state.admin_service.get_providers().await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     let indexing_status = state.admin_service.get_indexing_status().await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let performance = state.mcp_server.get_performance_metrics();
+    let performance = state.admin_service.get_performance_metrics().await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     // Group providers by type
     let mut embedding_providers = Vec::new();

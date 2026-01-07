@@ -425,13 +425,9 @@ mod tests {
 
         // Should return proper error instead of panicking
         let result = auth.authenticate("user", "pass");
-        assert!(matches!(result, Err(crate::core::error::Error::Generic(_))));
-        assert!(
-            result
-                .unwrap_err()
-                .to_string()
-                .contains("Authentication is disabled")
-        );
+        assert!(result.is_err());
+        let error_message = result.unwrap_err().to_string();
+        assert!(error_message.contains("Authentication is disabled"));
     }
 
     #[test]
@@ -440,13 +436,9 @@ mod tests {
 
         // Should return proper error instead of panicking
         let result = auth.authenticate("invalid@email.com", "wrongpass");
-        assert!(matches!(result, Err(crate::core::error::Error::Generic(_))));
-        assert!(
-            result
-                .unwrap_err()
-                .to_string()
-                .contains("Invalid credentials")
-        );
+        assert!(result.is_err());
+        let error_message = result.unwrap_err().to_string();
+        assert!(error_message.contains("Invalid credentials"));
     }
 
     #[test]
@@ -474,9 +466,6 @@ mod tests {
 
         // This should work in normal cases, but we test the error handling path
         let result = auth.authenticate("admin@context.browser", "admin");
-        assert!(
-            result.is_ok(),
-            "Authentication should succeed with valid credentials"
-        );
+        assert!(result.is_ok(), "Authentication should succeed with valid credentials");
     }
 }

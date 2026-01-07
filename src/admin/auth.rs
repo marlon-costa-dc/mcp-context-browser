@@ -102,7 +102,7 @@ impl AuthService {
 
 /// Authentication middleware
 pub async fn auth_middleware(
-    State(_state): State<crate::admin::models::AdminState>,
+    State(state): State<crate::admin::models::AdminState>,
     req: Request,
     next: Next,
 ) -> Result<Response, StatusCode> {
