@@ -6,7 +6,7 @@
 use crate::core::error::{Error, Result};
 use fs2::FileExt;
 use serde::{Deserialize, Serialize};
-use std::fs::{self, File, OpenOptions};
+use std::fs::{self, OpenOptions};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 
@@ -71,7 +71,7 @@ impl CodebaseLockManager {
     /// Returns Some(cleanup_fn) if lock acquired, None if already locked
     pub async fn acquire_lock(
         codebase_path: &Path,
-    ) -> Result<Option<Box<dyn FnOnce() -> Result<()> + Send>>> {
+    ) -> Result<Option<Box<dyn FnOnce() -> Result<()> + Send + '_>>> {
         let lock_dir = Self::ensure_lock_dir()?;
         let lock_name = Self::lock_filename(codebase_path);
         let lock_path = lock_dir.join(format!("{}{}", lock_name, Self::LOCK_EXT));
@@ -82,6 +82,7 @@ impl CodebaseLockManager {
             .read(true)
             .write(true)
             .create(true)
+            .truncate(true)
             .open(&lock_path)
         {
             Ok(file) => file,

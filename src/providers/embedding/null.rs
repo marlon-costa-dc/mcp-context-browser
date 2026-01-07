@@ -35,9 +35,9 @@ impl EmbeddingProvider for NullEmbeddingProvider {
         let embeddings = texts
             .iter()
             .map(|_| Embedding {
-                vector: vec![0.1; 128], // Small fixed dimension for testing
+                vector: vec![0.1; 1], // Small fixed dimension for testing
                 model: "null".to_string(),
-                dimensions: 128,
+                dimensions: 1,
             })
             .collect();
 
@@ -45,7 +45,7 @@ impl EmbeddingProvider for NullEmbeddingProvider {
     }
 
     fn dimensions(&self) -> usize {
-        128
+        1
     }
 
     fn provider_name(&self) -> &str {

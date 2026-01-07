@@ -124,7 +124,7 @@
 
 -   **AST-Based Parsing**: Tree-sitter integration for multiple languages
 -   **Intelligent Chunking**: Context-aware text splitting algorithms
--   **Advanced Embeddings**: VoyageAI, Anthropic integration
+-   **Advanced Embeddings**: OpenAI, Ollama integration
 -   **Performance Optimization**: Query Result caching with LRU eviction
 -   **Multi-Language Support**: Python, JavaScript, TypeScript, Rust, Go
 
@@ -260,7 +260,7 @@ make package        # Create distribution package (tar.gz)
 │   │   └── types.rs             # Data structures (Embedding, CodeChunk, SearchResult)
 │   ├── providers/               # Provider implementations (Provider Pattern)
 │   │   ├── mod.rs               # Provider traits (EmbeddingProvider, VectorStoreProvider)
-│   │   ├── embedding/           # Embedding providers (OpenAI, Ollama, Mock, VoyageAI)
+│   │   ├── embedding/           # Embedding providers (OpenAI, Ollama, Mock)
 │   │   └── vector_store/        # Vector storage (Milvus, InMemory, Null)
 │   ├── services/                # Business logic (SOLID Services)
 │   │   ├── mod.rs               # Service exports

@@ -8,13 +8,25 @@ use async_trait::async_trait;
 /// VoyageAI embedding provider
 pub struct VoyageAIEmbeddingProvider {
     api_key: String,
+    base_url: Option<String>,
     model: String,
 }
 
 impl VoyageAIEmbeddingProvider {
     /// Create a new VoyageAI embedding provider
-    pub fn new(api_key: String, model: String) -> Self {
-        Self { api_key, model }
+    pub fn new(api_key: String, base_url: Option<String>, model: String) -> Self {
+        Self {
+            api_key,
+            base_url,
+            model,
+        }
+    }
+
+    /// Get the effective base URL
+    fn effective_base_url(&self) -> &str {
+        self.base_url
+            .as_deref()
+            .unwrap_or("https://api.voyageai.com/v1")
     }
 }
 
@@ -33,14 +45,16 @@ impl EmbeddingProvider for VoyageAIEmbeddingProvider {
             return Ok(Vec::new());
         }
 
+        // Prepare request payload
         let payload = serde_json::json!({
             "input": texts,
             "model": self.model
         });
 
+        // Make HTTP request to VoyageAI
         let client = reqwest::Client::new();
         let response = client
-            .post("https://api.voyageai.com/v1/embeddings")
+            .post(format!("{}/embeddings", self.effective_base_url()))
             .header("Authorization", format!("Bearer {}", self.api_key))
             .header("Content-Type", "application/json")
             .json(&payload)
@@ -62,6 +76,7 @@ impl EmbeddingProvider for VoyageAIEmbeddingProvider {
             .await
             .map_err(|e| Error::embedding(format!("Failed to parse response: {}", e)))?;
 
+        // Parse embeddings from response
         let data = response_data["data"].as_array().ok_or_else(|| {
             Error::embedding("Invalid response format: missing data array".to_string())
         })?;
@@ -99,7 +114,10 @@ impl EmbeddingProvider for VoyageAIEmbeddingProvider {
     }
 
     fn dimensions(&self) -> usize {
-        1024 // VoyageAI voyage-code-3
+        match self.model.as_str() {
+            "voyage-code-3" => 1024,
+            _ => 1024, // Default for VoyageAI models
+        }
     }
 
     fn provider_name(&self) -> &str {
@@ -115,6 +133,19 @@ impl VoyageAIEmbeddingProvider {
 
     /// Get the maximum tokens supported by this provider
     pub fn max_tokens(&self) -> usize {
-        4096
+        match self.model.as_str() {
+            "voyage-code-3" => 16000,
+            _ => 16000, // Default max tokens
+        }
+    }
+
+    /// Get the API key for this provider
+    pub fn api_key(&self) -> &str {
+        &self.api_key
+    }
+
+    /// Get the base URL for this provider
+    pub fn base_url(&self) -> &str {
+        self.base_url.as_deref().unwrap_or("https://api.voyageai.com/v1")
     }
 }

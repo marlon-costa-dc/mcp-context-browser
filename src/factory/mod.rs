@@ -7,6 +7,7 @@ use crate::core::{
 use crate::providers::{EmbeddingProvider, VectorStoreProvider};
 
 // Import individual providers that exist
+use crate::providers::embedding::gemini::GeminiEmbeddingProvider;
 use crate::providers::embedding::null::NullEmbeddingProvider;
 use crate::providers::embedding::ollama::OllamaEmbeddingProvider;
 use crate::providers::embedding::openai::OpenAIEmbeddingProvider;
@@ -52,19 +53,21 @@ impl ProviderFactory for DefaultProviderFactory {
                     .api_key
                     .as_ref()
                     .ok_or_else(|| Error::config("OpenAI API key required"))?;
-                Ok(Arc::new(OpenAIEmbeddingProvider::new(
+                Ok(Arc::new(OpenAIEmbeddingProvider::with_timeout(
                     api_key.clone(),
                     config.base_url.clone(),
                     config.model.clone(),
-                )))
+                    std::time::Duration::from_secs(30),
+                )?))
             }
-            "ollama" => Ok(Arc::new(OllamaEmbeddingProvider::new(
+            "ollama" => Ok(Arc::new(OllamaEmbeddingProvider::with_timeout(
                 config
                     .base_url
                     .clone()
                     .unwrap_or_else(|| "http://localhost:11434".to_string()),
                 config.model.clone(),
-            ))),
+                std::time::Duration::from_secs(30),
+            )?)),
             "voyageai" => {
                 let api_key = config
                     .api_key
@@ -72,8 +75,21 @@ impl ProviderFactory for DefaultProviderFactory {
                     .ok_or_else(|| Error::config("VoyageAI API key required"))?;
                 Ok(Arc::new(VoyageAIEmbeddingProvider::new(
                     api_key.clone(),
+                    config.base_url.clone(),
                     config.model.clone(),
                 )))
+            }
+            "gemini" => {
+                let api_key = config
+                    .api_key
+                    .as_ref()
+                    .ok_or_else(|| Error::config("Gemini API key required"))?;
+                Ok(Arc::new(GeminiEmbeddingProvider::with_timeout(
+                    api_key.clone(),
+                    config.base_url.clone(),
+                    config.model.clone(),
+                    std::time::Duration::from_secs(30),
+                )?))
             }
             "mock" => Ok(Arc::new(NullEmbeddingProvider::new())),
             _ => Err(Error::config(format!(
@@ -110,6 +126,7 @@ impl ProviderFactory for DefaultProviderFactory {
             "openai".to_string(),
             "ollama".to_string(),
             "voyageai".to_string(),
+            "gemini".to_string(),
             "mock".to_string(),
         ]
     }

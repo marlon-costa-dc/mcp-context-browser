@@ -10,6 +10,11 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
+use crate::core::cache::{get_global_cache_manager, CacheStats};
+use crate::core::rate_limit::RateLimiter;
+use crate::core::limits::ResourceLimits;
+// Rate limiting middleware will be added later
+
 use crate::metrics::{PerformanceMetrics, SystemMetricsCollector};
 
 /// Comprehensive metrics response
@@ -20,6 +25,10 @@ pub struct ComprehensiveMetrics {
     pub memory: crate::metrics::MemoryMetrics,
     pub query_performance: crate::metrics::QueryPerformanceMetrics,
     pub cache: crate::metrics::CacheMetrics,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub resource_limits: Option<crate::core::limits::ResourceStats>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cache: Option<CacheStats>,
 }
 
 /// Health check response
@@ -39,21 +48,54 @@ pub struct MetricsApiServer {
     system_collector: Arc<Mutex<SystemMetricsCollector>>,
     performance_metrics: Arc<Mutex<PerformanceMetrics>>,
     start_time: std::time::Instant,
+    rate_limiter: Option<Arc<RateLimiter>>,
+    resource_limits: Option<Arc<ResourceLimits>>,
 }
 
 impl MetricsApiServer {
     /// Create a new metrics API server
     pub fn new(port: u16) -> Self {
+        Self::with_rate_limiting(port, None)
+    }
+
+    /// Create a new metrics API server with rate limiting
+    pub fn with_rate_limiting(port: u16, rate_limiter: Option<Arc<RateLimiter>>) -> Self {
         Self {
             port,
             system_collector: Arc::new(Mutex::new(SystemMetricsCollector::new())),
             performance_metrics: Arc::new(Mutex::new(PerformanceMetrics::new())),
             start_time: std::time::Instant::now(),
+            rate_limiter,
+            resource_limits: None,
+        }
+    }
+
+    /// Create a new metrics API server with resource limits
+    pub fn with_resource_limits(port: u16, resource_limits: Option<Arc<ResourceLimits>>) -> Self {
+        Self {
+            port,
+            system_collector: Arc::new(Mutex::new(SystemMetricsCollector::new())),
+            performance_metrics: Arc::new(Mutex::new(PerformanceMetrics::new())),
+            start_time: std::time::Instant::now(),
+            rate_limiter: None,
+            resource_limits,
+        }
+    }
+
+    /// Create a new metrics API server with both rate limiting and resource limits
+    pub fn with_limits(port: u16, rate_limiter: Option<Arc<RateLimiter>>, resource_limits: Option<Arc<ResourceLimits>>) -> Self {
+        Self {
+            port,
+            system_collector: Arc::new(Mutex::new(SystemMetricsCollector::new())),
+            performance_metrics: Arc::new(Mutex::new(PerformanceMetrics::new())),
+            start_time: std::time::Instant::now(),
+            rate_limiter,
+            resource_limits,
         }
     }
 
     /// Start the HTTP server
-    pub async fn start(self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn start(self) -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let app = self.create_router();
 
         let addr = format!("0.0.0.0:{}", self.port);
@@ -71,6 +113,8 @@ impl MetricsApiServer {
             system_collector: Arc::clone(&self.system_collector),
             performance_metrics: Arc::clone(&self.performance_metrics),
             start_time: self.start_time,
+            rate_limiter: self.rate_limiter.clone(),
+            resource_limits: self.resource_limits.clone(),
         };
 
         Router::new()
@@ -128,6 +172,26 @@ impl MetricsApiServer {
         let query_performance = performance_metrics.get_query_performance();
         let cache = performance_metrics.get_cache_metrics();
 
+        // Get resource limits stats if available
+        let resource_limits = if let Some(ref limits) = state.resource_limits {
+            match limits.get_stats().await {
+                Ok(stats) => Some(stats),
+                Err(e) => {
+                    tracing::warn!("Failed to collect resource limits stats: {}", e);
+                    None
+                }
+            }
+        } else {
+            None
+        };
+
+        // Get cache stats if available
+        let cache_stats = if let Some(cache_manager) = get_global_cache_manager() {
+            Some(cache_manager.get_stats().await)
+        } else {
+            None
+        };
+
         Ok(Json(ComprehensiveMetrics {
             timestamp: std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -137,6 +201,8 @@ impl MetricsApiServer {
             memory,
             query_performance,
             cache,
+            resource_limits,
+            cache: cache_stats,
         }))
     }
 
@@ -232,4 +298,6 @@ struct MetricsServerState {
     system_collector: Arc<Mutex<SystemMetricsCollector>>,
     performance_metrics: Arc<Mutex<PerformanceMetrics>>,
     start_time: std::time::Instant,
+    rate_limiter: Option<Arc<RateLimiter>>,
+    resource_limits: Option<Arc<ResourceLimits>>,
 }

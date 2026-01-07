@@ -7,7 +7,8 @@ use async_trait::async_trait;
 use std::collections::HashMap;
 use std::sync::Mutex;
 
-/// In-memory vector store provider for development and testing
+/// In-memory vector store provider
+#[allow(clippy::type_complexity)]
 pub struct InMemoryVectorStoreProvider {
     collections: Mutex<HashMap<String, Vec<(Embedding, HashMap<String, serde_json::Value>)>>>,
 }
@@ -56,7 +57,7 @@ impl VectorStoreProvider for InMemoryVectorStoreProvider {
         &self,
         collection: &str,
         vectors: &[Embedding],
-        metadata: Vec<std::collections::HashMap<String, serde_json::Value>>,
+        metadata: Vec<HashMap<String, serde_json::Value>>,
     ) -> Result<Vec<String>> {
         let mut collections = self.collections.lock().unwrap();
         let coll = collections
@@ -64,112 +65,15 @@ impl VectorStoreProvider for InMemoryVectorStoreProvider {
             .ok_or_else(|| Error::vector_db(format!("Collection '{}' not found", collection)))?;
 
         let mut ids = Vec::new();
-        for (vector, meta) in vectors.iter().zip(metadata) {
+        for (_i, (vector, mut meta)) in vectors.iter().zip(metadata).enumerate() {
             let id = format!("{}_{}", collection, coll.len());
+            // Store the generated ID in metadata for deletion
+            meta.insert("generated_id".to_string(), serde_json::json!(id.clone()));
             coll.push((vector.clone(), meta));
             ids.push(id);
         }
 
         Ok(ids)
-    }
-
-    async fn search_similar(
-        &self,
-        collection: &str,
-        query_vector: &[f32],
-        limit: usize,
-        _filter: Option<&str>,
-    ) -> Result<Vec<crate::core::types::SearchResult>> {
-        let collections = self.collections.lock().unwrap();
-        let coll = collections
-            .get(collection)
-            .ok_or_else(|| Error::vector_db(format!("Collection '{}' not found", collection)))?;
-
-        // Simple cosine similarity search
-        let mut results: Vec<_> = coll
-            .iter()
-            .enumerate()
-            .map(|(i, (embedding, metadata))| {
-                let similarity = cosine_similarity(query_vector, &embedding.vector);
-                (similarity, i, embedding, metadata)
-            })
-            .collect();
-
-        results.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
-        results.truncate(limit);
-
-        let search_results = results
-            .into_iter()
-            .map(
-                |(score, _i, embedding, metadata)| crate::core::types::SearchResult {
-                    file_path: metadata
-                        .get("file_path")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("")
-                        .to_string(),
-                    line_number: metadata
-                        .get("start_line")
-                        .and_then(|v| v.as_u64())
-                        .unwrap_or(0) as u32,
-                    content: metadata
-                        .get("content")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("")
-                        .to_string(),
-                    score,
-                    metadata: metadata.clone(),
-                },
-            )
-            .collect();
-
-        Ok(search_results)
-    }
-
-    async fn delete_vectors(&self, _collection: &str, _ids: &[String]) -> Result<()> {
-        // Simple implementation for in-memory provider
-        Ok(())
-    }
-
-    async fn get_stats(
-        &self,
-        collection: &str,
-    ) -> Result<std::collections::HashMap<String, serde_json::Value>> {
-        let collections = self.collections.lock().unwrap();
-        let count = collections
-            .get(collection)
-            .map(|coll| coll.len())
-            .unwrap_or(0);
-
-        let mut stats = std::collections::HashMap::new();
-        stats.insert("count".to_string(), serde_json::json!(count));
-        Ok(stats)
-    }
-
-    async fn flush(&self, _collection: &str) -> Result<()> {
-        // In-memory, no-op
-        Ok(())
-    }
-
-    fn provider_name(&self) -> &str {
-        "in-memory"
-    }
-}
-
-// Additional utility methods
-impl InMemoryVectorStoreProvider {
-    /// Check if collection exists (synchronous version)
-    pub fn collection_exists_sync(&self, name: &str) -> bool {
-        let collections = self.collections.lock().unwrap();
-        collections.contains_key(name)
-    }
-
-    /// Get collection statistics (synchronous version)
-    pub fn get_stats_sync(&self, collection: &str) -> usize {
-        let collections = self.collections.lock().unwrap();
-        collections
-            .get(collection)
-            .map(|coll| coll.len())
-            .unwrap_or(0)
     }
 
     async fn search_similar(
@@ -199,14 +103,14 @@ impl InMemoryVectorStoreProvider {
 
         let search_results = results
             .into_iter()
-            .map(|(score, _i, embedding, metadata)| SearchResult {
+            .map(|(score, _i, _embedding, metadata)| SearchResult {
                 file_path: metadata
                     .get("file_path")
                     .and_then(|v| v.as_str())
                     .unwrap_or("")
                     .to_string(),
                 line_number: metadata
-                    .get("start_line")
+                    .get("line_number")
                     .and_then(|v| v.as_u64())
                     .unwrap_or(0) as u32,
                 content: metadata
@@ -215,15 +119,24 @@ impl InMemoryVectorStoreProvider {
                     .unwrap_or("")
                     .to_string(),
                 score,
-                metadata: metadata.clone(),
+                metadata: serde_json::to_value(metadata).unwrap_or(serde_json::json!({})),
             })
             .collect();
 
         Ok(search_results)
     }
 
-    async fn delete_vectors(&self, _collection: &str, _ids: &[String]) -> Result<()> {
-        // Simple implementation for in-memory provider
+    async fn delete_vectors(&self, collection: &str, ids: &[String]) -> Result<()> {
+        let mut collections = self.collections.lock().unwrap();
+        let coll = collections
+            .get_mut(collection)
+            .ok_or_else(|| Error::vector_db(format!("Collection '{}' not found", collection)))?;
+
+        // Remove vectors by their generated IDs
+        coll.retain(|(_embedding, metadata)| {
+            let generated_id = metadata.get("generated_id").and_then(|v| v.as_str()).unwrap_or("");
+            !ids.contains(&generated_id.to_string())
+        });
         Ok(())
     }
 
@@ -231,21 +144,24 @@ impl InMemoryVectorStoreProvider {
         let collections = self.collections.lock().unwrap();
         let count = collections
             .get(collection)
-            .map(|coll| coll.len())
+            .map(|data| data.len())
             .unwrap_or(0);
 
         let mut stats = HashMap::new();
-        stats.insert("count".to_string(), serde_json::json!(count));
+        stats.insert("collection".to_string(), serde_json::json!(collection));
+        stats.insert("status".to_string(), serde_json::json!("active"));
+        stats.insert("vectors_count".to_string(), serde_json::json!(count));
+        stats.insert("provider".to_string(), serde_json::json!(self.provider_name()));
         Ok(stats)
     }
 
     async fn flush(&self, _collection: &str) -> Result<()> {
-        // In-memory, no-op
+        // No-op for in-memory store
         Ok(())
     }
 
     fn provider_name(&self) -> &str {
-        "in-memory"
+        "in_memory"
     }
 }
 
@@ -259,27 +175,5 @@ fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
         0.0
     } else {
         dot_product / (norm_a * norm_b)
-    }
-}
-
-impl InMemoryVectorStoreProvider {
-    /// Create a new collection
-    pub async fn create_collection(&self, name: &str, _dimensions: usize) -> Result<()> {
-        let mut collections = self.collections.lock().unwrap();
-        if collections.contains_key(name) {
-            return Err(Error::vector_db(format!(
-                "Collection '{}' already exists",
-                name
-            )));
-        }
-        collections.insert(name.to_string(), Vec::new());
-        Ok(())
-    }
-
-    /// Delete a collection
-    pub async fn delete_collection(&self, name: &str) -> Result<()> {
-        let mut collections = self.collections.lock().unwrap();
-        collections.remove(name);
-        Ok(())
     }
 }

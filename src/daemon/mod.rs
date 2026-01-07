@@ -5,15 +5,19 @@
 //! - Sync activity monitoring and reporting
 //! - Background health checks
 
+pub use crate::sync::lockfile::{CodebaseLockManager, LockMetadata};
+pub use crate::sync::manager::{SyncConfig, SyncManager, SyncStats};
+
+// DaemonConfig is defined in this module
+
 use crate::core::error::{Error, Result};
-use crate::sync::lockfile::CodebaseLockManager;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
 use tokio::time;
 
 /// Background daemon configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct DaemonConfig {
     /// Lock cleanup interval in seconds (default: 30)
     pub cleanup_interval_secs: u64,
@@ -149,10 +153,11 @@ impl ContextDaemon {
         let monitoring_handle = {
             let stats = Arc::clone(&self.stats);
             let running = Arc::clone(&self.running);
+            let config = self.config.clone();
 
             tokio::spawn(async move {
                 let mut interval =
-                    time::interval(Duration::from_secs(self.config.monitoring_interval_secs));
+                    time::interval(Duration::from_secs(config.monitoring_interval_secs));
 
                 loop {
                     interval.tick().await;
@@ -197,7 +202,7 @@ impl ContextDaemon {
     }
 
     /// Run a single cleanup cycle
-    async fn run_cleanup_cycle(stats: &Arc<Mutex<DaemonStats>>, max_age_secs: u64) -> Result<()> {
+    async fn run_cleanup_cycle(stats: &Arc<Mutex<DaemonStats>>, _max_age_secs: u64) -> Result<()> {
         let cleaned = CodebaseLockManager::cleanup_stale_locks().await?;
 
         let mut stats = stats.lock().await;
@@ -264,7 +269,6 @@ impl Default for ContextDaemon {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::time::Duration;
 
     #[test]
     fn test_daemon_config_default() {

@@ -152,5 +152,8 @@
   },
   "MD055": true,
   "MD056": true,
-  "MD057": true
+  "MD057": true,
+  "MD060": {
+    "style": "default"
+  }
 }

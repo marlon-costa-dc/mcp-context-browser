@@ -4,9 +4,8 @@ use mcp_context_browser::metrics::{CpuMetrics, MemoryMetrics, SystemMetricsColle
 
 #[test]
 fn test_system_metrics_collector_creation() {
-    let collector = SystemMetricsCollector::new();
+    let _collector = SystemMetricsCollector::new();
     // Test passes if no panic occurs during creation
-    assert!(true);
 }
 
 #[test]

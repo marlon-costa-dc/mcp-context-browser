@@ -8,18 +8,16 @@
 
 **Model Context Protocol Server** - Provides semantic code search and analysis capabilities to AI assistants through a standardized MCP interface.
 
-
 ## 🎯 Current Capabilities (v0.0.3)
 
 ### 🏆 Features
-
 
 -   **🧠 Semantic Code Search**: Hybrid BM25 + vector search using natural language queries
 -   **🔄 Incremental Sync**: Automatic background synchronization with change detection
 -   **💾 Persistent State**: Professional snapshot management with Keyv storage
 -   **🎯 Advanced Indexing**: AST-based code chunking with custom extensions and ignore patterns
 -   **🔒 Concurrency Control**: p-queue coordination with async-Mutex and file locks
--   **🔧 Multi-Provider Support**: OpenAI, VoyageAI, Gemini, Ollama embeddings + Milvus vector storage
+-   **🔧 Multi-Provider Support**: OpenAI, Ollama embeddings + Milvus vector storage
 -   **⚙️ Advanced Configuration**: convict.js schema validation with environment variables
 -   **📊 Professional Monitoring**: Comprehensive status tracking and error recovery
 
@@ -41,7 +39,7 @@
 
 ## 📋 Documentation
 
--   [**CLAUDE.md**](CLAUDE.md) - Development guide and project rules
+-   [**Claude.md**](CLAUDE.md) - Development guide and project rules
 -   [**ARCHITECTURE.md**](ARCHITECTURE.md) - Technical architecture and design
 -   [**ROADMAP.md**](ROADMAP.md) - Development roadmap and milestones
 -   [**DEPLOYMENT.md**](DEPLOYMENT.md) - Deployment guides and configurations
@@ -85,6 +83,44 @@ make audit          # Security audit
 make fix            # Auto-fix formatting and markdown issues
 ```
 
+### Docker Integration Testing 🐳
+
+The project includes comprehensive Docker-based integration tests that validate real provider implementations:
+
+```bash
+# Start Docker test services (OpenAI mock, Ollama, Milvus)
+make docker-up
+
+# Check service status
+make docker-status
+
+# Run integration tests with real containers
+make test-integration-docker
+
+# Run full test cycle (up -> test -> down)
+make test-docker-full
+
+# Stop and cleanup Docker services
+make docker-down
+
+# View service logs
+make docker-logs
+```
+
+**Test Services:**
+
+-   **OpenAI Mock**: HTTP mock server simulating OpenAI API responses
+-   **Ollama**: Real Ollama instance with `nomic-embed-text` model for embeddings
+-   **Milvus**: Complete Milvus vector database for production-like testing
+
+**Integration Test Coverage:**
+
+-   ✅ OpenAI mock API embedding generation
+-   ✅ Ollama real embedding generation and batch processing
+-   ✅ Milvus collection creation, vector insertion, and similarity search
+-   ✅ Full pipeline testing (embedding → vector storage → search)
+-   ✅ Error handling and provider validation
+
 ### Test Structure
 
 -   **Core Types**: Data structure validation and serialization (18 tests)
@@ -103,7 +139,7 @@ make fix            # Auto-fix formatting and markdown issues
 | **clear_index** | ✅ Complete | Professional cleanup and state management |
 | **get_indexing_status** | ✅ Complete | Real-time status with change detection |
 | **Incremental Sync** | ✅ Complete | Background cron jobs, change detection |
-| **Multi-Provider Support** | ✅ Complete | OpenAI, VoyageAI, Gemini, Ollama, Milvus |
+| **Multi-Provider Support** | ✅ Complete | OpenAI, Ollama, Milvus |
 | **Configuration System** | ✅ Complete | convict.js validation, environment variables |
 | **Snapshot Management** | ✅ Complete | Keyv persistence, state recovery |
 | **Concurrency Control** | ✅ Complete | p-queue, async-Mutex, file locks |

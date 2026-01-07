@@ -5,7 +5,7 @@
 //! - Configurable sync intervals
 //! - Debouncing to prevent excessive syncs
 
-use crate::core::error::{Error, Result};
+use crate::core::error::Result;
 use crate::sync::lockfile::CodebaseLockManager;
 use std::collections::HashMap;
 use std::path::Path;
@@ -14,7 +14,7 @@ use std::time::{Duration, Instant};
 use tokio::sync::Mutex;
 
 /// Synchronization configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct SyncConfig {
     /// Sync interval in milliseconds (default: 15 minutes)
     pub interval_ms: u64,
@@ -68,6 +68,12 @@ pub struct SyncManager {
     stats: Arc<Mutex<SyncStats>>,
 }
 
+impl Default for SyncManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SyncManager {
     /// Create a new sync manager with default config
     pub fn new() -> Self {
@@ -92,7 +98,7 @@ impl SyncManager {
     /// Check if codebase should be debounced (synced too recently)
     pub async fn should_debounce(&self, codebase_path: &Path) -> Result<bool> {
         let path_key = codebase_path.to_string_lossy().to_string();
-        let mut last_sync_times = self.last_sync_times.lock().await;
+        let last_sync_times = self.last_sync_times.lock().await;
 
         if let Some(last_sync) = last_sync_times.get(&path_key) {
             let elapsed = last_sync.elapsed();

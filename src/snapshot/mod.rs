@@ -70,6 +70,7 @@ impl SnapshotManager {
         self.walk_directory(root_path, root_path, &mut files, &mut total_size)
             .await?;
 
+        let file_count = files.len();
         let snapshot = CodebaseSnapshot {
             root_path: root_path_str,
             created_at: SystemTime::now()
@@ -77,7 +78,7 @@ impl SnapshotManager {
                 .unwrap_or_default()
                 .as_secs(),
             files,
-            file_count: files.len(),
+            file_count,
             total_size,
         };
 

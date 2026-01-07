@@ -477,7 +477,6 @@ pub trait EmbeddingProvider: Send + Sync {
 | **OpenAI** | text-embedding-3-small | 1536 | Pay-per-token | ✅ Production |
 | **Ollama** | nomic-embed-text | 768 | Self-hosted | ✅ Production |
 | **Anthropic** | N/A | N/A | Pay-per-token | 🚧 Planned |
-| **VoyageAI** | voyage-2 | 1024 | Pay-per-token | 🚧 Planned |
 | **Mock** | Fixed vectors | 128 | Free | ✅ Development |
 
 ##### Vector Store Providers

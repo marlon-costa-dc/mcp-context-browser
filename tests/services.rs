@@ -127,7 +127,6 @@ mod tests {
         let _indexing_service = IndexingService::new(context_service);
 
         // Just verify it can be created
-        assert!(true); // If we reach here, creation was successful
     }
 
     #[tokio::test]
@@ -170,7 +169,6 @@ mod tests {
         let _search_service = SearchService::new(context_service);
 
         // Just verify it can be created
-        assert!(true);
     }
 
     #[tokio::test]
@@ -229,7 +227,7 @@ mod tests {
         let service_provider = create_test_service_provider();
         let service = ContextService::new(&service_provider).unwrap();
 
-        let _texts = vec![
+          let _texts = [
             "fn main() {}".to_string(),
             "struct Test {}".to_string(),
             "let x = 42;".to_string(),

@@ -9,7 +9,7 @@ use std::time::{Duration, Instant};
 
 /// Global performance metrics instance
 pub static PERFORMANCE_METRICS: once_cell::sync::Lazy<Mutex<PerformanceMetrics>> =
-    once_cell::sync::Lazy::new(|| Mutex::new(PerformanceMetrics::new(1000)));
+    once_cell::sync::Lazy::new(|| Mutex::new(PerformanceMetrics::new()));
 
 /// Query performance metrics
 #[derive(Debug, Clone, Serialize, Deserialize)]

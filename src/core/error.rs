@@ -20,8 +20,17 @@ pub enum Error {
         source: serde_json::Error,
     },
 
-    #[error("Generic error: {message}")]
-    Generic { message: String },
+    #[error("Generic error: {0}")]
+    Generic(#[from] Box<dyn std::error::Error + Send + Sync>),
+
+    #[error("UTF-8 encoding error: {0}")]
+    Utf8(#[from] std::string::FromUtf8Error),
+
+    #[error("Base64 decode error: {0}")]
+    Base64(#[from] base64::DecodeError),
+
+    #[error("String error: {0}")]
+    String(String),
 
     #[error("Not found: {resource}")]
     NotFound { resource: String },
@@ -34,14 +43,18 @@ pub enum Error {
 
     #[error("Embedding provider error: {message}")]
     Embedding { message: String },
+
+    #[error("Configuration error: {message}")]
+    Config { message: String },
+
+    #[error("Internal error: {message}")]
+    Internal { message: String },
 }
 
 impl Error {
     /// Create a generic error
     pub fn generic<S: Into<String>>(message: S) -> Self {
-        Self::Generic {
-            message: message.into(),
-        }
+        Self::Generic(message.into().into())
     }
 
     /// Create a not found error
@@ -70,5 +83,36 @@ impl Error {
         Self::Embedding {
             message: message.into(),
         }
+    }
+
+    /// Create an I/O error
+    pub fn io<S: Into<String>>(message: S) -> Self {
+        Self::Generic(message.into().into())
+    }
+
+    /// Create a configuration error
+    pub fn config<S: Into<String>>(message: S) -> Self {
+        Self::Config {
+            message: message.into(),
+        }
+    }
+
+    /// Create an internal error
+    pub fn internal<S: Into<String>>(message: S) -> Self {
+        Self::Internal {
+            message: message.into(),
+        }
+    }
+}
+
+impl From<&str> for Error {
+    fn from(s: &str) -> Self {
+        Self::String(s.to_string())
+    }
+}
+
+impl From<nix::errno::Errno> for Error {
+    fn from(err: nix::errno::Errno) -> Self {
+        Self::Generic(Box::new(std::io::Error::from_raw_os_error(err as i32)))
     }
 }

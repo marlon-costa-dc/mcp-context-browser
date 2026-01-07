@@ -49,3 +49,36 @@ dev-cycle: fix test-quiet ## Development iteration: fix + test
 dev-ready: dev-cycle quality ## Development ready: iteration + quality
 
 dev-deploy: dev-ready version-all github-release ## Development deploy: ready + version + release
+
+# Docker-based integration testing
+docker-up: ## Start Docker test services (OpenAI mock, Ollama, Milvus)
+	@echo "🚀 Starting Docker test services..."
+	@docker-compose up -d
+	@echo "⏳ Waiting for services to be ready..."
+	@sleep 30
+	@echo "✅ Docker services are ready"
+
+docker-down: ## Stop Docker test services
+	@echo "🛑 Stopping Docker test services..."
+	@docker-compose down -v
+
+docker-logs: ## Show Docker test services logs
+	@docker-compose logs -f
+
+test-integration-docker: ## Run integration tests with Docker containers
+	@echo "🧪 Running integration tests with Docker containers..."
+	@OPENAI_BASE_URL=http://localhost:1080 \
+	OLLAMA_BASE_URL=http://localhost:11434 \
+	MILVUS_ADDRESS=http://localhost:19530 \
+	cargo test --test integration_docker -- --nocapture
+
+test-docker-full: docker-up test-integration-docker docker-down ## Run full Docker test cycle (up -> test -> down)
+
+docker-status: ## Check status of Docker test services
+	@echo "🔍 Checking Docker services status..."
+	@docker-compose ps
+	@echo ""
+	@echo "🔗 Service endpoints:"
+	@echo "  OpenAI Mock: http://localhost:1080"
+	@echo "  Ollama: http://localhost:11434"
+	@echo "  Milvus: http://localhost:19530"

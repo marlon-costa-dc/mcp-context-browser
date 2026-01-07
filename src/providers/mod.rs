@@ -10,6 +10,13 @@ pub trait EmbeddingProvider: Send + Sync {
     async fn embed_batch(&self, texts: &[String]) -> Result<Vec<Embedding>>;
     fn dimensions(&self) -> usize;
     fn provider_name(&self) -> &str;
+
+    /// Health check for the provider (default implementation provided)
+    async fn health_check(&self) -> Result<()> {
+        // Default implementation - try a simple embed operation
+        self.embed("health check").await?;
+        Ok(())
+    }
 }
 
 /// Vector store provider trait
@@ -31,18 +38,26 @@ pub trait VectorStoreProvider: Send + Sync {
         limit: usize,
         filter: Option<&str>,
     ) -> Result<Vec<crate::core::types::SearchResult>>;
-    async fn delete_vectors(&self, collection: &[String], ids: &[String]) -> Result<()>;
+    async fn delete_vectors(&self, collection: &str, ids: &[String]) -> Result<()>;
     async fn get_stats(
         &self,
         collection: &str,
     ) -> Result<std::collections::HashMap<String, serde_json::Value>>;
     async fn flush(&self, collection: &str) -> Result<()>;
     fn provider_name(&self) -> &str;
+
+    /// Health check for the provider (default implementation)
+    async fn health_check(&self) -> Result<()> {
+        // Default implementation - try a simple operation
+        self.collection_exists("__health_check__").await?;
+        Ok(())
+    }
 }
 
 // Submodules
 pub mod embedding;
 pub mod vector_store;
+pub mod routing;
 
 // Re-export implementations
 pub use embedding::NullEmbeddingProvider as MockEmbeddingProvider; // Backward compatibility

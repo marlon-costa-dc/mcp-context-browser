@@ -176,7 +176,6 @@ This roadmap outlines the incremental development of MCP Context Browser, focusi
 
 -   [ ] Pinecone vector database integration
 -   [ ] Anthropic Claude embeddings
--   [ ] VoyageAI embeddings
 -   [ ] Provider management CLI/API
 -   [ ] Cost tracking and alerts
 -   [ ] Automatic provider failover

@@ -1,0 +1,142 @@
+version: '3.8'
+
+services:
+  # OpenAI API Mock Server
+  openai-mock:
+    image: mockserver/mockserver:5.15.0
+    container_name: mcp-openai-mock
+    ports:
+      - "1080:1080"
+    environment:
+      MOCKSERVER_INITIALIZATION_JSON_PATH: /config/mockserver-initializer.json
+      MOCKSERVER_LOG_LEVEL: INFO
+    volumes:
+      - ./tests/docker/mockserver-initializer.json:/config/mockserver-initializer.json:ro
+    networks:
+      - mcp-test
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:1080/mockserver/status"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Ollama for embeddings
+  ollama:
+    image: ollama/ollama:latest
+    container_name: mcp-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+      - ./tests/docker/init-ollama.sh:/init-ollama.sh:ro
+    networks:
+      - mcp-test
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    healthcheck:
+      test: ["CMD", "ollama", "list", "|", "grep", "nomic-embed-text"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+    command: ["sh", "-c", "serve & /init-ollama.sh && wait"]
+
+  # Milvus vector database
+  milvus-etcd:
+    container_name: mcp-milvus-etcd
+    image: quay.io/coreos/etcd:v3.5.5
+    environment:
+      - ETCD_AUTO_COMPACTION_MODE=revision
+      - ETCD_AUTO_COMPACTION_RETENTION=1000
+      - ETCD_QUOTA_BACKEND_BYTES=4294967296
+      - ETCD_SNAPSHOT_COUNT=50000
+    volumes:
+      - milvus_etcd:/etcd
+    command: etcd -advertise-client-urls=http://127.0.0.1:2379 -listen-client-urls http://0.0.0.0:2379 --data-dir /etcd
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - mcp-test
+
+  milvus-minio:
+    container_name: mcp-milvus-minio
+    image: minio/minio:RELEASE.2023-03-20T20-16-18Z
+    environment:
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+    ports:
+      - "9001:9001"
+      - "9000:9000"
+    volumes:
+      - milvus_minio:/minio_data
+    command: minio server /minio_data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - mcp-test
+
+  milvus-standalone:
+    container_name: mcp-milvus-standalone
+    image: milvusdb/milvus:v2.3.0
+    command: ["milvus", "run", "standalone"]
+    environment:
+      ETCD_ENDPOINTS: mcp-milvus-etcd:2379
+      MINIO_ADDRESS: mcp-milvus-minio:9000
+    volumes:
+      - milvus_standalone:/var/lib/milvus
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
+      interval: 30s
+      start_period: 90s
+      timeout: 20s
+      retries: 3
+    ports:
+      - "19530:19530"
+      - "9091:9091"
+    depends_on:
+      - milvus-etcd
+      - milvus-minio
+    networks:
+      - mcp-test
+
+  # Test runner
+  test-runner:
+    build:
+      context: .
+      dockerfile: tests/docker/Dockerfile.test
+    container_name: mcp-test-runner
+    environment:
+      - OPENAI_BASE_URL=http://mcp-openai-mock:1080
+      - OLLAMA_BASE_URL=http://mcp-ollama:11434
+      - MILVUS_ADDRESS=http://mcp-milvus-standalone:19530
+      - RUST_BACKTRACE=1
+    volumes:
+      - .:/app
+      - cargo_cache:/usr/local/cargo/registry
+    working_dir: /app
+    depends_on:
+      openai-mock:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+      milvus-standalone:
+        condition: service_healthy
+    networks:
+      - mcp-test
+    command: ["make", "test-integration-docker"]
+
+volumes:
+  ollama_data:
+  milvus_etcd:
+  milvus_minio:
+  milvus_standalone:
+  cargo_cache:
+
+networks:
+  mcp-test:
+    driver: bridge

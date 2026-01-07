@@ -450,7 +450,7 @@ This release represents months of architectural design and prototyping. Special 
 
 ### [0.1.0] - Planned
 
--   Real embedding providers (OpenAI, VoyageAI, Ollama)
+-   Real embedding providers (OpenAI, Ollama)
 -   Persistent vector stores (Milvus, Pinecone)
 -   Enhanced code parsing and chunking
 -   Configuration file support

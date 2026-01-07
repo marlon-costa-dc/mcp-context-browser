@@ -6,6 +6,7 @@ use crate::services::context::ContextService;
 use crate::snapshot::{SnapshotManager, SnapshotChanges};
 use crate::sync::SyncManager;
 use crate::core::types::CodeChunk;
+use futures::future::join_all;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -67,39 +68,8 @@ impl IndexingService {
             return Ok(0);
         }
 
-        let mut total_chunks = 0;
-
-        // Process changed files
-        for file_path in &changed_files {
-            let full_path = canonical_path.join(file_path);
-
-            // Only process supported file types
-            if let Some(ext) = full_path.extension().and_then(|e| e.to_str()) {
-                if self.is_supported_file_type(ext) {
-                    match self.process_file(&full_path).await {
-                        Ok(file_chunks) => {
-                            if !file_chunks.is_empty() {
-                                // Store chunks with better error handling
-                                match self.context_service.store_chunks(collection, &file_chunks).await {
-                                    Ok(()) => {
-                                        total_chunks += file_chunks.len();
-                                        println!("[INDEX] Processed {} chunks from {}", file_chunks.len(), file_path);
-                                    }
-                                    Err(e) => {
-                                        eprintln!("[INDEX] Failed to store chunks for {}: {}", file_path, e);
-                                        // Continue with other files
-                                    }
-                                }
-                            }
-                        }
-                        Err(e) => {
-                            eprintln!("[INDEX] Failed to process {}: {}", file_path, e);
-                            // Continue with other files
-                        }
-                    }
-                }
-            }
-        }
+        // Process changed files in parallel batches
+        let total_chunks = self.process_files_parallel(&canonical_path, &changed_files, collection).await;
 
         // Update sync timestamp if sync manager is available
         if let Some(sync_mgr) = &self.sync_manager {
@@ -158,6 +128,75 @@ impl IndexingService {
         }
     }
 
+    /// Process files in parallel batches for better performance
+    async fn process_files_parallel(
+        &self,
+        canonical_path: &Path,
+        changed_files: &[String],
+        collection: &str,
+    ) -> usize {
+        let batch_size = 10; // Process 10 files concurrently
+        let mut total_chunks = 0;
+
+        // Process files in batches
+        for batch in changed_files.chunks(batch_size) {
+            let futures: Vec<_> = batch
+                .iter()
+                .filter_map(|file_path| {
+                    let full_path = canonical_path.join(file_path);
+
+                    // Only process supported file types
+                    if let Some(ext) = full_path.extension().and_then(|e| e.to_str()) {
+                        if self.is_supported_file_type(ext) {
+                            let file_path_clone = file_path.clone();
+                            let full_path_clone = full_path.clone();
+                            Some(async move {
+                                match self.process_file(&full_path_clone).await {
+                                    Ok(file_chunks) => {
+                                        if !file_chunks.is_empty() {
+                                            println!("[INDEX] Processed {} chunks from {}", file_chunks.len(), file_path_clone);
+                                            Some(file_chunks)
+                                        } else {
+                                            None
+                                        }
+                                    }
+                                    Err(e) => {
+                                        eprintln!("[INDEX] Failed to process {}: {}", file_path_clone, e);
+                                        None
+                                    }
+                                }
+                            })
+                        } else {
+                            None
+                        }
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+
+            // Execute batch concurrently
+            let batch_results = join_all(futures).await;
+
+            // Store chunks sequentially to avoid concurrent access issues
+            for chunks_option in batch_results {
+                if let Some(chunks) = chunks_option {
+                    match self.context_service.store_chunks(collection, &chunks).await {
+                        Ok(()) => {
+                            total_chunks += chunks.len();
+                        }
+                        Err(e) => {
+                            eprintln!("[INDEX] Failed to store batch of chunks: {}", e);
+                            // Continue with other batches
+                        }
+                    }
+                }
+            }
+        }
+
+        total_chunks
+    }
+
     /// Check if file type is supported for indexing
     fn is_supported_file_type(&self, ext: &str) -> bool {
         matches!(ext.to_lowercase().as_str(),
@@ -166,27 +205,5 @@ impl IndexingService {
             "pl" | "pm" | "sh" | "bash" | "zsh" | "fish" | "ps1" | "sql" |
             "html" | "xml" | "json" | "yaml" | "yml" | "toml" | "ini" | "cfg" |
             "md" | "txt" | "rst")
-    }
-
-    /// Detect programming language from file extension
-    fn detect_language(&self, path: &Path) -> Result<crate::core::types::Language> {
-        let ext = path.extension()
-            .and_then(|e| e.to_str())
-            .unwrap_or("")
-            .to_lowercase();
-
-        match ext.as_str() {
-            "rs" => Ok(crate::core::types::Language::Rust),
-            "py" => Ok(crate::core::types::Language::Python),
-            "js" => Ok(crate::core::types::Language::JavaScript),
-            "ts" => Ok(crate::core::types::Language::TypeScript),
-            "java" => Ok(crate::core::types::Language::Java),
-            "cpp" | "cc" | "cxx" => Ok(crate::core::types::Language::Cpp),
-            "c" => Ok(crate::core::types::Language::C),
-            "go" => Ok(crate::core::types::Language::Go),
-            "php" => Ok(crate::core::types::Language::Php),
-            "rb" => Ok(crate::core::types::Language::Ruby),
-            _ => Ok(crate::core::types::Language::Unknown),
-        }
     }
 }

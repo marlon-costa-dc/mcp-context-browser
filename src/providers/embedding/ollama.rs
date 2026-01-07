@@ -1,20 +1,41 @@
 //! Ollama embedding provider implementation
 
 use crate::core::error::{Error, Result};
+use crate::core::http_client::{get_or_create_global_http_client, HttpClientPool};
 use crate::core::types::Embedding;
 use crate::providers::EmbeddingProvider;
 use async_trait::async_trait;
+use std::sync::Arc;
+use std::time::Duration;
 
 /// Ollama embedding provider
 pub struct OllamaEmbeddingProvider {
     base_url: String,
     model: String,
+    timeout: Duration,
+    http_client: Arc<HttpClientPool>,
 }
 
 impl OllamaEmbeddingProvider {
     /// Create a new Ollama embedding provider
-    pub fn new(base_url: String, model: String) -> Self {
-        Self { base_url, model }
+    pub fn new(base_url: String, model: String) -> Result<Self> {
+        Self::with_timeout(base_url, model, Duration::from_secs(30))
+    }
+
+    /// Create a new Ollama embedding provider with custom timeout
+    pub fn with_timeout(base_url: String, model: String, timeout: Duration) -> Result<Self> {
+        let http_client = get_or_create_global_http_client()?;
+        Ok(Self { base_url, model, timeout, http_client })
+    }
+
+    /// Create a new Ollama embedding provider with custom HTTP client
+    pub fn with_http_client(
+        base_url: String,
+        model: String,
+        timeout: Duration,
+        http_client: Arc<HttpClientPool>,
+    ) -> Self {
+        Self { base_url, model, timeout, http_client }
     }
 }
 
@@ -43,9 +64,16 @@ impl EmbeddingProvider for OllamaEmbeddingProvider {
                 "stream": false
             });
 
-            let client = reqwest::Client::new();
+            // Use pooled HTTP client
+            let client = if self.timeout != self.http_client.config().timeout {
+                // Create custom client if timeout differs from pool default
+                self.http_client.client_with_timeout(self.timeout)?
+            } else {
+                self.http_client.client().clone()
+            };
+
             let response = client
-                .post(&format!(
+                .post(format!(
                     "{}/api/embeddings",
                     self.base_url.trim_end_matches('/')
                 ))
@@ -53,7 +81,13 @@ impl EmbeddingProvider for OllamaEmbeddingProvider {
                 .json(&payload)
                 .send()
                 .await
-                .map_err(|e| Error::embedding(format!("HTTP request failed: {}", e)))?;
+                .map_err(|e| {
+                    if e.is_timeout() {
+                        Error::embedding(format!("Request timed out after {:?}", self.timeout))
+                    } else {
+                        Error::embedding(format!("HTTP request failed: {}", e))
+                    }
+                })?;
 
             if !response.status().is_success() {
                 let status = response.status();
@@ -90,7 +124,13 @@ impl EmbeddingProvider for OllamaEmbeddingProvider {
     }
 
     fn dimensions(&self) -> usize {
-        4096 // Typical Ollama embedding dimensions
+        match self.model.as_str() {
+            "nomic-embed-text" => 768,
+            "all-minilm" => 384,
+            "mxbai-embed-large" => 1024,
+            "snowflake-arctic-embed" => 768,
+            _ => 768, // Default for most Ollama embedding models
+        }
     }
 
     fn provider_name(&self) -> &str {
@@ -106,6 +146,12 @@ impl OllamaEmbeddingProvider {
 
     /// Get the maximum tokens supported by this provider
     pub fn max_tokens(&self) -> usize {
-        8192
+        match self.model.as_str() {
+            "nomic-embed-text" => 8192,
+            "all-minilm" => 512,
+            "mxbai-embed-large" => 512,
+            "snowflake-arctic-embed" => 512,
+            _ => 8192, // Default max tokens
+        }
     }
 }

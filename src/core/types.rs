@@ -23,7 +23,7 @@ pub struct CodeChunk {
 }
 
 /// Programming language detection
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum Language {
     Rust,
     Python,
