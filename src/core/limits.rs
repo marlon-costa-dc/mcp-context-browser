@@ -402,7 +402,7 @@ impl ResourceLimits {
             use sysinfo::{MemoryRefreshKind, RefreshKind, System};
 
             let mut system = System::new_with_specifics(
-                RefreshKind::new().with_memory(MemoryRefreshKind::new().with_ram()),
+                RefreshKind::everything().with_memory(MemoryRefreshKind::everything()),
             );
             system.refresh_memory();
 
@@ -442,9 +442,9 @@ impl ResourceLimits {
             use sysinfo::{CpuRefreshKind, RefreshKind, System};
 
             let mut system = System::new_with_specifics(
-                RefreshKind::new().with_cpu(CpuRefreshKind::new().with_frequency()),
+                RefreshKind::everything().with_cpu(CpuRefreshKind::everything()),
             );
-            system.refresh_cpu();
+            system.refresh_cpu_all();
 
             let cores = system.cpus().len();
             let usage_percent =

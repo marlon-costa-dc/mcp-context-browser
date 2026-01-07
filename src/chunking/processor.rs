@@ -30,7 +30,7 @@ pub trait LanguageProcessor {
 
     /// Get the language instance
     fn get_language(&self) -> tree_sitter::Language {
-        (self.config().ts_language_fn)()
+        self.config().get_language()
     }
 }
 

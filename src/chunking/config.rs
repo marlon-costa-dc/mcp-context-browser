@@ -3,6 +3,7 @@
 //! This module defines the core configuration types used for language-specific
 //! chunking rules and settings.
 
+
 /// Rule for extracting specific AST node types
 #[derive(Debug, Clone)]
 pub struct NodeExtractionRule {
@@ -21,10 +22,10 @@ pub struct NodeExtractionRule {
 }
 
 /// Language-specific configuration for chunking
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct LanguageConfig {
     /// Tree-sitter language function
-    pub ts_language_fn: fn() -> tree_sitter::Language,
+    pub ts_language: tree_sitter::Language,
     /// Node extraction rules
     pub extraction_rules: Vec<NodeExtractionRule>,
     /// Fallback patterns for regex-based chunking
@@ -35,9 +36,9 @@ pub struct LanguageConfig {
 
 impl LanguageConfig {
     /// Create a new language configuration
-    pub fn new(ts_language_fn: fn() -> tree_sitter::Language) -> Self {
+    pub fn new(language: tree_sitter::Language) -> Self {
         Self {
-            ts_language_fn,
+            ts_language: language,
             extraction_rules: Vec::new(),
             fallback_patterns: Vec::new(),
             chunk_size: 20,
@@ -70,7 +71,7 @@ impl LanguageConfig {
 
     /// Get the tree-sitter language
     pub fn get_language(&self) -> tree_sitter::Language {
-        (self.ts_language_fn)()
+        self.ts_language.clone()
     }
 }
 

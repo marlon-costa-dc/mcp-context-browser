@@ -52,12 +52,22 @@ index-docs: ## Generate documentation index
 	@bash scripts/docs/generate-index.sh
 
 # ADR management (Architecture Decision Records)
-adr-new: ## Create new ADR
-	@bash scripts/docs/create-adr.sh
+adr-new: ## Create new ADR using professional adrs tool
+	@echo "📝 Creating new ADR..."
+	@~/.cargo/bin/adrs new
 
-adr-list: ## List ADRs
+adr-list: ## List ADRs using professional adrs tool
 	@echo "📋 ADRs:"
-	@ls -1 docs/architecture/adr/ | grep -E '\.md$$' | sed 's/\.md$$//' | sort
+	@~/.cargo/bin/adrs list
+
+adr-generate: ## Generate ADR summary documentation
+	@echo "📊 Generating ADR summary..."
+	@~/.cargo/bin/adrs generate toc > docs/adr/README.md
+	@~/.cargo/bin/adrs generate graph > docs/adr/adr-graph.md
+
+adr-status: ## Show ADR status and lifecycle
+	@echo "📈 ADR Status:"
+	@~/.cargo/bin/adrs list --status
 
 # Diagram generation
 diagrams: ## Generate diagrams only

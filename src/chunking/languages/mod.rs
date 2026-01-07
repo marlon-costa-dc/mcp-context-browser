@@ -7,6 +7,7 @@ use crate::chunking::config::{LanguageConfig, NodeExtractionRule};
 use crate::chunking::processor::{BaseProcessor, LanguageProcessor};
 use crate::core::types::{CodeChunk, Language};
 
+
 // Rust processor
 pub struct RustProcessor {
     processor: BaseProcessor,
@@ -20,7 +21,7 @@ impl Default for RustProcessor {
 
 impl RustProcessor {
     pub fn new() -> Self {
-        let config = LanguageConfig::new(tree_sitter_rust::language)
+        let config = LanguageConfig::new(tree_sitter_rust::LANGUAGE.into())
             .with_rules(vec![
                 // High priority: Main constructs
                 NodeExtractionRule {
@@ -96,7 +97,7 @@ impl Default for PythonProcessor {
 
 impl PythonProcessor {
     pub fn new() -> Self {
-        let config = LanguageConfig::new(tree_sitter_python::language)
+        let config = LanguageConfig::new(tree_sitter_python::LANGUAGE.into())
             .with_rules(vec![NodeExtractionRule {
                 node_types: vec![
                     "function_definition".to_string(),
@@ -132,12 +133,11 @@ impl Default for JavaScriptProcessor {
 
 impl JavaScriptProcessor {
     pub fn new(language: Language) -> Self {
-        let ts_language_fn = match language {
-            Language::TypeScript => tree_sitter_typescript::language_tsx,
-            _ => tree_sitter_javascript::language,
+        let language_instance = match language {
+            Language::TypeScript => tree_sitter_typescript::LANGUAGE_TSX.into(),
+            _ => tree_sitter_javascript::LANGUAGE.into(),
         };
-
-        let config = LanguageConfig::new(ts_language_fn)
+        let config = LanguageConfig::new(language_instance)
             .with_rules(vec![NodeExtractionRule {
                 node_types: vec![
                     "function_declaration".to_string(),
@@ -180,7 +180,7 @@ impl Default for JavaProcessor {
 
 impl JavaProcessor {
     pub fn new() -> Self {
-        let config = LanguageConfig::new(tree_sitter_java::language)
+        let config = LanguageConfig::new(tree_sitter_java::LANGUAGE.into())
             .with_rules(vec![NodeExtractionRule {
                 node_types: vec![
                     "method_declaration".to_string(),
@@ -224,7 +224,7 @@ impl Default for GoProcessor {
 
 impl GoProcessor {
     pub fn new() -> Self {
-        let config = LanguageConfig::new(tree_sitter_go::language)
+        let config = LanguageConfig::new(tree_sitter_go::LANGUAGE.into())
             .with_rules(vec![NodeExtractionRule {
                 node_types: vec![
                     "function_declaration".to_string(),
@@ -262,7 +262,7 @@ impl Default for CProcessor {
 
 impl CProcessor {
     pub fn new() -> Self {
-        let config = LanguageConfig::new(tree_sitter_c::language)
+        let config = LanguageConfig::new(tree_sitter_c::LANGUAGE.into())
             .with_rules(vec![NodeExtractionRule {
                 node_types: vec![
                     "function_definition".to_string(),
@@ -304,7 +304,7 @@ impl Default for CppProcessor {
 
 impl CppProcessor {
     pub fn new() -> Self {
-        let config = LanguageConfig::new(tree_sitter_cpp::language)
+        let config = LanguageConfig::new(tree_sitter_cpp::LANGUAGE.into())
             .with_rules(vec![NodeExtractionRule {
                 node_types: vec![
                     "function_definition".to_string(),
@@ -347,7 +347,7 @@ impl Default for CSharpProcessor {
 
 impl CSharpProcessor {
     pub fn new() -> Self {
-        let config = LanguageConfig::new(tree_sitter_c_sharp::language)
+        let config = LanguageConfig::new(tree_sitter_c_sharp::LANGUAGE.into())
             .with_rules(vec![NodeExtractionRule {
                 node_types: vec![
                     "method_declaration".to_string(),

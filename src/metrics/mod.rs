@@ -52,7 +52,7 @@ impl SystemMetricsCollector {
 
     /// Collect CPU metrics
     pub fn collect_cpu_metrics(&mut self) -> CpuMetrics {
-        self.system.refresh_cpu();
+        self.system.refresh_cpu_all();
 
         let cpus = self.system.cpus();
         let cores = cpus.len();

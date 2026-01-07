@@ -215,8 +215,8 @@ impl CacheManager {
             .await
             .map_err(|e| Error::generic(format!("Redis connection failed: {}", e)))?;
 
-        let _: String = redis::cmd("PING")
-            .query_async(&mut conn)
+        redis::cmd("PING")
+            .query_async::<()>(&mut conn)
             .await
             .map_err(|e| Error::generic(format!("Redis PING failed: {}", e)))?;
 
@@ -421,7 +421,7 @@ impl CacheManager {
                 .arg(key)
                 .arg(ttl)
                 .arg(json_str)
-                .query_async::<_, ()>(&mut conn)
+                .query_async::<()>(&mut conn)
                 .await?;
         }
         Ok(())
@@ -432,7 +432,7 @@ impl CacheManager {
             let mut conn = client.get_multiplexed_async_connection().await?;
             redis::cmd("DEL")
                 .arg(key)
-                .query_async::<_, ()>(&mut conn)
+                .query_async::<()>(&mut conn)
                 .await?;
         }
         Ok(())
@@ -443,12 +443,12 @@ impl CacheManager {
             let mut conn = client.get_multiplexed_async_connection().await?;
             let keys: Vec<String> = redis::cmd("KEYS")
                 .arg(pattern)
-                .query_async(&mut conn)
+                .query_async::<Vec<String>>(&mut conn)
                 .await?;
             if !keys.is_empty() {
                 redis::cmd("DEL")
-                    .arg(keys)
-                    .query_async::<_, ()>(&mut conn)
+                    .arg(&keys)
+                    .query_async::<()>(&mut conn)
                     .await?;
             }
         }

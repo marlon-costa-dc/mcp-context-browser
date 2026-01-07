@@ -305,11 +305,7 @@ mod tests {
             return Ok(());
         }
 
-        use rmcp::{
-            ServiceExt,
-            model::CallToolRequestParam,
-            transport::TokioChildProcess,
-        };
+        use rmcp::{model::CallToolRequestParam, transport::TokioChildProcess, ServiceExt};
         use tokio::process::Command;
 
         // Start MCP server process using rmcp client infrastructure
@@ -320,31 +316,53 @@ mod tests {
             c
         };
 
-        let running_service = ()
-            .serve(TokioChildProcess::new(cmd)?)
-            .await?;
+        let running_service = ().serve(TokioChildProcess::new(cmd)?).await?;
 
         // RunningService implements Deref<Target = Peer<RoleClient>>, so we can use it directly
         let client = &running_service;
 
         // Verify server info
         let server_info = client.peer_info();
-        assert!(server_info.is_some(), "Server should provide info after initialization");
+        assert!(
+            server_info.is_some(),
+            "Server should provide info after initialization"
+        );
 
         let info = server_info.unwrap();
-        assert_eq!(info.protocol_version, rmcp::model::ProtocolVersion::V_2024_11_05);
-        assert!(info.server_info.name.contains("MCP Context Browser"), "Server name should be correct");
+        assert_eq!(
+            info.protocol_version,
+            rmcp::model::ProtocolVersion::V_2024_11_05
+        );
+        assert!(
+            info.server_info.name.contains("MCP Context Browser"),
+            "Server name should be correct"
+        );
 
         // Test tools/list
         let tools_result = client.list_all_tools().await?;
-        assert!(tools_result.len() >= 4, "Server should provide at least 4 tools");
+        assert!(
+            tools_result.len() >= 4,
+            "Server should provide at least 4 tools"
+        );
 
         // Verify expected tools are present
         let tool_names: Vec<&str> = tools_result.iter().map(|t| t.name.as_ref()).collect();
-        assert!(tool_names.contains(&"index_codebase"), "index_codebase tool should be present");
-        assert!(tool_names.contains(&"search_code"), "search_code tool should be present");
-        assert!(tool_names.contains(&"get_indexing_status"), "get_indexing_status tool should be present");
-        assert!(tool_names.contains(&"clear_index"), "clear_index tool should be present");
+        assert!(
+            tool_names.contains(&"index_codebase"),
+            "index_codebase tool should be present"
+        );
+        assert!(
+            tool_names.contains(&"search_code"),
+            "search_code tool should be present"
+        );
+        assert!(
+            tool_names.contains(&"get_indexing_status"),
+            "get_indexing_status tool should be present"
+        );
+        assert!(
+            tool_names.contains(&"clear_index"),
+            "clear_index tool should be present"
+        );
 
         // Test calling a tool (index_codebase with invalid path - behavior may vary)
         let tool_result = client
@@ -359,7 +377,10 @@ mod tests {
 
         // The tool call may succeed or fail depending on implementation
         // We just verify it returns some result
-        assert!(tool_result.is_ok() || tool_result.is_err(), "Tool call should return some result");
+        assert!(
+            tool_result.is_ok() || tool_result.is_err(),
+            "Tool call should return some result"
+        );
 
         // Test calling get_indexing_status (should work even without prior indexing)
         let status_result = client
@@ -369,7 +390,10 @@ mod tests {
             })
             .await?;
 
-        assert!(status_result.content.len() > 0, "get_indexing_status should return content");
+        assert!(
+            status_result.content.len() > 0,
+            "get_indexing_status should return content"
+        );
 
         // Clean shutdown
         running_service.cancel().await?;

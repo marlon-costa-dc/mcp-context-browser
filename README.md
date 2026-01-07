@@ -3,16 +3,16 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange)](https://www.rust-lang.org/)
 [![MCP](https://img.shields.io/badge/MCP-2024--11--05-blue)](https://modelcontextprotocol.io/)
-[![Version](https://img.shields.io/badge/version-0.0.3-blue)](https://github.com/marlonsc/mcp-context-browser/releases)
+[![Version](https://img.shields.io/badge/version-0.0.4-blue)](https://github.com/marlonsc/mcp-context-browser/releases)
 [![CI](https://github.com/marlonsc/mcp-context-browser/actions/workflows/ci.yml/badge.svg)](https://github.com/marlonsc/mcp-context-browser/actions/workflows/ci.yml)
 
 **Model Context Protocol Server** - Provides semantic code search and analysis capabilities to AI assistants through a standardized MCP interface.
 
-## 🎯 Current Capabilities (v0.0.3)
+## 🎯 Current Capabilities (v0.0.4)
 
 ### 🏆 Production-Ready Features
 
-MCP Context Browser v0.0.3 is an **advanced MCP server** with enterprise-grade architecture, multi-provider routing, and comprehensive security features.
+MCP Context Browser v0.0.4 is an **advanced MCP server** with enterprise-grade architecture, multi-provider routing, and comprehensive security features.
 
 ### 🏆 Features
 
@@ -185,7 +185,7 @@ make docker-logs
 
 ### Claude Context Compatibility ✅
 
-**v0.0.3 implements all core Claude Context features:**
+**v0.0.4 implements all core Claude Context features:**
 
 | Feature | Status | Implementation |
 |---------|--------|----------------|

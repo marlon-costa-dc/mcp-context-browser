@@ -1,4 +1,4 @@
-# MCP Context Browser - Organized Makefile v0.0.3
+# MCP Context Browser - Organized Makefile v0.0.4
 
 # Include all modular makefiles in correct dependency order
 include make/Makefile.help.mk

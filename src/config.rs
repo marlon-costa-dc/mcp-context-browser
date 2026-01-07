@@ -1,4 +1,4 @@
-//! Configuration management for MCP Context Browser v0.0.3
+//! Configuration management for MCP Context Browser v0.0.4
 //!
 //! Professional configuration system with schema validation, similar to Claude Context:
 //! - Schema validation (equivalent to convict.js)
@@ -175,7 +175,7 @@ pub struct Config {
     pub version: String,
     pub server: ServerConfig,
     pub providers: ProviderConfig,
-    /// Metrics API configuration (v0.0.3)
+    /// Metrics API configuration
     pub metrics: MetricsConfig,
 
     /// Authentication configuration
@@ -185,16 +185,16 @@ pub struct Config {
     /// Database configuration
     #[serde(default)]
     pub database: DatabaseConfig,
-    /// Sync coordination configuration (v0.0.3)
+    /// Sync coordination configuration
     pub sync: SyncConfig,
-    /// Background daemon configuration (v0.0.3)
+    /// Background daemon configuration
     pub daemon: DaemonConfig,
 
-    /// Resource limits configuration (v0.0.3)
+    /// Resource limits configuration
     #[serde(default)]
     pub resource_limits: ResourceLimitsConfig,
 
-    /// Advanced caching configuration (v0.0.3)
+    /// Advanced caching configuration
     #[serde(default)]
     pub cache: CacheConfig,
     pub hybrid_search: HybridSearchConfig,
@@ -887,7 +887,7 @@ monitoring_interval_secs = 60  # 1 minute
     }
 }
 
-/// Metrics API configuration (v0.0.3)
+/// Metrics API configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MetricsConfig {
     /// Port for metrics HTTP API
@@ -1004,7 +1004,7 @@ impl Config {
         })
     }
 
-    /// Validate configuration (v0.0.3)
+    /// Validate configuration
     pub fn validate(&self) -> Result<()> {
         // Basic validation
         if self.name.is_empty() {
@@ -1033,12 +1033,12 @@ impl Config {
         Ok(())
     }
 
-    /// Get metrics port (v0.0.3)
+    /// Get metrics port
     pub fn metrics_port(&self) -> u16 {
         self.metrics.port
     }
 
-    /// Check if metrics are enabled (v0.0.3)
+    /// Check if metrics are enabled
     pub fn metrics_enabled(&self) -> bool {
         self.metrics.enabled
     }
@@ -1048,7 +1048,7 @@ impl Config {
         format!("{}:{}", self.server.host, self.server.port)
     }
 
-    /// Get metrics server address string (v0.0.3)
+    /// Get metrics server address string
     pub fn metrics_addr(&self) -> String {
         format!("0.0.0.0:{}", self.metrics.port)
     }

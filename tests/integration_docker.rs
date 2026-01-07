@@ -10,7 +10,6 @@ use std::env;
 mod tests {
     use super::*;
 
-
     fn get_ollama_config() -> EmbeddingConfig {
         EmbeddingConfig {
             provider: "ollama".to_string(),

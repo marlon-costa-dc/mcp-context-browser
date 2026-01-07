@@ -129,7 +129,6 @@ pub fn get_or_create_global_http_client(
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;

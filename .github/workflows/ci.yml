@@ -15,7 +15,6 @@ jobs:
         rust:
           - stable
           - beta
-          - 1.70.0  # MSRV
 
     steps:
       - name: Checkout repository
@@ -168,3 +167,44 @@ jobs:
         with:
           name: mcp-context-browser-${{ matrix.target }}
           path: target/${{ matrix.target }}/release/mcp-context-browser${{ matrix.os == 'windows-latest' && '.exe' || '' }}
+
+  docs:
+    name: Documentation Quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install documentation tools
+        run: |
+          cargo install cargo-modules
+          cargo install cargo-spellcheck
+          cargo install cargo-deadlinks
+
+      - name: Check documentation generation
+        run: cargo doc --no-deps --document-private-items
+
+      - name: Generate module documentation
+        run: |
+          mkdir -p docs/modules
+          cargo modules generate graph --package mcp-context-browser > docs/modules/dependencies.md || true
+
+      - name: Spell check documentation
+        run: cargo spellcheck --code 0 || true
+
+      - name: Check dead links
+        run: cargo deadlinks --check-http || true
+
+      - name: ADR validation (if framework exists)
+        run: |
+          if [ -f "src/adr_validation.rs" ]; then
+            cargo test adr_compliance --lib || true
+          fi

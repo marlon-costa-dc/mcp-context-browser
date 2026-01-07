@@ -656,11 +656,15 @@ mod tests {
             assert_eq!(stats.get("total_vectors").unwrap().as_u64().unwrap(), 0);
 
             println!("Test completed successfully!");
-        }).await;
+        })
+        .await;
 
         match result {
-            Ok(_) => {},
-            Err(_) => panic!("Test timed out after {} seconds", timeout_duration.as_secs()),
+            Ok(_) => {}
+            Err(_) => panic!(
+                "Test timed out after {} seconds",
+                timeout_duration.as_secs()
+            ),
         }
     }
 
