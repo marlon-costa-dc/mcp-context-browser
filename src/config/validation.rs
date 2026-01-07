@@ -150,12 +150,12 @@ impl ConfigValidator {
                     return Err(Error::config("Milvus address cannot be empty"));
                 }
             }
-            VectorStoreProviderConfig::Pinecone { token, collection, .. } => {
-                if token.is_empty() {
-                    return Err(Error::config("Pinecone API token cannot be empty"));
+            VectorStoreProviderConfig::Pinecone { api_key, index_name, .. } => {
+                if api_key.is_empty() {
+                    return Err(Error::config("Pinecone API key cannot be empty"));
                 }
-                if collection.is_empty() {
-                    return Err(Error::config("Pinecone collection name cannot be empty"));
+                if index_name.is_empty() {
+                    return Err(Error::config("Pinecone index name cannot be empty"));
                 }
             }
             VectorStoreProviderConfig::Qdrant { url, .. } => {
@@ -256,10 +256,10 @@ impl ConfigValidator {
                 dimensions: config.dimensions,
             },
             "pinecone" => VectorStoreProviderConfig::Pinecone {
-                token: config.token.clone().unwrap_or_default(),
-                collection: config.collection.clone().unwrap_or_default(),
+                api_key: config.token.clone().unwrap_or_default(),
+                environment: config.base_url.clone().unwrap_or_else(|| "us-east-1".to_string()),
+                index_name: config.collection.clone().unwrap_or_default(),
                 dimensions: config.dimensions,
-                base_url: config.base_url.clone(),
             },
             "qdrant" => VectorStoreProviderConfig::Qdrant {
                 url: config.address.clone().unwrap_or_default(),

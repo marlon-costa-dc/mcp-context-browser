@@ -25,12 +25,15 @@ pub struct WebInterface {
 impl WebInterface {
     /// Create a new web interface manager
     pub fn new() -> Result<Self> {
-        let mut tera = Tera::new("src/admin/web/templates/**/*")?;
+        let mut tera = Tera::new("src/admin/web/templates/**/*.html")?;
 
-        // Add custom functions
+        // Add custom functions and filters
         tera.register_function("format_bytes", format_bytes);
         tera.register_function("format_duration", format_duration);
         tera.register_function("format_percentage", format_percentage);
+
+        // Add custom filters
+        tera.register_filter("number_format", number_format);
 
         Ok(Self { tera })
     }
@@ -52,9 +55,8 @@ impl WebInterface {
             .route("/htmx/providers/list", get(Self::htmx_providers_list))
             .route("/htmx/indexes/list", get(Self::htmx_indexes_list))
             // Static assets
-            .route("/static/bootstrap.css", get(Self::bootstrap_css))
-            .route("/static/bootstrap.js", get(Self::bootstrap_js))
-            .route("/static/htmx.js", get(Self::htmx_js))
+            .route("/static/admin.css", get(Self::admin_css))
+            .route("/static/admin.js", get(Self::admin_js))
             .with_state(state)
     }
 
@@ -267,38 +269,29 @@ impl WebInterface {
 
     // Static assets
 
-    async fn bootstrap_css() -> impl IntoResponse {
-        let css = r#"
-        /* Bootstrap CSS served from Rust */
-        @import url('https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css');
-        "#;
+    async fn admin_css() -> impl IntoResponse {
+        let css = include_str!("web/templates/admin.css");
 
         (
-            [(header::CONTENT_TYPE, "text/css")],
+            [
+                (header::CONTENT_TYPE, "text/css"),
+                (header::CACHE_CONTROL, "public, max-age=3600"),
+            ],
             css,
         )
     }
 
-    async fn bootstrap_js() -> impl IntoResponse {
+    async fn admin_js() -> impl IntoResponse {
         let js = r#"
-// Bootstrap JS served from Rust - redirect to CDN
-import('https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js');
+// Admin interface JavaScript
+console.log('MCP Context Browser Admin Interface loaded');
 "#;
 
         (
-            [(header::CONTENT_TYPE, "application/javascript")],
-            js,
-        )
-    }
-
-    async fn htmx_js() -> impl IntoResponse {
-        let js = r#"
-// HTMX JS served from Rust - redirect to CDN
-import('https://unpkg.com/htmx.org@1.9.10');
-"#;
-
-        (
-            [(header::CONTENT_TYPE, "application/javascript")],
+            [
+                (header::CONTENT_TYPE, "application/javascript"),
+                (header::CACHE_CONTROL, "public, max-age=3600"),
+            ],
             js,
         )
     }

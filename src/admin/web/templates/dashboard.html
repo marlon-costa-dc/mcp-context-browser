@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+
+{% macro metric_card(icon, title, value, subtitle, color) %}
+<div class="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+    <div class="p-5">
+        <div class="flex items-center">
+            <div class="flex-shrink-0">
+                <div class="w-8 h-8 bg-{{ color }}-100 dark:bg-{{ color }}-900 rounded-md flex items-center justify-center">
+                    <svg class="w-5 h-5 text-{{ color }}-600 dark:text-{{ color }}-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        {{ icon }}
+                    </svg>
+                </div>
+            </div>
+            <div class="ml-5 w-0 flex-1">
+                <dl>
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">{{ title }}</dt>
+                    <dd class="text-lg font-medium text-gray-900 dark:text-white">{{ value }}</dd>
+                    <dd class="text-sm text-gray-500 dark:text-gray-400">{{ subtitle }}</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+{% endmacro %}
+
+{% block title %}Dashboard - MCP Context Browser{% endblock %}
+
+{% block content %}
+<div x-data="dashboard()" class="space-y-6">
+    <!-- Header -->
+    <div class="flex justify-between items-center">
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">System Dashboard</h1>
+        <button @click="refresh()" class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
+            <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+            </svg>
+            Refresh
+        </button>
+    </div>
+
+    <!-- Metrics Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {{ metric_card(
+            '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>',
+            'System Status',
+            health.status|title,
+            'Uptime: ' + health.uptime|format_duration + ' • PID: ' + health.pid,
+            'green'
+        ) }}
+
+        {{ metric_card(
+            '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>',
+            'Providers',
+            active_providers + ' active',
+            'of ' + total_providers + ' total',
+            'blue'
+        ) }}
+
+        {{ metric_card(
+            '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"></path>',
+            'Indexes',
+            active_indexes + ' active',
+            total_documents + ' documents',
+            'purple'
+        ) }}
+
+        {{ metric_card(
+            '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>',
+            'Performance',
+            cpu_usage + '% CPU',
+            memory_usage + '% Memory',
+            'yellow'
+        ) }}
+    </div>
+
+    <!-- Charts -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white dark:bg-gray-800 shadow rounded-lg">
+            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white">System Metrics</h3>
+            </div>
+            <div class="p-6">
+                <canvas id="metrics-chart" class="w-full h-64"></canvas>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 shadow rounded-lg">
+            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white">Query Performance</h3>
+            </div>
+            <div class="p-6">
+                <canvas id="query-chart" class="w-full h-64"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Activity Log -->
+    <div class="bg-white dark:bg-gray-800 shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Recent Activity</h3>
+            <button @click="refreshActivity()" class="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-500">
+                <svg class="w-4 h-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+                Refresh
+            </button>
+        </div>
+        <div class="divide-y divide-gray-200 dark:divide-gray-700">
+            <template x-for="activity in activities" :key="activity.id">
+                <div class="px-6 py-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <div class="w-2 h-2 bg-blue-400 rounded-full" :class="activity.color"></div>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm font-medium text-gray-900 dark:text-white" x-text="activity.message"></p>
+                                <p class="text-sm text-gray-500 dark:text-gray-400" x-text="activity.timestamp"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+</div>
+
+<script>
+function dashboard() {
+    return {
+        active_providers: '0',
+        total_providers: '0',
+        active_indexes: '0',
+        total_documents: '0',
+        cpu_usage: '0',
+        memory_usage: '0',
+        activities: [
+            { id: 1, message: 'System initialized successfully', timestamp: '2 minutes ago', color: 'bg-green-400' },
+            { id: 2, message: 'Provider connection established', timestamp: '5 minutes ago', color: 'bg-blue-400' },
+            { id: 3, message: 'Index synchronization completed', timestamp: '10 minutes ago', color: 'bg-purple-400' }
+        ],
+
+        async init() {
+            await this.refresh();
+            this.initCharts();
+        },
+
+        async refresh() {
+            try {
+                // Fetch metrics from API
+                const response = await fetch('/api/health');
+                const health = await response.json();
+
+                // Update reactive data
+                this.active_providers = '2'; // Mock data
+                this.total_providers = '3';
+                this.active_indexes = '1';
+                this.total_documents = '1500';
+                this.cpu_usage = '15';
+                this.memory_usage = '45';
+
+            } catch (error) {
+                console.error('Failed to refresh dashboard:', error);
+            }
+        },
+
+        async refreshActivity() {
+            // Fetch latest activities
+            this.activities.unshift({
+                id: Date.now(),
+                message: 'Dashboard refreshed',
+                timestamp: 'Just now',
+                color: 'bg-yellow-400'
+            });
+        },
+
+        initCharts() {
+            // System Metrics Chart
+            const metricsCtx = document.getElementById('metrics-chart');
+            if (metricsCtx) {
+                new Chart(metricsCtx, {
+                    type: 'line',
+                    data: {
+                        labels: ['1m', '2m', '3m', '4m', '5m', '6m'],
+                        datasets: [{
+                            label: 'CPU Usage (%)',
+                            data: [12, 19, 15, 25, 22, 30],
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }, {
+                            label: 'Memory Usage (%)',
+                            data: [45, 52, 48, 61, 55, 67],
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            y: { beginAtZero: true, max: 100, display: false },
+                            x: { display: false }
+                        }
+                    }
+                });
+            }
+
+            // Query Performance Chart
+            const queryCtx = document.getElementById('query-chart');
+            if (queryCtx) {
+                new Chart(queryCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Search', 'Index', 'Status', 'Clear'],
+                        datasets: [{
+                            data: [45, 25, 20, 10],
+                            backgroundColor: [
+                                '#3b82f6', '#10b981', '#f59e0b', '#ef4444'
+                            ],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: { padding: 20, usePointStyle: true }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+    }
+}
+</script>
+{% endblock %}
