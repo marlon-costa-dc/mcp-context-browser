@@ -12,7 +12,7 @@ readme = "README.md"
 
 [dependencies]
 # Core async runtime
-tokio = { version = "1.40", features = ["full"] }
+tokio = { version = "1.49", features = ["full"] }
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
@@ -34,14 +34,14 @@ toml = "0.9"
 reqwest = { version = "0.13", features = ["json", "__tls"] }
 
 # CLI
-clap = { version = "4.5", features = ["derive"] }
+clap = { version = "4.5.54", features = ["derive"] }
 
 # File operations
 walkdir = "2.5"
 fs2 = "0.4"
 
 # Regex
-regex = "1.11"
+regex = "1.12"
 
 # Date/time handling
 chrono = { version = "0.4", features = ["serde"] }
@@ -101,7 +101,7 @@ tower = { version = "0.5", features = ["load-shed", "limit", "load", "retry", "t
 tower-http = { version = "0.6", features = ["cors"] }
 
 # System metrics
-sysinfo = "0.37"
+sysinfo = "0.37.2"
 nix = { version = "0.30", features = ["fs"] }
 
 # Code analysis and AST parsing

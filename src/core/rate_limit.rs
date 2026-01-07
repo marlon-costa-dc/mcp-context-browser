@@ -199,10 +199,9 @@ impl RateLimiter {
 
         // Check memory cache first for performance
         let cache_key = key.to_string();
-        if let Some((cached_at, result)) = self.memory_cache.read().await.get(&cache_key) {
-            if cached_at.elapsed() < Duration::from_secs(1) {
-                return Ok(result.clone());
-            }
+        if let Some((cached_at, result)) = self.memory_cache.read().await.get(&cache_key)
+            && cached_at.elapsed() < Duration::from_secs(1) {
+            return Ok(result.clone());
         }
 
         let result = self.check_storage_rate_limit(key).await?;

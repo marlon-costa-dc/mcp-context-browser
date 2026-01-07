@@ -10,11 +10,15 @@
 //!
 //! Based on the official rmcp SDK examples and best practices.
 
+pub mod args;
+pub mod auth;
 pub mod rate_limit_middleware;
 pub mod security;
 
-use crate::core::auth::{AuthService, Claims, Permission};
+use crate::core::auth::AuthService;
 use crate::core::cache::CacheManager;
+use crate::server::args::{ClearIndexArgs, GetIndexingStatusArgs, IndexCodebaseArgs, SearchCodeArgs};
+use serde_json;
 use crate::core::database::init_global_database_pool;
 use crate::core::http_client::{HttpClientConfig, init_global_http_client};
 use crate::core::limits::{ResourceLimits, init_global_resource_limits};
@@ -22,77 +26,19 @@ use crate::core::rate_limit::RateLimiter;
 use crate::metrics::MetricsApiServer;
 use crate::services::{IndexingService, SearchService};
 use rmcp::{
-    ErrorData as McpError, ServerHandler, ServiceExt,
-    handler::server::{router::tool::ToolRouter, wrapper::Parameters},
+    ErrorData as McpError, RoleServer, ServerHandler, ServiceExt,
+    handler::server::wrapper::Parameters,
     model::{
-        CallToolResult, Content, Implementation, ProtocolVersion, ServerCapabilities, ServerInfo,
+        CallToolRequestParam, CallToolResult, Content, Implementation, ListToolsResult,
+        PaginatedRequestParam, ProtocolVersion, ServerCapabilities, ServerInfo,
     },
-    schemars, tool, tool_handler, tool_router,
+    schemars, service::RequestContext, tool,
     transport::stdio,
 };
 use std::sync::Arc;
 use std::time::Instant;
 use tracing_subscriber::{self, EnvFilter};
 
-/// Arguments for the index_codebase tool
-#[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
-#[schemars(description = "Parameters for indexing a codebase directory")]
-pub struct IndexCodebaseArgs {
-    /// Path to the codebase directory to index
-    #[schemars(
-        description = "Absolute or relative path to the directory containing code to index"
-    )]
-    pub path: String,
-    /// Optional JWT token for authentication
-    #[schemars(description = "JWT token for authenticated requests")]
-    pub token: Option<String>,
-}
-
-/// Arguments for the search_code tool
-#[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
-#[schemars(description = "Parameters for searching code using natural language")]
-pub struct SearchCodeArgs {
-    /// Natural language query to search for
-    #[schemars(
-        description = "The search query in natural language (e.g., 'find functions that handle authentication')"
-    )]
-    pub query: String,
-    /// Maximum number of results to return (default: 10)
-    #[schemars(description = "Maximum number of search results to return")]
-    #[serde(default = "default_limit")]
-    pub limit: usize,
-    /// Optional JWT token for authentication
-    #[schemars(description = "JWT token for authenticated requests")]
-    pub token: Option<String>,
-}
-
-/// Arguments for getting indexing status
-#[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
-#[schemars(description = "Parameters for checking indexing status")]
-pub struct GetIndexingStatusArgs {
-    /// Collection name (default: 'default')
-    #[schemars(description = "Name of the collection to check status for")]
-    #[serde(default = "default_collection")]
-    pub collection: String,
-}
-
-/// Arguments for clearing an index
-#[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
-#[schemars(description = "Parameters for clearing an index")]
-pub struct ClearIndexArgs {
-    /// Collection name to clear (default: 'default')
-    #[schemars(description = "Name of the collection to clear")]
-    #[serde(default = "default_collection")]
-    pub collection: String,
-}
-
-fn default_limit() -> usize {
-    10
-}
-
-fn default_collection() -> String {
-    "default".to_string()
-}
 
 /// MCP Context Browser Server
 ///
@@ -105,8 +51,8 @@ pub struct McpServer {
     indexing_service: Arc<IndexingService>,
     /// Service for searching indexed code
     search_service: Arc<SearchService>,
-    /// Authentication service
-    auth_service: Arc<AuthService>,
+    /// Authentication handler
+    auth_handler: Arc<crate::server::auth::AuthHandler>,
     /// Resource limits enforcer
     resource_limits: Arc<ResourceLimits>,
     /// Advanced cache manager
@@ -115,8 +61,6 @@ pub struct McpServer {
     _provider_router: Arc<crate::providers::routing::ProviderRouter>,
     /// Service provider for dependency injection
     service_provider: Arc<crate::di::factory::ServiceProvider>,
-    /// Tool router for handling tool calls
-    tool_router: ToolRouter<Self>,
 }
 
 impl McpServer {
@@ -197,7 +141,8 @@ impl McpServer {
         cache_manager: Option<Arc<CacheManager>>,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         // Load configuration from environment
-        let config = crate::config::Config::from_env().expect("Failed to load configuration");
+        let config = crate::config::Config::from_env()
+            .map_err(|e| format!("Failed to load configuration: {}", e))?;
 
         // Create authentication service
         let auth_service = Arc::new(AuthService::new(config.auth.clone()));
@@ -238,17 +183,17 @@ impl McpServer {
                         enabled: false,
                         ..Default::default()
                     };
-                    futures::executor::block_on(CacheManager::new(config)).unwrap()
+                    // For disabled cache, we can create synchronously since no Redis connection needed
+                    futures::executor::block_on(CacheManager::new(config))
+                        .expect("Failed to create disabled cache manager")
                 })
             }),
             _provider_router: provider_router,
             service_provider,
-            tool_router: Self::tool_router(),
         })
     }
 }
 
-#[tool_router]
 impl McpServer {
     /// Index a codebase directory for semantic search
     ///
@@ -572,8 +517,8 @@ impl McpServer {
         let cached_result: crate::core::cache::CacheResult<serde_json::Value> =
             self.cache_manager.get("search_results", &cache_key).await;
 
-        if let crate::core::cache::CacheResult::Hit(cached_data) = cached_result {
-            if let Ok(search_results) =
+        if let crate::core::cache::CacheResult::Hit(cached_data) = cached_result
+            && let Ok(search_results) =
                 serde_json::from_value::<Vec<crate::core::types::SearchResult>>(cached_data)
             {
                 tracing::info!(
@@ -588,7 +533,6 @@ impl McpServer {
                     true,
                 );
             }
-        }
 
         tracing::info!(
             "Performing semantic search for query: '{}' (limit: {})",
@@ -923,7 +867,6 @@ impl McpServer {
     }
 }
 
-#[tool_handler]
 impl ServerHandler for McpServer {
     /// Get server information and capabilities
     fn get_info(&self) -> ServerInfo {
@@ -1008,6 +951,102 @@ impl ServerHandler for McpServer {
             )
         }
     }
+
+    /// List available tools
+    async fn list_tools(
+        &self,
+        _pagination: Option<PaginatedRequestParam>,
+        _context: RequestContext<RoleServer>,
+    ) -> Result<ListToolsResult, McpError> {
+        use rmcp::model::Tool;
+
+        use std::borrow::Cow;
+        use std::sync::Arc;
+
+        let tools = vec![
+            Tool {
+                name: Cow::Borrowed("index_codebase"),
+                title: None,
+                description: Some(Cow::Borrowed("Index a codebase directory for semantic search using vector embeddings")),
+                input_schema: Arc::new(serde_json::to_value(schemars::schema_for!(IndexCodebaseArgs)).unwrap().as_object().unwrap().clone()),
+                output_schema: None,
+                annotations: None,
+                icons: None,
+                meta: Default::default(),
+            },
+            Tool {
+                name: Cow::Borrowed("search_code"),
+                title: None,
+                description: Some(Cow::Borrowed("Search for code using natural language queries")),
+                input_schema: Arc::new(serde_json::to_value(schemars::schema_for!(SearchCodeArgs)).unwrap().as_object().unwrap().clone()),
+                output_schema: None,
+                annotations: None,
+                icons: None,
+                meta: Default::default(),
+            },
+            Tool {
+                name: Cow::Borrowed("get_indexing_status"),
+                title: None,
+                description: Some(Cow::Borrowed("Get the current indexing status and statistics")),
+                input_schema: Arc::new(serde_json::to_value(schemars::schema_for!(GetIndexingStatusArgs)).unwrap().as_object().unwrap().clone()),
+                output_schema: None,
+                annotations: None,
+                icons: None,
+                meta: Default::default(),
+            },
+            Tool {
+                name: Cow::Borrowed("clear_index"),
+                title: None,
+                description: Some(Cow::Borrowed("Clear the search index for a collection")),
+                input_schema: Arc::new(serde_json::to_value(schemars::schema_for!(ClearIndexArgs)).unwrap().as_object().unwrap().clone()),
+                output_schema: None,
+                annotations: None,
+                icons: None,
+                meta: Default::default(),
+            },
+        ];
+
+        Ok(ListToolsResult {
+            tools,
+            meta: Default::default(),
+            next_cursor: None,
+        })
+    }
+
+    /// Call a tool
+    async fn call_tool(
+        &self,
+        request: CallToolRequestParam,
+        _context: RequestContext<RoleServer>,
+    ) -> Result<CallToolResult, McpError> {
+        match request.name.as_ref() {
+            "index_codebase" => {
+                let args: IndexCodebaseArgs = serde_json::from_value(
+                    serde_json::Value::Object(request.arguments.unwrap_or_default())
+                ).map_err(|e| McpError::invalid_params(format!("Invalid arguments: {}", e), None))?;
+                self.index_codebase(Parameters(args)).await
+            },
+            "search_code" => {
+                let args: SearchCodeArgs = serde_json::from_value(
+                    serde_json::Value::Object(request.arguments.unwrap_or_default())
+                ).map_err(|e| McpError::invalid_params(format!("Invalid arguments: {}", e), None))?;
+                self.search_code(Parameters(args)).await
+            },
+            "get_indexing_status" => {
+                let args: GetIndexingStatusArgs = serde_json::from_value(
+                    serde_json::Value::Object(request.arguments.unwrap_or_default())
+                ).map_err(|e| McpError::invalid_params(format!("Invalid arguments: {}", e), None))?;
+                self.get_indexing_status(Parameters(args)).await
+            },
+            "clear_index" => {
+                let args: ClearIndexArgs = serde_json::from_value(
+                    serde_json::Value::Object(request.arguments.unwrap_or_default())
+                ).map_err(|e| McpError::invalid_params(format!("Invalid arguments: {}", e), None))?;
+                self.clear_index(Parameters(args)).await
+            },
+            _ => Err(McpError::invalid_params(format!("Unknown tool: {}", request.name), None)),
+        }
+    }
 }
 
 /// Initialize logging and tracing for the MCP server
@@ -1064,7 +1103,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     // Load configuration
-    let config = crate::config::Config::from_env().expect("Failed to load configuration");
+    let config = crate::config::Config::from_env()?;
 
     // Initialize global HTTP client pool
     tracing::info!("🌐 Initializing HTTP client pool...");
@@ -1180,9 +1219,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     // Handle graceful shutdown signals
     let shutdown_signal = async {
-        tokio::signal::ctrl_c()
-            .await
-            .expect("Failed to listen for shutdown signal");
+        if let Err(e) = tokio::signal::ctrl_c().await {
+            tracing::error!("Failed to listen for shutdown signal: {}", e);
+            return;
+        }
         tracing::info!("🛑 Received shutdown signal, initiating graceful shutdown...");
     };
 

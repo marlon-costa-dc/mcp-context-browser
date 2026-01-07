@@ -4,7 +4,8 @@
 //! Tests cover server creation, tool validation, and MCP protocol compliance.
 
 use mcp_context_browser::server::{
-    ClearIndexArgs, GetIndexingStatusArgs, IndexCodebaseArgs, McpServer, SearchCodeArgs,
+    args::{ClearIndexArgs, GetIndexingStatusArgs, IndexCodebaseArgs, SearchCodeArgs},
+    McpServer,
 };
 use rmcp::{ServerHandler, model::ProtocolVersion};
 

@@ -55,22 +55,24 @@ rust-docs: ## Generate Rust API documentation
 	@cargo doc --no-deps --document-private-items
 
 # ADR management using adrs tool
+ADRS_CMD ?= $(HOME)/.cargo/bin/adrs
+
 adr-new: ## Create new ADR using adrs tool
 	@echo "📝 Creating new ADR..."
-	@adrs new
+	@$(ADRS_CMD) new
 
 adr-list: ## List ADRs using adrs tool
 	@echo "📋 ADRs:"
-	@adrs list
+	@$(ADRS_CMD) list
 
 adr-generate: ## Generate ADR summary documentation
 	@echo "📊 Generating ADR summary..."
-	@adrs generate toc > docs/adr/README.md
-	@adrs generate graph > docs/adr/adr-graph.md || true
+	@$(ADRS_CMD) generate toc > docs/adr/README.md
+	@$(ADRS_CMD) generate graph > docs/adr/adr-graph.md || true
 
 adr-status: ## Show ADR status and lifecycle
 	@echo "📈 ADR Status:"
-	@adrs list --status || echo "Status tracking not available in this version of adrs"
+	@$(ADRS_CMD) list --status || echo "Status tracking not available in this version of adrs"
 
 # Legacy diagram generation (if scripts exist)
 diagrams: ## Generate diagrams (if available)

@@ -109,7 +109,7 @@ MCP Context Browser serves as a semantic code intelligence layer between AI assi
 
 ### External Interfaces
 
-#### Primary Interfaces
+### Primary Interfaces
 
 | Interface | Protocol | Purpose | Status |
 |-----------|----------|---------|--------|

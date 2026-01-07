@@ -83,13 +83,33 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Install markdownlint
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install documentation tools
         run: |
-          npm install -g markdownlint-cli
+          # Install ADR tools
+          cargo install adrs
+          # Install other documentation tools
+          cargo install cargo-spellcheck
+          cargo install cargo-deadlinks
+          cargo install mdbook
+
+      - name: Setup documentation environment
+        run: |
+          ./scripts/docs/automation.sh setup
 
       - name: Lint documentation
         run: |
-          markdownlint docs/ --ignore docs/diagrams/generated/
+          ./scripts/docs/automation.sh quality
+
+      - name: Validate ADR compliance
+        run: |
+          ./scripts/docs/automation.sh adr-check
+
+      - name: Generate documentation
+        run: |
+          ./scripts/docs/automation.sh generate
 
       - name: Check ADR format
         run: |

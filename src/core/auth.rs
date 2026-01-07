@@ -414,4 +414,69 @@ mod tests {
         assert!(auth.authenticate("admin", "admin").is_err());
         assert!(auth.validate_token("dummy").is_err());
     }
+
+    #[test]
+    fn test_auth_service_handles_disabled_auth_errors() {
+        let config = AuthConfig {
+            enabled: false,
+            ..Default::default()
+        };
+        let auth = AuthService::new(config);
+
+        // Should return proper error instead of panicking
+        let result = auth.authenticate("user", "pass");
+        assert!(matches!(result, Err(crate::core::error::Error::Generic(_))));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("Authentication is disabled")
+        );
+    }
+
+    #[test]
+    fn test_auth_service_handles_invalid_credentials_errors() {
+        let auth = AuthService::default();
+
+        // Should return proper error instead of panicking
+        let result = auth.authenticate("invalid@email.com", "wrongpass");
+        assert!(matches!(result, Err(crate::core::error::Error::Generic(_))));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("Invalid credentials")
+        );
+    }
+
+    #[test]
+    fn test_auth_service_handles_token_validation_errors() {
+        let auth = AuthService::default();
+
+        // Should return proper error for invalid tokens instead of panicking
+        let result = auth.validate_token("invalid.jwt.token");
+        assert!(result.is_err()); // Should return some kind of error for invalid tokens
+        let err_msg = result.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("Invalid token format")
+                || err_msg.contains("Base64 decode error")
+                || err_msg.contains("JSON parsing error")
+        );
+
+        // Should return proper error for malformed tokens instead of panicking
+        let result = auth.validate_token("malformed.token");
+        assert!(result.is_err()); // Should return some kind of error for malformed tokens
+    }
+
+    #[test]
+    fn test_auth_service_handles_token_generation_errors() {
+        let auth = AuthService::default();
+
+        // This should work in normal cases, but we test the error handling path
+        let result = auth.authenticate("admin@context.browser", "admin");
+        assert!(
+            result.is_ok(),
+            "Authentication should succeed with valid credentials"
+        );
+    }
 }

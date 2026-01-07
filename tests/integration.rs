@@ -340,9 +340,14 @@ mod tests {
 
         // Test tools/list
         let tools_result = client.list_all_tools().await?;
+        println!("DEBUG: Found {} tools", tools_result.len());
+        for tool in &tools_result {
+            println!("DEBUG: Tool: {}", tool.name);
+        }
         assert!(
             tools_result.len() >= 4,
-            "Server should provide at least 4 tools"
+            "Server should provide at least 4 tools, but found {}",
+            tools_result.len()
         );
 
         // Verify expected tools are present

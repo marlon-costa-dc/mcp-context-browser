@@ -302,25 +302,23 @@ impl CacheManager {
 
         let size_bytes = serde_json::to_string(&data).map(|s| s.len()).unwrap_or(0);
 
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_err(|e| Error::generic(format!("System time error: {}", e)))?
+            .as_secs();
+
         let entry = CacheEntry {
             data: data.clone(),
-            created_at: SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_secs(),
-            accessed_at: SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_secs(),
+            created_at: now,
+            accessed_at: now,
             access_count: 1,
             size_bytes,
         };
 
         // Store in Redis if available
-        if self.redis_client.is_some() {
-            if let Err(e) = self.set_in_redis(&full_key, &entry, ttl).await {
-                tracing::warn!("Redis set failed: {}", e);
-            }
+        if self.redis_client.is_some()
+            && let Err(e) = self.set_in_redis(&full_key, &entry, ttl).await {
+            tracing::warn!("Redis set failed: {}", e);
         }
 
         // Store in local cache
@@ -338,10 +336,9 @@ impl CacheManager {
         let full_key = format!("{}:{}", namespace, key);
 
         // Delete from Redis
-        if self.redis_client.is_some() {
-            if let Err(e) = self.delete_from_redis(&full_key).await {
-                tracing::warn!("Redis delete failed: {}", e);
-            }
+        if self.redis_client.is_some()
+            && let Err(e) = self.delete_from_redis(&full_key).await {
+            tracing::warn!("Redis delete failed: {}", e);
         }
 
         // Delete from local cache
@@ -359,10 +356,9 @@ impl CacheManager {
         let pattern = format!("{}:*", namespace);
 
         // Clear from Redis
-        if self.redis_client.is_some() {
-            if let Err(e) = self.clear_namespace_redis(&pattern).await {
-                tracing::warn!("Redis namespace clear failed: {}", e);
-            }
+        if self.redis_client.is_some()
+            && let Err(e) = self.clear_namespace_redis(&pattern).await {
+            tracing::warn!("Redis namespace clear failed: {}", e);
         }
 
         // Clear from local cache
@@ -463,7 +459,7 @@ impl CacheManager {
         if let Some(entry) = cache.get_mut(key) {
             entry.accessed_at = SystemTime::now()
                 .duration_since(UNIX_EPOCH)
-                .unwrap()
+                .map_err(|e| Error::generic(format!("System time error: {}", e)))?
                 .as_secs();
             entry.access_count += 1;
             return Ok(Some(entry.data.clone()));
@@ -499,7 +495,9 @@ impl CacheManager {
     async fn evict_entries(&self, cache: &mut HashMap<String, CacheEntry<serde_json::Value>>) {
         // Simple LRU eviction: remove least recently accessed entries
         let mut entries: Vec<String> = cache.keys().cloned().collect();
-        entries.sort_by_key(|key| cache.get(key).unwrap().accessed_at);
+        entries.sort_by_key(|key| {
+            cache.get(key).map(|entry| entry.accessed_at).unwrap_or(0) // Fallback to 0 if key not found (shouldn't happen)
+        });
 
         // Remove oldest 10% of entries
         let to_remove = (cache.len() / 10).max(1);
@@ -548,7 +546,7 @@ impl CacheManager {
     async fn cleanup_expired_entries(&self) -> Result<()> {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
+            .map_err(|e| Error::generic(format!("System time error: {}", e)))?
             .as_secs();
 
         let mut cache = self.local_cache.write().await;
@@ -692,5 +690,91 @@ mod tests {
 
         assert!(result1.is_miss());
         assert!(result2.is_hit());
+    }
+
+    #[tokio::test]
+    async fn test_cache_manager_handles_connection_failures() {
+        // Test with invalid Redis configuration
+        let config = CacheConfig {
+            redis_url: "redis://invalid:6379".to_string(),
+            default_ttl_seconds: 300,
+            max_size: 100,
+            enabled: true,
+            namespaces: CacheNamespacesConfig::default(),
+        };
+
+        // Should handle Redis connection failures gracefully
+        let result = CacheManager::new(config).await;
+        // The implementation should either succeed with fallback or return a proper error
+        // We accept both outcomes as long as there's no panic
+        match result {
+            Ok(manager) => {
+                // If it succeeds, it should have fallen back to local cache
+                assert!(manager.is_enabled());
+            }
+            Err(e) => {
+                // If it fails, it should be a proper error, not a panic
+                assert!(matches!(
+                    e,
+                    crate::core::error::Error::Redis { .. } | crate::core::error::Error::Generic(_)
+                ));
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_cache_manager_handles_disabled_cache_operations() {
+        let config = CacheConfig {
+            redis_url: "".to_string(),
+            default_ttl_seconds: 300,
+            max_size: 0, // Disabled
+            enabled: false,
+            namespaces: CacheNamespacesConfig::default(),
+        };
+
+        let manager = CacheManager::new(config).await.unwrap();
+
+        // Operations on disabled cache should not panic
+        let set_result = manager.set("test", "key", "value".to_string()).await;
+        assert!(set_result.is_ok()); // Should succeed (no-op) or return proper error
+
+        let get_result: CacheResult<String> = manager.get("test", "key").await;
+        // CacheResult doesn't have is_ok, check it's not an error
+        assert!(!matches!(get_result, CacheResult::Error(_)));
+    }
+
+    #[tokio::test]
+    async fn test_cache_manager_handles_namespace_operations() {
+        let config = CacheConfig::default();
+        let manager = CacheManager::new(config).await.unwrap();
+
+        // These operations should not panic
+        let clear_result = manager.clear_namespace("test_ns").await;
+        assert!(clear_result.is_ok());
+
+        let delete_result = manager.delete("test_ns", "key").await;
+        assert!(delete_result.is_ok());
+
+        // Note: get_namespace_stats doesn't exist, skip that test
+    }
+
+    #[tokio::test]
+    async fn test_cache_manager_handles_large_data_operations() {
+        let config = CacheConfig::default();
+        let manager = CacheManager::new(config).await.unwrap();
+
+        // Test with large data that might cause issues
+        let large_data = "x".repeat(1024 * 1024); // 1MB string
+
+        let set_result = manager.set("test", "large_key", large_data.clone()).await;
+        assert!(set_result.is_ok());
+
+        let get_result: CacheResult<String> = manager.get("test", "large_key").await;
+        // Check it's not an error and contains the data
+        match get_result {
+            CacheResult::Hit(data) => assert_eq!(data, large_data),
+            CacheResult::Miss => panic!("Expected cache hit"),
+            CacheResult::Error(_) => panic!("Expected no error"),
+        }
     }
 }

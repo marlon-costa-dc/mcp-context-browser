@@ -71,7 +71,7 @@ impl CodebaseLockManager {
     /// Returns Some(cleanup_fn) if lock acquired, None if already locked
     pub async fn acquire_lock(
         codebase_path: &Path,
-    ) -> Result<Option<Box<dyn FnOnce() -> Result<()> + Send + '_>>> {
+    ) -> Result<Option<Box<dyn FnOnce() -> Result<()> + Send>>> {
         let lock_dir = Self::ensure_lock_dir()?;
         let lock_name = Self::lock_filename(codebase_path);
         let lock_path = lock_dir.join(format!("{}{}", lock_name, Self::LOCK_EXT));
@@ -105,12 +105,14 @@ impl CodebaseLockManager {
                 Self::write_lock_metadata(&meta_path, codebase_path).await?;
 
                 // Return cleanup function
+                let meta_path_clone = meta_path.clone();
+                let codebase_path_str = codebase_path.display().to_string();
                 let cleanup = Box::new(move || {
                     // Release lock
                     let _ = lock_file.unlock();
                     // Remove metadata
-                    let _ = fs::remove_file(&meta_path);
-                    println!("[LOCK] Released lock for {}", codebase_path.display());
+                    let _ = fs::remove_file(&meta_path_clone);
+                    println!("[LOCK] Released lock for {}", codebase_path_str);
                     Ok(())
                 });
 
@@ -233,17 +235,16 @@ impl CodebaseLockManager {
                 .map_err(|e| Error::internal(format!("Failed to read directory entry: {}", e)))?;
             let path = entry.path();
 
-            if let Some(ext) = path.extension() {
-                if ext == Self::META_EXT.trim_start_matches('.') {
-                    match fs::read_to_string(&path) {
-                        Ok(content) => {
-                            if let Ok(metadata) = serde_json::from_str::<LockMetadata>(&content) {
-                                locks.push(metadata);
-                            }
+            if let Some(ext) = path.extension()
+                && ext == Self::META_EXT.trim_start_matches('.') {
+                match fs::read_to_string(&path) {
+                    Ok(content) => {
+                        if let Ok(metadata) = serde_json::from_str::<LockMetadata>(&content) {
+                            locks.push(metadata);
                         }
-                        Err(e) => {
-                            eprintln!("[LOCK] Failed to read metadata {}: {}", path.display(), e);
-                        }
+                    }
+                    Err(e) => {
+                        eprintln!("[LOCK] Failed to read metadata {}: {}", path.display(), e);
                     }
                 }
             }

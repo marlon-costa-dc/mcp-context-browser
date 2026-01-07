@@ -611,17 +611,15 @@ impl ConfigManager {
         }
 
         // Validate dimensions if specified
-        if let Some(dim) = config.dimensions {
-            if dim == 0 {
-                return Err(Error::config("Embedding dimensions cannot be zero"));
-            }
+        if let Some(dim) = config.dimensions
+            && dim == 0 {
+            return Err(Error::config("Embedding dimensions cannot be zero"));
         }
 
         // Validate max tokens if specified
-        if let Some(tokens) = config.max_tokens {
-            if tokens == 0 {
-                return Err(Error::config("Max tokens cannot be zero"));
-            }
+        if let Some(tokens) = config.max_tokens
+            && tokens == 0 {
+            return Err(Error::config("Max tokens cannot be zero"));
         }
 
         Ok(())
@@ -661,10 +659,9 @@ impl ConfigManager {
         }
 
         // Validate dimensions if specified
-        if let Some(dim) = config.dimensions {
-            if dim == 0 {
-                return Err(Error::config("Vector dimensions cannot be zero"));
-            }
+        if let Some(dim) = config.dimensions
+            && dim == 0 {
+            return Err(Error::config("Vector dimensions cannot be zero"));
         }
 
         Ok(())
