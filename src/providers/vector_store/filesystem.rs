@@ -541,11 +541,15 @@ impl VectorStoreProvider for FilesystemVectorStore {
             self.load_collection_state(collection).await?;
         }
 
-        let mut index = self.index_cache.write().await;
-        for id in ids {
-            index.remove(id);
-        }
+        // Remove from index
+        {
+            let mut index = self.index_cache.write().await;
+            for id in ids {
+                index.remove(id);
+            }
+        } // Lock is released here
 
+        // Save state after releasing the lock
         self.save_collection_state().await?;
         Ok(())
     }

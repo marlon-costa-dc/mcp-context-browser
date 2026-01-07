@@ -468,7 +468,7 @@ impl ConfigManager {
         }
 
         // Provider-specific API keys
-        match config.providers.embedding.provider.as_str() {
+        match config.providers.embedding.provider.to_lowercase().as_str() {
             "openai" => {
                 if let Some(key) = self.env_config.get("OPENAI_API_KEY") {
                     config.providers.embedding.api_key = Some(key.clone());
@@ -571,7 +571,7 @@ impl ConfigManager {
         config: &crate::core::types::EmbeddingConfig,
     ) -> Result<()> {
         // Check required fields based on provider
-        match config.provider.as_str() {
+        match config.provider.to_lowercase().as_str() {
             "openai" => {
                 if config.api_key.is_none() || config.api_key.as_ref().unwrap().is_empty() {
                     return Err(Error::config("OpenAI API key is required"));
@@ -632,7 +632,7 @@ impl ConfigManager {
         &self,
         config: &crate::core::types::VectorStoreConfig,
     ) -> Result<()> {
-        match config.provider.as_str() {
+        match config.provider.to_lowercase().as_str() {
             "milvus" => {
                 if config.address.is_none() || config.address.as_ref().unwrap().is_empty() {
                     return Err(Error::config("Milvus address is required"));

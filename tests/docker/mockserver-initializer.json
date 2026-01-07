@@ -2,7 +2,7 @@
   {
     "httpRequest": {
       "method": "POST",
-      "path": "/v1/embeddings",
+      "path": "/embeddings",
       "headers": {
         "Authorization": ["Bearer test-api-key"],
         "Content-Type": ["application/json"]
@@ -33,7 +33,7 @@
   {
     "httpRequest": {
       "method": "POST",
-      "path": "/v1/embeddings",
+      "path": "/embeddings",
       "headers": {
         "Content-Type": ["application/json"]
       },
@@ -56,6 +56,21 @@
           "type": "invalid_request_error",
           "code": "invalid_api_key"
         }
+      }
+    }
+  },
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/health"
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "Content-Type": ["application/json"]
+      },
+      "body": {
+        "status": "ok"
       }
     }
   }

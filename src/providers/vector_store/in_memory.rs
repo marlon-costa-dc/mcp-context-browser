@@ -180,6 +180,7 @@ fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
     if norm_a == 0.0 || norm_b == 0.0 {
         0.0
     } else {
-        dot_product / (norm_a * norm_b)
+        // Normalize to [0, 1] range
+        (dot_product / (norm_a * norm_b) + 1.0) / 2.0
     }
 }

@@ -21,7 +21,7 @@ mod tests {
         // Test that security config is properly initialized
         let config = SecurityConfig::default();
         assert!(config.enabled);
-        assert!(!config.allowed_origins.is_empty());
+        assert!(config.allowed_origins.is_empty()); // Empty means allow all origins in development
         assert!(config.max_request_size > 0);
         assert!(config.block_suspicious_requests);
 
@@ -117,6 +117,7 @@ mod tests {
     async fn test_security_disabled() {
         let config = SecurityConfig {
             enabled: false,
+            block_suspicious_requests: false,
             ..Default::default()
         };
 

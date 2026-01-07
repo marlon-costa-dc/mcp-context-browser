@@ -12,14 +12,14 @@ use rmcp::{model::ProtocolVersion, ServerHandler};
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_mcp_server_creation() {
+    #[tokio::test]
+    async fn test_mcp_server_creation() {
         let result = McpServer::new(None);
         assert!(result.is_ok(), "MCP server should be created successfully");
     }
 
-    #[test]
-    fn test_server_info_structure() {
+    #[tokio::test]
+    async fn test_server_info_structure() {
         let server = McpServer::new(None).unwrap();
         let info = server.get_info();
 
@@ -67,8 +67,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_server_instructions_comprehensive() {
+    #[tokio::test]
+    async fn test_server_instructions_comprehensive() {
         let server = McpServer::new(None).unwrap();
         let info = server.get_info();
         let instructions = info.instructions.as_ref().unwrap();
@@ -169,8 +169,8 @@ mod tests {
         assert_eq!(args_empty.collection, "");
     }
 
-    #[test]
-    fn test_server_capabilities_structure() {
+    #[tokio::test]
+    async fn test_server_capabilities_structure() {
         let server = McpServer::new(None).unwrap();
         let info = server.get_info();
         let capabilities = &info.capabilities;
@@ -197,8 +197,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_server_implementation_info() {
+    #[tokio::test]
+    async fn test_server_implementation_info() {
         let server = McpServer::new(None).unwrap();
         let info = server.get_info();
         let implementation = &info.server_info;
@@ -258,8 +258,8 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_server_tool_router_initialization() {
+    #[tokio::test]
+    async fn test_server_tool_router_initialization() {
         // Test that the server properly initializes its tool router
         let _server = McpServer::new(None).unwrap();
 
@@ -268,8 +268,8 @@ mod tests {
         assert!(true, "Server with tool router initialized successfully");
     }
 
-    #[test]
-    fn test_server_instructions_formatting() {
+    #[tokio::test]
+    async fn test_server_instructions_formatting() {
         let server = McpServer::new(None).unwrap();
         let info = server.get_info();
         let instructions = info.instructions.as_ref().unwrap();
@@ -293,8 +293,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_server_capabilities_compliance() {
+    #[tokio::test]
+    async fn test_server_capabilities_compliance() {
         let server = McpServer::new(None).unwrap();
         let info = server.get_info();
 
@@ -322,8 +322,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_instructions_contain_essential_information() {
+    #[tokio::test]
+    async fn test_instructions_contain_essential_information() {
         let server = McpServer::new(None).unwrap();
         let info = server.get_info();
         let instructions = info.instructions.as_ref().unwrap();
@@ -354,8 +354,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_instructions_provide_usage_guidance() {
+    #[tokio::test]
+    async fn test_instructions_provide_usage_guidance() {
         let server = McpServer::new(None).unwrap();
         let info = server.get_info();
         let instructions = info.instructions.as_ref().unwrap();
@@ -381,8 +381,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_server_info_serialization() {
+    #[tokio::test]
+    async fn test_server_info_serialization() {
         let server = McpServer::new(None).unwrap();
         let info = server.get_info();
 
@@ -397,8 +397,8 @@ mod tests {
         assert_eq!(deserialized.server_info.name, info.server_info.name);
     }
 
-    #[test]
-    fn test_server_supports_required_mcp_features() {
+    #[tokio::test]
+    async fn test_server_supports_required_mcp_features() {
         let server = McpServer::new(None).unwrap();
         let info = server.get_info();
 

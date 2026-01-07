@@ -16,7 +16,16 @@ pub struct MilvusVectorStoreProvider {
 impl MilvusVectorStoreProvider {
     /// Create a new Milvus vector store provider
     pub async fn new(address: String, _token: Option<String>) -> Result<Self> {
-        let client = Client::new(address)
+        // Extract host and port from URL for Milvus client
+        let endpoint = if let Some(stripped) = address.strip_prefix("http://") {
+            stripped.to_string()
+        } else if let Some(stripped) = address.strip_prefix("https://") {
+            stripped.to_string()
+        } else {
+            address
+        };
+
+        let client = Client::new(endpoint)
             .await
             .map_err(|e| Error::vector_db(format!("Failed to connect to Milvus: {}", e)))?;
 

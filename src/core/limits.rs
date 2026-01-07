@@ -559,10 +559,22 @@ static RESOURCE_LIMITS: std::sync::OnceLock<ResourceLimits> = std::sync::OnceLoc
 
 /// Initialize global resource limits
 pub fn init_global_resource_limits(config: ResourceLimitsConfig) -> Result<()> {
+    // Check if we already have resource limits
+    if get_global_resource_limits().is_some() {
+        return Ok(());
+    }
+
+    // Try to create and set new limits
     let limits = ResourceLimits::new(config);
-    RESOURCE_LIMITS
-        .set(limits)
-        .map_err(|_| "Resource limits already initialized".into())
+
+    // Try to set it, but if it fails (already set), just return success
+    match RESOURCE_LIMITS.set(limits) {
+        Ok(()) => Ok(()),
+        Err(_) => {
+            // Already set by another thread/test, just return success
+            Ok(())
+        }
+    }
 }
 
 /// Get global resource limits
