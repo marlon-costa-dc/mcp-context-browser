@@ -232,3 +232,12 @@ tests/
 - `cargo tarpaulin`: Generate coverage reports
 - `cargo bench`: Run performance benchmarks
 - `PROPTEST_CASES=10000 cargo test`: Increase property test iterations
+
+---
+
+## Cross-References
+
+-   **Architecture**: [ARCHITECTURE.md](../docs/architecture/ARCHITECTURE.md)
+-   **Contributing**: [CONTRIBUTING.md](../docs/developer/CONTRIBUTING.md)
+-   **Examples**: [examples/](../examples/)
+-   **Module Documentation**: [docs/modules/](../docs/modules/)

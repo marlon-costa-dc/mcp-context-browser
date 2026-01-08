@@ -126,7 +126,7 @@ impl McpServerBuilder {
             Some(cm) => cm,
             None => {
                 let config = config_arc.load().cache.clone();
-                Arc::new(CacheManager::new(config).await?)
+                Arc::new(CacheManager::new(config, Some(event_bus.clone())).await?)
             }
         };
 

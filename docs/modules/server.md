@@ -1,132 +1,103 @@
-# Enterprise AI Assistant Integration Server
+# Server Module
 
 **Source**: `src/server/`
-**Business Purpose**: Connect AI assistants with enterprise code intelligence
-**Enterprise Value**: Transform natural language into precise code discoveries
 
-## Business Overview
+MCP protocol server and HTTP API endpoints for AI assistant integration.
 
-The server module implements the critical business interface between AI assistants (like Claude Desktop) and the enterprise semantic code search platform. This server transforms conversational queries from developers into actionable code intelligence, bridging the gap between human intent and technical implementation.
+## Overview
 
-## Business Value Delivered
+The server module implements the interface between AI assistants (like Claude Desktop) and the semantic code search platform. It handles MCP protocol communication, request routing, and response formatting.
 
-### 🤖 AI Assistant Integration
-**Business Impact**: Seamless collaboration between developers and AI assistants
-- **Natural Interaction**: Developers ask questions in plain English
-- **Instant Answers**: AI assistants provide precise code references and context
-- **Accelerated Development**: Reduce research time from hours to seconds
+## Components
 
-### 🏢 Enterprise Protocol Compliance
-**Business Assurance**: Standardized, secure, and scalable AI integration
-- **MCP Standard**: Industry-standard protocol for AI assistant integration
-- **Security First**: Enterprise-grade authentication and access controls
-- **Scalability**: Handle thousands of concurrent AI assistant sessions
+### McpServer
 
-### 📊 Developer Productivity
-**Business Metrics**: Measurable improvements in development efficiency
-- **Time Savings**: 80% reduction in code search and discovery time
-- **Knowledge Sharing**: Democratize access to complex business logic
-- **Onboarding Acceleration**: New team members productive within days
+Main server coordinator handling MCP protocol messages.
 
-## Core Business Capabilities
+**Responsibilities**:
 
-### Intelligent Codebase Indexing
-**Business Process**: Transform enterprise codebases into searchable intelligence
-- **AST-Based Processing**: Language-aware code analysis and chunking
-- **Incremental Updates**: Efficient synchronization with code changes
-- **Multi-Language Support**: Consistent processing across technology stacks
+-   Protocol message parsing and routing
+-   Tool discovery and capability advertisement
+-   Request/response lifecycle management
+-   Error handling and graceful degradation
 
-### Semantic Search Engine
-**Business Process**: Deliver precise code results from natural language queries
-- **AI-Powered Understanding**: Transform questions into semantic search vectors
-- **Contextual Ranking**: Results ordered by relevance and business importance
-- **Hybrid Search**: Combine keyword and semantic matching for comprehensive results
+### Tool Handlers
 
-### Real-Time Synchronization
-**Business Process**: Keep search results current with code evolution
-- **Background Monitoring**: Continuous tracking of codebase changes
-- **Automatic Updates**: Seamless integration of new and modified code
-- **Performance Optimization**: Minimal impact on development workflow
+Business logic for MCP tools.
 
-## Enterprise Integration Architecture
+| Handler | Tool | Purpose |
+|---------|------|---------|
+| `index_codebase` | Codebase ingestion | Process and index source files |
+| `search_code` | Semantic search | Natural language code queries |
+| `get_indexing_status` | Status monitoring | Check indexing progress |
+| `clear_index` | Index management | Reset indexed data |
 
-### MCP Protocol Implementation
-**Business Interface**: Standardized communication with AI assistants
-- **Tool Discovery**: AI assistants automatically discover available capabilities
-- **Secure Communication**: Encrypted, authenticated request/response cycles
-- **Error Handling**: Graceful degradation and clear error reporting
+### Authentication (`auth.rs`)
 
-### Authentication & Authorization
-**Business Security**: Enterprise-grade access control and audit trails
-- **JWT Integration**: Secure token-based authentication for API access
-- **Role-Based Permissions**: Granular access control for different user types
-- **Audit Logging**: Comprehensive tracking of all system interactions
+JWT-based security for API access.
 
-### Performance Monitoring
-**Business Intelligence**: Real-time insights into system performance and usage
-- **Response Time Tracking**: Monitor query performance and optimization opportunities
-- **Usage Analytics**: Understand how teams interact with code intelligence
-- **Health Monitoring**: Proactive identification of system issues
+-   Token validation and generation
+-   Role-based permissions
+-   Request authentication middleware
 
-## Key Business Workflows
+### Rate Limiting (`rate_limit_middleware.rs`)
 
-### Code Discovery Workflow
-1. **Developer Query**: "How does user authentication work in our system?"
-2. **AI Assistant Processing**: Query sent to MCP Context Browser server
-3. **Semantic Search**: Query transformed into vector embeddings for similarity search
-4. **Result Ranking**: Code chunks ranked by relevance and context
-5. **Intelligent Response**: AI assistant provides specific code references with explanations
+Request throttling to prevent abuse.
 
-### Codebase Onboarding Workflow
-1. **Initial Indexing**: Large codebase ingested and processed into semantic chunks
-2. **Background Sync**: Continuous monitoring for code changes and updates
-3. **Query Optimization**: Search indexes optimized for common query patterns
-4. **Performance Tuning**: System automatically adapts to usage patterns
+-   Token bucket implementation
+-   Per-user/per-endpoint limits
+-   Configurable thresholds
 
-### Enterprise Integration Workflow
-1. **Provider Setup**: Configure AI and storage providers for business requirements
-2. **Security Configuration**: Set up authentication and access controls
-3. **Monitoring Deployment**: Configure dashboards and alerting for operations teams
-4. **Team Training**: Enable developers to leverage AI-powered code discovery
+## MCP Protocol
 
-## Key Exports
+Implements [Model Context Protocol](https://modelcontextprotocol.io/) specification.
 
-```rust
-// Core server components
-pub use server::McpServer;                    // Main business coordinator
-pub use auth::AuthHandler;                    // Security and access control
-pub use handlers::*;                          // Business operation handlers
+**Transport**: stdio (standard input/output)
 
-// Business domain types
-pub use args::{IndexCodebaseArgs, SearchCodeArgs}; // API contracts
-pub use formatter::ResponseFormatter;          // Result presentation
-```
+**Message Types**:
+
+-   `initialize` - Capability negotiation
+-   `tools/list` - Tool discovery
+-   `tools/call` - Tool execution
+-   `shutdown` - Graceful termination
 
 ## File Structure
 
 ```text
-rate_limit_middleware.rs    # Request throttling and quota management
-security.rs                 # Enterprise security controls and validation
-args.rs                     # API contract definitions and validation
-auth.rs                     # Authentication and authorization business logic
-formatter.rs                # Response formatting for AI assistant consumption
-handlers/mod.rs             # Business operation handlers
-handlers/index_codebase.rs  # Codebase ingestion business logic
-handlers/search_code.rs     # Semantic search business logic
-handlers/get_indexing_status.rs # System monitoring business logic
-handlers/clear_index.rs     # Index management business operations
-init.rs                     # Server initialization and orchestration
-server.rs                   # Main MCP server implementation
-mod.rs                      # Module exports and organization
+src/server/
+├── args.rs              # Request argument types
+├── auth.rs              # Authentication logic
+├── builder.rs           # Server builder pattern
+├── formatter.rs         # Response formatting
+├── handlers/
+│   ├── clear_index.rs
+│   ├── get_indexing_status.rs
+│   ├── index_codebase.rs
+│   ├── mod.rs
+│   └── search_code.rs
+├── init.rs              # Server initialization
+├── mod.rs               # Module exports
+├── rate_limit_middleware.rs
+├── security.rs          # Security controls
+└── server.rs            # Main server implementation
 ```
 
-## Quality Assurance
+## Key Exports
 
-- **Protocol Compliance**: Full MCP specification validation and testing
-- **Security Testing**: Comprehensive authentication and authorization validation
-- **Performance Benchmarking**: Guaranteed response times under enterprise load
-- **Integration Testing**: End-to-end validation with popular AI assistants
+```rust
+pub use server::McpServer;
+pub use auth::AuthHandler;
+pub use handlers::*;
+pub use args::{IndexCodebaseArgs, SearchCodeArgs};
+```
 
----
+## Testing
 
-**Enterprise Impact**: The server module serves as the critical bridge between AI assistants and enterprise code intelligence, enabling development teams to leverage conversational interfaces for instant access to complex business logic and implementation details.
+15 MCP protocol tests plus 13 integration tests. See [tests/](../../tests/).
+
+## Cross-References
+
+-   **Architecture**: [ARCHITECTURE.md](../architecture/ARCHITECTURE.md)
+-   **Services**: [services.md](./services.md) (business logic)
+-   **Core**: [core.md](./core.md) (auth, rate limiting)
+-   **Providers**: [providers.md](./providers.md) (AI providers)

@@ -210,6 +210,16 @@ cargo run --bin mcp-context-browser -- --help
 -   **Discussions**: Use GitHub Discussions for questions
 -   **Documentation**: Check docs/architecture/ARCHITECTURE.md for technical details
 
-## 🙏 Code of Conduct
+## Code of Conduct
 
 Be respectful and constructive in all interactions. Focus on improving the project and helping fellow contributors.
+
+---
+
+## Cross-References
+
+-   **Architecture**: [ARCHITECTURE.md](../architecture/ARCHITECTURE.md)
+-   **Deployment**: [DEPLOYMENT.md](../operations/DEPLOYMENT.md)
+-   **Changelog**: [CHANGELOG.md](../operations/CHANGELOG.md)
+-   **Roadmap**: [ROADMAP.md](./ROADMAP.md)
+-   **Module Documentation**: [docs/modules/](../modules/)

@@ -1,98 +1,97 @@
-# Core Business Services - Enterprise Code Intelligence
+# Services Module
 
 **Source**: `src/services/`
-**Business Purpose**: Orchestrate the complete semantic code search workflow
-**Enterprise Value**: Transform raw codebases into AI-powered business intelligence
 
-## Business Overview
+Orchestrates the semantic code search workflow - from codebase ingestion to search results.
 
-The services module contains the core business logic that powers the semantic code search platform. Each service encapsulates specific business capabilities that work together to deliver enterprise-grade code intelligence to development teams.
+## Overview
 
-## Business Value Delivered
+The services module contains core business logic that powers the semantic code search platform. Each service encapsulates specific capabilities that work together to deliver code intelligence.
 
-### 🚀 Development Acceleration
-- **Instant Code Discovery**: Natural language queries return precise code results in seconds
-- **Knowledge Democratization**: Complex business logic becomes accessible through conversational search
-- **Productivity Multiplier**: Teams focus on building rather than searching through codebases
+## Services
 
-### 🏢 Enterprise Capabilities
-- **Scalable Architecture**: Handles millions of lines of code across distributed teams
-- **Reliable Operations**: Enterprise-grade error handling and monitoring
-- **Security Compliance**: Integrated authentication and access controls
+### ContextService
 
-## Service Architecture
+Coordinates embedding generation and vector storage operations.
 
-### Context Service - AI Semantic Intelligence
-**Business Purpose**: Transform code into searchable business intelligence
-- **Semantic Understanding**: AI embeddings capture code meaning beyond syntax
-- **Intelligent Chunking**: Code segments processed for optimal search relevance
-- **Hybrid Search**: Combines keyword and semantic search for comprehensive results
+**Responsibilities**:
 
-### Indexing Service - Codebase Ingestion
-**Business Purpose**: Ingest and organize enterprise codebases for search
-- **AST-Based Analysis**: Language-specific parsing for accurate code understanding
-- **Incremental Updates**: Efficient synchronization with code changes
-- **Multi-Language Support**: Consistent processing across technology stacks
+-   Generate embeddings via AI providers
+-   Store and retrieve vectors
+-   Handle batch processing
+-   Collect performance metrics
 
-### Search Service - Natural Language Discovery
-**Business Purpose**: Deliver precise code results from conversational queries
-- **Semantic Matching**: Find code by meaning, not just keywords
-- **Relevance Ranking**: Results ordered by business context and importance
-- **Performance Optimization**: Sub-second responses for large codebases
+**Related**: [providers/embedding](./providers.md), [core/types](./core.md)
 
-## Enterprise Integration Points
+### IndexingService
 
-### AI Provider Ecosystem
-- **OpenAI Integration**: Enterprise-grade GPT models for semantic understanding
-- **Ollama Deployment**: Self-hosted AI for cost-effective, private deployments
-- **Multi-Provider Routing**: Intelligent selection based on performance and cost
+Processes codebases and creates searchable vector indexes.
 
-### Vector Storage Backends
-- **Milvus Clusters**: Production-grade vector databases for enterprise scale
-- **Filesystem Storage**: Local persistence for development and small teams
-- **Hybrid Storage**: Optimal storage selection based on use case requirements
+**Responsibilities**:
 
-### Business Systems Integration
-- **MCP Protocol**: Standardized interface with AI assistants (Claude Desktop, etc.)
-- **HTTP APIs**: REST endpoints for enterprise system integration
-- **Monitoring Systems**: Comprehensive metrics and health monitoring
+-   Repository scanning and file discovery
+-   Language detection and AST parsing
+-   Incremental indexing with change detection
+-   Chunk generation and metadata extraction
+
+**Related**: [chunking module](../../src/chunking/), [core/types](./core.md)
+
+### SearchService
+
+Executes semantic similarity searches across indexed codebases.
+
+**Responsibilities**:
+
+-   Query processing and embedding generation
+-   Vector similarity search execution
+-   Result ranking and filtering
+-   Response caching and optimization
+
+**Related**: [providers/vector_store](./providers.md), [core/hybrid_search](./core.md)
+
+## Integration Points
+
+### AI Providers
+
+-   OpenAI, Ollama, Gemini, VoyageAI
+-   Intelligent routing with failover
+-   See [providers module](./providers.md)
+
+### Vector Storage
+
+-   Milvus (production), InMemory (development)
+-   See [providers module](./providers.md)
+
+### MCP Protocol
+
+-   Standardized interface with AI assistants
+-   See [server module](./server.md)
 
 ## Key Exports
 
 ```rust
-// Core business services
-pub use context::ContextService;      // AI semantic intelligence coordinator
-pub use indexing::IndexingService;    // Codebase ingestion and processing
-pub use search::SearchService;        // Natural language search delivery
-
-// Business domain types
-pub use crate::core::types::{CodeChunk, SearchResult};
+pub use context::ContextService;
+pub use indexing::IndexingService;
+pub use search::SearchService;
 ```
-
-## Business Workflow
-
-1. **Code Ingestion**: IndexingService processes raw codebases into intelligent chunks
-2. **Semantic Encoding**: ContextService transforms code into AI embeddings
-3. **Knowledge Storage**: Vector stores persist searchable business intelligence
-4. **Query Processing**: SearchService delivers instant, relevant code discoveries
-5. **AI Integration**: MCP server provides seamless access to development teams
 
 ## File Structure
 
 ```text
-context.rs       # AI semantic intelligence and code transformation
-indexing.rs      # Codebase ingestion and AST-based processing
-mod.rs          # Service orchestration and business logic coordination
-search.rs       # Natural language query processing and result ranking
+src/services/
+├── context.rs    # Embedding and vector operations
+├── indexing.rs   # Codebase ingestion and processing
+├── mod.rs        # Module coordination
+└── search.rs     # Query processing and ranking
 ```
 
-## Quality Assurance
+## Testing
 
-- **108 Business Tests**: Comprehensive validation of enterprise scenarios
-- **Performance Benchmarks**: Guaranteed sub-second response times
-- **Enterprise Monitoring**: Real-time health and performance tracking
-- **Security Validation**: Integrated authentication and access controls
+214 tests cover services functionality. See [tests/](../../tests/).
 
----
+## Cross-References
 
-**Enterprise Impact**: The services module transforms enterprise codebases into AI-powered business intelligence, enabling development teams to accelerate from hours of manual code search to seconds of AI-driven discovery.
+-   **Architecture**: [ARCHITECTURE.md](../architecture/ARCHITECTURE.md)
+-   **Core Types**: [core.md](./core.md)
+-   **Providers**: [providers.md](./providers.md)
+-   **Server**: [server.md](./server.md)

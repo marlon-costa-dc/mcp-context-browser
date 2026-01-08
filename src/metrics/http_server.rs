@@ -15,7 +15,7 @@ use crate::core::rate_limit::RateLimiter;
 // Rate limiting middleware will be added later
 
 use crate::metrics::{
-    CpuMetrics, MemoryMetrics, QueryPerformanceMetrics, CacheMetrics,
+    CpuMetrics, MemoryMetrics, CacheMetrics,
     system::SystemMetricsCollectorInterface,
 };
 use crate::server::server::PerformanceMetricsInterface;
@@ -59,21 +59,20 @@ impl MetricsApiServer {
     /// Create a new metrics API server
     pub fn new(
         port: u16,
+        system_collector: Arc<dyn SystemMetricsCollectorInterface>,
+        performance_metrics: Arc<dyn PerformanceMetricsInterface>,
     ) -> Self {
-        Self::with_limits(port, None, None)
+        Self::with_limits(port, system_collector, performance_metrics, None, None)
     }
 
     /// Create a new metrics API server with both rate limiting and resource limits
     pub fn with_limits(
         port: u16,
+        system_collector: Arc<dyn SystemMetricsCollectorInterface>,
+        performance_metrics: Arc<dyn PerformanceMetricsInterface>,
         rate_limiter: Option<Arc<RateLimiter>>,
         resource_limits: Option<Arc<ResourceLimits>>,
     ) -> Self {
-        // We will need to inject these dependencies properly
-        // For now, use the global ones if available or create defaults
-        let performance_metrics = Arc::new(crate::server::server::McpPerformanceMetrics::default());
-        let system_collector = Arc::new(crate::metrics::system::SystemMetricsCollector::new());
-
         Self {
             port,
             system_collector,

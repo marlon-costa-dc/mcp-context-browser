@@ -18,7 +18,7 @@ use crate::providers::vector_store::InMemoryVectorStoreProvider;
 use crate::providers::vector_store::milvus::MilvusVectorStoreProvider;
 use async_trait::async_trait;
 use std::sync::Arc;
-use shaku::{Component, Interface};
+use shaku::Component;
 
 /// Provider factory trait
 #[async_trait]

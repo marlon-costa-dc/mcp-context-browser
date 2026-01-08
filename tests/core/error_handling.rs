@@ -76,7 +76,7 @@ mod cache_error_handling_tests {
         };
 
         // In Exclusive mode, this should FAIL on creation
-        let result = CacheManager::new(config).await;
+        let result = CacheManager::new(config, None).await;
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), Error::Redis { .. } | Error::Generic(_)));
     }

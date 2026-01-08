@@ -14,7 +14,7 @@ mod reproduction_test {
             namespaces: CacheNamespacesConfig::default(),
         };
 
-        let manager = Arc::new(CacheManager::new(config).await.unwrap());
+        let manager = Arc::new(CacheManager::new(config, None).await.unwrap());
         let mut handles = vec![];
 
         // Spawn 100 concurrent readers/writers

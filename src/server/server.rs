@@ -18,7 +18,6 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use shaku::{Component, Interface, ModuleBuildContext};
 use arc_swap::ArcSwap;
 
-use crate::config::{ConfigLoader, ConfigWatcher};
 use crate::core::cache::CacheManager;
 use crate::core::limits::ResourceLimits;
 use crate::di::factory::ServiceProviderInterface;
@@ -283,30 +282,6 @@ impl McpServer {
         Ok((auth_handler, indexing_service, search_service))
     }
 
-    /// Initialize cache manager with fallback to disabled cache
-    async fn initialize_cache_manager(
-        cache_manager: Option<Arc<CacheManager>>,
-    ) -> crate::core::error::Result<Arc<CacheManager>> {
-        let cache_manager = match cache_manager {
-            Some(cm) => cm,
-            None => {
-                let config = crate::core::cache::CacheConfig {
-                    enabled: false,
-                    ..Default::default()
-                };
-                // For disabled cache, we can create safely
-                let cm = CacheManager::new(config).await.map_err(|e| {
-                    crate::core::error::Error::internal(format!(
-                        "Failed to create disabled cache manager: {}",
-                        e
-                    ))
-                })?;
-                Arc::new(cm)
-            }
-        };
-        Ok(cache_manager)
-    }
-
     /// Initialize all MCP tool handlers
     fn initialize_handlers(
         _service_provider: Arc<dyn ServiceProviderInterface>,
@@ -361,13 +336,17 @@ impl McpServer {
             clear_index_handler,
         ) = Self::initialize_handlers(
             Arc::clone(&service_provider),
-            indexing_service,
+            Arc::clone(&indexing_service),
             search_service,
             Arc::clone(&auth_handler),
             Arc::clone(&resource_limits),
-            cache_manager,
+            Arc::clone(&cache_manager),
             Arc::clone(&admin_service),
         )?;
+
+        // Start event listeners
+        indexing_service.start_event_listener(event_bus.clone());
+        cache_manager.start_event_listener(event_bus.clone());
 
         Ok(Self {
             index_codebase_handler,

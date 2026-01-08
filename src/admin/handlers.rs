@@ -96,7 +96,7 @@ pub async fn list_providers_handler(
 
 /// Add a new provider
 pub async fn add_provider_handler(
-    State(_state): State<AdminState>,
+    State(state): State<AdminState>,
     Json(provider_config): Json<ProviderConfigRequest>,
 ) -> Result<Json<ApiResponse<ProviderInfo>>, StatusCode> {
     // Validate provider configuration based on type
@@ -124,20 +124,18 @@ pub async fn add_provider_handler(
         }
     }
 
-    // In a real implementation, this would register the provider with the MCP server
-    // For now, return success with mock data
-    let provider_info = ProviderInfo {
-        id: format!(
-            "{}-{}",
-            provider_config.provider_type, provider_config.provider_type
-        ),
-        name: provider_config.provider_type.clone(),
-        provider_type: provider_config.provider_type,
-        status: "pending".to_string(),
-        config: provider_config.config,
-    };
-
-    Ok(Json(ApiResponse::success(provider_info)))
+    // Register provider through admin service
+    match state
+        .admin_service
+        .add_provider(&provider_config.provider_type, provider_config.config)
+        .await
+    {
+        Ok(provider_info) => Ok(Json(ApiResponse::success(provider_info))),
+        Err(e) => Ok(Json(ApiResponse::error(format!(
+            "Failed to add provider: {}",
+            e
+        )))),
+    }
 }
 
 /// Remove a provider
@@ -580,16 +578,16 @@ pub struct ExportQuery {
 
 /// Search handler
 pub async fn search_handler(
-    State(_state): State<AdminState>,
+    State(state): State<AdminState>,
     Query(params): Query<SearchQuery>,
-) -> Result<Json<ApiResponse<serde_json::Value>>, StatusCode> {
-    // TODO: Implement search through MCP server
-    let results = serde_json::json!({
-        "query": params.q,
-        "results": [],
-        "total": 0,
-        "took_ms": 0
-    });
-
-    Ok(Json(ApiResponse::success(results)))
+) -> Result<Json<ApiResponse<crate::admin::service::SearchResults>>, StatusCode> {
+    // Use admin service for search
+    match state
+        .admin_service
+        .search(&params.q, None, params.limit)
+        .await
+    {
+        Ok(results) => Ok(Json(ApiResponse::success(results))),
+        Err(e) => Ok(Json(ApiResponse::error(format!("Search failed: {}", e)))),
+    }
 }

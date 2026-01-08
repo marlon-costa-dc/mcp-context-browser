@@ -3,7 +3,7 @@
 > **IMPORTANT:** Start with fresh context. Run `/clear` before `/implement`.
 
 Created: 2026-01-08
-Status: COMPLETE
+Status: VERIFIED
 
 ## Summary
 **Goal:** Eliminate locks entirely by adopting Actor Pattern and Concurrent Data Structures, while ensuring non-blocking I/O.
@@ -19,7 +19,7 @@ Status: COMPLETE
 ## Scope
 
 ### In Scope
-- `src/sync/lockfile.rs`: Convert to async I/O
+- `src/sync/lockfile.rs`: Convert to async I/O (Note: File removed as part of lock elimination)
 - `src/snapshot/mod.rs` & `src/core/merkle.rs`: Offload blocking recursion
 - `src/providers/vector_store/filesystem.rs`: Rewrite to use `DashMap` & `tokio::fs`
 - `src/services/context.rs`: Refactor to use Actor pattern for Hybrid Search
@@ -80,7 +80,7 @@ Status: COMPLETE
 4. Update `src/services/indexing.rs` to await these new async methods.
 
 **Definition of Done:**
-- [ ] No heavy blocking operations on the async thread.
+- [x] No heavy blocking operations on the async thread.
 
 ### Task 3: Lock-Free Vector Store (DashMap)
 **Objective:** Replace `RwLock<HashMap>` with `DashMap` in `FilesystemVectorStore`.
@@ -95,8 +95,8 @@ Status: COMPLETE
    - Ensure `tokio::fs` is used for I/O.
 
 **Definition of Done:**
-- [ ] `RwLock` removed from `FilesystemVectorStore`.
-- [ ] All I/O is async.
+- [x] `RwLock` removed from `FilesystemVectorStore`.
+- [x] All I/O is async.
 
 ### Task 4: Hybrid Search Actor (Channel-based)
 **Objective:** Move `HybridSearchEngine` state into an actor to eliminate `RwLock` and enable batching.
@@ -114,8 +114,8 @@ Status: COMPLETE
    - Implement `search_similar` by sending a message and awaiting the response (oneshot).
 
 **Definition of Done:**
-- [ ] `RwLock` removed from `ContextService`.
-- [ ] Hybrid Search uses message passing.
+- [x] `RwLock` removed from `ContextService`.
+- [x] Hybrid Search uses message passing.
 
 ## Risks and Mitigations
 | Risk | Likelihood | Impact | Mitigation |

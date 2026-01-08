@@ -1,6 +1,6 @@
 # MCP Context Browser - Comprehensive Architecture Documentation
 
-[![Version](https://img.shields.io/badge/version-0.0.3-blue)](https://github.com/marlonsc/mcp-context-browser/releases)
+[![Version](https://img.shields.io/badge/version-0.0.4-blue)](https://github.com/marlonsc/mcp-context-browser/releases)
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange)](https://www.rust-lang.org/)
 [![MCP](https://img.shields.io/badge/MCP-2024--11--05-blue)](https://modelcontextprotocol.io/)
 
@@ -49,7 +49,7 @@ MCP Context Browser is a high-performance, extensible Model Context Protocol (MC
 
 ### Current Status
 
-**Version**: 0.0.3 (Stable Architecture)
+**Version**: 0.0.4 (Production Ready)
 **Architecture Maturity**: ✅ **100% Complete DI Implementation**
 **DI Status**: ✅ Provider Registry, ✅ Service Factory, ✅ Provider Router, ✅ Runtime Configuration
 **Deployment Options**: Local development, Docker, Kubernetes, hybrid cloud-edge
@@ -638,7 +638,7 @@ The system is organized into specialized modules, each handling distinct respons
 -   `manager`: Sync operation management and statistics
 -   `CodebaseLockManager`: Lock lifecycle management
 
-### Advanced Features (v0.0.3)
+### Advanced Features (v0.0.4)
 
 #### 🛡️ Provider Routing System (`src/providers/routing/`)
 

@@ -120,7 +120,7 @@ async fn initialize_server_components(
     // Initialize cache manager
     let cache_manager = if config.cache.enabled {
         tracing::info!("🗄️  Initializing cache manager...");
-        match CacheManager::new(config.cache.clone()).await {
+        match CacheManager::new(config.cache.clone(), Some(event_bus.clone())).await {
             Ok(manager) => {
                 tracing::info!("✅ Cache manager initialized successfully");
                 Some(Arc::new(manager))
@@ -176,6 +176,8 @@ async fn initialize_server_components(
         );
         let metrics_server = MetricsApiServer::with_limits(
             config.metrics.port,
+            server.system_collector(),
+            server.performance_metrics(),
             rate_limiter.clone(),
             Some(resource_limits.clone()),
         );

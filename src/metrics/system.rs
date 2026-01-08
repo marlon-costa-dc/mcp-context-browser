@@ -4,10 +4,10 @@
 
 use crate::core::error::{Error, Result};
 use serde::{Deserialize, Serialize};
-use shaku::{Component, Interface};
 use sysinfo::{System, Disks, Networks, ProcessesToUpdate, Pid};
 use tokio::sync::{mpsc, oneshot};
 use async_trait::async_trait;
+use shaku::Component;
 
 /// CPU usage metrics
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

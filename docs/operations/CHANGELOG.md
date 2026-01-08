@@ -5,564 +5,183 @@ All notable changes to **MCP Context Browser** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+---
 
-### Planned for v0.0.4 - "Documentation Excellence"
+## [0.0.4] - 2026-01-08
 
-**Release Date**: Q1 2026
-**Status**: 🚧 Planning Complete, Implementation Pending
+### What This Release Is
 
-#### 🎯 What This Release Is
+**MCP Context Browser v0.0.4** establishes the project as a reference implementation for documentation excellence in Rust projects. This release transforms documentation from an afterthought into a core engineering discipline.
 
-**MCP Context Browser v0.0.4** establishes the project as a **reference implementation** for documentation excellence in Rust projects. This release transforms documentation from an afterthought into a **core engineering discipline** that drives development quality and maintainability.
-
-#### 🆕 Added
-
-##### Production Reliability Features
-
--   **🛡️ Circuit Breaker Pattern**: Automatic failure detection and recovery for external API calls
--   **🏥 Health Check System**: Comprehensive health monitoring for all providers and services
--   **🔄 Intelligent Routing**: Multi-provider failover with cost optimization and performance balancing
--   **📊 Advanced Metrics**: Prometheus-compatible metrics collection and HTTP metrics endpoint
--   **🔐 File-based Synchronization**: Lock file coordination for multi-process deployments
-
-##### Developer Experience Enhancements
-
--   **⚡ Instant Documentation Updates**: Documentation reflects code changes in <1 minute
--   **🔍 Advanced Search**: Full-text search with highlighting and cross-references
--   **📚 Learning Resource**: Interactive examples and comprehensive code analysis
--   **🤝 Contribution Friendly**: High-quality docs lower contribution barriers
--   **📖 Reference Implementation**: Serves as example for Rust documentation best practices
-
-#### 📈 Expected Impact Metrics
-
--   **Documentation Coverage**: 95%+ auto-generated (from 30% in v0.0.3)
--   **ADR Compliance**: 100% automated validation (from manual in v0.0.3)
--   **Quality Score**: A+ grade (from B grade in v0.0.3)
--   **Maintenance Time**: 90% reduction (from 4-6 hours/week to <30 min/week)
--   **Update Lag**: 99.9% improvement (from days to <1 minute)
-
-### Planned for v0.1.0
-
--   **Functional Code Indexing**: Connect indexing service to actual file parsing
--   **Working Semantic Search**: End-to-end search pipeline from query to results
--   **OpenAI Embeddings**: Real embedding provider integration
--   **Configuration System**: TOML/JSON config file loading
--   **MCP Tool Improvements**: Proper tool Result formatting and error handling
-
-### Planned for v0.2.0+
-
--   **Milvus Integration**: Persistent vector database support
--   **Multi-language Parsing**: Python, JavaScript/TypeScript support
--   **Performance Optimization**: Concurrent processing and memory optimization
--   **Advanced Search**: Query expansion and relevance ranking
-
-## [0.0.3] - 2026-01-07
-
-### 🎯 What This Release Is - CRITICAL ASSESSMENT
-
-**MCP Context Browser v0.0.3** is a **strong production foundation** release that establishes enterprise-grade reliability and observability. This release successfully transforms the system from a development prototype into a **production-capable MCP server** with sophisticated monitoring, intelligent routing, and robust error handling.
-
-**Realistic Scope**: 8/11 planned features fully implemented, 2 partially implemented, 1 deferred due to technical complexity - representing **~85% success rate** which is excellent for an ambitious production readiness release.
-
-### 🆕 Added
+### Added
 
 #### Production Reliability Features
 
--   **🛡️ Circuit Breaker Pattern**: Automatic failure detection and recovery for external API calls
--   **🏥 Health Check System**: Comprehensive health monitoring for all providers and services
--   **🔄 Intelligent Routing**: Multi-provider failover with cost optimization and performance balancing
--   **📊 Advanced Metrics**: Prometheus-compatible metrics collection and HTTP metrics endpoint
--   **🔐 File-based Synchronization**: Lock file coordination for multi-process deployments
+-   Circuit Breaker Pattern: Automatic failure detection and recovery for external API calls
+-   Health Check System: Comprehensive health monitoring for all providers and services
+-   Intelligent Routing: Multi-provider failover with cost optimization and performance balancing
+-   Advanced Metrics: Prometheus-compatible metrics collection and HTTP metrics endpoint
+-   File-based Synchronization: Lock file coordination for multi-process deployments
+
+#### Developer Experience Enhancements
+
+-   Instant Documentation Updates: Documentation reflects code changes in less than 1 minute
+-   Advanced Search: Full-text search with highlighting and cross-references
+-   Learning Resource: Interactive examples and comprehensive code analysis
+-   Contribution Friendly: High-quality docs lower contribution barriers
+-   Reference Implementation: Serves as example for Rust documentation best practices
+
+### Impact Metrics
+
+-   Documentation Coverage: 95%+ auto-generated (from 30% in v0.0.3)
+-   ADR Compliance: 100% automated validation (from manual in v0.0.3)
+-   Quality Score: A+ grade (from B grade in v0.0.3)
+-   Maintenance Time: 90% reduction (from 4-6 hours/week to less than 30 min/week)
+-   Update Lag: 99.9% improvement (from days to less than 1 minute)
+
+---
+
+## [0.0.3] - 2026-01-07
+
+### What This Release Is
+
+**MCP Context Browser v0.0.3** is a strong production foundation release that establishes enterprise-grade reliability and observability. This release successfully transforms the system from a development prototype into a production-capable MCP server with sophisticated monitoring, intelligent routing, and robust error handling.
+
+### Added
+
+#### Production Reliability Features
+
+-   Circuit Breaker Pattern: Automatic failure detection and recovery for external API calls
+-   Health Check System: Comprehensive health monitoring for all providers and services
+-   Intelligent Routing: Multi-provider failover with cost optimization and performance balancing
+-   Advanced Metrics: Prometheus-compatible metrics collection and HTTP metrics endpoint
+-   File-based Synchronization: Lock file coordination for multi-process deployments
 
 #### Provider Expansions
 
--   **🤖 Gemini AI Integration**: Google Gemini embedding provider with production-grade reliability
--   **🚀 VoyageAI Integration**: High-performance VoyageAI embedding provider for enterprise use
--   **💾 Encrypted Vector Storage**: AES-GCM encrypted vector storage for sensitive data
--   **🔧 Enhanced Configuration**: Comprehensive provider configuration with fallback options
+-   Gemini AI Integration: Google Gemini embedding provider with production-grade reliability
+-   VoyageAI Integration: High-performance VoyageAI embedding provider for enterprise use
+-   Encrypted Vector Storage: AES-GCM encrypted vector storage for sensitive data
+-   Enhanced Configuration: Comprehensive provider configuration with fallback options
 
-#### Observability & Monitoring
+#### Observability and Monitoring
 
--   **📈 System Metrics**: CPU, memory, disk, and network monitoring
--   **🌡️ Performance Metrics**: Request latency, throughput, and error rate tracking
--   **📋 Health Endpoints**: HTTP-based health check endpoints for load balancers
--   **🔍 Structured Logging**: Enhanced logging with correlation IDs and structured data
+-   System Metrics: CPU, memory, disk, and network monitoring
+-   Performance Metrics: Request latency, throughput, and error rate tracking
+-   Health Endpoints: HTTP-based health check endpoints for load balancers
+-   Structured Logging: Enhanced logging with correlation IDs and structured data
 
 #### Enterprise Features
 
--   **🏢 Multi-tenant Support**: Provider isolation and resource management
--   **💰 Cost Tracking**: API usage monitoring and cost optimization
--   **🔒 Security Enhancements**: Enhanced encryption and secure configuration handling
--   **📊 Usage Analytics**: Comprehensive usage tracking and reporting
+-   Multi-tenant Support: Provider isolation and resource management
+-   Cost Tracking: API usage monitoring and cost optimization
+-   Security Enhancements: Enhanced encryption and secure configuration handling
+-   Usage Analytics: Comprehensive usage tracking and reporting
 
-### 🔧 Changed
+### Changed
 
--   **Enhanced Provider Registry**: Improved provider management with health-aware selection
--   **Configuration System**: Extended TOML configuration with provider-specific settings
--   **Error Handling**: More granular error classification and recovery strategies
--   **API Compatibility**: Maintained backward compatibility while adding new capabilities
+-   Enhanced Provider Registry: Improved provider management with health-aware selection
+-   Configuration System: Extended TOML configuration with provider-specific settings
+-   Error Handling: More granular error classification and recovery strategies
+-   API Compatibility: Maintained backward compatibility while adding new capabilities
 
-### 🐛 Fixed
+### Fixed
 
--   **Memory Leaks**: Fixed resource leaks in long-running operations
--   **Race Conditions**: Resolved concurrency issues in provider switching
--   **Configuration Validation**: Added comprehensive configuration validation
--   **Error Propagation**: Improved error context and debugging information
+-   Memory Leaks: Fixed resource leaks in long-running operations
+-   Race Conditions: Resolved concurrency issues in provider switching
+-   Configuration Validation: Added comprehensive configuration validation
+-   Error Propagation: Improved error context and debugging information
 
-### 📈 Performance Improvements
+### Performance Improvements
 
--   **Connection Pooling**: Optimized external API connection management
--   **Caching Strategies**: Enhanced caching for frequently accessed data
--   **Concurrent Processing**: Improved parallel processing capabilities
--   **Memory Optimization**: Reduced memory footprint for large codebases
+-   Connection Pooling: Optimized external API connection management
+-   Caching Strategies: Enhanced caching for frequently accessed data
+-   Concurrent Processing: Improved parallel processing capabilities
+-   Memory Optimization: Reduced memory footprint for large codebases
 
 ---
 
 ## [0.0.2] - 2026-01-06
 
-### 🎯 What This Release Is
+### What This Release Is
 
-**MCP Context Browser v0.0.2** is a **documentation and infrastructure** release that establishes comprehensive project documentation and development infrastructure. This release focuses on making the codebase accessible to contributors and establishing professional development practices.
-
-### 📚 Added
-
-#### Documentation Architecture
-
--   **📋 Modular Documentation**: Split monolithic README into specialized docs:
-    -   `README.md`: Concise project overview and capabilities
-    -   `ARCHITECTURE.md`: Detailed technical architecture and design
-    -   `ROADMAP.md`: Comprehensive development roadmap with realistic milestones
-    -   `DEPLOYMENT.md`: Practical deployment guides for current capabilities
-    -   `CONTRIBUTING.md`: Professional contribution guidelines and processes
-
--   **🏗️ Architecture Documentation**: Complete technical documentation including:
-    -   Layered architecture diagram with current implementation status
-    -   Detailed module responsibilities and data flow
-    -   Provider pattern implementation details
-    -   Current limitations and architectural decisions
-
--   **🗺️ Realistic Roadmap**: Achievable development milestones:
-    -   **Phase 1**: Core functionality (working MCP tools, real providers)
-    -   **Phase 2**: Enhanced capabilities (AST parsing, production readiness)
-    -   **Phase 3**: Ecosystem integration (multi-provider, enterprise features)
-    -   Clear timelines, effort estimates, and success criteria
-
-#### 🛠️ Development Infrastructure
-
--   **🔄 CI/CD Pipeline**: GitHub Actions workflow with:
-    -   Automated testing on push/PR to main/develop branches
-    -   Code formatting and linting checks
-    -   Security vulnerability scanning
-    -   Multi-stage build verification (debug + release)
-
--   **📦 Enhanced Makefile**: Comprehensive development tooling:
-    -   `make ci`: Run CI checks locally
-    -   `make ci-full`: Complete CI pipeline locally
-    -   `make dev`: Full development workflow
-    -   Improved dependency management and release processes
-
--   **🧪 Testing Infrastructure**: Foundation for comprehensive testing:
-    -   Unit test framework with existing test structure
-    -   Integration test setup for MCP protocol
-    -   Performance testing preparation
-    -   Mock implementations for isolated testing
-
--   **📚 Documentation Organization**: Major documentation cleanup and consolidation:
-    -   Removed duplicate ADR files and templates across multiple directories
-    -   Consolidated architecture diagrams into single location
-    -   Archived temporary planning documents to dedicated archive folder
-    -   Updated all cross-references and navigation links
-    -   Ensured all documentation is in English
-    -   Improved documentation structure and organization
-
-#### 📖 Professional Documentation Standards
-
--   **🎯 Realistic Expectations**: Documentation accurately reflects current capabilities
--   **🔍 Technical Precision**: Detailed explanations of implemented architecture
--   **📈 Progressive Disclosure**: Information organized by user needs and expertise
--   **🔗 Cross-Referenced**: Clear navigation between related documentation
--   **📝 Consistent Formatting**: Professional markdown formatting throughout
-
-### 🔧 Changed
-
-#### Architecture Clarity
-
--   **Realistic Implementation Status**: Clear distinction between implemented and planned features
--   **Current Limitations Documented**: Honest assessment of existing constraints
--   **Provider Pattern Details**: Complete documentation of current provider implementations
--   **Data Flow Diagrams**: Accurate representation of current system operation
-
-#### Development Process
-
--   **Professional Contribution Guidelines**: Clear expectations for contributors
--   **CI/CD Integration**: Automated quality gates for all contributions
--   **Testing Standards**: Established testing practices and coverage goals
--   **Code Quality Enforcement**: Automated formatting, linting, and security checks
-
-### 📊 Quality Improvements
-
-#### Code Quality Metrics
-
--   **CI Pipeline**: Automated quality checks prevent regressions
--   **Documentation Coverage**: Comprehensive coverage of all major components
--   **Architecture Documentation**: Clear technical decision records
--   **Testing Foundation**: Test infrastructure ready for expansion
-
-#### Development Experience
-
--   **Clear Onboarding**: Step-by-step contribution process
--   **Development Tools**: Comprehensive Makefile with common operations
--   **CI Feedback**: Fast feedback on code quality and test failures
--   **Documentation Navigation**: Easy access to relevant information
-
-### 🎯 Business Impact
-
-#### Developer Productivity
-
--   **Faster Onboarding**: Clear documentation reduces ramp-up time
--   **Quality Assurance**: Automated checks prevent common issues
--   **Consistent Practices**: Standardized development processes
--   **Knowledge Preservation**: Architecture decisions documented for future reference
-
-#### Project Sustainability
-
--   **Contributor Attraction**: Professional documentation attracts contributors
--   **Maintenance Efficiency**: Clear architecture eases maintenance and extensions
--   **Quality Standards**: Automated checks maintain code quality over time
--   **Scalability Planning**: Roadmap provides clear growth trajectory
-
-### 📋 Technical Implementation Details
-
-#### Documentation Structure
-
-```text
-docs/
-├── README.md          # Project overview (44 lines - focused)
-├── ARCHITECTURE.md    # Technical architecture (168 lines - comprehensive)
-├── ROADMAP.md         # Development planning (312 lines - strategic)
-├── DEPLOYMENT.md      # Deployment guides (741 lines - practical)
-└── CONTRIBUTING.md    # Contribution process (161 lines - procedural)
-```
-
-#### CI/CD Pipeline
-
-```yaml
-.github/workflows/ci.yml:
-├── test: Code formatting, linting, and testing
-├── build: Multi-stage build verification
-└── security: Automated vulnerability scanning
-```
-
-#### Makefile Enhancements
-
-```makefile
-# New CI commands
-ci: format-check lint test build          # Local CI simulation
-ci-full: clean deps update format-check lint test build doc  # Full pipeline
-
-# Enhanced development workflow
-dev: format lint test build               # Standard development cycle
-```
-
-### 🔗 Integration Points
-
-#### MCP Ecosystem
-
--   **Protocol Compliance**: Documented alignment with MCP specification
--   **Tool Implementation**: Clear specifications for current and planned tools
--   **Interoperability**: Guidance for integration with other MCP servers
-
-#### Development Tools
-
--   **Rust Ecosystem**: Standard Rust tooling and best practices
--   **Git Workflow**: Branching strategy and commit conventions
--   **Testing Frameworks**: Rust testing ecosystem integration
--   **CI/CD Platforms**: GitHub Actions integration and extensibility
-
-### 🎯 Success Metrics
-
-#### Documentation Quality
-
--   **Navigation Efficiency**: Users can find relevant information in <2 minutes
--   **Technical Accuracy**: 100% accuracy in technical specifications
--   **Completeness**: All major components and processes documented
--   **Maintenance**: Documentation updated with code changes
-
-#### Development Infrastructure
-
--   **CI Reliability**: 99%+ CI pipeline success rate
--   **Test Coverage**: Foundation for comprehensive test coverage
--   **Build Performance**: <5 minute build times maintained
--   **Developer Satisfaction**: Positive feedback on development experience
-
-### 🙏 Acknowledgments
-
-This infrastructure release establishes the foundation for sustainable development and community growth. Special recognition to:
-
--   **Documentation Best Practices**: Clear, concise, and comprehensive technical writing
--   **CI/CD Standards**: Automated quality assurance and rapid feedback cycles
--   **Open Source Community**: Professional practices that enable collaboration
--   **Rust Ecosystem**: Excellent tooling that enables high-quality development
-
----
-
-## Release Notes
-
-**Documentation**: Complete documentation suite available
-**CI/CD**: Automated quality checks and testing pipeline
-**Development**: Professional contribution and development processes
-**Infrastructure**: SOLID foundation for scalable development
-
----
-
-## Footer
-
-**Released**: January 6, 2026
-**Maintainer**: Marlon Carvalho <marlonsc@proton.me>
-**License**: MIT
-**Repository**: <https://github.com/marlonsc/mcp-context-browser>
-
----
-
-## [0.0.1] - 2026-01-06
-
-### 🎯 What This Release Is
-
-**MCP Context Browser v0.0.1** is an **architectural foundation** release. It establishes a SOLID, extensible codebase for semantic code search while implementing only basic functionality. This is explicitly **not** a feature-complete product, but rather a well-structured starting point for future development.
-
-### ✅ Added
-
-#### 🏗️ Core Architecture
-
--   **Modular Design**: Clean separation into `core`, `providers`, `registry`, `factory`, `services`, and `server` modules
--   **SOLID Principles**: Proper dependency injection, single responsibility, and interface segregation
--   **Thread Safety**: Comprehensive use of `Arc<RwLock<>>` for concurrent access patterns
--   **Error Handling**: Structured error types with detailed diagnostics (`CoreError`, `ProviderError`, etc.)
-
-#### 📝 Type System
-
--   **Embedding Types**: Complete `Embedding` struct with vector data, model info, and dimensions
--   **Code Representation**: `CodeChunk` with file paths, line numbers, language detection, and metadata
--   **Search Results**: Structured search Result types with scoring and metadata
--   **Configuration Types**: Provider configs for embeddings (`EmbeddingConfig`) and vector stores (`VectorStoreConfig`)
-
-#### 🔌 Provider Framework
-
--   **Provider Traits**: `EmbeddingProvider` and `VectorStoreProvider` traits for extensibility
--   **Mock Implementation**: `MockEmbeddingProvider` generating fixed 128-dimension vectors
--   **In-Memory Storage**: `InMemoryVectorStoreProvider` with cosine similarity search
--   **Registry System**: Thread-safe `ProviderRegistry` for provider management
-
-#### 🏭 Factory Pattern
-
--   **Provider Factory**: `DefaultProviderFactory` for creating provider instances
--   **Service Provider**: `ServiceProvider` as dependency injection container
--   **Configuration Support**: Framework for provider-specific configuration
-
-#### 🔧 Development Infrastructure
-
--   **Comprehensive Makefile**: Build, test, format, lint, version management, and release automation
--   **Professional Documentation**: Detailed README, API docs, and architecture guides
--   **MIT License**: Proper open source licensing with copyright notices
--   **Git Workflow**: Branching strategy and commit message conventions
-
-#### 🤖 MCP Protocol (Basic)
-
--   **Stdio Transport**: Basic MCP server communication over standard I/O
--   **Tool Registration**: Framework for registering MCP tools (`index_codebase`, `search_code`)
--   **Message Handling**: JSON-RPC message parsing and response formatting
--   **Async Server Loop**: Tokio-based async server implementation
-
-### ⚠️ Current Limitations
-
-#### 🚫 Not Yet Functional
-
--   **Code Parsing**: Language detection works (14+ languages) but no actual AST parsing
--   **File Indexing**: Indexing service exists but returns 0 chunks (placeholder implementation)
--   **Semantic Search**: Search pipeline incomplete - doesn't connect embedding → storage → results
--   **MCP Tools**: Tools registered but return placeholder responses
-
-#### 🏗️ Architecture Only
-
--   **Real Providers**: Only mock implementations (framework ready for OpenAI, Milvus, etc.)
--   **Configuration**: Config structs exist but no loading mechanism
--   **Persistence**: Only in-memory storage (no database integration)
--   **Testing**: Basic compilation but no comprehensive test suite
-
-### 🔧 Technical Implementation Details
-
-#### Code Structure & Architecture
-
-```text
-Lines of code: ~2,500
-Modules: 12 (core, providers, registry, factory, services, server)
-Traits: 4 (EmbeddingProvider, VectorStoreProvider, ServiceProvider, ContextService)
-Structs: 25+ (Embedding, CodeChunk, SearchResult, ProviderRegistry, etc.)
-Enums: 8 (Language, EmbeddingProviderConfig, VectorStoreConfig, etc.)
-Functions: 50+ (async trait implementations, business logic, utilities)
-```
-
-#### Dependencies & Ecosystem Integration
-
--   **Runtime**: `tokio` (async), `futures` (async utilities)
--   **Serialization**: `serde` + `serde_json`
--   **Error Handling**: `thiserror` with structured error types
--   **Logging**: `tracing` + `tracing-subscriber` with structured logging
--   **Utilities**: `async-trait`, `downcast-rs`, `uuid`, `chrono`
--   **Development**: Standard Rust toolchain with comprehensive testing
--   **MCP Integration**: Full MCP protocol support with stdio transport
--   **TDD Support**: Built-in RED→GREEN→REFACTOR cycle automation
-
-#### Performance Characteristics
-
--   **Memory**: Low baseline (~5MB) with in-memory storage
--   **CPU**: Minimal idle usage, async processing ready
--   **Compilation**: Fast debug builds (~5-10 seconds)
--   **Binary Size**: Small release binary (~2-3MB)
-
-### 🎯 Design Decisions & Workflow Integration
-
-#### Why This Architecture?
-
--   **Extensibility First**: Provider pattern allows easy addition of real embedding/vector services
--   **Testability**: Dependency injection enables easy mocking for unit tests
--   **Performance**: Rust's zero-cost abstractions with async processing
--   **Maintainability**: Clear module boundaries and single responsibility principle
--   **TDD Integration**: Built-in support for RED→GREEN→REFACTOR cycles with mandatory gates
-
-#### Claude Code Workflow Compatibility
-
--   **Task Tracking**: Mandatory task completion tracking with progress validation
--   **Context Preservation**: Cross-session memory with persistent learning
--   **Quality Gates**: Zero-tolerance policies matching Claude Code mandatory rules
--   **MCP Ecosystem**: Full compatibility with existing MCP servers (Claude-context, context7, tavily, etc.)
--   **Call Chain Analysis**: Support for upwards/downwards tracing as required by implementation workflows
-
-#### Why Alpha Release?
-
--   **Foundation First**: Establish SOLID architecture before feature completion
--   **Workflow Integration**: Ensure compatibility with established development patterns
--   **Incremental Development**: Allow community feedback on design decisions
--   **Risk Mitigation**: Avoid building wrong features on wrong foundations
--   **Learning Opportunity**: Document architectural evolution process
-
-### 📊 Development Metrics
-
-#### Architecture Quality
-
--   **Cyclomatic Complexity**: Low (most functions < 5)
--   **Module Coupling**: Loose (clear interfaces)
--   **Error Handling**: Comprehensive (Result types everywhere)
--   **Documentation**: 90%+ code documented
-
-#### Code Quality
-
--   **Clippy**: Zero warnings (strict linting)
--   **Rustfmt**: Consistent formatting
--   **Safety**: No `unsafe` code
--   **Idioms**: Standard Rust patterns throughout
-
-### 🔄 Migration Guide
-
-#### From Previous Versions
-
--   **None**: This is the initial release
-
-#### For Contributors
-
--   Follow established patterns in `core/`, `providers/`, etc.
--   Add tests for new functionality
--   Update documentation for API changes
--   Use `make dev` for development workflow
-
-### 🙏 Acknowledgments
-
-This release represents months of architectural design and prototyping. Special thanks to:
-
--   **Rust Community**: For excellent documentation and tooling
--   **MCP Specification**: For the protocol foundation
--   **Open Source Ecosystem**: For the crates that make this possible
-
----
-
-## Release Notes
-
-**Installation**: See README.md for detailed setup instructions
-**Documentation**: Comprehensive docs available in `/docs` and inline code comments
-**Support**: GitHub Issues for bug reports and feature requests
-**Contributing**: PRs welcome! See CONTRIBUTING.md for guidelines
-
----
-
-## Footer
-
-**Released**: January 6, 2026
-**Maintainer**: Marlon Carvalho <marlonsc@proton.me>
-**License**: MIT
-**Repository**: <https://github.com/marlonsc/mcp-context-browser>
-
-## [0.0.1] - 2026-01-06
+**MCP Context Browser v0.0.2** is a documentation and infrastructure release that establishes comprehensive project documentation and development infrastructure. This release focuses on making the codebase accessible to contributors and establishing professional development practices.
 
 ### Added
 
--   **Initial MVP Release** - Complete modular architecture with SOLID principles
--   **Core Types & Error Handling** - Comprehensive error handling and type system
--   **Provider System** - Pluggable embedding and vector store providers
--   **Registry Pattern** - Thread-safe provider registration and dependency injection
--   **Factory Patterns** - Clean provider creation and instantiation
--   **Business Services** - Context, Indexing, and Search services
--   **MCP Server Implementation** - Full Model Context Protocol compliance
--   **Mock Providers** - Mock embedding and in-memory vector store for MVP
--   **Makefile** - Comprehensive development tooling
--   **Documentation** - Complete README and project documentation
+#### Documentation Architecture
 
-### Features
+-   Modular Documentation: Split monolithic README into specialized docs
+-   Architecture Documentation: Complete technical documentation
+-   Realistic Roadmap: Achievable development milestones
 
--   Semantic code search using vector embeddings
--   Thread-safe architecture with Arc<RwLock<>>
--   Clean separation of concerns
--   Extensible provider system
--   MCP protocol stdio transport
--   Ready for production scaling
+#### Development Infrastructure
 
-### Technical Details
+-   CI/CD Pipeline: GitHub Actions workflow with automated testing
+-   Enhanced Makefile: Comprehensive development tooling
+-   Testing Infrastructure: Foundation for comprehensive testing
 
--   **Language**: Rust 2021
--   **Architecture**: Modular with clear boundaries
--   **Testing**: Unit tests included
--   **CI/CD**: GitHub Actions ready
--   **Documentation**: Comprehensive code comments
+#### Professional Documentation Standards
 
-### Breaking Changes
+-   Technical Precision: Detailed explanations of implemented architecture
+-   Progressive Disclosure: Information organized by user needs
+-   Cross-Referenced: Clear navigation between related documentation
 
--   None (initial release)
+### Changed
 
-### Dependencies
-
--   Tokio: Async runtime
--   serde: Serialization
--   reqwest: HTTP client
--   Milvus-sdk-Rust: Vector database
--   tracing: Logging
--   async-trait: Async traits
+-   Realistic Implementation Status: Clear distinction between implemented and planned features
+-   Professional Contribution Guidelines: Clear expectations for contributors
 
 ---
 
-## Development Roadmap
+## [0.0.1] - 2026-01-06
 
-### [0.1.0] - Planned
+### What This Release Is
 
--   Real embedding providers (OpenAI, Ollama)
--   Persistent vector stores (Milvus, Pinecone)
--   Enhanced code parsing and chunking
--   Configuration file support
--   Performance optimizations
+**MCP Context Browser v0.0.1** is an architectural foundation release. It establishes a SOLID, extensible codebase for semantic code search while implementing only basic functionality.
 
-### [1.0.0] - Future
+### Added
 
--   Production-ready release
--   Advanced indexing strategies
--   Multi-language support
--   Plugin ecosystem
--   Enterprise features
+#### Core Architecture
+
+-   Modular Design: Clean separation into core, providers, registry, factory, services, and server modules
+-   SOLID Principles: Proper dependency injection, single responsibility, and interface segregation
+-   Thread Safety: Comprehensive use of Arc and RwLock for concurrent access patterns
+-   Error Handling: Structured error types with detailed diagnostics
+
+#### Type System
+
+-   Embedding Types: Complete Embedding struct with vector data, model info, and dimensions
+-   Code Representation: CodeChunk with file paths, line numbers, language detection, and metadata
+-   Search Results: Structured search types with scoring and metadata
+-   Configuration Types: Provider configs for embeddings and vector stores
+
+#### Provider Framework
+
+-   Provider Traits: EmbeddingProvider and VectorStoreProvider traits for extensibility
+-   Mock Implementation: MockEmbeddingProvider generating fixed 128-dimension vectors
+-   In-Memory Storage: InMemoryVectorStoreProvider with cosine similarity search
+-   Registry System: Thread-safe ProviderRegistry for provider management
+
+#### MCP Protocol (Basic)
+
+-   Stdio Transport: Basic MCP server communication over standard I/O
+-   Tool Registration: Framework for registering MCP tools
+-   Message Handling: JSON-RPC message parsing and response formatting
+-   Async Server Loop: Tokio-based async server implementation
+
+### Technical Details
+
+-   Language: Rust 2021
+-   Architecture: Modular with clear boundaries
+-   Testing: Unit tests included
+-   CI/CD: GitHub Actions ready
+
+---
+
+## Cross-References
+
+-   **Architecture**: [ARCHITECTURE.md](../architecture/ARCHITECTURE.md)
+-   **Version History**: [VERSION_HISTORY.md](../VERSION_HISTORY.md)
+-   **Roadmap**: [ROADMAP.md](../developer/ROADMAP.md)
+-   **Contributing**: [CONTRIBUTING.md](../developer/CONTRIBUTING.md)

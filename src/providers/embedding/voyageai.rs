@@ -3,6 +3,7 @@
 use crate::core::error::{Error, Result};
 use crate::core::types::Embedding;
 use crate::providers::EmbeddingProvider;
+use crate::core::http_client::get_global_http_client;
 use async_trait::async_trait;
 
 /// VoyageAI embedding provider
@@ -51,9 +52,11 @@ impl EmbeddingProvider for VoyageAIEmbeddingProvider {
             "model": self.model
         });
 
-        // Make HTTP request to VoyageAI
-        let client = reqwest::Client::new();
-        let response = client
+        // Use global HTTP client for connection pooling and performance
+        let client = get_global_http_client()
+            .ok_or_else(|| Error::internal("Global HTTP client not initialized"))?;
+            
+        let response = client.client()
             .post(format!("{}/embeddings", self.effective_base_url()))
             .header("Authorization", format!("Bearer {}", self.api_key))
             .header("Content-Type", "application/json")

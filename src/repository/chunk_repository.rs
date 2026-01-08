@@ -4,12 +4,39 @@
 //! code chunks with their associated vector embeddings.
 
 use crate::core::error::{Error, Result};
-use crate::core::types::CodeChunk;
+use crate::core::types::{CodeChunk, Language};
 use crate::providers::{EmbeddingProvider, VectorStoreProvider};
 use crate::repository::{ChunkRepository, RepositoryStats};
 use async_trait::async_trait;
 use std::collections::HashMap;
 use std::sync::Arc;
+
+/// Parse Language from metadata string (stored as "{:?}" format)
+fn parse_language_from_metadata(metadata: &HashMap<String, serde_json::Value>) -> Language {
+    let lang_str = metadata
+        .get("language")
+        .and_then(|v| v.as_str())
+        .unwrap_or("Unknown");
+
+    match lang_str {
+        "Rust" => Language::Rust,
+        "Python" => Language::Python,
+        "JavaScript" => Language::JavaScript,
+        "TypeScript" => Language::TypeScript,
+        "Go" => Language::Go,
+        "Java" => Language::Java,
+        "C" => Language::C,
+        "Cpp" => Language::Cpp,
+        "CSharp" => Language::CSharp,
+        "Php" => Language::Php,
+        "Ruby" => Language::Ruby,
+        "Swift" => Language::Swift,
+        "Kotlin" => Language::Kotlin,
+        "Scala" => Language::Scala,
+        "Haskell" => Language::Haskell,
+        _ => Language::Unknown,
+    }
+}
 
 /// Vector store backed chunk repository
 pub struct VectorStoreChunkRepository<E, V> {
@@ -102,8 +129,70 @@ where
         Ok(ids)
     }
 
-    async fn find_by_id(&self, _id: &str) -> Result<Option<CodeChunk>> {
-        // Vector stores typically don't support finding by ID directly
+    async fn find_by_id(&self, id: &str) -> Result<Option<CodeChunk>> {
+        // Search all collections for a chunk with matching ID
+        let collections = ["default"]; // Active collections
+
+        for collection in collections {
+            let collection_name = self.collection_name(collection);
+
+            // Check if collection exists
+            if !self
+                .vector_store_provider
+                .collection_exists(&collection_name)
+                .await?
+            {
+                continue;
+            }
+
+            // Search for vectors and filter by ID in metadata
+            let query_vector = vec![0.0; self.embedding_provider.dimensions()];
+            let results = self
+                .vector_store_provider
+                .search_similar(&collection_name, &query_vector, 1000, None)
+                .await?;
+
+            // Find chunk with matching ID
+            for result in results {
+                let file_path = result
+                    .metadata
+                    .get("file_path")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("");
+                let start_line = result
+                    .metadata
+                    .get("start_line")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0) as u32;
+                let generated_id = format!("{}_{}", file_path, start_line);
+
+                if generated_id == id || result.id == id {
+                    let content = result
+                        .metadata
+                        .get("content")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string();
+                    let end_line = result
+                        .metadata
+                        .get("end_line")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0) as u32;
+                    let language = parse_language_from_metadata(&result.metadata);
+
+                    return Ok(Some(CodeChunk {
+                        id: generated_id,
+                        content,
+                        file_path: file_path.to_string(),
+                        start_line,
+                        end_line,
+                        language,
+                        metadata: result.metadata.clone(),
+                    }));
+                }
+            }
+        }
+
         Ok(None)
     }
 
@@ -135,7 +224,7 @@ where
                     file_path,
                     start_line,
                     end_line,
-                    language: crate::core::types::Language::Rust, // Default
+                    language: parse_language_from_metadata(&result.metadata),
                     metadata: result.metadata.clone(),
                 })
             })
@@ -144,11 +233,55 @@ where
         Ok(chunks)
     }
 
-    async fn delete(&self, _id: &str) -> Result<()> {
-        // Not implemented for vector stores
-        Err(Error::generic(
-            "Delete by ID not implemented for vector store repository",
-        ))
+    async fn delete(&self, id: &str) -> Result<()> {
+        // Search all collections to find and delete the chunk by ID
+        let collections = ["default"]; // Active collections
+
+        for collection in collections {
+            let collection_name = self.collection_name(collection);
+
+            // Check if collection exists
+            if !self
+                .vector_store_provider
+                .collection_exists(&collection_name)
+                .await?
+            {
+                continue;
+            }
+
+            // Search for vectors to find one with matching ID
+            let query_vector = vec![0.0; self.embedding_provider.dimensions()];
+            let results = self
+                .vector_store_provider
+                .search_similar(&collection_name, &query_vector, 1000, None)
+                .await?;
+
+            // Find vector with matching ID and delete it
+            for result in results {
+                let file_path = result
+                    .metadata
+                    .get("file_path")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("");
+                let start_line = result
+                    .metadata
+                    .get("start_line")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0) as u32;
+                let generated_id = format!("{}_{}", file_path, start_line);
+
+                if generated_id == id || result.id == id {
+                    // Found the chunk, delete it using the vector store's ID
+                    self.vector_store_provider
+                        .delete_vectors(&collection_name, &[result.id.clone()])
+                        .await?;
+                    return Ok(());
+                }
+            }
+        }
+
+        // Chunk not found is still OK - delete is idempotent
+        Ok(())
     }
 
     async fn delete_collection(&self, collection: &str) -> Result<()> {

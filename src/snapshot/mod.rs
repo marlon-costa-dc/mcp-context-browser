@@ -61,6 +61,13 @@ impl SnapshotManager {
         Ok(Self { snapshot_dir })
     }
 
+    /// Create a disabled snapshot manager (uses temporary directory)
+    pub fn new_disabled() -> Self {
+        Self {
+            snapshot_dir: std::env::temp_dir().join("mcp_disabled_snapshots"),
+        }
+    }
+
     /// Create snapshot for a codebase
     pub async fn create_snapshot(&self, root_path: &Path) -> Result<CodebaseSnapshot> {
         let root_path_buf = root_path.to_path_buf();

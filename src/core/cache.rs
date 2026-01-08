@@ -14,6 +14,7 @@
 //! - Clustered/Distributed instances use Redis for consistency.
 
 use crate::core::error::{Error, Result};
+use crate::core::events::{SharedEventBus, SystemEvent};
 use moka::future::Cache;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -194,7 +195,7 @@ pub struct CacheManager {
 
 impl CacheManager {
     /// Create a new cache manager
-    pub async fn new(config: CacheConfig) -> Result<Self> {
+    pub async fn new(config: CacheConfig, event_bus: Option<SharedEventBus>) -> Result<Self> {
         tracing::debug!("CacheManager::new started");
 
         let mut redis_client = None;
@@ -298,7 +299,7 @@ impl CacheManager {
             .support_invalidation_closures()
             .build();
 
-        Ok(Self {
+        let manager = Self {
             config,
             redis_client,
             embeddings_cache,
@@ -309,7 +310,49 @@ impl CacheManager {
             stats_hits,
             stats_misses,
             stats_evictions,
-        })
+        };
+
+        if let Some(bus) = event_bus {
+            manager.start_event_listener(bus);
+        }
+
+        Ok(manager)
+    }
+
+    /// Start listening for system events
+    pub fn start_event_listener(&self, event_bus: SharedEventBus) {
+        let mut receiver = event_bus.subscribe();
+        let manager = self.clone();
+
+        tokio::spawn(async move {
+            while let Ok(event) = receiver.recv().await {
+                match event {
+                    SystemEvent::CacheClear { namespace } => {
+                        if let Some(ns) = namespace {
+                            tracing::info!("[CACHE] Clearing namespace: {}", ns);
+                            if let Err(e) = manager.clear_namespace(&ns).await {
+                                tracing::error!("[CACHE] Failed to clear namespace {}: {}", ns, e);
+                            }
+                        } else {
+                            tracing::info!("[CACHE] Clearing all namespaces");
+                            let namespaces = [
+                                "embeddings",
+                                "search_results",
+                                "metadata",
+                                "provider_responses",
+                                "sync_batches",
+                            ];
+                            for ns in namespaces {
+                                if let Err(e) = manager.clear_namespace(ns).await {
+                                    tracing::error!("[CACHE] Failed to clear namespace {}: {}", ns, e);
+                                }
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        });
     }
 
     /// Test Redis connection
@@ -836,8 +879,8 @@ impl CacheManager {
 static CACHE_MANAGER: std::sync::OnceLock<CacheManager> = std::sync::OnceLock::new();
 
 /// Initialize global cache manager
-pub async fn init_global_cache_manager(config: CacheConfig) -> Result<()> {
-    let manager = CacheManager::new(config).await?;
+pub async fn init_global_cache_manager(config: CacheConfig, event_bus: Option<SharedEventBus>) -> Result<()> {
+    let manager = CacheManager::new(config, event_bus).await?;
     CACHE_MANAGER
         .set(manager)
         .map_err(|_| "Cache manager already initialized".into())
@@ -868,7 +911,7 @@ mod tests {
             ..Default::default()
         };
 
-        let manager = CacheManager::new(config).await.unwrap();
+        let manager = CacheManager::new(config, None).await.unwrap();
         assert!(!manager.is_enabled());
 
         let stats = manager.get_stats().await;
@@ -885,7 +928,7 @@ mod tests {
             ..Default::default()
         };
 
-        let manager = CacheManager::new(config).await.unwrap();
+        let manager = CacheManager::new(config, None).await.unwrap();
 
         // Test set and get
         manager
@@ -924,7 +967,7 @@ mod tests {
             ..Default::default()
         };
 
-        let manager = CacheManager::new(config).await.unwrap();
+        let manager = CacheManager::new(config, None).await.unwrap();
 
         // Set values in different namespaces
         manager
@@ -969,7 +1012,7 @@ mod tests {
             namespaces: CacheNamespacesConfig::default(),
         };
 
-        let result = CacheManager::new(config).await;
+        let result = CacheManager::new(config, None).await;
         assert!(result.is_err()); // Strict failure
     }
 
@@ -983,7 +1026,7 @@ mod tests {
             namespaces: CacheNamespacesConfig::default(),
         };
 
-        let manager = CacheManager::new(config).await.unwrap();
+        let manager = CacheManager::new(config, None).await.unwrap();
 
         // Operations on disabled cache should not panic
         let set_result = manager.set("test", "key", "value".to_string()).await;
@@ -996,7 +1039,7 @@ mod tests {
     #[tokio::test]
     async fn test_cache_manager_handles_large_data_operations() {
         let config = CacheConfig::default(); // Local mode
-        let manager = CacheManager::new(config).await.unwrap();
+        let manager = CacheManager::new(config, None).await.unwrap();
 
         // Test with large data
         let large_data = "x".repeat(1024 * 1024); // 1MB string
@@ -1022,7 +1065,7 @@ mod tests {
         // Configure metadata namespace with small limit
         config.namespaces.metadata.max_entries = 2;
 
-        let manager = CacheManager::new(config).await.unwrap();
+        let manager = CacheManager::new(config, None).await.unwrap();
 
         // Add 3 items to metadata namespace
         manager.set("meta", "k1", "v1".to_string()).await.unwrap();
