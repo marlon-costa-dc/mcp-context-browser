@@ -3,20 +3,17 @@
 //! Tracks query latency, cache hit/miss ratios, and other performance indicators.
 
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, VecDeque};
+use std::collections::VecDeque;
 use std::time::{Duration, Instant};
 use tokio::sync::{mpsc, oneshot};
 
-/// Global performance metrics sender
-pub static PERFORMANCE_METRICS: once_cell::sync::Lazy<PerformanceMetricsSender> =
-    once_cell::sync::Lazy::new(PerformanceMetricsSender::new);
+/// Global performance metrics handle
+pub static PERFORMANCE_METRICS: once_cell::sync::Lazy<PerformanceMetrics> =
+    once_cell::sync::Lazy::new(PerformanceMetrics::new);
 
 /// Performance metrics messages
 pub enum PerformanceMessage {
-    RecordQuery {
-        latency: Duration,
-        success: bool,
-    },
+    RecordQuery { latency: Duration, success: bool },
     RecordCacheHit,
     RecordCacheMiss,
     UpdateCacheSize(u64),
@@ -26,13 +23,20 @@ pub enum PerformanceMessage {
     CleanOldRecords(Duration),
 }
 
-/// Sender for performance metrics actor
-pub struct PerformanceMetricsSender {
+/// Handle for performance metrics actor
+pub struct PerformanceMetrics {
     sender: mpsc::Sender<PerformanceMessage>,
 }
 
-impl PerformanceMetricsSender {
-    fn new() -> Self {
+impl Default for PerformanceMetrics {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl PerformanceMetrics {
+    /// Create a new performance metrics handle and start the actor
+    pub fn new() -> Self {
         let (tx, rx) = mpsc::channel(1000);
         let mut actor = PerformanceMetricsActor::new(rx);
         tokio::spawn(async move {
@@ -42,7 +46,9 @@ impl PerformanceMetricsSender {
     }
 
     pub fn record_query(&self, latency: Duration, success: bool) {
-        let _ = self.sender.try_send(PerformanceMessage::RecordQuery { latency, success });
+        let _ = self
+            .sender
+            .try_send(PerformanceMessage::RecordQuery { latency, success });
     }
 
     pub fn record_cache_hit(&self) {
@@ -54,18 +60,26 @@ impl PerformanceMetricsSender {
     }
 
     pub fn update_cache_size(&self, size_bytes: u64) {
-        let _ = self.sender.try_send(PerformanceMessage::UpdateCacheSize(size_bytes));
+        let _ = self
+            .sender
+            .try_send(PerformanceMessage::UpdateCacheSize(size_bytes));
     }
 
     pub async fn get_query_performance(&self) -> QueryPerformanceMetrics {
         let (tx, rx) = oneshot::channel();
-        let _ = self.sender.send(PerformanceMessage::GetQueryPerformance(tx)).await;
+        let _ = self
+            .sender
+            .send(PerformanceMessage::GetQueryPerformance(tx))
+            .await;
         rx.await.unwrap_or_default()
     }
 
     pub async fn get_cache_metrics(&self) -> CacheMetrics {
         let (tx, rx) = oneshot::channel();
-        let _ = self.sender.send(PerformanceMessage::GetCacheMetrics(tx)).await;
+        let _ = self
+            .sender
+            .send(PerformanceMessage::GetCacheMetrics(tx))
+            .await;
         rx.await.unwrap_or_default()
     }
 
@@ -74,7 +88,9 @@ impl PerformanceMetricsSender {
     }
 
     pub fn clean_old_records(&self, max_age: Duration) {
-        let _ = self.sender.try_send(PerformanceMessage::CleanOldRecords(max_age));
+        let _ = self
+            .sender
+            .try_send(PerformanceMessage::CleanOldRecords(max_age));
     }
 }
 
@@ -171,7 +187,8 @@ impl PerformanceMetricsActor {
                 }
                 PerformanceMessage::CleanOldRecords(max_age) => {
                     let now = Instant::now();
-                    self.query_records.retain(|r| now.duration_since(r.timestamp) < max_age);
+                    self.query_records
+                        .retain(|r| now.duration_since(r.timestamp) < max_age);
                 }
             }
         }
@@ -228,15 +245,15 @@ mod tests {
 
     #[tokio::test]
     async fn test_record_query() {
-        PERFORMANCE_METRICS.reset();
-        
-        PERFORMANCE_METRICS.record_query(Duration::from_millis(100), true);
-        PERFORMANCE_METRICS.record_query(Duration::from_millis(200), false);
+        let metrics = PerformanceMetrics::new();
+
+        metrics.record_query(Duration::from_millis(100), true);
+        metrics.record_query(Duration::from_millis(200), false);
 
         // Give some time for the actor to process
-        tokio::time::sleep(Duration::from_millis(50)).await;
+        tokio::time::sleep(Duration::from_millis(100)).await;
 
-        let perf = PERFORMANCE_METRICS.get_query_performance().await;
+        let perf = metrics.get_query_performance().await;
         assert_eq!(perf.total_queries, 2);
         assert_eq!(perf.average_latency, 150.0); // (100 + 200) / 2
         assert_eq!(perf.success_rate, 50.0); // 1/2 * 100
@@ -244,17 +261,17 @@ mod tests {
 
     #[tokio::test]
     async fn test_cache_metrics() {
-        PERFORMANCE_METRICS.reset();
+        let metrics = PerformanceMetrics::new();
 
-        PERFORMANCE_METRICS.record_cache_hit();
-        PERFORMANCE_METRICS.record_cache_hit();
-        PERFORMANCE_METRICS.record_cache_miss();
-        PERFORMANCE_METRICS.update_cache_size(1024);
+        metrics.record_cache_hit();
+        metrics.record_cache_hit();
+        metrics.record_cache_miss();
+        metrics.update_cache_size(1024);
 
         // Give some time for the actor to process
-        tokio::time::sleep(Duration::from_millis(50)).await;
+        tokio::time::sleep(Duration::from_millis(100)).await;
 
-        let cache = PERFORMANCE_METRICS.get_cache_metrics().await;
+        let cache = metrics.get_cache_metrics().await;
         assert_eq!(cache.hits, 2);
         assert_eq!(cache.misses, 1);
         assert_eq!(cache.hit_rate, 66.66666666666666); // 2/3 * 100
@@ -263,18 +280,18 @@ mod tests {
 
     #[tokio::test]
     async fn test_empty_metrics() {
-        PERFORMANCE_METRICS.reset();
+        let metrics = PerformanceMetrics::new();
 
         // Give some time for the actor to process
-        tokio::time::sleep(Duration::from_millis(50)).await;
+        tokio::time::sleep(Duration::from_millis(100)).await;
 
-        let perf = PERFORMANCE_METRICS.get_query_performance().await;
+        let perf = metrics.get_query_performance().await;
         assert_eq!(perf.total_queries, 0);
         assert_eq!(perf.average_latency, 0.0);
         assert_eq!(perf.p99_latency, 0.0);
         assert_eq!(perf.success_rate, 0.0);
 
-        let cache = PERFORMANCE_METRICS.get_cache_metrics().await;
+        let cache = metrics.get_cache_metrics().await;
         assert_eq!(cache.hits, 0);
         assert_eq!(cache.misses, 0);
         assert_eq!(cache.hit_rate, 0.0);
@@ -283,21 +300,24 @@ mod tests {
 
     #[tokio::test]
     async fn test_reset() {
-        PERFORMANCE_METRICS.reset();
+        let metrics = PerformanceMetrics::new();
 
-        PERFORMANCE_METRICS.record_query(Duration::from_millis(100), true);
-        PERFORMANCE_METRICS.record_cache_hit();
-        PERFORMANCE_METRICS.update_cache_size(1024);
+        metrics.record_query(Duration::from_millis(100), true);
+        metrics.record_cache_hit();
+        metrics.update_cache_size(1024);
 
-        PERFORMANCE_METRICS.reset();
+        // Wait for processing
+        tokio::time::sleep(Duration::from_millis(100)).await;
 
-        // Give some time for the actor to process
-        tokio::time::sleep(Duration::from_millis(50)).await;
+        metrics.reset();
 
-        let perf = PERFORMANCE_METRICS.get_query_performance().await;
+        // Give some time for the actor to process reset
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        let perf = metrics.get_query_performance().await;
         assert_eq!(perf.total_queries, 0);
-        
-        let cache = PERFORMANCE_METRICS.get_cache_metrics().await;
+
+        let cache = metrics.get_cache_metrics().await;
         assert_eq!(cache.hits, 0);
         assert_eq!(cache.size, 0);
     }

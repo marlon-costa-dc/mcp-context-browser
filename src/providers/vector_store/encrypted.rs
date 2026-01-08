@@ -154,7 +154,9 @@ mod tests {
         let inner = InMemoryVectorStoreProvider::new();
         let config = EncryptionConfig::default();
 
-        let encrypted_store = EncryptedVectorStoreProvider::new(inner, config).await.unwrap();
+        let encrypted_store = EncryptedVectorStoreProvider::new(inner, config)
+            .await
+            .unwrap();
         assert_eq!(encrypted_store.provider_name(), "encrypted");
     }
 
@@ -166,7 +168,9 @@ mod tests {
             ..Default::default()
         };
 
-        let encrypted_store = EncryptedVectorStoreProvider::new(inner, config).await.unwrap();
+        let encrypted_store = EncryptedVectorStoreProvider::new(inner, config)
+            .await
+            .unwrap();
         assert_eq!(encrypted_store.provider_name(), "encrypted");
     }
 
@@ -175,7 +179,9 @@ mod tests {
         // Test that encrypted search returns empty results (as implemented)
         let inner = InMemoryVectorStoreProvider::new();
         let config = EncryptionConfig::default();
-        let encrypted_store = EncryptedVectorStoreProvider::new(inner, config).await.unwrap();
+        let encrypted_store = EncryptedVectorStoreProvider::new(inner, config)
+            .await
+            .unwrap();
 
         // Create collection
         encrypted_store

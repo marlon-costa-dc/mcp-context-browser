@@ -255,10 +255,8 @@ impl ProviderRouterDeps {
     /// Create dependencies with default implementations
     pub async fn with_defaults(registry: Arc<ProviderRegistry>) -> Result<Self> {
         let health_monitor = Arc::new(HealthMonitor::with_registry(Arc::clone(&registry)));
-        let circuit_breaker = Arc::new(CircuitBreaker::with_config(
-            "global",
-            CircuitBreakerConfig::default(),
-        ).await);
+        let circuit_breaker =
+            Arc::new(CircuitBreaker::with_config("global", CircuitBreakerConfig::default()).await);
         let metrics = Arc::new(ProviderMetricsCollector::new()?);
         let cost_tracker = Arc::new(CostTracker::new());
         let failover_manager = Arc::new(FailoverManager::new(Arc::clone(&health_monitor)));
@@ -555,7 +553,9 @@ mod tests {
     #[tokio::test]
     async fn test_provider_router_creation() {
         let registry = Arc::new(ProviderRegistry::new());
-        let router = ProviderRouter::with_defaults(Arc::clone(&registry)).await.unwrap();
+        let router = ProviderRouter::with_defaults(Arc::clone(&registry))
+            .await
+            .unwrap();
 
         let stats = router.get_statistics().await;
         assert_eq!(stats.total_providers, 0);
@@ -565,7 +565,9 @@ mod tests {
     #[tokio::test]
     async fn test_provider_selection_with_no_providers() {
         let registry = Arc::new(ProviderRegistry::new());
-        let router = ProviderRouter::with_defaults(Arc::clone(&registry)).await.unwrap();
+        let router = ProviderRouter::with_defaults(Arc::clone(&registry))
+            .await
+            .unwrap();
 
         let context = ProviderContext::default();
         let result = router.select_embedding_provider(&context).await;

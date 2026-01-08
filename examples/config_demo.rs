@@ -104,9 +104,9 @@ impl ConfigManager {
         })
     }
 
-    fn load_config(&self) -> Result<GlobalConfig, Box<dyn std::error::Error>> {
+    async fn load_config(&self) -> Result<GlobalConfig, Box<dyn std::error::Error>> {
         // Try global config file first
-        if let Ok(config) = self.load_global_config() {
+        if let Ok(config) = self.load_global_config().await {
             self.validate_config(&config)?;
             return Ok(config);
         }
@@ -115,12 +115,12 @@ impl ConfigManager {
         self.load_env_config()
     }
 
-    fn load_global_config(&self) -> Result<GlobalConfig, Box<dyn std::error::Error>> {
+    async fn load_global_config(&self) -> Result<GlobalConfig, Box<dyn std::error::Error>> {
         if !self.global_config_path.exists() {
             return Err("Global config file not found".into());
         }
 
-        let content = std::fs::read_to_string(&self.global_config_path)?;
+        let content = tokio::fs::read_to_string(&self.global_config_path).await?;
         let config: GlobalConfig = toml::from_str(&content)?;
         Ok(config)
     }
@@ -289,13 +289,13 @@ impl ConfigManager {
         Ok(())
     }
 
-    fn create_example_config(&self) -> Result<(), Box<dyn std::error::Error>> {
+    async fn create_example_config(&self) -> Result<(), Box<dyn std::error::Error>> {
         let config_dir = self
             .global_config_path
             .parent()
             .ok_or("Cannot determine config directory")?;
 
-        std::fs::create_dir_all(config_dir)?;
+        tokio::fs::create_dir_all(config_dir).await?;
 
         let example_config = r#"# MCP Context Browser Configuration
 # Professional configuration system similar to Claude Context
@@ -323,7 +323,7 @@ collection = "mcp_context"
 dimensions = 1536
 "#;
 
-        std::fs::write(&self.global_config_path, example_config)?;
+        tokio::fs::write(&self.global_config_path, example_config).await?;
         println!(
             "✅ Example configuration created: {}",
             self.global_config_path.display()
@@ -484,6 +484,11 @@ dimensions = 1536
         println!("MILVUS_TOKEN=your-milvus-token");
         println!("PINECONE_API_KEY=your-pinecone-key");
         println!();
+        println!("# Network Configuration");
+        println!("MILVUS_ADDRESS=http://localhost:19530");
+        println!("MCP_HOST=127.0.0.1");
+        println!("MCP_PORT=3000");
+        println!();
         println!("✅ Schema Validation (like Claude Context's convict.js):");
         println!("  • 🔍 Provider-specific validation rules");
         println!("  • 🔐 API key presence verification");
@@ -492,7 +497,8 @@ dimensions = 1536
     }
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🚀 MCP Context Browser - Professional Configuration Demo");
     println!("=======================================================");
     println!();
@@ -513,7 +519,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!();
 
     // Try to load configuration
-    match manager.load_config() {
+    match manager.load_config().await {
         Ok(config) => {
             println!("✅ Successfully loaded configuration:");
             manager.print_config_summary(&config);
@@ -523,7 +529,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("Error: {}", e);
             println!();
 
-            manager.create_example_config()?;
+            manager.create_example_config().await?;
             println!();
             println!("📝 Next steps:");
             println!("  1. Edit ~/.context/config.toml with your API keys");

@@ -4,246 +4,147 @@
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange)](https://www.rust-lang.org/)
 [![MCP](https://img.shields.io/badge/MCP-2024--11--05-blue)](https://modelcontextprotocol.io/)
 [![Version](https://img.shields.io/badge/version-0.0.4-blue)](https://github.com/marlonsc/mcp-context-browser/releases)
-[![CI](https://github.com/marlonsc/mcp-context-browser/actions/workflows/ci.yml/badge.svg)](https://github.com/marlonsc/mcp-context-browser/actions/workflows/ci.yml)
 
-**Enterprise Semantic Code Search** - Transforms how development teams find and understand code using AI-powered natural language search, connecting AI assistants directly to your codebase for instant, accurate answers.
+AI-powered semantic code search for development teams. Natural language queries transformed into precise code locations with context.
 
-## 🎯 Business Value (v0.0.4)
-
-### 🚀 Why Choose MCP Context Browser?
-
-**Accelerate Development Teams** - Reduce time spent searching through codebases from hours to seconds. Enable developers to focus on building features rather than finding existing code.
-
-**AI-Powered Code Discovery** - Transform natural language questions like "find authentication middleware" or "show error handling patterns" into precise code locations with context.
-
-**Enterprise-Ready Architecture** - Production-grade solution with comprehensive monitoring, security, and scalability for teams of any size.
-
-### 💼 Key Business Benefits
-
--   **🧠 Semantic Search**: Find code by meaning, not just keywords - understand what code does, not just what it contains
--   **🔄 Real-Time Sync**: Automatic background updates keep search results current as code changes
--   **💾 Enterprise Persistence**: Professional state management ensures reliability across deployments
--   **🎯 Precision Results**: AST-based analysis provides contextually relevant code snippets
--   **🔒 Production Security**: Enterprise-grade security with encryption, rate limiting, and audit trails
--   **🔧 Provider Flexibility**: Support for multiple AI and storage providers (OpenAI, Ollama, Milvus, and more)
--   **⚙️ Operational Excellence**: Comprehensive monitoring, health checks, and automated maintenance
-
-### 🔧 How It Works
-
-**Smart Code Understanding** - MCP Context Browser uses advanced AI to understand code semantics, not just text patterns. It analyzes code structure, relationships, and business logic to provide contextually relevant results.
-
-**Multi-Provider Intelligence** - Automatically routes requests to the best available AI provider based on performance, cost, and availability. Seamlessly switches between OpenAI, Ollama, and other providers without service interruption.
-
-**Enterprise Integration** - Connects directly with AI assistants (Claude Desktop, etc.) through the Model Context Protocol, making your entire codebase instantly searchable through natural language queries.
-
-### 📊 Business Impact
-
-| Metric | Before | With MCP Context Browser |
-|--------|--------|---------------------------|
-| **Code Search Time** | 30-60 minutes | <30 seconds |
-| **Onboarding Time** | 2-4 weeks | 3-5 days |
-| **Code Reuse** | 20-30% | 70-80% |
-| **Bug Prevention** | Reactive | Proactive |
-| **Team Productivity** | Baseline | +40% improvement |
-
-### 🏗️ Technical Foundation
-
-**Production-Grade Architecture** - Built for enterprise scale with:
-- **Provider Registry**: Thread-safe management of AI and storage providers
-- **Intelligent Routing**: Smart load balancing with health monitoring and automatic failover
-- **Security Framework**: Enterprise security with encryption, rate limiting, and audit capabilities
-- **Background Processing**: Automated synchronization and maintenance tasks
-- **Monitoring & Observability**: Comprehensive metrics and health monitoring
-
-## 📋 Documentation
-
--   [**VERSION_HISTORY.md**](docs/VERSION_HISTORY.md) - Complete version history and evolution
--   [**Claude.md**](CLAUDE.md) - Development guide and project rules
--   [**ARCHITECTURE.md**](ARCHITECTURE.md) - Technical architecture and design
--   [**ROADMAP.md**](ROADMAP.md) - Development roadmap and milestones
--   [**DEPLOYMENT.md**](DEPLOYMENT.md) - Deployment guides and configurations
--   [**CONTRIBUTING.md**](CONTRIBUTING.md) - Contribution guidelines
-
-### 📚 Advanced Documentation (v0.0.4)
-
--   [**Documentation Automation Plan**](docs/archive/2025-01-07-documentation-automation-improvement.md) - v0.0.4 "Documentation Excellence" roadmap
--   [**ADR Index**](docs/adr/README.md) - Architectural Decision Records with validation framework
--   [**Implementation Status**](docs/implementation-status.md) - Real-time implementation tracking
--   [**API Reference**](docs/api-reference.md) - Auto-generated API documentation
-
-## 🚀 Getting Started
-
-**Quick Start** - Get semantic code search running in your development environment:
+## Quick Start
 
 ```bash
-# Clone and setup
+# Setup
 git clone https://github.com/marlonsc/mcp-context-browser.git
 cd mcp-context-browser
-make setup  # Install all dependencies
+make setup
 
-# Start with Ollama (recommended for development)
-make docker-up  # Launch test services
-make run       # Start MCP server
-```
+# Development
+make docker-up  # Start test services (Ollama, Milvus)
+make run        # Start MCP server
 
-**Production Deployment** - Enterprise configuration with monitoring:
-
-```bash
-# Configure environment
+# Production
 export MCP_EMBEDDING_PROVIDER=ollama
 export MCP_VECTOR_STORE=milvus
 export MCP_METRICS_ENABLED=true
-
-# Deploy with monitoring
 make build-release
-make metrics-server  # Start monitoring dashboard
 ```
 
-## 💼 Use Cases
+## Core Features
 
-### 🔍 Development Teams
-- **Code Discovery**: Find existing implementations instantly
-- **Knowledge Sharing**: Understand complex business logic quickly
-- **Onboarding**: New developers productive within days
-- **Refactoring**: Identify all usages of specific patterns
+-   **Semantic Search**: Find code by meaning, not just keywords
+-   **Real-Time Sync**: Automatic background updates keep results current
+-   **Multi-Provider**: Support for OpenAI, Ollama, Gemini, VoyageAI
+-   **Production Ready**: JWT auth, rate limiting, encryption, audit trails
+-   **Comprehensive Monitoring**: Metrics API, health checks, performance tracking
 
-### 🤖 AI Assistant Integration
-- **Claude Desktop**: Direct codebase access through MCP
-- **Custom Assistants**: Build specialized code analysis tools
-- **Automated Reviews**: AI-powered code review assistance
-- **Documentation Generation**: Auto-create code documentation
+## How It Works
 
-### 🏢 Enterprise Applications
-- **Large Codebases**: Search across millions of lines efficiently
-- **Multi-Language Support**: Works with Rust, Python, JavaScript, and more
-- **Security Compliance**: Audit trails and access controls
-- **Scalability**: Handles teams from 5 to 500+ developers
+**AST-Based Analysis** - Analyzes code structure and relationships to provide contextually relevant results.
 
-## 🧪 Quality Assurance & Reliability
+**Intelligent Routing** - Automatically routes requests to optimal AI providers with health monitoring and failover.
 
-**Enterprise-Grade Testing** - Comprehensive quality assurance ensures reliable operation in production environments with automated testing covering all critical business scenarios.
+**MCP Integration** - Connects directly with Claude Desktop and other AI assistants through the Model Context Protocol.
 
-### 🎯 Quality Standards
+## MCP Tools
+
+| Tool | Purpose | Implementation |
+|------|---------|----------------|
+| `index_codebase` | Ingest codebase | AST chunking, incremental sync |
+| `search_code` | Natural language search | Hybrid BM25 + semantic vectors |
+| `get_indexing_status` | System monitoring | Real-time health and progress |
+| `clear_index` | Index management | Professional cleanup operations |
+
+## Architecture
+
+Built on production-grade foundations:
+
+-   **Tokio async runtime** - Concurrent performance (1000+ users)
+-   **Provider registry** - Thread-safe management with health monitoring
+-   **Circuit breakers** - Automatic failover between providers
+-   **Background processing** - Non-blocking indexing and sync
+-   **Metrics collection** - Comprehensive system and performance monitoring
+
+## Testing
+
+214 automated tests covering all critical functionality:
 
 ```bash
-# Complete quality validation
-make quality        # Full quality assurance pipeline
-make test          # 108 automated tests (100% pass rate)
-make validate      # Documentation and configuration validation
-make audit         # Security vulnerability assessment
+make test           # Run full test suite
+make quality        # Complete quality check (fmt + lint + test + audit)
+make validate       # Documentation and configuration validation
 ```
 
-### 🐳 Real-World Testing
+Test coverage:
 
-**Docker Integration Testing** - Validates complete business workflows with real AI providers and databases:
+-   Core types: 18 tests (data structures, serialization)
+-   Services: 16 tests (context, indexing, search logic)
+-   MCP protocol: 15 tests (protocol compliance)
+-   Integration: 13 tests (end-to-end workflows)
+-   Providers: 34 tests (embedding and vector stores)
+-   Routing: 25+ tests (circuit breakers, failover)
+-   Security: 19 tests (auth, rate limiting)
 
-```bash
-# Start production-like test environment
-make docker-up      # Launch OpenAI mock, Ollama, Milvus services
-make test-docker-full  # Complete integration test cycle
-make docker-down    # Cleanup test environment
-```
+## Performance
 
-**Business Scenario Coverage:**
-- ✅ **AI Provider Integration**: Real embedding generation with OpenAI and Ollama
-- ✅ **Vector Database Operations**: Production-like search with Milvus
-- ✅ **End-to-End Workflows**: Complete code indexing → search → results pipeline
-- ✅ **Error Recovery**: Automatic failover and error handling validation
-- ✅ **Performance Validation**: Response times and resource usage monitoring
+-   **Response time**: <500ms average query response
+-   **Indexing**: <30s for 1000+ files
+-   **Scalability**: Handles millions of lines efficiently
+-   **Concurrency**: 1000+ simultaneous users
 
-### 📊 Test Coverage Overview
+## Documentation
 
-| Test Category | Tests | Business Focus |
-|---------------|-------|----------------|
-| **Core Business Logic** | 18 | Data structures and API contracts |
-| **Search & Indexing** | 16 | Code understanding and retrieval accuracy |
-| **AI Assistant Integration** | 18 | MCP protocol compliance and reliability |
-| **Production Workflows** | 13 | Real-world usage scenarios |
-| **Code Intelligence** | 19 | Smart code chunking and analysis |
-| **System Monitoring** | 5 | Performance and health tracking |
-| **Security & Access** | 9 | Rate limiting and quota management |
-| **Authentication** | 10 | User access and permissions |
+-   [**Claude.md**](CLAUDE.md) - Development guide and project rules
+-   [**ARCHITECTURE.md**](docs/architecture/ARCHITECTURE.md) - Technical architecture
+-   [**DEPLOYMENT.md**](docs/operations/DEPLOYMENT.md) - Deployment guides
+-   [**CONTRIBUTING.md**](docs/developer/CONTRIBUTING.md) - Contribution guidelines
+-   [**ADR Index**](docs/adr/README.md) - Architectural decisions
+-   [**VERSION_HISTORY.md**](docs/VERSION_HISTORY.md) - Complete version history
 
-## 🚀 Current Status: v0.0.4 Enterprise Ready
+## Use Cases
 
-**MCP Context Browser v0.0.4** is production-ready with enterprise-grade semantic code search capabilities. The system provides AI-powered natural language code discovery with comprehensive monitoring, security, and scalability features.
+**Development Teams:**
 
-### 📊 Production Metrics
+-   Instant code discovery and understanding
+-   Fast onboarding (days instead of weeks)
+-   Identify refactoring opportunities
 
-| Component | Status | Performance |
-|-----------|--------|-------------|
-| **Semantic Search** | ✅ Production | <500ms response time |
-| **Code Indexing** | ✅ Production | <30s for 1000+ files |
-| **Multi-Provider Routing** | ✅ Production | Automatic failover |
-| **Security & Authentication** | ✅ Production | Enterprise-grade |
-| **Monitoring & Health** | ✅ Production | Real-time dashboards |
-| **Background Sync** | ✅ Production | Incremental updates |
+**AI Integration:**
 
-### 🏆 Enterprise Features
+-   Claude Desktop direct codebase access
+-   Custom assistant development
+-   Automated code review assistance
 
--   **🤖 AI-Powered Search**: Natural language queries transformed into precise code results
--   **🔄 Real-Time Synchronization**: Automatic background updates with change detection
--   **💾 Enterprise Persistence**: Professional state management with snapshot recovery
--   **🎯 Smart Code Analysis**: AST-based chunking with language-specific intelligence
--   **🔒 Production Security**: Encryption, rate limiting, JWT authentication, audit trails
--   **🔧 Provider Ecosystem**: OpenAI, Ollama, Gemini, VoyageAI, Milvus, Filesystem storage
--   **📊 Operational Excellence**: Comprehensive monitoring, health checks, automated maintenance
+**Enterprise:**
 
-### 🔧 MCP Protocol Integration
+-   Large codebase search (millions of lines)
+-   Multi-language support (Rust, Python, JavaScript, etc.)
+-   Security compliance with audit trails
 
-**Full MCP Protocol Support** - Seamlessly integrates with AI assistants:
+## Current Status: v0.0.4
 
-| MCP Tool | Business Value | Implementation |
-|----------|----------------|----------------|
-| **`index_codebase`** | Codebase ingestion | AST chunking, incremental sync |
-| **`search_code`** | Natural language search | Hybrid BM25 + semantic vectors |
-| **`get_indexing_status`** | System monitoring | Real-time health and progress |
-| **`clear_index`** | Index management | Professional cleanup operations |
+Production-ready with comprehensive features:
 
-### 🤖 AI Assistant Compatibility
+-   ✅ Full MCP protocol implementation
+-   ✅ Advanced provider routing with failover
+-   ✅ Real-time synchronization with change detection
+-   ✅ JWT authentication and authorization
+-   ✅ Comprehensive monitoring and health checks
+-   ✅ 214 tests with 100% pass rate
+-   ✅ Security audit complete (3 known dependency issues, non-blocking)
 
-**Works with leading AI assistants:**
-- **Claude Desktop**: Direct MCP integration for instant code search
-- **Custom Assistants**: MCP protocol enables any assistant integration
-- **Enterprise Platforms**: Standardized interface for corporate deployments
+## Contributing
 
-### ⚡ Performance & Scalability
+Contributions welcome! See [CONTRIBUTING.md](docs/developer/CONTRIBUTING.md) for guidelines.
 
-**Designed for Enterprise Scale:**
-- **Concurrent Users**: Supports 1000+ simultaneous users
-- **Response Time**: <500ms average query response
-- **Index Size**: Handles millions of lines of code efficiently
-- **Background Processing**: Non-blocking indexing and synchronization
-- **Resource Efficient**: Optimized memory usage and CPU utilization
+**Development philosophy:**
 
-### 🔒 Enterprise Security
+-   Quality first: comprehensive testing before changes
+-   Documentation driven: features documented before implementation
+-   Community focused: production-grade solutions for development teams
 
-**Production-Grade Security:**
-- **Authentication**: JWT-based user authentication and authorization
-- **Encryption**: Data at rest and in transit protection
-- **Rate Limiting**: Configurable request throttling and quotas
-- **Audit Trails**: Comprehensive logging and monitoring
-- **Access Control**: Role-based permissions and resource isolation
+## License
 
-## 🤝 Contributing & Community
+MIT Licensed - Open source and free for commercial and personal use.
 
-**Join the MCP Context Browser Community** - Help build the future of AI-powered code search:
+## Support
 
-- [**CONTRIBUTING.md**](CONTRIBUTING.md) - Development guidelines and contribution process
-- [**ARCHITECTURE.md**](docs/architecture/ARCHITECTURE.md) - Technical architecture and design principles
-- [**ROADMAP.md**](docs/developer/ROADMAP.md) - Development roadmap and upcoming features
-
-**Development Philosophy:**
-- **Quality First**: Comprehensive testing and validation before any changes
-- **Documentation Driven**: All features documented before implementation
-- **Community Focused**: Enterprise-grade solutions for development teams worldwide
-
-## 📄 License & Support
-
-**MIT Licensed** - Open source and free for commercial and personal use.
-
-**Enterprise Support Available** - Professional deployment assistance, custom integrations, and priority support for enterprise customers.
-
----
-
-**Ready to accelerate your development team?** Get started with MCP Context Browser today and transform how your team discovers and understands code.
+-   Issues: [GitHub Issues](https://github.com/marlonsc/mcp-context-browser/issues)
+-   Documentation: [docs/](docs/)
+-   Architecture: [ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md)

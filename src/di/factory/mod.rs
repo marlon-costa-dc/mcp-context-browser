@@ -4,7 +4,7 @@ use crate::core::{
     error::{Error, Result},
     types::{EmbeddingConfig, VectorStoreConfig},
 };
-use crate::di::registry::ProviderRegistryTrait;
+use crate::di::registry::{ProviderRegistry, ProviderRegistryTrait};
 use crate::providers::{EmbeddingProvider, VectorStoreProvider};
 
 // Import individual providers that exist
@@ -18,6 +18,7 @@ use crate::providers::vector_store::InMemoryVectorStoreProvider;
 use crate::providers::vector_store::milvus::MilvusVectorStoreProvider;
 use async_trait::async_trait;
 use std::sync::Arc;
+use shaku::{Component, Interface};
 
 /// Provider factory trait
 #[async_trait]
@@ -177,21 +178,49 @@ impl Default for DefaultProviderFactory {
     }
 }
 
-/// Service provider for dependency injection
-pub struct ServiceProvider {
-    factory: DefaultProviderFactory,
-    registry: crate::di::registry::ProviderRegistry,
+/// Service provider interface
+#[async_trait]
+pub trait ServiceProviderInterface: shaku::Interface + Send + Sync {
+    fn registry(&self) -> &ProviderRegistry;
+    fn list_providers(&self) -> (Vec<String>, Vec<String>);
+    fn register_embedding_provider(&self, name: &str, provider: Arc<dyn EmbeddingProvider>) -> Result<()>;
+    fn register_vector_store_provider(&self, name: &str, provider: Arc<dyn VectorStoreProvider>) -> Result<()>;
+    async fn get_embedding_provider(&self, config: &EmbeddingConfig) -> Result<Arc<dyn EmbeddingProvider>>;
+    async fn get_vector_store_provider(&self, config: &VectorStoreConfig) -> Result<Arc<dyn VectorStoreProvider>>;
 }
 
-impl ServiceProvider {
-    pub fn new() -> Self {
-        Self {
-            factory: DefaultProviderFactory::new(),
-            registry: crate::di::registry::ProviderRegistry::new(),
-        }
+/// Service provider for dependency injection
+#[derive(Component)]
+#[shaku(interface = ServiceProviderInterface)]
+pub struct ServiceProvider {
+    #[shaku(default = DefaultProviderFactory::new())]
+    factory: DefaultProviderFactory,
+    #[shaku(default = ProviderRegistry::new())]
+    registry: ProviderRegistry,
+}
+
+#[async_trait]
+impl ServiceProviderInterface for ServiceProvider {
+    fn registry(&self) -> &ProviderRegistry {
+        &self.registry
     }
 
-    pub async fn get_embedding_provider(
+    fn list_providers(&self) -> (Vec<String>, Vec<String>) {
+        (
+            self.registry.list_embedding_providers(),
+            self.registry.list_vector_store_providers(),
+        )
+    }
+
+    fn register_embedding_provider(&self, name: &str, provider: Arc<dyn EmbeddingProvider>) -> Result<()> {
+        self.registry.register_embedding_provider(name.to_string(), provider)
+    }
+
+    fn register_vector_store_provider(&self, name: &str, provider: Arc<dyn VectorStoreProvider>) -> Result<()> {
+        self.registry.register_vector_store_provider(name.to_string(), provider)
+    }
+
+    async fn get_embedding_provider(
         &self,
         config: &EmbeddingConfig,
     ) -> Result<Arc<dyn EmbeddingProvider>> {
@@ -208,7 +237,7 @@ impl ServiceProvider {
         Ok(provider)
     }
 
-    pub async fn get_vector_store_provider(
+    async fn get_vector_store_provider(
         &self,
         config: &VectorStoreConfig,
     ) -> Result<Arc<dyn VectorStoreProvider>> {
@@ -224,37 +253,14 @@ impl ServiceProvider {
 
         Ok(provider)
     }
+}
 
-    pub fn registry(&self) -> &crate::di::registry::ProviderRegistry {
-        &self.registry
-    }
-
-    /// Register an embedding provider directly
-    pub fn register_embedding_provider(
-        &self,
-        name: &str,
-        provider: Arc<dyn EmbeddingProvider>,
-    ) -> Result<()> {
-        self.registry
-            .register_embedding_provider(name.to_string(), provider)
-    }
-
-    /// Register a vector store provider directly
-    pub fn register_vector_store_provider(
-        &self,
-        name: &str,
-        provider: Arc<dyn VectorStoreProvider>,
-    ) -> Result<()> {
-        self.registry
-            .register_vector_store_provider(name.to_string(), provider)
-    }
-
-    /// List all registered providers
-    pub fn list_providers(&self) -> (Vec<String>, Vec<String>) {
-        (
-            self.registry.list_embedding_providers(),
-            self.registry.list_vector_store_providers(),
-        )
+impl ServiceProvider {
+    pub fn new() -> Self {
+        Self {
+            factory: DefaultProviderFactory::new(),
+            registry: ProviderRegistry::new(),
+        }
     }
 }
 

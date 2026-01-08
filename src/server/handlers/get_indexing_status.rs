@@ -9,7 +9,7 @@ use rmcp::model::CallToolResult;
 use std::sync::Arc;
 
 use crate::admin::service::{
-    AdminError, AdminService, IndexingStatus, PerformanceMetrics as AdminPerformanceMetrics,
+    AdminError, AdminService, IndexingStatus, PerformanceMetricsData as AdminPerformanceMetrics,
     SystemInfo,
 };
 use crate::server::args::GetIndexingStatusArgs;

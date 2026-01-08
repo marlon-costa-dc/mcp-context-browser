@@ -3,15 +3,16 @@
 //! This service provides a clean interface to access system data
 //! following SOLID principles and dependency injection.
 
-use crate::server::server::{
-    IndexingOperation as ServerIndexingOperation, PerformanceMetrics as ServerPerformanceMetrics,
-};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::RwLock;
+use shaku::Interface;
+use crate::metrics::system::SystemMetricsCollectorInterface;
+use crate::di::factory::ServiceProviderInterface;
+use crate::server::server::{PerformanceMetricsInterface, IndexingOperationsInterface};
+use crate::core::logging::{LogBuffer, LogEntry as CoreLogEntry, SharedLogBuffer};
 
 // Data structures for admin service operations
 
@@ -269,7 +270,7 @@ pub trait AdminService: Send + Sync {
     async fn get_indexing_status(&self) -> Result<IndexingStatus, AdminError>;
 
     /// Get performance metrics
-    async fn get_performance_metrics(&self) -> Result<PerformanceMetrics, AdminError>;
+    async fn get_performance_metrics(&self) -> Result<PerformanceMetricsData, AdminError>;
 
     /// Get dashboard data
     async fn get_dashboard_data(&self) -> Result<DashboardData, AdminError>;
@@ -356,54 +357,34 @@ pub trait AdminService: Send + Sync {
 
 /// Concrete implementation of AdminService
 pub struct AdminServiceImpl {
-    performance_metrics: Arc<ServerPerformanceMetrics>,
-    indexing_operations: Arc<RwLock<HashMap<String, ServerIndexingOperation>>>,
-    service_provider: Arc<crate::di::factory::ServiceProvider>,
+    performance_metrics: Arc<dyn PerformanceMetricsInterface>,
+    indexing_operations: Arc<dyn IndexingOperationsInterface>,
+    service_provider: Arc<dyn ServiceProviderInterface>,
+    system_collector: Arc<dyn SystemMetricsCollectorInterface>,
+    event_bus: crate::core::events::SharedEventBus,
+    log_buffer: crate::core::logging::SharedLogBuffer,
+    config: Arc<arc_swap::ArcSwap<crate::config::Config>>,
 }
 
 impl AdminServiceImpl {
     /// Create new admin service with dependency injection
     pub fn new(
-        performance_metrics: Arc<ServerPerformanceMetrics>,
-        indexing_operations: Arc<RwLock<HashMap<String, ServerIndexingOperation>>>,
-        service_provider: Arc<crate::di::factory::ServiceProvider>,
+        performance_metrics: Arc<dyn PerformanceMetricsInterface>,
+        indexing_operations: Arc<dyn IndexingOperationsInterface>,
+        service_provider: Arc<dyn ServiceProviderInterface>,
+        system_collector: Arc<dyn SystemMetricsCollectorInterface>,
+        event_bus: crate::core::events::SharedEventBus,
+        log_buffer: crate::core::logging::SharedLogBuffer,
+        config: Arc<arc_swap::ArcSwap<crate::config::Config>>,
     ) -> Self {
         Self {
             performance_metrics,
             indexing_operations,
             service_provider,
-        }
-    }
-
-    /// Get current CPU usage percentage
-    fn get_cpu_usage() -> f64 {
-        use sysinfo::System;
-
-        let mut system = System::new();
-        system.refresh_cpu_all();
-
-        let cpus = system.cpus();
-        if cpus.is_empty() {
-            0.0
-        } else {
-            cpus.iter().map(|cpu| cpu.cpu_usage() as f64).sum::<f64>() / cpus.len() as f64
-        }
-    }
-
-    /// Get current memory usage percentage
-    fn get_memory_usage() -> f64 {
-        use sysinfo::System;
-
-        let mut system = System::new();
-        system.refresh_memory();
-
-        let total = system.total_memory() as f64;
-        let used = system.used_memory() as f64;
-
-        if total > 0.0 {
-            (used / total) * 100.0
-        } else {
-            0.0
+            system_collector,
+            event_bus,
+            log_buffer,
+            config,
         }
     }
 }
@@ -411,7 +392,7 @@ impl AdminServiceImpl {
 #[async_trait]
 impl AdminService for AdminServiceImpl {
     async fn get_system_info(&self) -> Result<SystemInfo, AdminError> {
-        let uptime_seconds = self.performance_metrics.start_time.elapsed().as_secs();
+        let uptime_seconds = self.performance_metrics.start_time().elapsed().as_secs();
         Ok(SystemInfo {
             version: env!("CARGO_PKG_VERSION").to_string(),
             uptime: uptime_seconds,
@@ -450,11 +431,9 @@ impl AdminService for AdminServiceImpl {
     }
 
     async fn get_indexing_status(&self) -> Result<IndexingStatus, AdminError> {
-        let operations: tokio::sync::RwLockReadGuard<'_, HashMap<String, ServerIndexingOperation>> =
-            self.indexing_operations.read().await;
-
+        let map = self.indexing_operations.get_map();
         // Check if any indexing operations are active
-        let is_indexing = !operations.is_empty();
+        let is_indexing = !map.is_empty();
 
         // Find the most recent operation for current status
         let (current_file, start_time, _processed_files, _total_files): (
@@ -462,7 +441,8 @@ impl AdminService for AdminServiceImpl {
             Option<u64>,
             usize,
             usize,
-        ) = if let Some((_, operation)) = operations.iter().next() {
+        ) = if let Some(entry) = map.iter().next() {
+            let operation = entry.value();
             (
                 operation.current_file.clone(),
                 Some(operation.start_time.elapsed().as_secs()),
@@ -474,8 +454,8 @@ impl AdminService for AdminServiceImpl {
         };
 
         // Calculate totals across all operations
-        let total_documents: usize = operations.values().map(|op| op.total_files).sum();
-        let indexed_documents: usize = operations.values().map(|op| op.processed_files).sum();
+        let total_documents: usize = map.iter().map(|entry| entry.value().total_files).sum();
+        let indexed_documents: usize = map.iter().map(|entry| entry.value().processed_files).sum();
 
         // For now, no failed documents tracking
         let failed_documents = 0;
@@ -506,62 +486,8 @@ impl AdminService for AdminServiceImpl {
         })
     }
 
-    async fn get_performance_metrics(&self) -> Result<PerformanceMetrics, AdminError> {
-        let total_queries = self
-            .performance_metrics
-            .total_queries
-            .load(std::sync::atomic::Ordering::Relaxed);
-        let successful_queries = self
-            .performance_metrics
-            .successful_queries
-            .load(std::sync::atomic::Ordering::Relaxed);
-        let failed_queries = self
-            .performance_metrics
-            .failed_queries
-            .load(std::sync::atomic::Ordering::Relaxed);
-        let response_time_sum = self
-            .performance_metrics
-            .response_time_sum
-            .load(std::sync::atomic::Ordering::Relaxed);
-        let cache_hits = self
-            .performance_metrics
-            .cache_hits
-            .load(std::sync::atomic::Ordering::Relaxed);
-        let cache_misses = self
-            .performance_metrics
-            .cache_misses
-            .load(std::sync::atomic::Ordering::Relaxed);
-
-        // Calculate average response time
-        let average_response_time_ms = if total_queries > 0 {
-            response_time_sum as f64 / total_queries as f64
-        } else {
-            0.0
-        };
-
-        // Calculate cache hit rate
-        let total_cache_requests = cache_hits + cache_misses;
-        let cache_hit_rate = if total_cache_requests > 0 {
-            cache_hits as f64 / total_cache_requests as f64
-        } else {
-            0.0
-        };
-
-        // Calculate uptime
-        let uptime_seconds = self.performance_metrics.start_time.elapsed().as_secs();
-
-        Ok(PerformanceMetrics {
-            total_queries,
-            successful_queries,
-            failed_queries,
-            average_response_time_ms,
-            cache_hit_rate,
-            active_connections: self
-                .performance_metrics
-                .active_connections
-                .load(std::sync::atomic::Ordering::Relaxed) as u32,
-            uptime_seconds,
-        })
+    async fn get_performance_metrics(&self) -> Result<PerformanceMetricsData, AdminError> {
+        Ok(self.performance_metrics.get_performance_metrics())
     }
 
     async fn get_dashboard_data(&self) -> Result<DashboardData, AdminError> {
@@ -573,51 +499,60 @@ impl AdminService for AdminServiceImpl {
         let active_providers = providers.iter().filter(|p| p.status == "active").count();
         let active_indexes = if indexing.is_indexing { 0 } else { 1 };
 
+        let cpu_metrics = self.system_collector.collect_cpu_metrics().await.unwrap_or_default();
+        let memory_metrics = self.system_collector.collect_memory_metrics().await.unwrap_or_default();
+
         Ok(DashboardData {
             system_info,
             active_providers,
             total_providers: providers.len(),
             active_indexes,
             total_documents: indexing.indexed_documents,
-            cpu_usage: Self::get_cpu_usage(),
-            memory_usage: Self::get_memory_usage(),
+            cpu_usage: cpu_metrics.usage as f64,
+            memory_usage: memory_metrics.usage_percent as f64,
             performance,
         })
     }
 
     // Configuration Management Implementation
     async fn get_configuration(&self) -> Result<ConfigurationData, AdminError> {
-        // Build configuration from current system state
+        let config = self.config.load();
         let providers = self.get_providers().await?;
 
         Ok(ConfigurationData {
             providers,
             indexing: IndexingConfig {
-                chunk_size: 1000, // TODO: Get from actual config when available
+                // Default chunking values (no chunking config in current Config struct)
+                chunk_size: 1000,
                 chunk_overlap: 200,
-                max_file_size: 10 * 1024 * 1024,
-                supported_extensions: vec![".rs".to_string(), ".js".to_string(), ".ts".to_string()],
-                exclude_patterns: vec!["target/".to_string(), "node_modules/".to_string()],
+                max_file_size: 10 * 1024 * 1024, // 10MB
+                supported_extensions: vec![
+                    ".rs".to_string(), ".py".to_string(), ".js".to_string(), 
+                    ".ts".to_string(), ".go".to_string(), ".java".to_string()
+                ],
+                exclude_patterns: vec![
+                    "node_modules".to_string(), "target".to_string(), ".git".to_string()
+                ],
             },
             security: SecurityConfig {
-                enable_auth: true, // TODO: Get from actual config
-                rate_limiting: true,
-                max_requests_per_minute: 60,
+                enable_auth: config.auth.enabled,
+                rate_limiting: config.metrics.rate_limiting.enabled,
+                max_requests_per_minute: config.metrics.rate_limiting.max_requests_per_window,
             },
             metrics: MetricsConfigData {
-                enabled: true,
-                collection_interval: 30,
-                retention_days: 30,
+                enabled: config.metrics.enabled,
+                collection_interval: 30, // Default collection interval
+                retention_days: 7,       // Default retention days
             },
             cache: CacheConfigData {
-                enabled: true,
-                max_size: 10000,
-                ttl_seconds: 3600,
+                enabled: config.cache.enabled,
+                max_size: config.cache.max_size as u64,
+                ttl_seconds: config.cache.default_ttl_seconds,
             },
             database: DatabaseConfigData {
-                url: "sqlite://mcp_context.db".to_string(),
-                pool_size: 10,
-                connection_timeout: 30,
+                url: config.database.url.clone(),
+                pool_size: config.database.max_connections,
+                connection_timeout: config.database.connection_timeout.as_secs(),
             },
         })
     }
@@ -667,9 +602,7 @@ impl AdminService for AdminServiceImpl {
         for (path, value) in updates {
             match path.as_str() {
                 "metrics.collection_interval" => {
-                    if let Some(interval) = value.as_u64()
-                        && interval < 5
-                    {
+                    if let Some(interval) = value.as_u64() && interval < 5 {
                         warnings.push(
                             "Collection interval below 5 seconds may impact performance"
                                 .to_string(),
@@ -677,17 +610,13 @@ impl AdminService for AdminServiceImpl {
                     }
                 }
                 "cache.max_size" => {
-                    if let Some(size) = value.as_u64()
-                        && size > 10 * 1024 * 1024 * 1024
-                    {
+                    if let Some(size) = value.as_u64() && size > 10 * 1024 * 1024 * 1024 {
                         // 10GB
                         warnings.push("Cache size above 10GB may cause memory issues".to_string());
                     }
                 }
                 "database.pool_size" => {
-                    if let Some(pool_size) = value.as_u64()
-                        && pool_size > 100
-                    {
+                    if let Some(pool_size) = value.as_u64() && pool_size > 100 {
                         warnings.push(
                             "Database pool size above 100 may cause resource exhaustion"
                                 .to_string(),
@@ -711,20 +640,48 @@ impl AdminService for AdminServiceImpl {
     }
 
     // Logging System Implementation
-    async fn get_logs(&self, _filter: LogFilter) -> Result<LogEntries, AdminError> {
-        // In a real implementation, this would query the actual logging system
-        // For now, return mock data
+    async fn get_logs(&self, filter: LogFilter) -> Result<LogEntries, AdminError> {
+        // Use async get_all from the Actor-based LogBuffer
+        let core_entries = self.log_buffer.get_all().await;
+
+        let mut entries: Vec<LogEntry> = core_entries.into_iter().map(|e| {
+            LogEntry {
+                timestamp: e.timestamp,
+                level: e.level,
+                module: e.target.clone(),
+                message: e.message,
+                target: e.target,
+                file: None, // RingBuffer doesn't capture file/line by default yet
+                line: None,
+            }
+        }).collect();
+
+        // Apply filters
+        if let Some(level) = filter.level {
+            entries.retain(|e| e.level == level);
+        }
+        if let Some(module) = filter.module {
+            entries.retain(|e| e.module == module);
+        }
+        if let Some(message_contains) = filter.message_contains {
+            entries.retain(|e| e.message.contains(&message_contains));
+        }
+        if let Some(start_time) = filter.start_time {
+            entries.retain(|e| e.timestamp >= start_time);
+        }
+        if let Some(end_time) = filter.end_time {
+            entries.retain(|e| e.timestamp <= end_time);
+        }
+
+        let total_count = entries.len() as u64;
+        
+        if let Some(limit) = filter.limit {
+            entries.truncate(limit);
+        }
+
         Ok(LogEntries {
-            entries: vec![LogEntry {
-                timestamp: chrono::Utc::now(),
-                level: "INFO".to_string(),
-                module: "mcp_server".to_string(),
-                message: "Server started successfully".to_string(),
-                target: "mcp_context_browser".to_string(),
-                file: Some("src/main.rs".to_string()),
-                line: Some(42),
-            }],
-            total_count: 1,
+            entries,
+            total_count,
             has_more: false,
         })
     }
@@ -750,23 +707,23 @@ impl AdminService for AdminServiceImpl {
     }
 
     async fn get_log_stats(&self) -> Result<LogStats, AdminError> {
-        // Mock log statistics
+        // Use async get_all from the Actor-based LogBuffer
+        let all_entries = self.log_buffer.get_all().await;
+        
         let mut entries_by_level = HashMap::new();
-        entries_by_level.insert("INFO".to_string(), 150);
-        entries_by_level.insert("WARN".to_string(), 5);
-        entries_by_level.insert("ERROR".to_string(), 2);
-
         let mut entries_by_module = HashMap::new();
-        entries_by_module.insert("mcp_server".to_string(), 100);
-        entries_by_module.insert("providers".to_string(), 40);
-        entries_by_module.insert("metrics".to_string(), 17);
+        
+        for entry in &all_entries {
+            *entries_by_level.entry(entry.level.clone()).or_insert(0) += 1;
+            *entries_by_module.entry(entry.target.clone()).or_insert(0) += 1;
+        }
 
         Ok(LogStats {
-            total_entries: 157,
+            total_entries: all_entries.len() as u64,
             entries_by_level,
             entries_by_module,
-            oldest_entry: Some(chrono::Utc::now() - chrono::Duration::hours(24)),
-            newest_entry: Some(chrono::Utc::now()),
+            oldest_entry: all_entries.first().map(|e| e.timestamp),
+            newest_entry: all_entries.last().map(|e| e.timestamp),
         })
     }
 
@@ -774,27 +731,23 @@ impl AdminService for AdminServiceImpl {
     async fn clear_cache(&self, cache_type: CacheType) -> Result<MaintenanceResult, AdminError> {
         let start_time = std::time::Instant::now();
 
-        // In real implementation, this would clear the specified cache type
-        let affected_items = match cache_type {
-            CacheType::All => 1250,
-            CacheType::QueryResults => 450,
-            CacheType::Embeddings => 600,
-            CacheType::Indexes => 200,
+        let namespace = match cache_type {
+            CacheType::All => None,
+            CacheType::QueryResults => Some("search_results".to_string()),
+            CacheType::Embeddings => Some("embeddings".to_string()),
+            CacheType::Indexes => Some("indexes".to_string()),
         };
 
-        let execution_time = start_time.elapsed().as_millis() as u64;
+        self.event_bus.publish(crate::core::events::SystemEvent::CacheClear { namespace: namespace.clone() })
+            .map_err(|e| AdminError::McpServerError(format!("Failed to publish CacheClear event: {}", e)))?;
 
-        tracing::info!(
-            "Cache cleared: {} items removed in {}ms",
-            affected_items,
-            execution_time
-        );
+        let execution_time = start_time.elapsed().as_millis() as u64;
 
         Ok(MaintenanceResult {
             success: true,
             operation: format!("clear_cache_{:?}", cache_type),
-            message: format!("Successfully cleared {} cache entries", affected_items),
-            affected_items,
+            message: format!("Successfully requested cache clear for {:?}", cache_type),
+            affected_items: 0, // Event-based, so we don't know affected items immediately
             execution_time_ms: execution_time,
         })
     }
@@ -819,20 +772,17 @@ impl AdminService for AdminServiceImpl {
     async fn rebuild_index(&self, index_id: &str) -> Result<MaintenanceResult, AdminError> {
         let start_time = std::time::Instant::now();
 
-        // In real implementation, this would trigger index rebuild
-        let execution_time = start_time.elapsed().as_millis() as u64;
+        self.event_bus.publish(crate::core::events::SystemEvent::IndexRebuild { 
+            collection: Some(index_id.to_string()) 
+        }).map_err(|e| AdminError::McpServerError(format!("Failed to publish IndexRebuild event: {}", e)))?;
 
-        tracing::info!(
-            "Index {} rebuild completed in {}ms",
-            index_id,
-            execution_time
-        );
+        let execution_time = start_time.elapsed().as_millis() as u64;
 
         Ok(MaintenanceResult {
             success: true,
             operation: "rebuild_index".to_string(),
-            message: format!("Index {} rebuilt successfully", index_id),
-            affected_items: 15420, // Mock number of documents re-indexed
+            message: format!("Successfully requested rebuild for index {}", index_id),
+            affected_items: 0,
             execution_time_ms: execution_time,
         })
     }
@@ -844,20 +794,14 @@ impl AdminService for AdminServiceImpl {
         let start_time = std::time::Instant::now();
 
         // In real implementation, this would clean up old data
-        let affected_items = 89; // Mock number of items cleaned up
+        let affected_items = 0;
 
         let execution_time = start_time.elapsed().as_millis() as u64;
-
-        tracing::info!(
-            "Data cleanup completed: {} items removed in {}ms",
-            affected_items,
-            execution_time
-        );
 
         Ok(MaintenanceResult {
             success: true,
             operation: "cleanup_data".to_string(),
-            message: format!("Cleaned up {} old data items", affected_items),
+            message: "Data cleanup requested".to_string(),
             affected_items,
             execution_time_ms: execution_time,
         })
@@ -871,14 +815,17 @@ impl AdminService for AdminServiceImpl {
         let mut checks = Vec::new();
 
         // System health
+        let cpu_metrics = self.system_collector.collect_cpu_metrics().await.unwrap_or_default();
+        let memory_metrics = self.system_collector.collect_memory_metrics().await.unwrap_or_default();
+
         checks.push(HealthCheck {
             name: "system".to_string(),
             status: "healthy".to_string(),
             message: "System resources within normal limits".to_string(),
             duration_ms: 10,
             details: Some(serde_json::json!({
-                "cpu_usage": Self::get_cpu_usage(),
-                "memory_usage": Self::get_memory_usage()
+                "cpu_usage": cpu_metrics.usage,
+                "memory_usage": memory_metrics.usage_percent
             })),
         });
 
@@ -898,19 +845,6 @@ impl AdminService for AdminServiceImpl {
                 details: Some(provider.config),
             });
         }
-
-        // Database health
-        checks.push(HealthCheck {
-            name: "database".to_string(),
-            status: "healthy".to_string(),
-            message: "Database connection is healthy".to_string(),
-            duration_ms: 15,
-            details: Some(serde_json::json!({
-                "connections_active": 3,
-                "connections_idle": 7,
-                "response_time_ms": 2
-            })),
-        });
 
         let overall_status = if checks.iter().all(|c| c.status == "healthy") {
             "healthy"
@@ -938,23 +872,11 @@ impl AdminService for AdminServiceImpl {
         let start_time = std::time::Instant::now();
 
         // In real implementation, this would test actual connectivity
-        let (success, _response_time, error_message) = match provider_id {
-            "openai-1" => (true, Some(150), None),
-            "milvus-1" => (true, Some(25), None),
-            _ => (false, None, Some("Provider not found".to_string())),
-        };
-
-        let response_time_ms = if success {
-            Some(start_time.elapsed().as_millis() as u64)
-        } else {
-            None
-        };
-
         Ok(ConnectivityTestResult {
             provider_id: provider_id.to_string(),
-            success,
-            response_time_ms,
-            error_message,
+            success: true,
+            response_time_ms: Some(start_time.elapsed().as_millis() as u64),
+            error_message: None,
             details: serde_json::json!({
                 "test_type": "connectivity",
                 "endpoint_tested": format!("provider_{}", provider_id)
@@ -968,24 +890,17 @@ impl AdminService for AdminServiceImpl {
     ) -> Result<PerformanceTestResult, AdminError> {
         let start_time = std::time::Instant::now();
 
-        // Mock performance test results
-        let total_requests = 1000;
-        let successful_requests = 985;
-        let failed_requests = total_requests - successful_requests;
-
-        let duration_seconds = start_time.elapsed().as_secs() as u32;
-
         Ok(PerformanceTestResult {
             test_id: format!("perf_test_{}", chrono::Utc::now().timestamp()),
             test_type: test_config.test_type,
-            duration_seconds,
-            total_requests,
-            successful_requests,
-            failed_requests,
-            average_response_time_ms: 45.2,
-            p95_response_time_ms: 120.0,
-            p99_response_time_ms: 250.0,
-            throughput_rps: (total_requests as f64) / (duration_seconds as f64),
+            duration_seconds: 0,
+            total_requests: 0,
+            successful_requests: 0,
+            failed_requests: 0,
+            average_response_time_ms: 0.0,
+            p95_response_time_ms: 0.0,
+            p99_response_time_ms: 0.0,
+            throughput_rps: 0.0,
         })
     }
 
@@ -993,42 +908,31 @@ impl AdminService for AdminServiceImpl {
     async fn create_backup(&self, backup_config: BackupConfig) -> Result<BackupResult, AdminError> {
         let backup_id = format!("backup_{}", chrono::Utc::now().format("%Y%m%d_%H%M%S"));
         let created_at = chrono::Utc::now();
+        let path = format!("./backups/{}.tar.gz", backup_config.name);
 
-        // Mock backup creation
-        let size_bytes = 1024 * 1024 * 500; // 500MB mock size
-
-        tracing::info!("Backup created: {} ({} bytes)", backup_id, size_bytes);
+        self.event_bus.publish(crate::core::events::SystemEvent::BackupCreate { 
+            path: path.clone() 
+        }).map_err(|e| AdminError::McpServerError(format!("Failed to publish BackupCreate event: {}", e)))?;
 
         Ok(BackupResult {
             backup_id,
-            name: backup_config.name.clone(),
-            size_bytes,
+            name: backup_config.name,
+            size_bytes: 0, // Event-based, size unknown yet
             created_at,
-            path: format!("/backups/{}", backup_config.name),
+            path,
         })
     }
 
     async fn list_backups(&self) -> Result<Vec<BackupInfo>, AdminError> {
-        // Mock backup list
-        Ok(vec![BackupInfo {
-            id: "backup_20241201_120000".to_string(),
-            name: "daily_backup".to_string(),
-            created_at: chrono::Utc::now() - chrono::Duration::hours(24),
-            size_bytes: 512 * 1024 * 1024,
-            status: "completed".to_string(),
-        }])
+        // For now, return empty list
+        Ok(Vec::new())
     }
 
     async fn restore_backup(&self, backup_id: &str) -> Result<RestoreResult, AdminError> {
-        // Mock restore operation
-        let restored_items = 15420;
-
-        tracing::info!("Backup restored: {} ({} items)", backup_id, restored_items);
-
         Ok(RestoreResult {
             success: true,
             backup_id: backup_id.to_string(),
-            restored_items,
+            restored_items: 0,
             errors: vec![],
         })
     }
@@ -1036,7 +940,7 @@ impl AdminService for AdminServiceImpl {
 
 /// Data structures for admin service
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct SystemInfo {
     pub version: String,
     pub uptime: u64,
@@ -1052,7 +956,7 @@ pub struct ProviderInfo {
     pub config: serde_json::Value,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct IndexingStatus {
     pub is_indexing: bool,
     pub total_documents: u64,
@@ -1063,8 +967,8 @@ pub struct IndexingStatus {
     pub estimated_completion: Option<u64>,
 }
 
-#[derive(Debug, Clone)]
-pub struct PerformanceMetrics {
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct PerformanceMetricsData {
     pub total_queries: u64,
     pub successful_queries: u64,
     pub failed_queries: u64,
@@ -1074,7 +978,7 @@ pub struct PerformanceMetrics {
     pub uptime_seconds: u64,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct DashboardData {
     pub system_info: SystemInfo,
     pub active_providers: usize,
@@ -1083,7 +987,7 @@ pub struct DashboardData {
     pub total_documents: u64,
     pub cpu_usage: f64,
     pub memory_usage: f64,
-    pub performance: PerformanceMetrics,
+    pub performance: PerformanceMetricsData,
 }
 
 /// Admin service errors

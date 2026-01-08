@@ -1,14 +1,13 @@
 //! Health Monitoring Module
 //!
-//! This module provides health monitoring capabilities using the established `health` crate
-//! following SOLID principles with proper separation of concerns.
+//! This module provides health monitoring capabilities using DashMap
+//! to eliminate locks and ensure non-blocking operation.
 
 use crate::core::error::{Error, Result};
 use crate::di::registry::{ProviderRegistry, ProviderRegistryTrait};
-use std::collections::HashMap;
+use dashmap::DashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use tokio::sync::RwLock;
 use tracing::{debug, warn};
 
 /// Provider health status
@@ -204,7 +203,7 @@ impl ProviderHealthChecker for RealProviderHealthChecker {
 
 /// Health monitor coordinating health checks and tracking status
 pub struct HealthMonitor {
-    health_states: Arc<RwLock<HashMap<String, ProviderHealth>>>,
+    health_states: DashMap<String, ProviderHealth>,
     checker: Option<Arc<dyn ProviderHealthChecker>>,
 }
 
@@ -212,7 +211,7 @@ impl HealthMonitor {
     /// Create a new health monitor
     pub fn new() -> Self {
         Self {
-            health_states: Arc::new(RwLock::new(HashMap::new())),
+            health_states: DashMap::new(),
             checker: None,
         }
     }
@@ -220,7 +219,7 @@ impl HealthMonitor {
     /// Create with a specific checker
     pub fn with_checker(checker: Arc<dyn ProviderHealthChecker>) -> Self {
         Self {
-            health_states: Arc::new(RwLock::new(HashMap::new())),
+            health_states: DashMap::new(),
             checker: Some(checker),
         }
     }
@@ -249,8 +248,7 @@ impl HealthMonitor {
 impl HealthMonitorTrait for HealthMonitor {
     /// Check if a provider is considered healthy
     async fn is_healthy(&self, provider_id: &str) -> bool {
-        let states = self.health_states.read().await;
-        states
+        self.health_states
             .get(provider_id)
             .map(|h| h.status == ProviderHealthStatus::Healthy)
             .unwrap_or(true) // Assume healthy if unknown
@@ -258,14 +256,13 @@ impl HealthMonitorTrait for HealthMonitor {
 
     /// Get detailed health information for a provider
     async fn get_health(&self, provider_id: &str) -> Option<ProviderHealth> {
-        let states = self.health_states.read().await;
-        states.get(provider_id).cloned()
+        self.health_states.get(provider_id).map(|h| h.clone())
     }
 
     /// Record a health check result
     async fn record_result(&self, result: HealthCheckResult) {
-        let mut states = self.health_states.write().await;
-        let health = states
+        let mut health = self
+            .health_states
             .entry(result.provider_id.clone())
             .or_insert_with(|| ProviderHealth {
                 provider_id: result.provider_id.clone(),
@@ -304,11 +301,10 @@ impl HealthMonitorTrait for HealthMonitor {
 
     /// List all currently healthy provider IDs
     async fn list_healthy_providers(&self) -> Vec<String> {
-        let states = self.health_states.read().await;
-        states
+        self.health_states
             .iter()
-            .filter(|(_, h)| h.status == ProviderHealthStatus::Healthy)
-            .map(|(id, _)| id.clone())
+            .filter(|h| h.status == ProviderHealthStatus::Healthy)
+            .map(|h| h.key().clone())
             .collect()
     }
 

@@ -129,6 +129,14 @@ impl From<String> for Error {
     }
 }
 
+impl From<config::ConfigError> for Error {
+    fn from(err: config::ConfigError) -> Self {
+        Self::Config {
+            message: err.to_string(),
+        }
+    }
+}
+
 impl From<tera::Error> for Error {
     fn from(err: tera::Error) -> Self {
         Self::Generic(Box::new(err))

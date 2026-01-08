@@ -5,15 +5,13 @@
 //! rate limiting for production security.
 
 use crate::core::error::{Error, Result};
+use arc_swap::ArcSwapOption;
+use dashmap::DashMap;
 use redis::Client;
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, VecDeque};
+use std::collections::VecDeque;
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
-use tokio::sync::RwLock;
-
-/// Type alias for sliding window data structure
-type SlidingWindowData = HashMap<String, VecDeque<(u64, u32)>>;
 
 /// Rate limit configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -106,18 +104,21 @@ impl std::fmt::Display for RateLimitKey {
     }
 }
 
+/// Sliding window data structure
+type SlidingWindowData = DashMap<String, VecDeque<(u64, u32)>>;
+
 /// Storage backends for rate limiting
 #[derive(Clone)]
 enum RateLimitStorage {
     /// In-memory storage for single-node deployments
     Memory {
         /// Sliding window data: key -> (timestamps, counts)
-        windows: Arc<RwLock<SlidingWindowData>>,
+        windows: Arc<SlidingWindowData>,
         /// Maximum entries to prevent memory leaks
         max_entries: usize,
     },
     /// Redis storage for clustered deployments
-    Redis { client: Arc<RwLock<Option<Client>>> },
+    Redis { client: Arc<ArcSwapOption<Client>> },
 }
 
 /// Rate limiter with pluggable storage backends
@@ -126,7 +127,7 @@ pub struct RateLimiter {
     storage: RateLimitStorage,
     config: RateLimitConfig,
     /// In-memory cache for faster lookups (works with both backends)
-    memory_cache: Arc<RwLock<HashMap<String, (Instant, RateLimitResult)>>>,
+    memory_cache: Arc<DashMap<String, (Instant, RateLimitResult)>>,
 }
 
 impl RateLimiter {
@@ -134,18 +135,18 @@ impl RateLimiter {
     pub fn new(config: RateLimitConfig) -> Self {
         let storage = match &config.backend {
             RateLimitBackend::Memory { max_entries } => RateLimitStorage::Memory {
-                windows: Arc::new(RwLock::new(HashMap::new())),
+                windows: Arc::new(DashMap::new()),
                 max_entries: *max_entries,
             },
             RateLimitBackend::Redis { .. } => RateLimitStorage::Redis {
-                client: Arc::new(RwLock::new(None)),
+                client: Arc::new(ArcSwapOption::new(None)),
             },
         };
 
         Self {
             storage,
             config,
-            memory_cache: Arc::new(RwLock::new(HashMap::new())),
+            memory_cache: Arc::new(DashMap::new()),
         }
     }
 
@@ -179,7 +180,7 @@ impl RateLimiter {
                     .query(&mut conn)
                     .map_err(|e| Error::internal(format!("Redis PING failed: {}", e)))?;
 
-                *client.write().await = Some(redis_client);
+                client.store(Some(Arc::new(redis_client)));
                 Ok(())
             }
         }
@@ -199,18 +200,17 @@ impl RateLimiter {
 
         // Check memory cache first for performance
         let cache_key = key.to_string();
-        if let Some((cached_at, result)) = self.memory_cache.read().await.get(&cache_key)
-            && cached_at.elapsed() < Duration::from_secs(1)
-        {
-            return Ok(result.clone());
+        if let Some(entry) = self.memory_cache.get(&cache_key) {
+            let (cached_at, result) = entry.value();
+            if cached_at.elapsed() < Duration::from_secs(1) {
+                return Ok(result.clone());
+            }
         }
 
         let result = self.check_storage_rate_limit(key).await?;
 
         // Cache result for 1 second
         self.memory_cache
-            .write()
-            .await
             .insert(cache_key, (Instant::now(), result.clone()));
 
         Ok(result)
@@ -236,7 +236,7 @@ impl RateLimiter {
     async fn check_memory_rate_limit(
         &self,
         key: &RateLimitKey,
-        windows: &Arc<RwLock<SlidingWindowData>>,
+        windows: &Arc<SlidingWindowData>,
         max_entries: usize,
     ) -> Result<RateLimitResult> {
         let storage_key = key.to_string();
@@ -247,21 +247,22 @@ impl RateLimiter {
 
         let window_start = now.saturating_sub(self.config.window_seconds);
 
-        let mut windows_guard = windows.write().await;
-
-        // Clean up old entries to prevent memory leaks
-        if windows_guard.len() > max_entries {
-            // Remove oldest entries when exceeding max_entries
-            let keys_to_remove: Vec<_> = windows_guard.keys().cloned().collect();
-            for key in keys_to_remove.into_iter().skip(max_entries / 2) {
-                windows_guard.remove(&key);
+        // Clean up old entries to prevent memory leaks if we exceeded max_entries
+        if windows.len() > max_entries {
+            // Very simple cleanup: remove about half
+            let keys_to_remove: Vec<_> = windows
+                .iter()
+                .take(max_entries / 2)
+                .map(|r| r.key().clone())
+                .collect();
+            for key in keys_to_remove {
+                windows.remove(&key);
             }
         }
 
         // Get or create window for this key
-        let window = windows_guard
-            .entry(storage_key.clone())
-            .or_insert_with(VecDeque::new);
+        let mut window_entry = windows.entry(storage_key.clone()).or_default();
+        let window = window_entry.value_mut();
 
         // Remove old entries outside the window
         while let Some(&(timestamp, _)) = window.front() {
@@ -301,10 +302,10 @@ impl RateLimiter {
     async fn check_redis_rate_limit(
         &self,
         key: &RateLimitKey,
-        client: &Arc<RwLock<Option<Client>>>,
+        client: &Arc<ArcSwapOption<Client>>,
     ) -> Result<RateLimitResult> {
-        let client_guard = client.read().await;
-        let redis_client = client_guard
+        let redis_client = client.load();
+        let redis_client = redis_client
             .as_ref()
             .ok_or_else(|| Error::internal("Redis client not initialized"))?;
 
@@ -321,7 +322,6 @@ impl RateLimiter {
         let window_start = now - self.config.window_seconds as f64;
 
         // Remove old entries outside the window
-        // Note: zremrangebyscore removes by score range, we want to keep recent entries
         let _: () = redis::cmd("ZREMRANGEBYSCORE")
             .arg(&redis_key)
             .arg("-inf")
@@ -395,11 +395,11 @@ impl RateLimiter {
         match &self.storage {
             RateLimitStorage::Memory { windows, .. } => {
                 let storage_key = key.to_string();
-                windows.write().await.remove(&storage_key);
+                windows.remove(&storage_key);
             }
             RateLimitStorage::Redis { client, .. } => {
-                let client_guard = client.read().await;
-                let redis_client = client_guard
+                let redis_client = client.load();
+                let redis_client = redis_client
                     .as_ref()
                     .ok_or_else(|| Error::internal("Redis client not initialized"))?;
 
@@ -416,7 +416,7 @@ impl RateLimiter {
         }
 
         // Clear from memory cache
-        self.memory_cache.write().await.remove(&key.to_string());
+        self.memory_cache.remove(&key.to_string());
 
         Ok(())
     }
@@ -465,7 +465,7 @@ mod tests {
         limiter.init().await.unwrap();
 
         // Clear cache to ensure fresh results for this test
-        limiter.memory_cache.write().await.clear();
+        limiter.memory_cache.clear();
 
         let key = RateLimitKey::Ip("127.0.0.1".to_string());
 

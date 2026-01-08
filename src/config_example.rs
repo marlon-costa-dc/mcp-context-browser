@@ -114,11 +114,11 @@ impl ConfigManager {
     }
 
     /// Load configuration with priority: Global file -> Environment -> Defaults
-    pub fn load_config(&self) -> Result<GlobalConfig, Box<dyn std::error::Error>> {
+    pub async fn load_config(&self) -> Result<GlobalConfig, Box<dyn std::error::Error>> {
         // Start with defaults will be handled by file/env loading
 
         // Try to load global config file first
-        if let Ok(global_config) = self.load_global_config() {
+        if let Ok(global_config) = self.load_global_config().await {
             self.validate_config(&global_config)?;
             return Ok(global_config);
         }
@@ -128,12 +128,12 @@ impl ConfigManager {
     }
 
     /// Load global configuration file (~/.context/config.toml)
-    fn load_global_config(&self) -> Result<GlobalConfig, Box<dyn std::error::Error>> {
+    async fn load_global_config(&self) -> Result<GlobalConfig, Box<dyn std::error::Error>> {
         if !self.global_config_path.exists() {
             return Err("Global config file not found".into());
         }
 
-        let content = fs::read_to_string(&self.global_config_path)?;
+        let content = tokio::fs::read_to_string(&self.global_config_path).await?;
         let config: GlobalConfig = toml::from_str(&content)?;
         Ok(config)
     }
@@ -264,12 +264,12 @@ impl ConfigManager {
     }
 
     /// Create example configuration file at ~/.context/config.toml
-    pub fn create_example_config(&self) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn create_example_config(&self) -> Result<(), Box<dyn std::error::Error>> {
         let config_dir = self.global_config_path.parent()
             .ok_or("Cannot determine config directory")?;
 
         // Create ~/.context directory if it doesn't exist
-        fs::create_dir_all(config_dir)?;
+        tokio::fs::create_dir_all(config_dir).await?;
 
         // Create example configuration
         let example_config = r#"# MCP Context Browser Configuration
@@ -323,7 +323,7 @@ dimensions = 1536
 # dimensions = 1536
 "#;
 
-        fs::write(&self.global_config_path, example_config)?;
+        tokio::fs::write(&self.global_config_path, example_config).await?;
         println!("✅ Example configuration created: {}", self.global_config_path.display());
         println!("📝 Edit this file with your actual API keys and settings");
 
@@ -456,7 +456,7 @@ dimensions = 1536
 }
 
 /// Example usage and demonstration
-pub fn demonstrate_professional_config() -> Result<(), Box<dyn std::error::Error>> {
+pub async fn demonstrate_professional_config() -> Result<(), Box<dyn std::error::Error>> {
     println!("🚀 Demonstrating Professional Configuration System");
     println!("=================================================");
     println!();
@@ -468,7 +468,7 @@ pub fn demonstrate_professional_config() -> Result<(), Box<dyn std::error::Error
     println!();
 
     // Try to load configuration
-    match manager.load_config() {
+    match manager.load_config().await {
         Ok(config) => {
             println!("✅ Successfully loaded configuration:");
             manager.print_config_summary(&config);
@@ -478,7 +478,7 @@ pub fn demonstrate_professional_config() -> Result<(), Box<dyn std::error::Error
             println!("Error: {}", e);
             println!();
 
-            manager.create_example_config()?;
+            manager.create_example_config().await?;
             println!();
             println!("📝 Next steps:");
             println!("  1. Edit ~/.context/config.toml with your API keys");
@@ -493,8 +493,8 @@ pub fn demonstrate_professional_config() -> Result<(), Box<dyn std::error::Error
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_config_validation_openai() {
+    #[tokio::test]
+    async fn test_config_validation_openai() {
         let config = GlobalConfig {
             server: ServerConfigExample::default(),
             providers: GlobalProviderConfig {
@@ -518,8 +518,8 @@ mod tests {
         assert!(manager.validate_config(&config).is_ok());
     }
 
-    #[test]
-    fn test_config_validation_missing_api_key() {
+    #[tokio::test]
+    async fn test_config_validation_missing_api_key() {
         let config = GlobalConfig {
             server: ServerConfigExample::default(),
             providers: GlobalProviderConfig {

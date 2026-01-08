@@ -50,20 +50,27 @@ impl Default for FailoverContext {
 }
 
 /// Priority-based failover strategy
-#[derive(Default)]
 pub struct PriorityBasedStrategy {
     /// Provider priorities (lower number = higher priority)
-    priorities: HashMap<String, u32>,
+    priorities: dashmap::DashMap<String, u32>,
+}
+
+impl Default for PriorityBasedStrategy {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl PriorityBasedStrategy {
     /// Create a new priority-based strategy
     pub fn new() -> Self {
-        Self::default()
+        Self {
+            priorities: dashmap::DashMap::new(),
+        }
     }
 
     /// Set priority for a provider (lower number = higher priority)
-    pub fn set_priority(&mut self, provider_id: &str, priority: u32) {
+    pub fn set_priority(&self, provider_id: &str, priority: u32) {
         self.priorities.insert(provider_id.to_string(), priority);
     }
 
@@ -98,7 +105,7 @@ impl FailoverStrategy for PriorityBasedStrategy {
             let priority = self
                 .priorities
                 .get(candidate)
-                .copied()
+                .map(|p| *p)
                 .unwrap_or_else(|| self.get_default_priority(candidate));
 
             scored_providers.push((candidate.clone(), priority));
@@ -352,8 +359,10 @@ impl FailoverManager {
 
     /// Configure priority-based strategy
     pub fn configure_priorities(&mut self, priorities: HashMap<String, u32>) {
-        let mut new_strategy = PriorityBasedStrategy::new();
-        new_strategy.priorities = priorities;
+        let new_strategy = PriorityBasedStrategy::new();
+        for (id, priority) in priorities {
+            new_strategy.set_priority(&id, priority);
+        }
         let count = new_strategy.priorities.len();
         self.strategy = Box::new(new_strategy);
         info!("Provider priorities configured with {} entries", count);
@@ -415,7 +424,7 @@ mod tests {
         let _ = health_monitor.check_provider("secondary").await;
         let _ = health_monitor.check_provider("tertiary").await;
 
-        let mut strategy = PriorityBasedStrategy::new();
+        let strategy = PriorityBasedStrategy::new();
         strategy.set_priority("primary", 1);
         strategy.set_priority("secondary", 2);
         strategy.set_priority("tertiary", 3);

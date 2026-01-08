@@ -12,7 +12,6 @@ use aes_gcm::{
 };
 use rand::{Rng, rng};
 use serde::{Deserialize, Serialize};
-use std::fs;
 use std::path::Path;
 
 /// Encryption algorithm configuration

@@ -11,8 +11,7 @@ use std::sync::Arc;
 /// Null vector store provider for testing
 #[allow(clippy::type_complexity)]
 pub struct NullVectorStoreProvider {
-    collections:
-        Arc<DashMap<String, Vec<(Embedding, HashMap<String, serde_json::Value>)>>>,
+    collections: Arc<DashMap<String, Vec<(Embedding, HashMap<String, serde_json::Value>)>>>,
 }
 
 #[allow(dead_code, clippy::needless_borrows_for_generic_args)]

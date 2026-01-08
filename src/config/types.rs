@@ -6,20 +6,24 @@ use crate::core::limits::ResourceLimitsConfig;
 use crate::daemon::DaemonConfig;
 use crate::sync::SyncConfig;
 use serde::{Deserialize, Serialize};
+use validator::Validate;
 
 use super::metrics::MetricsConfig;
 use super::providers::{EmbeddingProviderConfig, VectorStoreProviderConfig};
 use super::server::ServerConfig;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct GlobalConfig {
     /// Server configuration
     #[serde(default)]
+    #[validate]
     pub server: ServerConfig,
     /// Provider configurations
+    #[validate]
     pub providers: GlobalProviderConfig,
     /// Metrics configuration
     #[serde(default)]
+    #[validate]
     pub metrics: MetricsConfig,
     /// Sync configuration
     #[serde(default)]
@@ -29,14 +33,14 @@ pub struct GlobalConfig {
     pub daemon: DaemonConfig,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct GlobalProviderConfig {
     pub embedding: EmbeddingProviderConfig,
     pub vector_store: VectorStoreProviderConfig,
 }
 
 /// Legacy provider config (maintained for backward compatibility)
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct ProviderConfig {
     pub embedding: crate::core::types::EmbeddingConfig,
     pub vector_store: crate::core::types::VectorStoreConfig,
@@ -68,17 +72,25 @@ impl Default for ProviderConfig {
 ///
 /// Central configuration structure containing all settings for the MCP Context Browser.
 /// Supports hierarchical configuration with validation and environment variable overrides.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct Config {
     /// Application name
+    #[serde(default = "default_name")]
     pub name: String,
     /// Application version
+    #[serde(default = "default_version")]
     pub version: String,
     /// Server configuration (host, port, etc.)
+    #[serde(default)]
+    #[validate]
     pub server: ServerConfig,
     /// AI and vector store provider configurations
+    #[serde(default)]
+    #[validate]
     pub providers: ProviderConfig,
     /// Metrics and monitoring configuration
+    #[serde(default)]
+    #[validate]
     pub metrics: MetricsConfig,
     /// Authentication and authorization settings
     #[serde(default)]
@@ -88,8 +100,10 @@ pub struct Config {
     #[serde(default)]
     pub database: DatabaseConfig,
     /// Sync coordination configuration
+    #[serde(default)]
     pub sync: SyncConfig,
     /// Background daemon configuration
+    #[serde(default)]
     pub daemon: DaemonConfig,
 
     /// Resource limits configuration
@@ -99,7 +113,16 @@ pub struct Config {
     /// Advanced caching configuration
     #[serde(default)]
     pub cache: CacheConfig,
+    #[serde(default)]
     pub hybrid_search: HybridSearchConfig,
+}
+
+fn default_name() -> String {
+    "MCP Context Browser".to_string()
+}
+
+fn default_version() -> String {
+    env!("CARGO_PKG_VERSION").to_string()
 }
 
 impl Default for Config {

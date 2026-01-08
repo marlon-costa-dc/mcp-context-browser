@@ -57,7 +57,8 @@ impl VectorStoreProvider for InMemoryVectorStoreProvider {
         vectors: &[Embedding],
         metadata: Vec<HashMap<String, serde_json::Value>>,
     ) -> Result<Vec<String>> {
-        let mut coll = self.collections
+        let mut coll = self
+            .collections
             .get_mut(collection)
             .ok_or_else(|| Error::vector_db(format!("Collection '{}' not found", collection)))?;
 
@@ -80,7 +81,8 @@ impl VectorStoreProvider for InMemoryVectorStoreProvider {
         limit: usize,
         _filter: Option<&str>,
     ) -> Result<Vec<SearchResult>> {
-        let coll = self.collections
+        let coll = self
+            .collections
             .get(collection)
             .ok_or_else(|| Error::vector_db(format!("Collection '{}' not found", collection)))?;
 
@@ -123,7 +125,8 @@ impl VectorStoreProvider for InMemoryVectorStoreProvider {
     }
 
     async fn delete_vectors(&self, collection: &str, ids: &[String]) -> Result<()> {
-        let mut coll = self.collections
+        let mut coll = self
+            .collections
             .get_mut(collection)
             .ok_or_else(|| Error::vector_db(format!("Collection '{}' not found", collection)))?;
 
@@ -139,7 +142,8 @@ impl VectorStoreProvider for InMemoryVectorStoreProvider {
     }
 
     async fn get_stats(&self, collection: &str) -> Result<HashMap<String, serde_json::Value>> {
-        let count = self.collections
+        let count = self
+            .collections
             .get(collection)
             .map(|data| data.len())
             .unwrap_or(0);

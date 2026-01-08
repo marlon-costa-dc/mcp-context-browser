@@ -21,7 +21,7 @@ async fn main() -> Result<()> {
     let registry = Arc::new(ProviderRegistry::new());
 
     // Create provider router
-    let mut router = ProviderRouter::with_defaults(Arc::clone(&registry))?;
+    let mut router = ProviderRouter::with_defaults(Arc::clone(&registry)).await?;
 
     // Set selection strategy
     let strategy = ContextualStrategy::new();

@@ -13,8 +13,8 @@ use crate::core::cache::get_global_cache_manager;
 use crate::core::error::{Error, Result};
 use crate::core::types::SyncBatch;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::time::Duration;
-use tokio::sync::Mutex;
 use tokio::time;
 
 /// Background daemon configuration
@@ -59,7 +59,7 @@ impl DaemonConfig {
 }
 
 /// Daemon statistics for monitoring
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct DaemonStats {
     /// Total cleanup cycles run
     pub cleanup_cycles: u64,
@@ -75,11 +75,56 @@ pub struct DaemonStats {
     pub last_monitoring: Option<std::time::SystemTime>,
 }
 
+/// Internal atomic statistics
+struct AtomicDaemonStats {
+    cleanup_cycles: AtomicU64,
+    locks_cleaned: AtomicU64,
+    monitoring_cycles: AtomicU64,
+    active_locks: AtomicUsize,
+    last_cleanup: AtomicU64,    // Seconds since epoch
+    last_monitoring: AtomicU64, // Seconds since epoch
+}
+
+impl AtomicDaemonStats {
+    fn new() -> Self {
+        Self {
+            cleanup_cycles: AtomicU64::new(0),
+            locks_cleaned: AtomicU64::new(0),
+            monitoring_cycles: AtomicU64::new(0),
+            active_locks: AtomicUsize::new(0),
+            last_cleanup: AtomicU64::new(0),
+            last_monitoring: AtomicU64::new(0),
+        }
+    }
+
+    async fn to_stats(&self) -> DaemonStats {
+        let last_cleanup = self.last_cleanup.load(Ordering::Relaxed);
+        let last_monitoring = self.last_monitoring.load(Ordering::Relaxed);
+
+        DaemonStats {
+            cleanup_cycles: self.cleanup_cycles.load(Ordering::Relaxed),
+            locks_cleaned: self.locks_cleaned.load(Ordering::Relaxed),
+            monitoring_cycles: self.monitoring_cycles.load(Ordering::Relaxed),
+            active_locks: self.active_locks.load(Ordering::Relaxed),
+            last_cleanup: if last_cleanup > 0 {
+                Some(std::time::UNIX_EPOCH + Duration::from_secs(last_cleanup))
+            } else {
+                None
+            },
+            last_monitoring: if last_monitoring > 0 {
+                Some(std::time::UNIX_EPOCH + Duration::from_secs(last_monitoring))
+            } else {
+                None
+            },
+        }
+    }
+}
+
 /// Background daemon for maintenance tasks
 pub struct ContextDaemon {
     config: DaemonConfig,
-    stats: Arc<Mutex<DaemonStats>>,
-    running: Arc<Mutex<bool>>,
+    stats: Arc<AtomicDaemonStats>,
+    running: Arc<AtomicBool>,
 }
 
 impl ContextDaemon {
@@ -92,26 +137,16 @@ impl ContextDaemon {
     pub fn with_config(config: DaemonConfig) -> Self {
         Self {
             config,
-            stats: Arc::new(Mutex::new(DaemonStats {
-                cleanup_cycles: 0,
-                locks_cleaned: 0,
-                monitoring_cycles: 0,
-                active_locks: 0,
-                last_cleanup: None,
-                last_monitoring: None,
-            })),
-            running: Arc::new(Mutex::new(false)),
+            stats: Arc::new(AtomicDaemonStats::new()),
+            running: Arc::new(AtomicBool::new(false)),
         }
     }
 
     /// Start the daemon (non-blocking)
     pub async fn start(&self) -> Result<()> {
-        let mut running = self.running.lock().await;
-        if *running {
+        if self.running.swap(true, Ordering::SeqCst) {
             return Err(Error::internal("Daemon is already running"));
         }
-        *running = true;
-        drop(running);
 
         tracing::info!("[DAEMON] Starting background daemon...");
         tracing::debug!(
@@ -137,8 +172,7 @@ impl ContextDaemon {
                 loop {
                     interval.tick().await;
 
-                    let is_running = *running.lock().await;
-                    if !is_running {
+                    if !running.load(Ordering::Relaxed) {
                         break;
                     }
 
@@ -163,8 +197,7 @@ impl ContextDaemon {
                 loop {
                     interval.tick().await;
 
-                    let is_running = *running.lock().await;
-                    if !is_running {
+                    if !running.load(Ordering::Relaxed) {
                         break;
                     }
 
@@ -190,20 +223,18 @@ impl ContextDaemon {
 
     /// Stop the daemon
     pub async fn stop(&self) -> Result<()> {
-        let mut running = self.running.lock().await;
-        *running = false;
+        self.running.store(false, Ordering::SeqCst);
         tracing::info!("[DAEMON] Stop signal sent to background daemon");
         Ok(())
     }
 
     /// Get current daemon statistics
     pub async fn get_stats(&self) -> DaemonStats {
-        let stats = self.stats.lock().await;
-        (*stats).clone()
+        self.stats.to_stats().await
     }
 
     /// Run a single cleanup cycle
-    async fn run_cleanup_cycle(stats: &Arc<Mutex<DaemonStats>>, max_age_secs: u64) -> Result<()> {
+    async fn run_cleanup_cycle(stats: &Arc<AtomicDaemonStats>, max_age_secs: u64) -> Result<()> {
         let mut cleaned_count = 0;
         if let Some(cache) = get_global_cache_manager()
             && let Ok(queue) = cache.get_queue::<SyncBatch>("sync_batches", "queue").await
@@ -225,10 +256,15 @@ impl ContextDaemon {
             }
         }
 
-        let mut stats = stats.lock().await;
-        stats.cleanup_cycles += 1;
-        stats.locks_cleaned += cleaned_count;
-        stats.last_cleanup = Some(std::time::SystemTime::now());
+        stats.cleanup_cycles.fetch_add(1, Ordering::Relaxed);
+        stats
+            .locks_cleaned
+            .fetch_add(cleaned_count, Ordering::Relaxed);
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+        stats.last_cleanup.store(now, Ordering::Relaxed);
 
         if cleaned_count > 0 {
             tracing::info!("[DAEMON] Cleaned up {} stale batches", cleaned_count);
@@ -238,7 +274,7 @@ impl ContextDaemon {
     }
 
     /// Run a single monitoring cycle
-    async fn run_monitoring_cycle(stats: &Arc<Mutex<DaemonStats>>) -> Result<()> {
+    async fn run_monitoring_cycle(stats: &Arc<AtomicDaemonStats>) -> Result<()> {
         let mut queue_size = 0;
         if let Some(cache) = get_global_cache_manager()
             && let Ok(queue) = cache.get_queue::<SyncBatch>("sync_batches", "queue").await
@@ -246,10 +282,13 @@ impl ContextDaemon {
             queue_size = queue.len();
         }
 
-        let mut stats = stats.lock().await;
-        stats.monitoring_cycles += 1;
-        stats.active_locks = queue_size;
-        stats.last_monitoring = Some(std::time::SystemTime::now());
+        stats.monitoring_cycles.fetch_add(1, Ordering::Relaxed);
+        stats.active_locks.store(queue_size, Ordering::Relaxed);
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+        stats.last_monitoring.store(now, Ordering::Relaxed);
 
         // Warn about high backlog
         if queue_size > 10 {
@@ -271,10 +310,9 @@ impl ContextDaemon {
 
     /// Check if daemon is running
     pub async fn is_running(&self) -> bool {
-        *self.running.lock().await
+        self.running.load(Ordering::SeqCst)
     }
 }
-
 impl Default for ContextDaemon {
     fn default() -> Self {
         Self::new()

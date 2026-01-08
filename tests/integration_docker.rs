@@ -9,6 +9,7 @@ use std::env;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use mcp_context_browser::di::factory::ServiceProviderInterface;
 
     fn get_ollama_config() -> EmbeddingConfig {
         EmbeddingConfig {

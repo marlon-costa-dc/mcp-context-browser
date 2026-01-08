@@ -5,6 +5,7 @@
 //! semantic search operations. The server orchestrates the complete business
 //! workflow from query understanding to result delivery.
 
+use dashmap::DashMap;
 use rmcp::ErrorData as McpError;
 use rmcp::handler::server::wrapper::Parameters;
 use rmcp::model::{
@@ -12,16 +13,15 @@ use rmcp::model::{
     ServerCapabilities, ServerInfo, Tool,
 };
 use rmcp::{ServerHandler, tool};
-use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
-use tokio::sync::RwLock;
+use shaku::{Component, Interface, ModuleBuildContext};
+use arc_swap::ArcSwap;
 
-use crate::config::ConfigManager;
+use crate::config::{ConfigLoader, ConfigWatcher};
 use crate::core::cache::CacheManager;
 use crate::core::limits::ResourceLimits;
-use crate::di::factory::ServiceProvider;
-use crate::providers::routing::ProviderRouter;
+use crate::di::factory::ServiceProviderInterface;
 use crate::server::args::{
     ClearIndexArgs, GetIndexingStatusArgs, IndexCodebaseArgs, SearchCodeArgs,
 };
@@ -30,6 +30,7 @@ use crate::server::handlers::{
     ClearIndexHandler, GetIndexingStatusHandler, IndexCodebaseHandler, SearchCodeHandler,
 };
 use crate::services::{IndexingService, SearchService};
+use crate::core::events::SharedEventBus;
 
 /// Type alias for provider tuple to reduce complexity
 type ProviderTuple = (
@@ -37,36 +38,17 @@ type ProviderTuple = (
     Arc<dyn crate::providers::VectorStoreProvider>,
 );
 
-/// Enterprise Semantic Search Coordinator
-///
-/// The McpServer orchestrates the complete business workflow for AI-powered
-/// code intelligence, connecting development teams with instant access to
-/// codebase knowledge. This enterprise-grade server transforms natural language
-/// queries into precise code discoveries while maintaining security, performance,
-/// and reliability standards required for production deployments.
-#[derive(Clone)]
-pub struct McpServer {
-    /// Handler for codebase indexing operations
-    index_codebase_handler: Arc<IndexCodebaseHandler>,
-    /// Handler for code search operations
-    search_code_handler: Arc<SearchCodeHandler>,
-    /// Handler for indexing status operations
-    get_indexing_status_handler: Arc<GetIndexingStatusHandler>,
-    /// Handler for index clearing operations
-    clear_index_handler: Arc<ClearIndexHandler>,
-    /// Service provider for dependency injection
-    service_provider: Arc<ServiceProvider>,
-    /// Real-time performance metrics
-    performance_metrics: Arc<PerformanceMetrics>,
-    /// Ongoing indexing operations tracking
-    indexing_operations: Arc<RwLock<HashMap<String, IndexingOperation>>>,
-    /// Admin service
-    admin_service: Arc<dyn crate::admin::service::AdminService>,
+/// Real-time performance metrics tracking interface
+pub trait PerformanceMetricsInterface: Interface + Send + Sync {
+    fn start_time(&self) -> std::time::Instant;
+    fn record_query(&self, response_time_ms: u64, success: bool, cache_hit: bool);
+    fn update_active_connections(&self, delta: i64);
+    fn get_performance_metrics(&self) -> crate::admin::service::PerformanceMetricsData;
 }
 
 /// Real-time performance metrics tracking
 #[derive(Debug)]
-pub struct PerformanceMetrics {
+pub struct McpPerformanceMetrics {
     /// Total queries processed
     pub total_queries: AtomicU64,
     /// Successful queries
@@ -85,7 +67,84 @@ pub struct PerformanceMetrics {
     pub start_time: std::time::Instant,
 }
 
-impl Default for PerformanceMetrics {
+impl<M: shaku::Module> Component<M> for McpPerformanceMetrics {
+    type Interface = dyn PerformanceMetricsInterface;
+    type Parameters = ();
+
+    fn build(_context: &mut ModuleBuildContext<M>, _params: Self::Parameters) -> Box<Self::Interface> {
+        Box::new(Self::default())
+    }
+}
+
+impl PerformanceMetricsInterface for McpPerformanceMetrics {
+    fn start_time(&self) -> std::time::Instant {
+        self.start_time
+    }
+
+    fn record_query(&self, response_time_ms: u64, success: bool, cache_hit: bool) {
+        self.total_queries.fetch_add(1, Ordering::Relaxed);
+
+        if success {
+            self.successful_queries.fetch_add(1, Ordering::Relaxed);
+        } else {
+            self.failed_queries.fetch_add(1, Ordering::Relaxed);
+        }
+
+        self.response_time_sum.fetch_add(response_time_ms, Ordering::Relaxed);
+
+        if cache_hit {
+            self.cache_hits.fetch_add(1, Ordering::Relaxed);
+        } else {
+            self.cache_misses.fetch_add(1, Ordering::Relaxed);
+        }
+    }
+
+    fn update_active_connections(&self, delta: i64) {
+        if delta > 0 {
+            self.active_connections.fetch_add(delta as u64, Ordering::Relaxed);
+        } else {
+            let current = self.active_connections.load(Ordering::Relaxed);
+            let new_value = current.saturating_sub((-delta) as u64);
+            self.active_connections.store(new_value, Ordering::Relaxed);
+        }
+    }
+
+    fn get_performance_metrics(&self) -> crate::admin::service::PerformanceMetricsData {
+        let total_queries = self.total_queries.load(Ordering::Relaxed);
+        let successful_queries = self.successful_queries.load(Ordering::Relaxed);
+        let failed_queries = self.failed_queries.load(Ordering::Relaxed);
+        let response_time_sum = self.response_time_sum.load(Ordering::Relaxed);
+        let cache_hits = self.cache_hits.load(Ordering::Relaxed);
+        let cache_misses = self.cache_misses.load(Ordering::Relaxed);
+
+        let average_response_time_ms = if total_queries > 0 {
+            response_time_sum as f64 / total_queries as f64
+        } else {
+            0.0
+        };
+
+        let total_cache_requests = cache_hits + cache_misses;
+        let cache_hit_rate = if total_cache_requests > 0 {
+            cache_hits as f64 / total_cache_requests as f64
+        } else {
+            0.0
+        };
+
+        let uptime_seconds = self.start_time.elapsed().as_secs();
+
+        crate::admin::service::PerformanceMetricsData {
+            total_queries,
+            successful_queries,
+            failed_queries,
+            average_response_time_ms,
+            cache_hit_rate,
+            active_connections: self.active_connections.load(Ordering::Relaxed) as u32,
+            uptime_seconds,
+        }
+    }
+}
+
+impl Default for McpPerformanceMetrics {
     fn default() -> Self {
         Self {
             total_queries: AtomicU64::new(0),
@@ -98,6 +157,11 @@ impl Default for PerformanceMetrics {
             start_time: std::time::Instant::now(),
         }
     }
+}
+
+/// Interface for indexing operations tracking
+pub trait IndexingOperationsInterface: Interface + Send + Sync {
+    fn get_map(&self) -> &DashMap<String, IndexingOperation>;
 }
 
 /// Tracks ongoing indexing operations
@@ -117,6 +181,56 @@ pub struct IndexingOperation {
     pub start_time: std::time::Instant,
 }
 
+/// Concrete implementation of indexing operations tracking
+#[derive(Debug, Default)]
+pub struct McpIndexingOperations {
+    pub map: DashMap<String, IndexingOperation>,
+}
+
+impl<M: shaku::Module> Component<M> for McpIndexingOperations {
+    type Interface = dyn IndexingOperationsInterface;
+    type Parameters = ();
+
+    fn build(_context: &mut ModuleBuildContext<M>, _params: Self::Parameters) -> Box<Self::Interface> {
+        Box::new(Self::default())
+    }
+}
+
+impl IndexingOperationsInterface for McpIndexingOperations {
+    fn get_map(&self) -> &DashMap<String, IndexingOperation> {
+        &self.map
+    }
+}
+
+/// Enterprise Semantic Search Coordinator
+#[derive(Clone)]
+pub struct McpServer {
+    /// Handler for codebase indexing operations
+    index_codebase_handler: Arc<IndexCodebaseHandler>,
+    /// Handler for code search operations
+    search_code_handler: Arc<SearchCodeHandler>,
+    /// Handler for indexing status operations
+    get_indexing_status_handler: Arc<GetIndexingStatusHandler>,
+    /// Handler for index clearing operations
+    clear_index_handler: Arc<ClearIndexHandler>,
+    /// Service provider for dependency injection
+    service_provider: Arc<dyn ServiceProviderInterface>,
+    /// Real-time performance metrics
+    pub performance_metrics: Arc<dyn PerformanceMetricsInterface>,
+    /// Ongoing indexing operations tracking
+    pub indexing_operations: Arc<dyn IndexingOperationsInterface>,
+    /// Admin service
+    pub admin_service: Arc<dyn crate::admin::service::AdminService>,
+    /// Configuration state
+    pub config: Arc<ArcSwap<crate::config::Config>>,
+    /// Event bus for decoupled communication
+    pub event_bus: SharedEventBus,
+    /// Shared log buffer for real-time monitoring
+    pub log_buffer: crate::core::logging::SharedLogBuffer,
+    /// System metrics collector
+    pub system_collector: Arc<dyn crate::metrics::system::SystemMetricsCollectorInterface>,
+}
+
 /// Type alias for initialized handlers tuple
 type InitializedHandlers = (
     Arc<IndexCodebaseHandler>,
@@ -128,7 +242,7 @@ type InitializedHandlers = (
 impl McpServer {
     /// Create providers based on configuration using service provider
     async fn create_providers(
-        service_provider: &ServiceProvider,
+        service_provider: &Arc<dyn ServiceProviderInterface>,
         config: &crate::config::Config,
     ) -> Result<ProviderTuple, Box<dyn std::error::Error>> {
         // Use service provider to create configured providers
@@ -144,7 +258,7 @@ impl McpServer {
 
     /// Initialize core services (authentication, indexing, search)
     async fn initialize_services(
-        service_provider: Arc<ServiceProvider>,
+        service_provider: Arc<dyn ServiceProviderInterface>,
         config: &crate::config::Config,
     ) -> Result<
         (Arc<AuthHandler>, Arc<IndexingService>, Arc<SearchService>),
@@ -195,7 +309,7 @@ impl McpServer {
 
     /// Initialize all MCP tool handlers
     fn initialize_handlers(
-        _service_provider: Arc<ServiceProvider>,
+        _service_provider: Arc<dyn ServiceProviderInterface>,
         indexing_service: Arc<IndexingService>,
         search_service: Arc<SearchService>,
         auth_handler: Arc<AuthHandler>,
@@ -220,46 +334,24 @@ impl McpServer {
         ))
     }
 
-    /// Create a new MCP server instance
-    ///
-    /// Initializes all required services and configurations.
-    pub async fn new(
-        cache_manager: Option<Arc<CacheManager>>,
+    /// Assemble McpServer from components using pure Constructor Injection
+    pub async fn from_components(
+        config: Arc<ArcSwap<crate::config::Config>>,
+        cache_manager: Arc<CacheManager>,
+        performance_metrics: Arc<dyn PerformanceMetricsInterface>,
+        indexing_operations: Arc<dyn IndexingOperationsInterface>,
+        admin_service: Arc<dyn crate::admin::service::AdminService>,
+        service_provider: Arc<dyn ServiceProviderInterface>,
+        resource_limits: Arc<ResourceLimits>,
+        event_bus: SharedEventBus,
+        log_buffer: crate::core::logging::SharedLogBuffer,
+        system_collector: Arc<dyn crate::metrics::system::SystemMetricsCollectorInterface>,
     ) -> Result<Self, Box<dyn std::error::Error>> {
-        // Load configuration from environment
-        let manager =
-            ConfigManager::new().map_err(|e| format!("Failed to create config manager: {}", e))?;
-        let config = manager
-            .load_config()
-            .map_err(|e| format!("Failed to load configuration: {}", e))?;
-
-        // Initialize resource limits
-        let resource_limits_config = config.resource_limits.clone();
-        let resource_limits = Arc::new(ResourceLimits::new(resource_limits_config.clone()));
-        crate::core::limits::init_global_resource_limits(resource_limits_config)?;
-
-        // Create provider registry and router
-        let registry = Arc::new(crate::di::registry::ProviderRegistry::new());
-        let _provider_router = Arc::new(ProviderRouter::with_defaults(Arc::clone(&registry)).await?);
-        let service_provider = Arc::new(ServiceProvider::new());
+        let current_config = config.load();
 
         // Initialize core services
         let (auth_handler, indexing_service, search_service) =
-            Self::initialize_services(Arc::clone(&service_provider), &config).await?;
-
-        // Create cache manager
-        let cache_manager = Self::initialize_cache_manager(cache_manager).await?;
-
-        // Initialize shared state
-        let performance_metrics = Arc::new(PerformanceMetrics::default());
-        let indexing_operations = Arc::new(RwLock::new(HashMap::new()));
-
-        // Create admin service
-        let admin_service = Arc::new(crate::admin::service::AdminServiceImpl::new(
-            Arc::clone(&performance_metrics),
-            Arc::clone(&indexing_operations),
-            Arc::clone(&service_provider),
-        )) as Arc<dyn crate::admin::service::AdminService>;
+            Self::initialize_services(Arc::clone(&service_provider), &current_config).await?;
 
         // Create handlers
         let (
@@ -286,12 +378,40 @@ impl McpServer {
             performance_metrics,
             indexing_operations,
             admin_service,
+            config,
+            event_bus,
+            log_buffer,
+            system_collector,
         })
+    }
+
+    /// Create a new MCP server instance
+    ///
+    /// Initializes all required services and configurations.
+    pub async fn new(
+        cache_manager: Option<Arc<CacheManager>>,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
+        // Use builder for consistency
+        let mut builder = crate::server::McpServerBuilder::new();
+        if let Some(cm) = cache_manager {
+            builder = builder.with_cache(cm);
+        }
+        builder.build().await
     }
 
     /// Get the admin service
     pub fn admin_service(&self) -> Arc<dyn crate::admin::service::AdminService> {
         Arc::clone(&self.admin_service)
+    }
+
+    /// Get performance metrics
+    pub fn performance_metrics(&self) -> Arc<dyn PerformanceMetricsInterface> {
+        Arc::clone(&self.performance_metrics)
+    }
+
+    /// Get system metrics collector
+    pub fn system_collector(&self) -> Arc<dyn crate::metrics::system::SystemMetricsCollectorInterface> {
+        Arc::clone(&self.system_collector)
     }
 
     /// Register a new embedding provider at runtime
@@ -421,7 +541,7 @@ impl McpServer {
 
     /// Get system information for admin interface
     pub fn get_system_info(&self) -> crate::admin::service::SystemInfo {
-        let uptime_seconds = self.performance_metrics.start_time.elapsed().as_secs();
+        let uptime_seconds = self.performance_metrics.start_time().elapsed().as_secs();
         crate::admin::service::SystemInfo {
             version: env!("CARGO_PKG_VERSION").to_string(),
             uptime: uptime_seconds,
@@ -431,14 +551,14 @@ impl McpServer {
 
     /// Get real indexing status for admin interface
     pub async fn get_indexing_status_admin(&self) -> crate::admin::service::IndexingStatus {
-        let operations = self.indexing_operations.read().await;
-
         // Check if any indexing operations are active
-        let is_indexing = !operations.is_empty();
+        let ops_map = self.indexing_operations.get_map();
+        let is_indexing = !ops_map.is_empty();
 
         // Find the most recent operation for current status
         let (current_file, start_time, _processed_files, _total_files) =
-            if let Some((_, operation)) = operations.iter().next() {
+            if let Some(entry) = ops_map.iter().next() {
+                let operation = entry.value();
                 (
                     operation.current_file.clone(),
                     Some(operation.start_time.elapsed().as_secs()),
@@ -450,8 +570,14 @@ impl McpServer {
             };
 
         // Calculate totals across all operations
-        let total_documents: usize = operations.values().map(|op| op.total_files).sum();
-        let indexed_documents: usize = operations.values().map(|op| op.processed_files).sum();
+        let total_documents: usize = ops_map
+            .iter()
+            .map(|entry| entry.value().total_files)
+            .sum();
+        let indexed_documents: usize = ops_map
+            .iter()
+            .map(|entry| entry.value().processed_files)
+            .sum();
 
         // For now, no failed documents tracking
         let failed_documents = 0;
@@ -498,8 +624,7 @@ impl McpServer {
             start_time: std::time::Instant::now(),
         };
 
-        let mut operations = self.indexing_operations.write().await;
-        operations.insert(operation_id, operation);
+        self.indexing_operations.get_map().insert(operation_id, operation);
     }
 
     /// Update indexing operation progress
@@ -509,8 +634,7 @@ impl McpServer {
         current_file: Option<String>,
         processed_files: usize,
     ) {
-        let mut operations = self.indexing_operations.write().await;
-        if let Some(operation) = operations.get_mut(operation_id) {
+        if let Some(mut operation) = self.indexing_operations.get_map().get_mut(operation_id) {
             operation.current_file = current_file;
             operation.processed_files = processed_files;
         }
@@ -518,113 +642,23 @@ impl McpServer {
 
     /// Complete an indexing operation
     pub async fn complete_indexing_operation(&self, operation_id: &str) {
-        let mut operations = self.indexing_operations.write().await;
-        operations.remove(operation_id);
+        self.indexing_operations.get_map().remove(operation_id);
     }
 
     /// Record a query operation with timing
     pub fn record_query(&self, response_time_ms: u64, success: bool, cache_hit: bool) {
         self.performance_metrics
-            .total_queries
-            .fetch_add(1, Ordering::Relaxed);
-
-        if success {
-            self.performance_metrics
-                .successful_queries
-                .fetch_add(1, Ordering::Relaxed);
-        } else {
-            self.performance_metrics
-                .failed_queries
-                .fetch_add(1, Ordering::Relaxed);
-        }
-
-        self.performance_metrics
-            .response_time_sum
-            .fetch_add(response_time_ms, Ordering::Relaxed);
-
-        if cache_hit {
-            self.performance_metrics
-                .cache_hits
-                .fetch_add(1, Ordering::Relaxed);
-        } else {
-            self.performance_metrics
-                .cache_misses
-                .fetch_add(1, Ordering::Relaxed);
-        }
+            .record_query(response_time_ms, success, cache_hit);
     }
 
     /// Update active connection count
     pub fn update_active_connections(&self, delta: i64) {
-        if delta > 0 {
-            self.performance_metrics
-                .active_connections
-                .fetch_add(delta as u64, Ordering::Relaxed);
-        } else {
-            let current = self
-                .performance_metrics
-                .active_connections
-                .load(Ordering::Relaxed);
-            let new_value = current.saturating_sub((-delta) as u64);
-            self.performance_metrics
-                .active_connections
-                .store(new_value, Ordering::Relaxed);
-        }
+        self.performance_metrics.update_active_connections(delta);
     }
 
     /// Get real performance metrics for admin interface
-    pub fn get_performance_metrics(&self) -> crate::admin::service::PerformanceMetrics {
-        let total_queries = self
-            .performance_metrics
-            .total_queries
-            .load(Ordering::Relaxed);
-        let successful_queries = self
-            .performance_metrics
-            .successful_queries
-            .load(Ordering::Relaxed);
-        let failed_queries = self
-            .performance_metrics
-            .failed_queries
-            .load(Ordering::Relaxed);
-        let response_time_sum = self
-            .performance_metrics
-            .response_time_sum
-            .load(Ordering::Relaxed);
-        let cache_hits = self.performance_metrics.cache_hits.load(Ordering::Relaxed);
-        let cache_misses = self
-            .performance_metrics
-            .cache_misses
-            .load(Ordering::Relaxed);
-
-        // Calculate average response time
-        let average_response_time_ms = if total_queries > 0 {
-            response_time_sum as f64 / total_queries as f64
-        } else {
-            0.0
-        };
-
-        // Calculate cache hit rate
-        let total_cache_requests = cache_hits + cache_misses;
-        let cache_hit_rate = if total_cache_requests > 0 {
-            cache_hits as f64 / total_cache_requests as f64
-        } else {
-            0.0
-        };
-
-        // Calculate uptime
-        let uptime_seconds = self.performance_metrics.start_time.elapsed().as_secs();
-
-        crate::admin::service::PerformanceMetrics {
-            total_queries,
-            successful_queries,
-            failed_queries,
-            average_response_time_ms,
-            cache_hit_rate,
-            active_connections: self
-                .performance_metrics
-                .active_connections
-                .load(Ordering::Relaxed) as u32,
-            uptime_seconds,
-        }
+    pub fn get_performance_metrics(&self) -> crate::admin::service::PerformanceMetricsData {
+        self.performance_metrics.get_performance_metrics()
     }
 }
 

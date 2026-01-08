@@ -11,7 +11,6 @@ use crate::core::types::SyncBatch;
 use dashmap::DashMap;
 use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 
@@ -216,10 +215,11 @@ impl SyncManager {
                 queue.iter().filter(|b| b.path == batch.path).collect();
 
             if let Some(first) = path_batches.first()
-                && first.id != batch.id {
-                    // We are not first, so skip
-                    tracing::info!("[SYNC] Queued behind batch {}", first.id);
-                    return Ok(None);
+                && first.id != batch.id
+            {
+                // We are not first, so skip
+                tracing::info!("[SYNC] Queued behind batch {}", first.id);
+                return Ok(None);
             }
             Ok(Some(batch))
         } else {
@@ -234,9 +234,9 @@ impl SyncManager {
             && let Err(e) = cache
                 .remove_item("sync_batches", "queue", batch.clone())
                 .await
-            {
-                tracing::warn!("[SYNC] Failed to remove batch from queue: {}", e);
-                return Err(e);
+        {
+            tracing::warn!("[SYNC] Failed to remove batch from queue: {}", e);
+            return Err(e);
         }
         Ok(())
     }
@@ -255,7 +255,8 @@ impl SyncManager {
     pub async fn clean_old_timestamps(&self, max_age: Duration) {
         let now = Instant::now();
 
-        self.last_sync_times.retain(|_path, timestamp| now.duration_since(*timestamp) < max_age);
+        self.last_sync_times
+            .retain(|_path, timestamp| now.duration_since(*timestamp) < max_age);
 
         // Also clean old batches
         self.clean_old_batches(Duration::from_secs(86400)).await; // 24h

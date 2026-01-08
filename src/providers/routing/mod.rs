@@ -32,7 +32,7 @@
 //!
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 //! let registry = Arc::new(ProviderRegistry::new());
-//! let router = ProviderRouter::with_defaults(registry)?;
+//! let router = ProviderRouter::with_defaults(registry).await?;
 //!
 //! let context = ProviderContext {
 //!     operation_type: "embedding".to_string(),

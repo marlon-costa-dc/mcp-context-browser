@@ -3,7 +3,7 @@
 //! This module contains server initialization logic extracted from the main
 //! server implementation to improve code organization and testability.
 
-use crate::config::ConfigManager;
+use crate::config::ConfigLoader;
 use crate::core::cache::CacheManager;
 use crate::core::database::init_global_database_pool;
 use crate::core::http_client::{HttpClientConfig, init_global_http_client};
@@ -17,22 +17,30 @@ use rmcp::transport::stdio;
 use std::sync::Arc;
 use tracing_subscriber::{self, EnvFilter};
 
+use crate::core::logging::{create_shared_log_buffer, RingBufferLayer};
+use crate::core::events::create_shared_event_bus;
+use crate::server::McpServerBuilder;
+use tracing_subscriber::prelude::*;
+
 /// Initialize logging and tracing for the MCP server
-///
-/// Sets up structured logging with appropriate levels for production use.
-/// Uses stderr for logs to avoid interfering with stdio MCP protocol.
-fn init_tracing() -> Result<(), Box<dyn std::error::Error>> {
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            EnvFilter::from_default_env()
-                .add_directive(tracing::Level::INFO.into())
-                .add_directive("mcp_context_browser=debug".parse()?)
-                .add_directive("rmcp=info".parse()?),
-        )
+fn init_tracing(log_buffer: crate::core::logging::SharedLogBuffer) -> Result<(), Box<dyn std::error::Error>> {
+    let env_filter = EnvFilter::from_default_env()
+        .add_directive(tracing::Level::INFO.into())
+        .add_directive("mcp_context_browser=debug".parse()?)
+        .add_directive("rmcp=info".parse()?);
+
+    let fmt_layer = tracing_subscriber::fmt::layer()
         .with_writer(std::io::stderr)
-        .with_ansi(false) // Disable ANSI colors for better log parsing
+        .with_ansi(false)
         .with_thread_ids(true)
-        .with_thread_names(true)
+        .with_thread_names(true);
+
+    let ring_buffer_layer = RingBufferLayer::new(log_buffer, tracing::Level::INFO);
+
+    tracing_subscriber::registry()
+        .with(env_filter)
+        .with(fmt_layer)
+        .with(ring_buffer_layer)
         .init();
 
     Ok(())
@@ -41,6 +49,7 @@ fn init_tracing() -> Result<(), Box<dyn std::error::Error>> {
 /// Initialize all server components and services
 async fn initialize_server_components(
     cache_manager: Option<Arc<CacheManager>>,
+    log_buffer: crate::core::logging::SharedLogBuffer,
 ) -> Result<
     (
         McpServer,
@@ -50,12 +59,13 @@ async fn initialize_server_components(
     Box<dyn std::error::Error>,
 > {
     // Load configuration from environment
-    let manager =
-        ConfigManager::new().map_err(|e| format!("Failed to create config manager: {}", e))?;
-    let config = manager
-        .load_config()
+    let loader = ConfigLoader::new();
+    let config = loader
+        .load()
         .await
         .map_err(|e| format!("Failed to load configuration: {}", e))?;
+
+    let event_bus = create_shared_event_bus();
 
     // Initialize resource limits
     let resource_limits = Arc::new(crate::core::limits::ResourceLimits::new(
@@ -128,8 +138,17 @@ async fn initialize_server_components(
         cache_manager
     };
 
-    // Create server instance
-    let server = match McpServer::new(cache_manager).await {
+    // Create server instance using builder
+    let mut builder = McpServerBuilder::new()
+        .with_log_buffer(log_buffer)
+        .with_event_bus(event_bus)
+        .with_resource_limits(resource_limits.clone());
+
+    if let Some(cm) = cache_manager {
+        builder = builder.with_cache(cm);
+    }
+
+    let server = match builder.build().await {
         Ok(server) => {
             tracing::info!("✅ Service providers initialized successfully");
             server
@@ -193,8 +212,9 @@ async fn initialize_server_components(
 /// - SOC 2 compliant logging and security
 /// - Production-ready rate limiting
 pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
+    let log_buffer = create_shared_log_buffer(1000);
     // Initialize tracing first for proper error reporting
-    init_tracing()?;
+    init_tracing(log_buffer.clone())?;
 
     tracing::info!(
         "🚀 Starting MCP Context Browser v{}",
@@ -207,7 +227,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     // Initialize all server components
-    let (server, metrics_handle, _resource_limits) = initialize_server_components(None).await?;
+    let (server, metrics_handle, _resource_limits) = initialize_server_components(None, log_buffer).await?;
 
     tracing::info!("📡 Starting MCP protocol server on stdio transport");
     tracing::info!("🎯 Ready to accept MCP client connections");

@@ -18,7 +18,7 @@ mod reproduction_test {
         let mut handles = vec![];
 
         // Spawn 100 concurrent readers/writers
-        for i in 0..100 {
+        for _i in 0..100 {
             let m = manager.clone();
             handles.push(tokio::spawn(async move {
                 for j in 0..1000 {

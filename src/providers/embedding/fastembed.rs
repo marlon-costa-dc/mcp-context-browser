@@ -8,12 +8,19 @@ use crate::core::types::Embedding;
 use crate::providers::EmbeddingProvider;
 use async_trait::async_trait;
 use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
-use std::sync::Arc;
-use tokio::sync::Mutex;
+use tokio::sync::{mpsc, oneshot};
 
-/// FastEmbed local embedding provider
+/// Messages for the FastEmbed actor
+enum FastEmbedMessage {
+    EmbedBatch {
+        texts: Vec<String>,
+        tx: oneshot::Sender<Result<Vec<Embedding>>>,
+    },
+}
+
+/// FastEmbed local embedding provider using Actor pattern to eliminate locks
 pub struct FastEmbedProvider {
-    model: Arc<Mutex<TextEmbedding>>,
+    sender: mpsc::Sender<FastEmbedMessage>,
     model_name: String,
 }
 
@@ -26,31 +33,24 @@ impl FastEmbedProvider {
     /// Create a new FastEmbed provider with a specific model
     pub fn with_model(model: EmbeddingModel) -> Result<Self> {
         let init_options = InitOptions::new(model.clone()).with_show_download_progress(true);
-
-        let text_embedding = TextEmbedding::try_new(init_options).map_err(|e| {
-            Error::embedding(format!("Failed to initialize FastEmbed model: {}", e))
-        })?;
-
-        let model_name = format!("{:?}", model);
-
-        Ok(Self {
-            model: Arc::new(Mutex::new(text_embedding)),
-            model_name,
-        })
+        Self::with_options(init_options)
     }
 
     /// Create a new FastEmbed provider with custom initialization options
     pub fn with_options(init_options: InitOptions) -> Result<Self> {
-        let model = init_options.model_name.clone();
-
+        let model_name = format!("{:?}", init_options.model_name);
         let text_embedding = TextEmbedding::try_new(init_options).map_err(|e| {
             Error::embedding(format!("Failed to initialize FastEmbed model: {}", e))
         })?;
 
-        let model_name = format!("{:?}", model);
+        let (tx, rx) = mpsc::channel(100);
+        let mut actor = FastEmbedActor::new(rx, text_embedding, model_name.clone());
+        tokio::spawn(async move {
+            actor.run().await;
+        });
 
         Ok(Self {
-            model: Arc::new(Mutex::new(text_embedding)),
+            sender: tx,
             model_name,
         })
     }
@@ -79,28 +79,16 @@ impl EmbeddingProvider for FastEmbedProvider {
     }
 
     async fn embed_batch(&self, texts: &[String]) -> Result<Vec<Embedding>> {
-        // Convert texts to Vec<&str> for fastembed
-        let text_refs: Vec<&str> = texts.iter().map(|s| s.as_str()).collect();
-
-        // Lock the model for exclusive access
-        let model = self.model.lock().await;
-
-        // Generate embeddings
-        let embeddings_result = model
-            .embed(text_refs, None)
-            .map_err(|e| Error::embedding(format!("FastEmbed embedding failed: {}", e)))?;
-
-        // Convert to our Embedding format
-        let embeddings = embeddings_result
-            .into_iter()
-            .map(|vector| Embedding {
-                vector: vector.clone(),
-                model: self.model_name.clone(),
-                dimensions: vector.len(),
+        let (tx, rx) = oneshot::channel();
+        let _ = self
+            .sender
+            .send(FastEmbedMessage::EmbedBatch {
+                texts: texts.to_vec(),
+                tx,
             })
-            .collect();
-
-        Ok(embeddings)
+            .await;
+        rx.await
+            .unwrap_or_else(|_| Err(Error::internal("Actor closed")))
     }
 
     fn dimensions(&self) -> usize {
@@ -124,8 +112,54 @@ impl EmbeddingProvider for FastEmbedProvider {
 impl Clone for FastEmbedProvider {
     fn clone(&self) -> Self {
         Self {
-            model: Arc::clone(&self.model),
+            sender: self.sender.clone(),
             model_name: self.model_name.clone(),
+        }
+    }
+}
+
+struct FastEmbedActor {
+    receiver: mpsc::Receiver<FastEmbedMessage>,
+    model: TextEmbedding,
+    model_name: String,
+}
+
+impl FastEmbedActor {
+    fn new(
+        receiver: mpsc::Receiver<FastEmbedMessage>,
+        model: TextEmbedding,
+        model_name: String,
+    ) -> Self {
+        Self {
+            receiver,
+            model,
+            model_name,
+        }
+    }
+
+    async fn run(&mut self) {
+        while let Some(msg) = self.receiver.recv().await {
+            match msg {
+                FastEmbedMessage::EmbedBatch { texts, tx } => {
+                    let text_refs: Vec<&str> = texts.iter().map(|s| s.as_str()).collect();
+                    let embeddings_result = self.model.embed(text_refs, None);
+                    let result = match embeddings_result {
+                        Ok(res) => Ok(res
+                            .into_iter()
+                            .map(|v| Embedding {
+                                vector: v.clone(),
+                                model: self.model_name.clone(),
+                                dimensions: v.len(),
+                            })
+                            .collect()),
+                        Err(e) => Err(Error::embedding(format!(
+                            "FastEmbed embedding failed: {}",
+                            e
+                        ))),
+                    };
+                    let _ = tx.send(result);
+                }
+            }
         }
     }
 }

@@ -1,0 +1,134 @@
+//! Event Bus System for Decoupled Communication
+//!
+//! Provides a publish/subscribe event system using tokio::sync::broadcast
+//! for decoupling components like AdminService from core logic.
+
+use std::sync::Arc;
+use tokio::sync::broadcast::{self, Receiver, Sender};
+
+/// System-wide events for internal communication
+#[derive(Debug, Clone)]
+pub enum SystemEvent {
+    /// Request to clear all caches
+    CacheClear {
+        /// Optional namespace to clear (None = all)
+        namespace: Option<String>,
+    },
+    /// Request to create a backup
+    BackupCreate {
+        /// Target path for backup
+        path: String,
+    },
+    /// Request to rebuild the index
+    IndexRebuild {
+        /// Collection to rebuild (None = all)
+        collection: Option<String>,
+    },
+    /// Configuration was reloaded
+    ConfigReloaded,
+    /// Server is shutting down
+    Shutdown,
+}
+
+/// Event Bus for publishing and subscribing to system events
+#[derive(Clone)]
+pub struct EventBus {
+    sender: Sender<SystemEvent>,
+}
+
+impl EventBus {
+    /// Create a new EventBus with specified channel capacity
+    pub fn new(capacity: usize) -> Self {
+        let (sender, _) = broadcast::channel(capacity);
+        Self { sender }
+    }
+
+    /// Create a new EventBus with default capacity (100)
+    pub fn with_default_capacity() -> Self {
+        Self::new(100)
+    }
+
+    /// Publish an event to all subscribers
+    pub fn publish(&self, event: SystemEvent) -> Result<usize, broadcast::error::SendError<SystemEvent>> {
+        self.sender.send(event)
+    }
+
+    /// Subscribe to receive events
+    pub fn subscribe(&self) -> Receiver<SystemEvent> {
+        self.sender.subscribe()
+    }
+
+    /// Get the number of active subscribers
+    pub fn subscriber_count(&self) -> usize {
+        self.sender.receiver_count()
+    }
+}
+
+impl Default for EventBus {
+    fn default() -> Self {
+        Self::with_default_capacity()
+    }
+}
+
+/// Shared EventBus wrapped in Arc for thread-safe sharing
+pub type SharedEventBus = Arc<EventBus>;
+
+/// Create a shared EventBus
+pub fn create_shared_event_bus() -> SharedEventBus {
+    Arc::new(EventBus::default())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tokio::time::{timeout, Duration};
+
+    #[tokio::test]
+    async fn test_event_bus_publish_subscribe() {
+        let bus = EventBus::new(10);
+        let mut receiver = bus.subscribe();
+
+        // Publish an event
+        let result = bus.publish(SystemEvent::CacheClear { namespace: None });
+        assert!(result.is_ok());
+
+        // Receive the event
+        let event = timeout(Duration::from_millis(100), receiver.recv())
+            .await
+            .expect("timeout")
+            .expect("receive error");
+
+        matches!(event, SystemEvent::CacheClear { namespace: None });
+    }
+
+    #[tokio::test]
+    async fn test_event_bus_multiple_subscribers() {
+        let bus = EventBus::new(10);
+        let mut receiver1 = bus.subscribe();
+        let mut receiver2 = bus.subscribe();
+
+        assert_eq!(bus.subscriber_count(), 2);
+
+        bus.publish(SystemEvent::ConfigReloaded).unwrap();
+
+        let event1 = receiver1.recv().await.unwrap();
+        let event2 = receiver2.recv().await.unwrap();
+
+        assert!(matches!(event1, SystemEvent::ConfigReloaded));
+        assert!(matches!(event2, SystemEvent::ConfigReloaded));
+    }
+
+    #[tokio::test]
+    async fn test_shared_event_bus() {
+        let bus = create_shared_event_bus();
+        let bus_clone = Arc::clone(&bus);
+
+        let mut receiver = bus.subscribe();
+
+        // Publish from clone
+        bus_clone.publish(SystemEvent::Shutdown).unwrap();
+
+        let event = receiver.recv().await.unwrap();
+        assert!(matches!(event, SystemEvent::Shutdown));
+    }
+}

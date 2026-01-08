@@ -6,8 +6,9 @@
 use crate::core::error::{Error, Result};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
-use tokio::sync::{Mutex, Semaphore};
+use tokio::sync::Semaphore;
 
 /// Resource limits configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -209,14 +210,14 @@ pub struct ResourceLimits {
     /// Semaphore for embedding operations
     embedding_semaphore: Arc<Semaphore>,
     /// Current operation counters
-    operation_counters: Arc<Mutex<OperationCounters>>,
+    operation_counters: Arc<OperationCounters>,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Default)]
 struct OperationCounters {
-    active_indexing: usize,
-    active_search: usize,
-    active_embedding: usize,
+    active_indexing: AtomicUsize,
+    active_search: AtomicUsize,
+    active_embedding: AtomicUsize,
 }
 
 impl ResourceLimits {
@@ -228,7 +229,7 @@ impl ResourceLimits {
             embedding_semaphore: Arc::new(Semaphore::new(
                 config.operations.max_concurrent_embedding,
             )),
-            operation_counters: Arc::new(Mutex::new(OperationCounters::default())),
+            operation_counters: Arc::new(OperationCounters::default()),
             config,
         }
     }
@@ -272,24 +273,27 @@ impl ResourceLimits {
                 let permit = self.indexing_semaphore.acquire().await.map_err(|e| {
                     Error::generic(format!("Failed to acquire indexing permit: {}", e))
                 })?;
-                let mut counters = self.operation_counters.lock().await;
-                counters.active_indexing += 1;
+                self.operation_counters
+                    .active_indexing
+                    .fetch_add(1, Ordering::Relaxed);
                 Some(permit)
             }
             "search" => {
                 let permit = self.search_semaphore.acquire().await.map_err(|e| {
                     Error::generic(format!("Failed to acquire search permit: {}", e))
                 })?;
-                let mut counters = self.operation_counters.lock().await;
-                counters.active_search += 1;
+                self.operation_counters
+                    .active_search
+                    .fetch_add(1, Ordering::Relaxed);
                 Some(permit)
             }
             "embedding" => {
                 let permit = self.embedding_semaphore.acquire().await.map_err(|e| {
                     Error::generic(format!("Failed to acquire embedding permit: {}", e))
                 })?;
-                let mut counters = self.operation_counters.lock().await;
-                counters.active_embedding += 1;
+                self.operation_counters
+                    .active_embedding
+                    .fetch_add(1, Ordering::Relaxed);
                 Some(permit)
             }
             _ => {
@@ -371,21 +375,34 @@ impl ResourceLimits {
 
     /// Check concurrency limits
     async fn check_concurrency_limits(&self, operation_type: &str) -> Result<()> {
-        let counters = self.operation_counters.lock().await;
-
         match operation_type {
             "indexing" => {
-                if counters.active_indexing >= self.config.operations.max_concurrent_indexing {
+                if self
+                    .operation_counters
+                    .active_indexing
+                    .load(Ordering::Relaxed)
+                    >= self.config.operations.max_concurrent_indexing
+                {
                     return Err(Error::generic("Indexing concurrency limit exceeded"));
                 }
             }
             "search" => {
-                if counters.active_search >= self.config.operations.max_concurrent_search {
+                if self
+                    .operation_counters
+                    .active_search
+                    .load(Ordering::Relaxed)
+                    >= self.config.operations.max_concurrent_search
+                {
                     return Err(Error::generic("Search concurrency limit exceeded"));
                 }
             }
             "embedding" => {
-                if counters.active_embedding >= self.config.operations.max_concurrent_embedding {
+                if self
+                    .operation_counters
+                    .active_embedding
+                    .load(Ordering::Relaxed)
+                    >= self.config.operations.max_concurrent_embedding
+                {
                     return Err(Error::generic("Embedding concurrency limit exceeded"));
                 }
             }
@@ -506,12 +523,19 @@ impl ResourceLimits {
 
     /// Get operation statistics
     async fn get_operation_stats(&self) -> Result<OperationStats> {
-        let counters = self.operation_counters.lock().await;
-
         Ok(OperationStats {
-            active_indexing: counters.active_indexing,
-            active_search: counters.active_search,
-            active_embedding: counters.active_embedding,
+            active_indexing: self
+                .operation_counters
+                .active_indexing
+                .load(Ordering::Relaxed),
+            active_search: self
+                .operation_counters
+                .active_search
+                .load(Ordering::Relaxed),
+            active_embedding: self
+                .operation_counters
+                .active_embedding
+                .load(Ordering::Relaxed),
             queued_operations: 0, // TODO: Implement queue tracking
         })
     }
@@ -530,27 +554,29 @@ impl ResourceLimits {
 /// RAII guard for operation permits
 pub struct OperationPermit<'a> {
     _permit: Option<tokio::sync::SemaphorePermit<'a>>,
-    counters: Arc<Mutex<OperationCounters>>,
+    counters: Arc<OperationCounters>,
     operation_type: String,
 }
 
 impl Drop for OperationPermit<'_> {
     fn drop(&mut self) {
         // Decrement counter when permit is dropped
-        let counters = Arc::clone(&self.counters);
-        let operation_type = self.operation_type.clone();
-
-        tokio::spawn(async move {
-            let mut counters = counters.lock().await;
-            match operation_type.as_str() {
-                "indexing" => counters.active_indexing = counters.active_indexing.saturating_sub(1),
-                "search" => counters.active_search = counters.active_search.saturating_sub(1),
-                "embedding" => {
-                    counters.active_embedding = counters.active_embedding.saturating_sub(1)
-                }
-                _ => {}
+        match self.operation_type.as_str() {
+            "indexing" => {
+                self.counters
+                    .active_indexing
+                    .fetch_sub(1, Ordering::Relaxed);
             }
-        });
+            "search" => {
+                self.counters.active_search.fetch_sub(1, Ordering::Relaxed);
+            }
+            "embedding" => {
+                self.counters
+                    .active_embedding
+                    .fetch_sub(1, Ordering::Relaxed);
+            }
+            _ => {}
+        }
     }
 }
 

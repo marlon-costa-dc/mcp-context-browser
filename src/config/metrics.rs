@@ -1,8 +1,9 @@
 use crate::core::rate_limit::RateLimitConfig;
 use serde::{Deserialize, Serialize};
+use validator::Validate;
 
 /// Metrics API configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct MetricsConfig {
     /// Port for metrics HTTP API
     pub port: u16,

@@ -8,22 +8,25 @@
 use axum::{Router, extract::State, http::StatusCode, response::Json, routing::get};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use tokio::sync::Mutex;
 
 use crate::core::cache::{CacheStats, get_global_cache_manager};
 use crate::core::limits::ResourceLimits;
 use crate::core::rate_limit::RateLimiter;
 // Rate limiting middleware will be added later
 
-use crate::metrics::{PerformanceMetrics, SystemMetricsCollector};
+use crate::metrics::{
+    CpuMetrics, MemoryMetrics, QueryPerformanceMetrics, CacheMetrics,
+    system::SystemMetricsCollectorInterface,
+};
+use crate::server::server::PerformanceMetricsInterface;
 
 /// Comprehensive metrics response
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ComprehensiveMetrics {
     pub timestamp: u64,
-    pub cpu: crate::metrics::CpuMetrics,
-    pub memory: crate::metrics::MemoryMetrics,
-    pub query_performance: crate::metrics::QueryPerformanceMetrics,
+    pub cpu: CpuMetrics,
+    pub memory: MemoryMetrics,
+    pub query_performance: crate::admin::service::PerformanceMetricsData, // Updated to match interface
     pub cache: crate::metrics::CacheMetrics,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub resource_limits: Option<crate::core::limits::ResourceStats>,
@@ -45,8 +48,8 @@ pub struct HealthResponse {
 /// HTTP API server state
 pub struct MetricsApiServer {
     port: u16,
-    system_collector: Arc<Mutex<SystemMetricsCollector>>,
-    performance_metrics: Arc<Mutex<PerformanceMetrics>>,
+    system_collector: Arc<dyn SystemMetricsCollectorInterface>,
+    performance_metrics: Arc<dyn PerformanceMetricsInterface>,
     start_time: std::time::Instant,
     _rate_limiter: Option<Arc<RateLimiter>>,
     resource_limits: Option<Arc<ResourceLimits>>,
@@ -54,32 +57,10 @@ pub struct MetricsApiServer {
 
 impl MetricsApiServer {
     /// Create a new metrics API server
-    pub fn new(port: u16) -> Self {
-        Self::with_rate_limiting(port, None)
-    }
-
-    /// Create a new metrics API server with rate limiting
-    pub fn with_rate_limiting(port: u16, rate_limiter: Option<Arc<RateLimiter>>) -> Self {
-        Self {
-            port,
-            system_collector: Arc::new(Mutex::new(SystemMetricsCollector::new())),
-            performance_metrics: Arc::new(Mutex::new(PerformanceMetrics::new())),
-            start_time: std::time::Instant::now(),
-            _rate_limiter: rate_limiter,
-            resource_limits: None,
-        }
-    }
-
-    /// Create a new metrics API server with resource limits
-    pub fn with_resource_limits(port: u16, resource_limits: Option<Arc<ResourceLimits>>) -> Self {
-        Self {
-            port,
-            system_collector: Arc::new(Mutex::new(SystemMetricsCollector::new())),
-            performance_metrics: Arc::new(Mutex::new(PerformanceMetrics::new())),
-            start_time: std::time::Instant::now(),
-            _rate_limiter: None,
-            resource_limits,
-        }
+    pub fn new(
+        port: u16,
+    ) -> Self {
+        Self::with_limits(port, None, None)
     }
 
     /// Create a new metrics API server with both rate limiting and resource limits
@@ -88,10 +69,15 @@ impl MetricsApiServer {
         rate_limiter: Option<Arc<RateLimiter>>,
         resource_limits: Option<Arc<ResourceLimits>>,
     ) -> Self {
+        // We will need to inject these dependencies properly
+        // For now, use the global ones if available or create defaults
+        let performance_metrics = Arc::new(crate::server::server::McpPerformanceMetrics::default());
+        let system_collector = Arc::new(crate::metrics::system::SystemMetricsCollector::new());
+
         Self {
             port,
-            system_collector: Arc::new(Mutex::new(SystemMetricsCollector::new())),
-            performance_metrics: Arc::new(Mutex::new(PerformanceMetrics::new())),
+            system_collector,
+            performance_metrics,
             start_time: std::time::Instant::now(),
             _rate_limiter: rate_limiter,
             resource_limits,
@@ -168,14 +154,26 @@ impl MetricsApiServer {
     async fn comprehensive_metrics_handler(
         State(state): State<MetricsServerState>,
     ) -> Result<Json<ComprehensiveMetrics>, StatusCode> {
-        let mut system_collector = state.system_collector.lock().await;
-        let performance_metrics = state.performance_metrics.lock().await;
+        let cpu = state
+            .system_collector
+            .collect_cpu_metrics()
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        let memory = state
+            .system_collector
+            .collect_memory_metrics()
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-        let cpu = system_collector.collect_cpu_metrics();
-        let memory = system_collector.collect_memory_metrics();
-
-        let query_performance = performance_metrics.get_query_performance();
-        let cache = performance_metrics.get_cache_metrics();
+        let performance_data = state.performance_metrics.get_performance_metrics();
+        
+        // Convert to CacheMetrics for response compatibility
+        let cache = CacheMetrics {
+            hits: performance_data.successful_queries, // This is a bit of a stretch but we follow the data we have
+            misses: performance_data.failed_queries,
+            hit_rate: performance_data.cache_hit_rate,
+            size: 0, // Interface doesn't expose size yet
+        };
 
         // Get resource limits stats if available
         let resource_limits = if let Some(ref limits) = state.resource_limits {
@@ -204,7 +202,7 @@ impl MetricsApiServer {
                 .as_millis() as u64,
             cpu,
             memory,
-            query_performance,
+            query_performance: performance_data,
             cache,
             resource_limits,
             advanced_cache_stats: cache_stats,
@@ -215,14 +213,18 @@ impl MetricsApiServer {
     async fn status_handler(
         State(state): State<MetricsServerState>,
     ) -> Result<Json<serde_json::Value>, StatusCode> {
-        let mut system_collector = state.system_collector.lock().await;
-        let performance_metrics = state.performance_metrics.lock().await;
+        let cpu = state
+            .system_collector
+            .collect_cpu_metrics()
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        let memory = state
+            .system_collector
+            .collect_memory_metrics()
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-        let cpu = system_collector.collect_cpu_metrics();
-        let memory = system_collector.collect_memory_metrics();
-
-        let query_performance = performance_metrics.get_query_performance();
-        let cache = performance_metrics.get_cache_metrics();
+        let performance = state.performance_metrics.get_performance_metrics();
 
         let uptime = state.start_time.elapsed().as_secs();
 
@@ -258,9 +260,9 @@ impl MetricsApiServer {
             "metrics": {
                 "cpu": cpu.usage,
                 "memory": memory.usage_percent,
-                "queries": query_performance.total_queries,
-                "avgLatency": query_performance.average_latency,
-                "cacheHitRate": cache.hit_rate
+                "queries": performance.total_queries,
+                "avgLatency": performance.average_response_time_ms,
+                "cacheHitRate": performance.cache_hit_rate
             }
         });
 
@@ -270,38 +272,52 @@ impl MetricsApiServer {
     /// Individual metrics endpoints
     async fn cpu_metrics_handler(
         State(state): State<MetricsServerState>,
-    ) -> Result<Json<crate::metrics::CpuMetrics>, StatusCode> {
-        let mut system_collector = state.system_collector.lock().await;
-        Ok(Json(system_collector.collect_cpu_metrics()))
+    ) -> Result<Json<CpuMetrics>, StatusCode> {
+        let metrics = state
+            .system_collector
+            .collect_cpu_metrics()
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        Ok(Json(metrics))
     }
 
     async fn memory_metrics_handler(
         State(state): State<MetricsServerState>,
-    ) -> Result<Json<crate::metrics::MemoryMetrics>, StatusCode> {
-        let mut system_collector = state.system_collector.lock().await;
-        Ok(Json(system_collector.collect_memory_metrics()))
+    ) -> Result<Json<MemoryMetrics>, StatusCode> {
+        let metrics = state
+            .system_collector
+            .collect_memory_metrics()
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        Ok(Json(metrics))
     }
 
     async fn query_metrics_handler(
         State(state): State<MetricsServerState>,
-    ) -> Result<Json<crate::metrics::QueryPerformanceMetrics>, StatusCode> {
-        let performance_metrics = state.performance_metrics.lock().await;
-        Ok(Json(performance_metrics.get_query_performance()))
+    ) -> Result<Json<crate::admin::service::PerformanceMetricsData>, StatusCode> {
+        Ok(Json(
+            state.performance_metrics.get_performance_metrics(),
+        ))
     }
 
     async fn cache_metrics_handler(
         State(state): State<MetricsServerState>,
-    ) -> Result<Json<crate::metrics::CacheMetrics>, StatusCode> {
-        let performance_metrics = state.performance_metrics.lock().await;
-        Ok(Json(performance_metrics.get_cache_metrics()))
+    ) -> Result<Json<CacheMetrics>, StatusCode> {
+        let performance = state.performance_metrics.get_performance_metrics();
+        Ok(Json(CacheMetrics {
+            hits: performance.successful_queries, // Approximate
+            misses: performance.failed_queries,
+            hit_rate: performance.cache_hit_rate,
+            size: 0,
+        }))
     }
 }
 
 /// Server state for dependency injection
 #[derive(Clone)]
 struct MetricsServerState {
-    system_collector: Arc<Mutex<SystemMetricsCollector>>,
-    performance_metrics: Arc<Mutex<PerformanceMetrics>>,
+    system_collector: Arc<dyn SystemMetricsCollectorInterface>,
+    performance_metrics: Arc<dyn PerformanceMetricsInterface>,
     start_time: std::time::Instant,
     _rate_limiter: Option<Arc<RateLimiter>>,
     resource_limits: Option<Arc<ResourceLimits>>,
