@@ -225,7 +225,7 @@ impl ProviderSelectionStrategy for ContextualStrategy {
         // Select highest scoring provider
         scored_providers
             .into_iter()
-            .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap())
+            .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
             .map(|(id, score)| {
                 debug!("Selected provider {} with score {:.3}", id, score);
                 id

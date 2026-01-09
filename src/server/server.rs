@@ -317,7 +317,7 @@ impl McpServer {
     ) -> Result<InitializedHandlers, Box<dyn std::error::Error>> {
         Ok((
             Arc::new(IndexCodebaseHandler::new(
-                indexing_service,
+                Arc::clone(&indexing_service),
                 Arc::clone(&auth_handler),
                 Arc::clone(&resource_limits),
             )),
@@ -806,7 +806,8 @@ impl ServerHandler for McpServer {
                     "Get the current indexing status and statistics",
                 )),
                 input_schema: Arc::new(serialize_schema(
-                    serde_json::to_value(schemars::schema_for!(GetIndexingStatusArgs)),
+                    serde_json::to_value(schemars::schema_for!(GetIndexingStatusArgs))
+                        .map_err(|e| McpError::internal_error(e.to_string(), None))?,
                     "get_indexing_status",
                 )?),
                 output_schema: None,
@@ -819,7 +820,8 @@ impl ServerHandler for McpServer {
                 title: None,
                 description: Some(Cow::Borrowed("Clear the search index for a collection")),
                 input_schema: Arc::new(serialize_schema(
-                    serde_json::to_value(schemars::schema_for!(ClearIndexArgs)),
+                    serde_json::to_value(schemars::schema_for!(ClearIndexArgs))
+                        .map_err(|e| McpError::internal_error(e.to_string(), None))?,
                     "clear_index",
                 )?),
                 output_schema: None,

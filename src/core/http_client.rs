@@ -2,11 +2,38 @@
 //!
 //! Shared HTTP client pool for all providers to optimize connection reuse
 //! and reduce latency through connection pooling.
+//!
+//! ## Architecture
+//!
+//! This module uses dependency injection via the `HttpClientProvider` trait
+//! to enable testability and flexibility. Pass `Arc<dyn HttpClientProvider>`
+//! through constructors instead of using global state.
 
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::time::Duration;
+
+/// Trait for HTTP client pool operations (enables DI and testing)
+pub trait HttpClientProvider: Send + Sync {
+    /// Get a reference to the underlying reqwest Client
+    fn client(&self) -> &Client;
+
+    /// Get the configuration
+    fn config(&self) -> &HttpClientConfig;
+
+    /// Create a new client with custom timeout for specific operations
+    fn client_with_timeout(
+        &self,
+        timeout: Duration,
+    ) -> Result<Client, Box<dyn std::error::Error + Send + Sync>>;
+
+    /// Check if the client pool is enabled
+    fn is_enabled(&self) -> bool;
+}
+
+/// Type alias for shared HTTP client provider
+pub type SharedHttpClient = Arc<dyn HttpClientProvider>;
 
 /// HTTP client pool configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -90,10 +117,91 @@ impl HttpClientPool {
     }
 }
 
+/// Implement the provider trait for HttpClientPool
+impl HttpClientProvider for HttpClientPool {
+    fn client(&self) -> &Client {
+        HttpClientPool::client(self)
+    }
+
+    fn config(&self) -> &HttpClientConfig {
+        HttpClientPool::config(self)
+    }
+
+    fn client_with_timeout(
+        &self,
+        timeout: Duration,
+    ) -> Result<Client, Box<dyn std::error::Error + Send + Sync>> {
+        HttpClientPool::client_with_timeout(self, timeout)
+    }
+
+    fn is_enabled(&self) -> bool {
+        true
+    }
+}
+
+/// Null HTTP client pool for testing (always returns errors)
+#[derive(Clone)]
+pub struct NullHttpClientPool {
+    config: HttpClientConfig,
+    client: Client,
+}
+
+impl Default for NullHttpClientPool {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl NullHttpClientPool {
+    /// Create a new null HTTP client pool for testing
+    pub fn new() -> Self {
+        // Create a minimal client for the null implementation
+        let client = Client::builder()
+            .timeout(Duration::from_millis(1))
+            .build()
+            .unwrap_or_else(|_| Client::new());
+
+        Self {
+            config: HttpClientConfig::default(),
+            client,
+        }
+    }
+}
+
+impl HttpClientProvider for NullHttpClientPool {
+    fn client(&self) -> &Client {
+        &self.client
+    }
+
+    fn config(&self) -> &HttpClientConfig {
+        &self.config
+    }
+
+    fn client_with_timeout(
+        &self,
+        _timeout: Duration,
+    ) -> Result<Client, Box<dyn std::error::Error + Send + Sync>> {
+        Ok(self.client.clone())
+    }
+
+    fn is_enabled(&self) -> bool {
+        false
+    }
+}
+
 /// Global HTTP client pool instance
+///
+/// **DEPRECATED**: Use dependency injection with `Arc<dyn HttpClientProvider>` instead.
+/// This global static will be removed in a future release.
 static HTTP_CLIENT_POOL: std::sync::OnceLock<Arc<HttpClientPool>> = std::sync::OnceLock::new();
 
 /// Initialize the global HTTP client pool
+///
+/// **DEPRECATED**: Use `HttpClientPool::with_config()` and pass via DI instead.
+#[deprecated(
+    since = "0.0.5",
+    note = "Use HttpClientPool::with_config() and pass Arc<dyn HttpClientProvider> via dependency injection"
+)]
 pub fn init_global_http_client(
     config: HttpClientConfig,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -104,15 +212,27 @@ pub fn init_global_http_client(
 }
 
 /// Get the global HTTP client pool
+///
+/// **DEPRECATED**: Use dependency injection with `Arc<dyn HttpClientProvider>` instead.
+#[deprecated(
+    since = "0.0.5",
+    note = "Use Arc<dyn HttpClientProvider> via dependency injection"
+)]
 pub fn get_global_http_client() -> Option<Arc<HttpClientPool>> {
     HTTP_CLIENT_POOL.get().cloned()
 }
 
 /// Get the global HTTP client or create a default one
+///
+/// **DEPRECATED**: Use `HttpClientPool::new()` or `NullHttpClientPool::new()` and pass via DI instead.
+#[deprecated(
+    since = "0.0.5",
+    note = "Use HttpClientPool::new() or NullHttpClientPool::new() and pass via DI"
+)]
 pub fn get_or_create_global_http_client()
 -> Result<Arc<HttpClientPool>, Box<dyn std::error::Error + Send + Sync>> {
-    // First check if we already have a pool
-    if let Some(pool) = get_global_http_client() {
+    // Use HTTP_CLIENT_POOL.get() directly instead of calling deprecated get_global_http_client()
+    if let Some(pool) = HTTP_CLIENT_POOL.get().cloned() {
         return Ok(pool);
     }
 
@@ -124,7 +244,10 @@ pub fn get_or_create_global_http_client()
         Ok(()) => Ok(pool),
         Err(_) => {
             // Already set by another thread/test, get the existing one
-            get_global_http_client().ok_or_else(|| "HTTP client pool not available".into())
+            HTTP_CLIENT_POOL
+                .get()
+                .cloned()
+                .ok_or_else(|| "HTTP client pool not available".into())
         }
     }
 }
@@ -144,7 +267,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_http_client_pool_creation() {
+    async fn test_http_client_pool_creation() -> Result<(), Box<dyn std::error::Error>> {
         let config = HttpClientConfig {
             max_idle_per_host: 5,
             idle_timeout: Duration::from_secs(60),
@@ -153,22 +276,37 @@ mod tests {
             user_agent: "Test-Agent/1.0".to_string(),
         };
 
-        let pool = HttpClientPool::with_config(config.clone()).unwrap();
+        let pool = HttpClientPool::with_config(config.clone())?;
         assert_eq!(pool.config().max_idle_per_host, 5);
         assert_eq!(pool.config().user_agent, "Test-Agent/1.0");
+        Ok(())
     }
 
     #[tokio::test]
-    async fn test_global_http_client() {
-        // Reset for test
-        // Note: OnceLock can't be reset, so we'll test the creation path
-
+    async fn test_http_client_pool_via_trait()
+    -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let config = HttpClientConfig::default();
-        let pool = HttpClientPool::with_config(config).unwrap();
+        let pool = HttpClientPool::with_config(config)?;
         let client = pool.client();
 
         // Test that we can create a request (doesn't need to succeed)
-        let request = client.get("http://httpbin.org/status/200").build().unwrap();
+        let request = client.get("http://httpbin.org/status/200").build()?;
         assert_eq!(request.method(), "GET");
+        Ok(())
+    }
+
+    #[test]
+    fn test_null_http_client_pool() {
+        let pool = NullHttpClientPool::new();
+        assert!(!pool.is_enabled());
+        assert_eq!(pool.config().max_idle_per_host, 10);
+    }
+
+    #[test]
+    fn test_http_client_provider_trait() -> Result<(), Box<dyn std::error::Error>> {
+        let pool = HttpClientPool::new()?;
+        let provider: &dyn HttpClientProvider = &pool;
+        assert!(provider.is_enabled());
+        Ok(())
     }
 }

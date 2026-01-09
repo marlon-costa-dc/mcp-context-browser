@@ -107,11 +107,11 @@ async fn test_sync_returns_changed_files() {
     // First sync
     let _ = manager.sync_codebase(temp_dir.path()).await;
 
-    // Wait and modify a file
-    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    // Wait for filesystem time resolution (some filesystems have 1-second granularity)
+    tokio::time::sleep(std::time::Duration::from_millis(1100)).await;
     fs::write(
         temp_dir.path().join("file2.rs"),
-        "fn test() { assert!(true); }",
+        "fn test_modified() { assert!(true); } // modified content",
     )
     .expect("Failed to modify");
 

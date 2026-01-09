@@ -556,7 +556,7 @@ impl VectorStoreProvider for FilesystemVectorStore {
                 i,
                 std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap()
+                    .unwrap_or_default()
                     .as_nanos()
             );
             let shard_id = self.find_optimal_shard(collection);

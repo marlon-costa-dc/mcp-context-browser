@@ -380,14 +380,14 @@ impl SyncManager {
 
             let path_str = path.to_string_lossy().to_string();
 
-            // Check if file has been modified since last sync (using millis for precision)
+            // Check if file has been modified since last sync
             if let Ok(metadata) = std::fs::metadata(path)
                 && let Ok(modified) = metadata.modified()
             {
                 let mod_time = modified
                     .duration_since(UNIX_EPOCH)
                     .unwrap_or(Duration::from_secs(0))
-                    .as_millis() as u64;
+                    .as_secs();
 
                 // Check if we have a previous modification time
                 if let Some(prev_mod_time) = self.file_mod_times.get(&path_str) {

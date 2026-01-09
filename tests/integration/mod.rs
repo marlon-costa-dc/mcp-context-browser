@@ -1,0 +1,10 @@
+//! Integration tests
+
+mod docker;
+mod integration;
+mod integration_docker;
+mod integration_unit;
+mod mcp_e2e;
+mod mcp_full_integration_test;
+mod mcp_protocol;
+mod ollama_integration;

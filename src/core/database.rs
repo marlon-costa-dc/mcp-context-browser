@@ -2,12 +2,42 @@
 //!
 //! Provides connection pooling with r2d2 for efficient database access.
 //! Supports health checks, metrics, and graceful shutdown.
+//!
+//! ## Architecture
+//!
+//! This module uses dependency injection via the `DatabasePoolProvider` trait
+//! to enable testability and flexibility. Pass `Arc<dyn DatabasePoolProvider>`
+//! through constructors instead of using global state.
 
 use crate::core::error::{Error, Result};
+use async_trait::async_trait;
 use r2d2::Pool;
 use r2d2_postgres::{PostgresConnectionManager, postgres::NoTls};
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use std::time::Duration;
+
+/// Trait for database pool operations (enables DI and testing)
+#[async_trait]
+pub trait DatabasePoolProvider: Send + Sync {
+    /// Get a connection from the pool
+    fn get_connection(&self) -> Result<r2d2::PooledConnection<PostgresConnectionManager<NoTls>>>;
+
+    /// Execute a health check
+    async fn health_check(&self) -> Result<()>;
+
+    /// Get pool statistics
+    fn stats(&self) -> DatabaseStats;
+
+    /// Check if database is enabled
+    fn is_enabled(&self) -> bool;
+
+    /// Get configuration
+    fn config(&self) -> &DatabaseConfig;
+}
+
+/// Type alias for shared database pool provider
+pub type SharedDatabasePool = Arc<dyn DatabasePoolProvider>;
 
 /// Database connection configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -115,6 +145,76 @@ impl DatabasePool {
     }
 }
 
+/// Implement the provider trait for DatabasePool
+#[async_trait]
+impl DatabasePoolProvider for DatabasePool {
+    fn get_connection(&self) -> Result<r2d2::PooledConnection<PostgresConnectionManager<NoTls>>> {
+        DatabasePool::get_connection(self)
+    }
+
+    async fn health_check(&self) -> Result<()> {
+        DatabasePool::health_check(self).await
+    }
+
+    fn stats(&self) -> DatabaseStats {
+        DatabasePool::stats(self)
+    }
+
+    fn is_enabled(&self) -> bool {
+        DatabasePool::is_enabled(self)
+    }
+
+    fn config(&self) -> &DatabaseConfig {
+        DatabasePool::config(self)
+    }
+}
+
+/// Null database pool for testing (always disabled)
+#[derive(Clone, Default)]
+pub struct NullDatabasePool {
+    config: DatabaseConfig,
+}
+
+impl NullDatabasePool {
+    /// Create a new null database pool for testing
+    pub fn new() -> Self {
+        Self {
+            config: DatabaseConfig {
+                enabled: false,
+                ..Default::default()
+            },
+        }
+    }
+}
+
+#[async_trait]
+impl DatabasePoolProvider for NullDatabasePool {
+    fn get_connection(&self) -> Result<r2d2::PooledConnection<PostgresConnectionManager<NoTls>>> {
+        Err(Error::generic("NullDatabasePool: database is disabled"))
+    }
+
+    async fn health_check(&self) -> Result<()> {
+        Err(Error::generic("NullDatabasePool: database is disabled"))
+    }
+
+    fn stats(&self) -> DatabaseStats {
+        DatabaseStats {
+            connections: 0,
+            idle_connections: 0,
+            max_connections: 0,
+            min_idle: 0,
+        }
+    }
+
+    fn is_enabled(&self) -> bool {
+        false
+    }
+
+    fn config(&self) -> &DatabaseConfig {
+        &self.config
+    }
+}
+
 /// Database pool statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DatabaseStats {
@@ -129,9 +229,18 @@ pub struct DatabaseStats {
 }
 
 /// Global database pool instance
+///
+/// **DEPRECATED**: Use dependency injection with `Arc<dyn DatabasePoolProvider>` instead.
+/// This global static will be removed in a future release.
 static DB_POOL: std::sync::OnceLock<DatabasePool> = std::sync::OnceLock::new();
 
 /// Initialize the global database pool
+///
+/// **DEPRECATED**: Use `DatabasePool::new()` and pass via DI instead.
+#[deprecated(
+    since = "0.0.5",
+    note = "Use DatabasePool::new() and pass Arc<dyn DatabasePoolProvider> via dependency injection"
+)]
 pub fn init_global_database_pool(config: DatabaseConfig) -> Result<()> {
     let pool = DatabasePool::new(config)?;
     DB_POOL
@@ -140,13 +249,26 @@ pub fn init_global_database_pool(config: DatabaseConfig) -> Result<()> {
 }
 
 /// Get the global database pool
+///
+/// **DEPRECATED**: Use dependency injection with `Arc<dyn DatabasePoolProvider>` instead.
+#[deprecated(
+    since = "0.0.5",
+    note = "Use Arc<dyn DatabasePoolProvider> via dependency injection"
+)]
 pub fn get_global_database_pool() -> Option<&'static DatabasePool> {
     DB_POOL.get()
 }
 
 /// Get the global database pool or create a default one
+///
+/// **DEPRECATED**: Use `DatabasePool::new()` or `NullDatabasePool::new()` and pass via DI instead.
+#[deprecated(
+    since = "0.0.5",
+    note = "Use DatabasePool::new() or NullDatabasePool::new() and pass via DI"
+)]
 pub fn get_or_create_global_database_pool() -> Result<&'static DatabasePool> {
-    if let Some(pool) = get_global_database_pool() {
+    // Use DB_POOL.get() directly instead of calling deprecated get_global_database_pool()
+    if let Some(pool) = DB_POOL.get() {
         Ok(pool)
     } else {
         // Create disabled pool if not configured
@@ -200,5 +322,22 @@ mod tests {
         assert_eq!(stats.idle_connections, 5);
         assert_eq!(stats.max_connections, 20);
         assert_eq!(stats.min_idle, 5);
+    }
+
+    #[test]
+    fn test_null_database_pool() {
+        let pool = NullDatabasePool::new();
+        assert!(!pool.is_enabled());
+        assert!(pool.get_connection().is_err());
+
+        let stats = pool.stats();
+        assert_eq!(stats.connections, 0);
+        assert_eq!(stats.idle_connections, 0);
+    }
+
+    #[tokio::test]
+    async fn test_null_database_pool_health_check() {
+        let pool = NullDatabasePool::new();
+        assert!(pool.health_check().await.is_err());
     }
 }

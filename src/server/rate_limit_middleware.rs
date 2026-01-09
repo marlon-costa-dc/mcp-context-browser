@@ -51,15 +51,23 @@ pub fn add_rate_limit_headers(
         (limiter.config().max_requests_per_window + limiter.config().burst_allowance)
             .to_string()
             .parse()
-            .unwrap(),
+            .unwrap_or_else(|_| axum::http::HeaderValue::from_static("0")),
     );
     headers.insert(
         "X-RateLimit-Remaining",
-        result.remaining.to_string().parse().unwrap(),
+        result
+            .remaining
+            .to_string()
+            .parse()
+            .unwrap_or_else(|_| axum::http::HeaderValue::from_static("0")),
     );
     headers.insert(
         "X-RateLimit-Reset",
-        result.reset_in_seconds.to_string().parse().unwrap(),
+        result
+            .reset_in_seconds
+            .to_string()
+            .parse()
+            .unwrap_or_else(|_| axum::http::HeaderValue::from_static("0")),
     );
 }
 

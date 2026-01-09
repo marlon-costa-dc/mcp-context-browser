@@ -2,236 +2,298 @@
 
 ## Overview
 
-This test suite provides comprehensive coverage for the MCP Context Browser, implementing multiple testing strategies to ensure code quality, performance, and reliability.
+This test suite provides comprehensive coverage for the MCP Context Browser, implementing multiple testing strategies to ensure code quality, performance, and reliability. Tests are organized by module following the source code structure.
+
+## Test Organization
+
+Tests are organized in a structure that mirrors the source code modules:
+
+```
+testes/
+├── admin/              # Admin module tests
+├── benchmark/          # Performance benchmarks
+├── chunking/           # Intelligent chunking tests
+├── config/             # Configuration system tests
+├── core/               # Core functionality tests
+├── integration/        # Integration and end-to-end tests
+├── metrics/            # Metrics and monitoring tests
+├── providers/          # Provider implementations tests
+├── repository/         # Repository pattern tests
+├── services/           # Service layer tests
+├── sync/               # Synchronization tests
+├── unit/               # General unit tests
+├── validation/         # Validation system tests
+└── README.md          # This documentation
+```
 
 ## Test Categories
 
-### 1. Unit Tests (`tests/unit_tests.rs`)
-Focused tests for individual functions and methods:
-- Core type constructors and basic functionality
-- Error handling and custom error types
-- Validation logic for individual components
-- Configuration parsing and validation
-- Repository pattern implementations
-- Provider strategy implementations
-- Service layer business logic
-- Utility functions and helpers
-- Performance and benchmarking tests
-- Security and safety tests
+### 1. Module-Specific Tests
 
-### 2. Repository Tests (`tests/repository_unit.rs`)
-Tests for the repository pattern implementation:
-- Repository trait implementations
-- Repository data structures and contracts
-- Repository performance characteristics
-- Repository data validation
-- Repository lifecycle management
+Each source module has its corresponding test directory:
 
-### 3. Validation Tests (`tests/validation_unit.rs`)
-Comprehensive validation testing:
-- Core data structure validation rules
-- Business rule validation
-- Validation error handling
-- Validation performance
-- Edge case testing
+-   **admin/**: Admin interface and authentication tests
+-   **chunking/**: Intelligent code chunking and language parsing tests
+-   **config/**: Configuration loading, validation, and providers tests
+-   **core/**: Core types, error handling, and fundamental functionality tests
+-   **metrics/**: Metrics collection and system monitoring tests
+-   **providers/**: Embedding and vector store provider implementations tests
+-   **repository/**: Data repository and search functionality tests
+-   **services/**: Business logic service layer tests
+-   **sync/**: Synchronization and state management tests
+-   **validation/**: Data validation and business rules tests
 
-### 4. Configuration Tests (`tests/config_unit.rs`)
-Configuration system testing:
-- Configuration data structure integrity
-- Configuration validation rules
-- Configuration loading mechanisms
-- Configuration builder pattern
-- Configuration error handling
-- Configuration performance
-- Configuration security
-- Configuration compatibility
+### 2. Integration Tests (`testes/integration/`)
 
-### 5. Provider Strategy Tests (`tests/provider_strategy_unit.rs`)
-Strategy pattern implementation testing:
-- Provider trait implementations
-- Strategy pattern implementation
-- Provider compatibility checking
-- Provider health monitoring
-- Provider configuration validation
-- Strategy composition
-- Provider performance characteristics
-- Provider error handling
-- Strategy pattern benefits
+Component interaction and end-to-end testing:
 
-### 6. Integration Tests (`tests/integration_unit.rs`)
-Component interaction testing:
-- Repository and service integration
-- Service and provider integration
-- Validation and business logic integration
-- Configuration and component integration
-- End-to-end request processing
-- Concurrent access patterns
-- System boundary integration
-- System monitoring and observability
-- System upgrade and migration
-- System resource management
+-   MCP protocol implementation tests
+-   Docker container integration tests
+-   Cross-component interaction validation
+-   End-to-end request processing
+-   Concurrent access patterns
+-   System boundary testing
 
-### 7. Property-Based Tests (`tests/property_based.rs`)
-Advanced testing with proptest:
-- CodeChunk content preservation
-- Line number consistency
-- Embedding vector consistency
-- File path safety validation
-- ID uniqueness and non-emptiness
-- Language enum serialization roundtrip
-- Metadata JSON validity
-- Model name length constraints
-- Vector value bounds
-- Integration property tests
-- Stress tests for edge cases
+### 3. Benchmark Tests (`testes/benchmark/`)
 
-### 8. Benchmark Tests (`tests/benchmark.rs`)
 Performance measurement with Criterion:
-- Core type operations
-- Validation operations
-- Repository operations
-- Provider operations
-- Service operations
-- Memory operations
-- Concurrent operations
+
+-   Core type operations benchmarking
+-   Provider performance characteristics
+-   Repository operation benchmarks
+-   Memory usage analysis
+-   Concurrent operation performance
+-   System throughput measurements
+
+### 4. Unit Tests (`testes/unit/`)
+
+General unit tests that don't fit specific modules:
+
+-   Property-based tests with proptest
+-   Security and safety tests
+-   Rate limiting functionality tests
+-   General utility function tests
 
 ## Testing Strategy
 
 ### TDD (Test-Driven Development)
+
 All new features follow TDD principles:
-1. Write failing test first
-2. Implement minimal code to pass
-3. Refactor while maintaining test coverage
+
+1.  Write failing test first
+2.  Implement minimal code to pass
+3.  Refactor while maintaining test coverage
 
 ### Coverage Goals
-- **Unit Tests**: 80%+ coverage of individual functions
-- **Integration Tests**: All component interactions tested
-- **Property Tests**: Edge cases and invariants verified
-- **Performance Tests**: Benchmarks for critical paths
+
+-   **Unit Tests**: 80%+ coverage of individual functions
+-   **Integration Tests**: All component interactions tested
+-   **Property Tests**: Edge cases and invariants verified
+-   **Performance Tests**: Benchmarks for critical paths
 
 ### Quality Gates
-- All tests must pass before commits
-- Coverage reports generated and reviewed
-- Performance benchmarks tracked over time
-- Property tests catch edge cases missed by example tests
+
+-   All tests must pass before commits
+-   Coverage reports generated and reviewed
+-   Performance benchmarks tracked over time
+-   Property tests catch edge cases missed by example tests
 
 ## Running Tests
 
 ### Basic Test Execution
-```bash
-# Run all tests
-cargo test
 
-# Run specific test category
-cargo test unit_tests
-cargo test repository_unit
-cargo test validation_unit
+```bash
+# Run all tests (organized by module)
+cargo test --test testes
+
+# Run tests for specific module
+cargo test --test testes chunking
+cargo test --test testes config
+cargo test --test testes core
+
+# Run integration tests
+cargo test --test testes integration
+
+# Run benchmark tests
+cargo test --test testes benchmark
+
+# Run unit tests
+cargo test --test testes unit
 
 # Run with coverage
 cargo tarpaulin --out Html
 
-# Run benchmarks
+# Run performance benchmarks
 cargo bench
 ```
 
-### Property-Based Testing
-```bash
-# Run property tests
-cargo test property_based
+### Module-Specific Testing
 
-# Run with more test cases
-PROPTEST_CASES=1000 cargo test property_based
+```bash
+# Test individual modules
+cargo test --test testes providers::embedding_providers
+cargo test --test testes core::core_types
+cargo test --test testes validation
+
+# Test specific functionality
+cargo test --test testes chunking::chunking::tests::test_rust_chunking_with_tree_sitter
 ```
 
 ### Integration Testing
-```bash
-# Run integration tests
-cargo test integration_unit
 
-# Run with real dependencies (requires setup)
-cargo test --features integration
+```bash
+# Run all integration tests
+cargo test --test testes integration
+
+# Run specific integration tests
+cargo test --test testes integration::mcp_protocol
+cargo test --test testes integration::docker
+```
+
+### Property-Based Testing
+
+```bash
+# Run property tests
+cargo test --test testes unit::property_based
+
+# Run with more test cases
+PROPTEST_CASES=1000 cargo test --test testes unit::property_based
 ```
 
 ## Test Organization
 
-### File Structure
+### Directory Structure
+
+Tests follow a hierarchical structure matching source modules:
+
 ```
-tests/
-├── unit_tests.rs           # Core unit tests
-├── repository_unit.rs      # Repository pattern tests
-├── validation_unit.rs      # Validation system tests
-├── config_unit.rs          # Configuration tests
-├── provider_strategy_unit.rs # Strategy pattern tests
-├── integration_unit.rs     # Integration tests
-├── property_based.rs       # Property-based tests
-├── benchmark.rs            # Performance benchmarks
-└── README.md              # This documentation
+testes/
+├── mod.rs                 # Root test module declaration
+├── admin/
+│   ├── mod.rs            # Admin module tests
+│   └── service/          # Admin service specific tests
+├── benchmark/
+│   ├── mod.rs            # Benchmark tests module
+│   └── benchmark.rs      # Performance benchmarks
+├── chunking/
+│   ├── mod.rs            # Chunking tests module
+│   └── chunking.rs       # Intelligent chunking tests
+├── config/
+│   ├── mod.rs            # Config tests module
+│   ├── config.rs         # General config tests
+│   ├── config_tests.rs   # Specific config validation tests
+│   ├── config_unit.rs    # Config unit tests
+│   └── providers/        # Config provider tests
+├── core/
+│   ├── mod.rs            # Core tests module
+│   ├── core_types.rs     # Core type tests
+│   └── error_handling.rs # Error handling tests (temporarily disabled)
+├── integration/
+│   ├── mod.rs            # Integration tests module
+│   ├── docker/           # Docker integration tests
+│   ├── integration*.rs   # Various integration test files
+│   └── mcp*.rs           # MCP protocol integration tests
+├── providers/
+│   ├── mod.rs            # Provider tests module
+│   ├── embedding_providers.rs    # Embedding provider tests
+│   └── vector_store_providers.rs # Vector store provider tests
+├── repository/
+│   ├── mod.rs            # Repository tests module
+│   └── repository_unit.rs # Repository unit tests
+├── services/
+│   ├── mod.rs            # Service tests module
+│   └── services.rs       # Service layer tests
+├── sync/
+│   ├── mod.rs            # Sync tests module
+│   └── sync_manager.rs   # Sync manager tests
+├── unit/
+│   ├── mod.rs            # Unit tests module
+│   ├── property_based.rs # Property-based tests
+│   ├── rate_limiting.rs  # Rate limiting tests
+│   ├── security.rs       # Security tests
+│   └── unit_tests.rs     # General unit tests
+├── validation/
+│   ├── mod.rs            # Validation tests module
+│   ├── validation*.rs    # Various validation tests
+│   └── comprehensive.rs  # Comprehensive validation tests
+└── README.md             # This documentation
 ```
 
 ### Naming Conventions
-- `*_unit.rs`: Unit tests for specific modules
-- `*_integration.rs`: Tests for component interactions
-- `*_property.rs`: Property-based tests
-- `*_benchmark.rs`: Performance benchmarks
+
+-   `mod.rs`: Module declaration file in each directory
+-   `*_tests.rs`: Test files containing multiple test modules
+-   `*_unit.rs`: Unit tests for specific functionality
+-   `*_integration.rs`: Tests for component interactions
+-   `*_property.rs`: Property-based tests
+-   `*_benchmark.rs`: Performance benchmarks
 
 ## Coverage Analysis
 
 ### Current Coverage Status
-- **Unit Tests**: Comprehensive coverage of core functionality
-- **Integration**: Component interaction validation
-- **Property Tests**: Edge case and invariant verification
-- **Performance**: Benchmark tracking for optimization
+
+-   **Unit Tests**: Comprehensive coverage of core functionality
+-   **Integration**: Component interaction validation
+-   **Property Tests**: Edge case and invariant verification
+-   **Performance**: Benchmark tracking for optimization
 
 ### Coverage Goals by Module
-- Core Types: 95%+ coverage
-- Validation: 90%+ coverage
-- Repository: 85%+ coverage
-- Services: 80%+ coverage
-- Configuration: 85%+ coverage
+
+-   Core Types: 95%+ coverage
+-   Validation: 90%+ coverage
+-   Repository: 85%+ coverage
+-   Services: 80%+ coverage
+-   Configuration: 85%+ coverage
 
 ## Continuous Integration
 
 ### Automated Testing
-- All tests run on every commit
-- Coverage reports generated automatically
-- Performance regression detection
-- Property test failure alerts
+
+-   All tests run on every commit
+-   Coverage reports generated automatically
+-   Performance regression detection
+-   Property test failure alerts
 
 ### Quality Gates
-- Test pass rate: 100%
-- Minimum coverage thresholds
-- Performance benchmark baselines
-- No memory leaks or crashes
+
+-   Test pass rate: 100%
+-   Minimum coverage thresholds
+-   Performance benchmark baselines
+-   No memory leaks or crashes
 
 ## Contributing
 
 ### Adding New Tests
-1. Identify the appropriate test category
-2. Follow naming conventions
-3. Include comprehensive documentation
-4. Ensure tests are deterministic
-5. Add performance benchmarks for critical paths
+
+1.  Identify the appropriate test category
+2.  Follow naming conventions
+3.  Include comprehensive documentation
+4.  Ensure tests are deterministic
+5.  Add performance benchmarks for critical paths
 
 ### Test Best Practices
-- Tests should be fast and reliable
-- Use descriptive names that explain the behavior being tested
-- Include edge cases and error conditions
-- Mock external dependencies appropriately
-- Clean up test resources properly
+
+-   Tests should be fast and reliable
+-   Use descriptive names that explain the behavior being tested
+-   Include edge cases and error conditions
+-   Mock external dependencies appropriately
+-   Clean up test resources properly
 
 ## Troubleshooting
 
 ### Common Issues
-- **Flaky Tests**: Ensure tests don't depend on external state
-- **Slow Tests**: Profile and optimize or move to benchmarks
-- **Coverage Gaps**: Add missing test cases
-- **Integration Failures**: Check dependency setup and mocking
+
+-   **Flaky Tests**: Ensure tests don't depend on external state
+-   **Slow Tests**: Profile and optimize or move to benchmarks
+-   **Coverage Gaps**: Add missing test cases
+-   **Integration Failures**: Check dependency setup and mocking
 
 ### Debug Tools
-- `cargo test -- --nocapture`: See test output
-- `cargo tarpaulin`: Generate coverage reports
-- `cargo bench`: Run performance benchmarks
-- `PROPTEST_CASES=10000 cargo test`: Increase property test iterations
+
+-   `cargo test -- --nocapture`: See test output
+-   `cargo tarpaulin`: Generate coverage reports
+-   `cargo bench`: Run performance benchmarks
+-   `PROPTEST_CASES=10000 cargo test`: Increase property test iterations
 
 ---
 

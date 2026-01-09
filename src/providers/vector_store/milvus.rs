@@ -176,45 +176,47 @@ impl VectorStoreProvider for MilvusVectorStoreProvider {
             contents.push(content);
         }
 
-        // Validate schema has required fields
+        // Get schema fields with proper error handling
         let schema = collection_instance.schema();
-        let required_fields = ["id", "vector", "file_path", "line_number", "content"];
-        for field_name in &required_fields {
-            if schema.get_field(field_name).is_none() {
-                return Err(Error::vector_db(format!(
-                    "Required field '{}' not found in collection '{}' schema",
-                    field_name, collection
-                )));
-            }
-        }
-
-        // Create FieldColumns for insertion using schema fields
         use milvus::data::FieldColumn;
 
-        let id_column = FieldColumn::new(
-            schema.get_field("id").unwrap(), // Safe after validation above
-            ids.clone(),
-        );
+        let id_field = schema.get_field("id").ok_or_else(|| {
+            Error::vector_db(format!(
+                "Required field 'id' not found in collection '{}' schema",
+                collection
+            ))
+        })?;
+        let vector_field = schema.get_field("vector").ok_or_else(|| {
+            Error::vector_db(format!(
+                "Required field 'vector' not found in collection '{}' schema",
+                collection
+            ))
+        })?;
+        let file_path_field = schema.get_field("file_path").ok_or_else(|| {
+            Error::vector_db(format!(
+                "Required field 'file_path' not found in collection '{}' schema",
+                collection
+            ))
+        })?;
+        let line_number_field = schema.get_field("line_number").ok_or_else(|| {
+            Error::vector_db(format!(
+                "Required field 'line_number' not found in collection '{}' schema",
+                collection
+            ))
+        })?;
+        let content_field = schema.get_field("content").ok_or_else(|| {
+            Error::vector_db(format!(
+                "Required field 'content' not found in collection '{}' schema",
+                collection
+            ))
+        })?;
 
-        let vector_column = FieldColumn::new(
-            schema.get_field("vector").unwrap(), // Safe after validation above
-            vectors_data,
-        );
-
-        let file_path_column = FieldColumn::new(
-            schema.get_field("file_path").unwrap(), // Safe after validation above
-            file_paths,
-        );
-
-        let line_number_column = FieldColumn::new(
-            schema.get_field("line_number").unwrap(), // Safe after validation above
-            line_numbers,
-        );
-
-        let content_column = FieldColumn::new(
-            schema.get_field("content").unwrap(), // Safe after validation above
-            contents,
-        );
+        // Create FieldColumns for insertion using validated schema fields
+        let id_column = FieldColumn::new(id_field, ids.clone());
+        let vector_column = FieldColumn::new(vector_field, vectors_data);
+        let file_path_column = FieldColumn::new(file_path_field, file_paths);
+        let line_number_column = FieldColumn::new(line_number_field, line_numbers);
+        let content_column = FieldColumn::new(content_field, contents);
 
         let columns = vec![
             id_column,
