@@ -4,7 +4,7 @@
 //! for language-specific chunking logic.
 
 use crate::chunking::config::LanguageConfig;
-use crate::core::types::{CodeChunk, Language};
+use crate::domain::types::{CodeChunk, Language};
 
 /// Trait for language-specific processing
 pub trait LanguageProcessor {

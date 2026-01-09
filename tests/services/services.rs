@@ -4,9 +4,9 @@
 //! This module tests the business logic services including ContextService,
 //! IndexingService, and SearchService.
 
-use mcp_context_browser::core::types::{CodeChunk, Language};
-use mcp_context_browser::providers::{EmbeddingProvider, VectorStoreProvider};
-use mcp_context_browser::services::{ContextService, IndexingService, SearchService};
+use mcp_context_browser::domain::types::{CodeChunk, Language};
+use mcp_context_browser::adapters::providers::{EmbeddingProvider, VectorStoreProvider};
+use mcp_context_browser::application::{ContextService, IndexingService, SearchService};
 use std::sync::Arc;
 
 #[cfg(test)]
@@ -27,9 +27,9 @@ mod tests {
 
     fn create_test_providers() -> (Arc<dyn EmbeddingProvider>, Arc<dyn VectorStoreProvider>) {
         let embedding_provider =
-            Arc::new(mcp_context_browser::providers::embedding::null::NullEmbeddingProvider::new());
+            Arc::new(mcp_context_browser::adapters::providers::embedding::null::NullEmbeddingProvider::new());
         let vector_store_provider = Arc::new(
-            mcp_context_browser::providers::vector_store::null::NullVectorStoreProvider::new(),
+            mcp_context_browser::adapters::providers::vector_store::null::NullVectorStoreProvider::new(),
         );
         (embedding_provider, vector_store_provider)
     }

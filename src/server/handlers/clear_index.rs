@@ -10,9 +10,9 @@ use rmcp::model::CallToolResult;
 use std::sync::Arc;
 use std::time::Instant;
 
+use crate::application::IndexingService;
 use crate::server::args::ClearIndexArgs;
 use crate::server::formatter::ResponseFormatter;
-use crate::services::IndexingService;
 
 /// Handler for index clearing operations
 pub struct ClearIndexHandler {

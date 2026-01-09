@@ -3,9 +3,9 @@
 //! This example shows how to create a FastEmbedProvider and use it
 //! to generate embeddings for text without external API dependencies.
 
-use mcp_context_browser::core::http_client::HttpClientPool;
-use mcp_context_browser::core::types::EmbeddingConfig;
-use mcp_context_browser::di::factory::{DefaultProviderFactory, ProviderFactory};
+use mcp_context_browser::adapters::http_client::HttpClientPool;
+use mcp_context_browser::infrastructure::di::factory::{DefaultProviderFactory, ProviderFactory};
+use mcp_context_browser::domain::types::EmbeddingConfig;
 use std::sync::Arc;
 
 #[tokio::main]

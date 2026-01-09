@@ -2,8 +2,8 @@
 //!
 //! This module demonstrates TDD approach - RED phase: write failing tests first
 
-use mcp_context_browser::core::validation::{NumberValidator, StringValidator};
-use mcp_context_browser::core::validation::{
+use mcp_context_browser::domain::validation::{NumberValidator, StringValidator};
+use mcp_context_browser::domain::validation::{
     NumberValidatorTrait, StringValidatorTrait, ValidationError,
 };
 

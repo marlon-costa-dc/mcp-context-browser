@@ -3,12 +3,12 @@
 //! This module contains server initialization logic extracted from the main
 //! server implementation to improve code organization and testability.
 
-use crate::config::ConfigLoader;
-use crate::core::cache::CacheManager;
-use crate::core::http_client::{HttpClientConfig, HttpClientPool};
-use crate::core::limits::ResourceLimits;
-use crate::core::rate_limit::RateLimiter;
-use crate::metrics::MetricsApiServer;
+use crate::adapters::http_client::{HttpClientConfig, HttpClientPool};
+use crate::infrastructure::cache::CacheManager;
+use crate::infrastructure::config::ConfigLoader;
+use crate::infrastructure::limits::ResourceLimits;
+use crate::infrastructure::metrics::MetricsApiServer;
+use crate::infrastructure::rate_limit::RateLimiter;
 use crate::server::McpServer;
 use rmcp::ServerHandler;
 use rmcp::ServiceExt;
@@ -16,14 +16,14 @@ use rmcp::transport::stdio;
 use std::sync::Arc;
 use tracing_subscriber::{self, EnvFilter};
 
-use crate::core::events::create_shared_event_bus;
-use crate::core::logging::{RingBufferLayer, create_shared_log_buffer};
+use crate::infrastructure::events::create_shared_event_bus;
+use crate::infrastructure::logging::{RingBufferLayer, create_shared_log_buffer};
 use crate::server::McpServerBuilder;
 use tracing_subscriber::prelude::*;
 
 /// Initialize logging and tracing for the MCP server
 fn init_tracing(
-    log_buffer: crate::core::logging::SharedLogBuffer,
+    log_buffer: crate::infrastructure::logging::SharedLogBuffer,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let env_filter = EnvFilter::from_default_env()
         .add_directive(tracing::Level::INFO.into())
@@ -50,13 +50,13 @@ fn init_tracing(
 /// Initialize all server components and services
 async fn initialize_server_components(
     cache_manager: Option<Arc<CacheManager>>,
-    log_buffer: crate::core::logging::SharedLogBuffer,
+    log_buffer: crate::infrastructure::logging::SharedLogBuffer,
 ) -> Result<
     (
         McpServer,
         Option<tokio::task::JoinHandle<()>>,
         Arc<ResourceLimits>,
-        Arc<dyn crate::core::http_client::HttpClientProvider>,
+        Arc<dyn crate::adapters::http_client::HttpClientProvider>,
     ),
     Box<dyn std::error::Error>,
 > {
@@ -70,7 +70,7 @@ async fn initialize_server_components(
     let event_bus = create_shared_event_bus();
 
     // Initialize resource limits
-    let resource_limits = Arc::new(crate::core::limits::ResourceLimits::new(
+    let resource_limits = Arc::new(crate::infrastructure::limits::ResourceLimits::new(
         config.resource_limits.clone(),
     ));
 
@@ -79,15 +79,15 @@ async fn initialize_server_components(
     let http_client = match HttpClientPool::with_config(HttpClientConfig::default()) {
         Ok(pool) => {
             tracing::info!("✅ HTTP client pool initialized successfully");
-            Arc::new(pool) as Arc<dyn crate::core::http_client::HttpClientProvider>
+            Arc::new(pool) as Arc<dyn crate::adapters::http_client::HttpClientProvider>
         }
         Err(e) => {
             tracing::warn!(
                 "⚠️  Failed to initialize HTTP client pool: {}. Using null client.",
                 e
             );
-            Arc::new(crate::core::http_client::NullHttpClientPool::new())
-                as Arc<dyn crate::core::http_client::HttpClientProvider>
+            Arc::new(crate::adapters::http_client::NullHttpClientPool::new())
+                as Arc<dyn crate::adapters::http_client::HttpClientProvider>
         }
     };
 

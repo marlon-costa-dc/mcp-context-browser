@@ -3,8 +3,8 @@
 //! This module contains authentication-related functionality extracted
 //! from the main server implementation to improve separation of concerns.
 
-use crate::core::auth::{AuthService, Claims, Permission};
-use crate::core::error::Result;
+use crate::domain::error::Result;
+use crate::infrastructure::auth::{AuthService, Claims, Permission};
 
 /// Authentication utilities for MCP server tools
 pub struct AuthHandler {
@@ -32,7 +32,7 @@ impl AuthHandler {
         }
 
         let Some(token) = token else {
-            return Err(crate::core::error::Error::generic(
+            return Err(crate::domain::error::Error::generic(
                 "Authentication required",
             ));
         };
@@ -42,7 +42,7 @@ impl AuthHandler {
             .auth_service
             .check_permission(&claims, required_permission)
         {
-            return Err(crate::core::error::Error::generic(
+            return Err(crate::domain::error::Error::generic(
                 "Insufficient permissions",
             ));
         }

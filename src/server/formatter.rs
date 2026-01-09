@@ -15,7 +15,7 @@ impl ResponseFormatter {
     /// Format search response for display
     pub fn format_search_response(
         query: &str,
-        results: &[crate::core::types::SearchResult],
+        results: &[crate::domain::types::SearchResult],
         duration: std::time::Duration,
         from_cache: bool,
     ) -> Result<CallToolResult, McpError> {
@@ -63,7 +63,7 @@ impl ResponseFormatter {
     /// Format search results with code snippets and metadata
     fn format_search_results(
         message: &mut String,
-        results: &[crate::core::types::SearchResult],
+        results: &[crate::domain::types::SearchResult],
         duration: std::time::Duration,
     ) {
         message.push_str("📊 **Search Results:**\n\n");
@@ -103,7 +103,7 @@ impl ResponseFormatter {
     }
 
     /// Format code preview with syntax highlighting
-    fn format_code_preview(message: &mut String, result: &crate::core::types::SearchResult) {
+    fn format_code_preview(message: &mut String, result: &crate::domain::types::SearchResult) {
         // Add context lines around the match for better understanding
         let lines: Vec<&str> = result.content.lines().collect();
         let preview_lines = if lines.len() > 10 {

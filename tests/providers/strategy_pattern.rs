@@ -3,17 +3,17 @@
 //! This module tests the generic provider services that use trait bounds
 //! instead of dynamic dispatch, implementing the Strategy pattern.
 
-use mcp_context_browser::core::error::Result;
-use mcp_context_browser::core::types::{Embedding, SearchResult, CodeChunk};
-use mcp_context_browser::providers::{EmbeddingProvider, VectorStoreProvider};
-use mcp_context_browser::services::context::{ContextService, GenericContextService};
+use mcp_context_browser::{CodeChunk, Embedding, SearchResult};
+use mcp_context_browser::domain::error::Result;
+use mcp_context_browser::adapters::providers::{EmbeddingProvider, VectorStoreProvider};
+use mcp_context_browser::application::context::{ContextService, GenericContextService};
 use std::sync::Arc;
 
 /// Test generic context service with strategy pattern
 #[cfg(test)]
 mod generic_context_service_tests {
     use super::*;
-    use mcp_context_browser::providers::{MockEmbeddingProvider, InMemoryVectorStoreProvider};
+    use mcp_context_browser::adapters::providers::{InMemoryVectorStoreProvider, MockEmbeddingProvider};
 
     #[test]
     fn test_generic_context_service_creation() {
@@ -22,10 +22,7 @@ mod generic_context_service_tests {
         let vector_store_provider = Arc::new(InMemoryVectorStoreProvider::new());
 
         // Create generic context service with compile-time strategy types
-        let context_service = GenericContextService::new(
-            embedding_provider,
-            vector_store_provider,
-        );
+        let context_service = GenericContextService::new(embedding_provider, vector_store_provider);
 
         assert_eq!(context_service.embedding_dimensions(), 384); // Mock provider dimensions
     }
@@ -35,18 +32,13 @@ mod generic_context_service_tests {
         let embedding_provider = Arc::new(MockEmbeddingProvider::new());
         let vector_store_provider = Arc::new(InMemoryVectorStoreProvider::new());
 
-        let context_service = GenericContextService::new(
-            embedding_provider,
-            vector_store_provider,
-        );
+        let context_service = GenericContextService::new(embedding_provider, vector_store_provider);
 
         // Test that we can embed text
         let text = "fn hello() { println!(\"Hello, world!\"); }";
         let result = tokio::runtime::Runtime::new()
             .unwrap()
-            .block_on(async {
-                context_service.embed_text(text).await
-            });
+            .block_on(async { context_service.embed_text(text).await });
 
         assert!(result.is_ok());
         let embedding = result.unwrap();
@@ -61,10 +53,7 @@ mod generic_context_service_tests {
         let embedding_provider = Arc::new(MockEmbeddingProvider::new());
         let vector_store_provider = Arc::new(InMemoryVectorStoreProvider::new());
 
-        let context_service = GenericContextService::new(
-            embedding_provider,
-            vector_store_provider,
-        );
+        let context_service = GenericContextService::new(embedding_provider, vector_store_provider);
 
         // Verify the service is properly constructed
         assert!(context_service.embedding_dimensions() > 0);
@@ -97,10 +86,7 @@ mod strategy_pattern_tests {
         let vector_store_provider = Arc::new(InMemoryVectorStoreProvider::new());
 
         // Create a service that composes these strategies
-        let service = GenericContextService::new(
-            embedding_provider,
-            vector_store_provider,
-        );
+        let service = GenericContextService::new(embedding_provider, vector_store_provider);
 
         // The service should be able to perform operations using both strategies
         assert_eq!(service.embedding_dimensions(), 384);
@@ -116,10 +102,8 @@ mod strategy_pattern_tests {
         let embedding_provider = Arc::new(MockEmbeddingProvider::new());
         let vector_store_provider = Arc::new(InMemoryVectorStoreProvider::new());
 
-        let service = GenericContextService::new(
-            embedding_provider.clone(),
-            vector_store_provider.clone(),
-        );
+        let service =
+            GenericContextService::new(embedding_provider.clone(), vector_store_provider.clone());
 
         // Test that we can call methods directly on the concrete types
         // while still using the trait bounds for polymorphism
@@ -131,7 +115,7 @@ mod strategy_pattern_tests {
 #[cfg(test)]
 mod provider_validation_tests {
     use super::*;
-    use mcp_context_browser::config::providers::ProviderConfigManager;
+    use mcp_context_browser::infrastructure::config::providers::ProviderConfigManager;
 
     #[test]
     fn test_strategy_based_provider_validation() {
@@ -169,10 +153,7 @@ mod integration_tests {
         let embedding_provider = Arc::new(MockEmbeddingProvider::new());
         let vector_store_provider = Arc::new(InMemoryVectorStoreProvider::new());
 
-        let context_service = GenericContextService::new(
-            embedding_provider,
-            vector_store_provider,
-        );
+        let context_service = GenericContextService::new(embedding_provider, vector_store_provider);
 
         // Test basic functionality
         assert_eq!(context_service.embedding_dimensions(), 384);
@@ -180,9 +161,7 @@ mod integration_tests {
         // Test that the service can be used in async context
         let result = tokio::runtime::Runtime::new()
             .unwrap()
-            .block_on(async {
-                context_service.embed_text("test code").await
-            });
+            .block_on(async { context_service.embed_text("test code").await });
 
         assert!(result.is_ok());
     }
@@ -195,10 +174,7 @@ mod integration_tests {
         let embedding_provider = Arc::new(MockEmbeddingProvider::new());
         let vector_store_provider = Arc::new(InMemoryVectorStoreProvider::new());
 
-        let service = GenericContextService::new(
-            embedding_provider,
-            vector_store_provider,
-        );
+        let service = GenericContextService::new(embedding_provider, vector_store_provider);
 
         // Performance should be consistent (no dynamic dispatch overhead)
         let start = std::time::Instant::now();

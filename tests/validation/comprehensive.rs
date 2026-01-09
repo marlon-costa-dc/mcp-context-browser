@@ -3,9 +3,11 @@
 //! Tests for validator crate integration and business logic validation
 //! throughout the MCP Context Browser application.
 
-use mcp_context_browser::core::error::Error;
-use mcp_context_browser::core::types::{CodeChunk, Language, Embedding};
-use mcp_context_browser::server::args::{IndexCodebaseArgs, SearchCodeArgs, GetIndexingStatusArgs, ClearIndexArgs};
+use mcp_context_browser::{CodeChunk, Embedding, Language};
+use mcp_context_browser::domain::error::Error;
+use mcp_context_browser::server::args::{
+    ClearIndexArgs, GetIndexingStatusArgs, IndexCodebaseArgs, SearchCodeArgs,
+};
 use validator::{Validate, ValidationErrors};
 
 /// Test validation of server request arguments
@@ -242,11 +244,11 @@ mod error_handling_tests {
     fn test_multiple_validation_errors() {
         // Test multiple validation failures
         let invalid_chunk = CodeChunk {
-            id: "".to_string(), // Invalid: empty ID
-            content: "".to_string(), // Invalid: empty content
+            id: "".to_string(),        // Invalid: empty ID
+            content: "".to_string(),   // Invalid: empty content
             file_path: "".to_string(), // Invalid: empty path
-            start_line: 0, // Invalid: zero line
-            end_line: 0, // Invalid: zero line
+            start_line: 0,             // Invalid: zero line
+            end_line: 0,               // Invalid: zero line
             language: Language::Rust,
             metadata: serde_json::json!({}),
         };
@@ -297,7 +299,7 @@ mod middleware_integration_tests {
     fn test_validation_middleware_error_formatting() {
         // Test that validation errors are properly formatted for API responses
         let invalid_request = SearchCodeArgs {
-            query: "", // Invalid: empty query
+            query: "",      // Invalid: empty query
             limit: Some(0), // Invalid: zero limit
         };
 
@@ -318,14 +320,18 @@ fn validate_file_path(path: &str) -> Result<(), Error> {
     }
 
     if path.contains("..") {
-        return Err(Error::validation("File path cannot contain directory traversal"));
+        return Err(Error::validation(
+            "File path cannot contain directory traversal",
+        ));
     }
 
     // Check for sensitive system paths
     let sensitive_paths = ["/etc/", "/proc/", "/sys/", "/root/", "/home/"];
     for sensitive in &sensitive_paths {
         if path.starts_with(sensitive) && !path.starts_with("/tmp/") {
-            return Err(Error::validation("Access to sensitive system paths is not allowed"));
+            return Err(Error::validation(
+                "Access to sensitive system paths is not allowed",
+            ));
         }
     }
 
@@ -338,14 +344,18 @@ fn validate_search_query(query: &str) -> Result<(), Error> {
     }
 
     if query.len() > 1000 {
-        return Err(Error::validation("Search query is too long (maximum 1000 characters)"));
+        return Err(Error::validation(
+            "Search query is too long (maximum 1000 characters)",
+        ));
     }
 
     // Basic XSS protection
     let dangerous_patterns = ["<script", "javascript:", "onload=", "onerror="];
     for pattern in &dangerous_patterns {
         if query.to_lowercase().contains(pattern) {
-            return Err(Error::validation("Search query contains potentially dangerous content"));
+            return Err(Error::validation(
+                "Search query contains potentially dangerous content",
+            ));
         }
     }
 
@@ -358,12 +368,19 @@ fn validate_collection_name(name: &str) -> Result<(), Error> {
     }
 
     if name.len() > 100 {
-        return Err(Error::validation("Collection name is too long (maximum 100 characters)"));
+        return Err(Error::validation(
+            "Collection name is too long (maximum 100 characters)",
+        ));
     }
 
     // Only allow alphanumeric, underscore, and hyphen
-    if !name.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '-') {
-        return Err(Error::validation("Collection name can only contain letters, numbers, underscores, and hyphens"));
+    if !name
+        .chars()
+        .all(|c| c.is_alphanumeric() || c == '_' || c == '-')
+    {
+        return Err(Error::validation(
+            "Collection name can only contain letters, numbers, underscores, and hyphens",
+        ));
     }
 
     Ok(())

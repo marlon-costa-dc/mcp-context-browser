@@ -334,8 +334,8 @@ pub enum AdminError {
     NetworkError(String),
 }
 
-impl From<crate::core::error::Error> for AdminError {
-    fn from(err: crate::core::error::Error) -> Self {
+impl From<crate::domain::error::Error> for AdminError {
+    fn from(err: crate::domain::error::Error) -> Self {
         AdminError::McpServerError(err.to_string())
     }
 }

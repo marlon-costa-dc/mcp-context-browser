@@ -1,6 +1,6 @@
 //! Unit tests for validation system components
 
-use mcp_context_browser::core::types::{CodeChunk, Embedding, Language};
+use mcp_context_browser::{CodeChunk, Embedding, Language};
 
 /// Test validation of core data structures
 #[cfg(test)]

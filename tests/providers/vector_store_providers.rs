@@ -5,8 +5,8 @@
 //! - NullVectorStoreProvider: No-op behavior validation
 //! - MilvusVectorStoreProvider: Integration tests with proper mocking
 
-use mcp_context_browser::core::types::{Embedding, SearchResult};
-use mcp_context_browser::providers::VectorStoreProvider;
+use mcp_context_browser::domain::types::{Embedding, SearchResult};
+use mcp_context_browser::adapters::providers::VectorStoreProvider;
 use std::collections::HashMap;
 
 /// Test utilities for vector store providers
@@ -60,7 +60,7 @@ mod test_utils {
 #[cfg(test)]
 mod in_memory_provider_tests {
     use super::*;
-    use mcp_context_browser::providers::vector_store::InMemoryVectorStoreProvider;
+    use mcp_context_browser::adapters::providers::vector_store::InMemoryVectorStoreProvider;
 
     #[tokio::test]
     async fn test_provider_creation() {
@@ -308,7 +308,7 @@ mod in_memory_provider_tests {
 #[cfg(test)]
 mod null_provider_tests {
     use super::*;
-    use mcp_context_browser::providers::vector_store::NullVectorStoreProvider;
+    use mcp_context_browser::adapters::providers::vector_store::NullVectorStoreProvider;
 
     #[tokio::test]
     async fn test_provider_creation() {
@@ -383,7 +383,7 @@ mod null_provider_tests {
 #[cfg(test)]
 mod milvus_provider_tests {
     use super::*;
-    use mcp_context_browser::providers::vector_store::MilvusVectorStoreProvider;
+    use mcp_context_browser::adapters::providers::vector_store::MilvusVectorStoreProvider;
 
     // Test helper to check if Milvus is available
     async fn is_milvus_available() -> bool {
@@ -706,13 +706,13 @@ mod common_provider_tests {
     #[tokio::test]
     async fn test_in_memory_provider_compliance() {
         let provider =
-            mcp_context_browser::providers::vector_store::InMemoryVectorStoreProvider::new();
+            mcp_context_browser::adapters::providers::vector_store::InMemoryVectorStoreProvider::new();
         test_provider_interface_compliance(provider).await;
     }
 
     #[tokio::test]
     async fn test_null_provider_compliance() {
-        let provider = mcp_context_browser::providers::vector_store::NullVectorStoreProvider::new();
+        let provider = mcp_context_browser::adapters::providers::vector_store::NullVectorStoreProvider::new();
         test_provider_interface_compliance(provider).await;
     }
 }

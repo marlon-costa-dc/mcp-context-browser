@@ -2,7 +2,7 @@
 //!
 //! Tests both the core rate limiter and HTTP middleware integration.
 
-use mcp_context_browser::core::rate_limit::{
+use mcp_context_browser::infrastructure::rate_limit::{
     RateLimitBackend, RateLimitConfig, RateLimitKey, RateLimitResult, RateLimiter,
 };
 use std::sync::Arc;

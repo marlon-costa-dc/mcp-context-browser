@@ -10,12 +10,12 @@ use rmcp::model::CallToolResult;
 use std::sync::Arc;
 use std::time::Instant;
 
-use crate::core::auth::Permission;
-use crate::core::limits::ResourceLimits;
+use crate::application::IndexingService;
+use crate::infrastructure::auth::Permission;
+use crate::infrastructure::limits::ResourceLimits;
 use crate::server::args::IndexCodebaseArgs;
 use crate::server::auth::AuthHandler;
 use crate::server::formatter::ResponseFormatter;
-use crate::services::IndexingService;
 
 /// Handler for codebase indexing operations
 pub struct IndexCodebaseHandler {

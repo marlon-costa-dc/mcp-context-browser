@@ -11,14 +11,14 @@ use serde_json;
 use std::sync::Arc;
 use std::time::Instant;
 
-use crate::core::auth::Permission;
-use crate::core::cache::{CacheManager, CacheResult};
-use crate::core::limits::ResourceLimits;
-use crate::core::validation::{StringValidator, StringValidatorTrait, ValidationError};
+use crate::application::SearchService;
+use crate::domain::validation::{StringValidator, StringValidatorTrait, ValidationError};
+use crate::infrastructure::auth::Permission;
+use crate::infrastructure::cache::{CacheManager, CacheResult};
+use crate::infrastructure::limits::ResourceLimits;
 use crate::server::args::SearchCodeArgs;
 use crate::server::auth::AuthHandler;
 use crate::server::formatter::ResponseFormatter;
-use crate::services::SearchService;
 
 /// Handler for code search operations
 pub struct SearchCodeHandler {
@@ -135,7 +135,7 @@ impl SearchCodeHandler {
 
         if let CacheResult::Hit(cached_data) = cached_result
             && let Ok(search_results) =
-                serde_json::from_value::<Vec<crate::core::types::SearchResult>>(cached_data)
+                serde_json::from_value::<Vec<crate::domain::types::SearchResult>>(cached_data)
         {
             tracing::info!(
                 "✅ Search cache hit for query: '{}' (limit: {})",
@@ -192,7 +192,7 @@ impl SearchCodeHandler {
     /// Format search response (extracted from the original implementation)
     fn format_search_response_with_cache(
         query: &str,
-        results: &[crate::core::types::SearchResult],
+        results: &[crate::domain::types::SearchResult],
         duration: std::time::Duration,
     ) -> Result<CallToolResult, McpError> {
         let mut message = "🔍 **Semantic Code Search Results**\n\n".to_string();

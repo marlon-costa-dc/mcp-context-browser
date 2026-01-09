@@ -8,7 +8,7 @@
 //! - Edge cases and error handling
 
 use mcp_context_browser::chunking::{IntelligentChunker, NodeExtractionRule};
-use mcp_context_browser::core::types::Language;
+use mcp_context_browser::domain::types::Language;
 
 /// Test data for different programming languages
 struct TestData {

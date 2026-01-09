@@ -4,12 +4,12 @@
 //! to ensure they meet performance requirements.
 
 use criterion::{Criterion, criterion_group, criterion_main};
-use mcp_context_browser::core::cache::CacheManager;
-use mcp_context_browser::core::types::{CodeChunk, Embedding, Language, SearchResult};
-use mcp_context_browser::providers::{EmbeddingProvider, VectorStoreProvider};
-use mcp_context_browser::repository::{RepositoryStats, SearchStats};
+use mcp_context_browser::infrastructure::cache::CacheManager;
+use mcp_context_browser::domain::types::{CodeChunk, Embedding, Language, SearchResult};
+use mcp_context_browser::adapters::providers::{EmbeddingProvider, VectorStoreProvider};
+use mcp_context_browser::adapters::repository::{RepositoryStats, SearchStats};
 use mcp_context_browser::server::McpServer;
-use mcp_context_browser::services::ContextService;
+use mcp_context_browser::application::ContextService;
 use std::hint::black_box;
 use std::sync::Arc;
 use tokio::runtime::Runtime;
@@ -18,9 +18,9 @@ use tokio::runtime::Runtime;
 #[allow(dead_code)]
 fn create_benchmark_providers() -> (Arc<dyn EmbeddingProvider>, Arc<dyn VectorStoreProvider>) {
     let embedding_provider: Arc<dyn EmbeddingProvider> =
-        Arc::new(mcp_context_browser::providers::embedding::null::NullEmbeddingProvider::new());
+        Arc::new(mcp_context_browser::adapters::providers::embedding::null::NullEmbeddingProvider::new());
     let vector_store_provider: Arc<dyn VectorStoreProvider> = Arc::new(
-        mcp_context_browser::providers::vector_store::in_memory::InMemoryVectorStoreProvider::new(),
+        mcp_context_browser::adapters::providers::vector_store::in_memory::InMemoryVectorStoreProvider::new(),
     );
     (embedding_provider, vector_store_provider)
 }

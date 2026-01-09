@@ -2,7 +2,7 @@
 //!
 //! This module tests the core data structures and their functionality.
 
-use mcp_context_browser::core::types::{CodeChunk, Embedding, Language, SearchResult};
+use mcp_context_browser::domain::types::{CodeChunk, Embedding, Language, SearchResult};
 
 #[cfg(test)]
 mod tests {

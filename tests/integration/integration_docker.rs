@@ -3,17 +3,17 @@
 //! These tests require Docker and docker-compose to be available.
 //! Run with: make test-integration-docker
 
-use mcp_context_browser::core::http_client::HttpClientPool;
-use mcp_context_browser::core::types::EmbeddingConfig;
+use mcp_context_browser::adapters::http_client::HttpClientPool;
+use mcp_context_browser::domain::types::EmbeddingConfig;
 use std::env;
 use std::sync::Arc;
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mcp_context_browser::di::factory::ServiceProviderInterface;
+    use mcp_context_browser::infrastructure::di::factory::ServiceProviderInterface;
 
-    fn get_test_http_client() -> Arc<dyn mcp_context_browser::core::http_client::HttpClientProvider>
+    fn get_test_http_client() -> Arc<dyn mcp_context_browser::adapters::http_client::HttpClientProvider>
     {
         Arc::new(HttpClientPool::new().unwrap())
     }
@@ -37,7 +37,7 @@ mod tests {
     #[tokio::test]
     async fn test_openai_mock_embedding() {
         // Use null provider for testing instead of external mock server
-        let config = mcp_context_browser::core::types::EmbeddingConfig {
+        let config = mcp_context_browser::domain::types::EmbeddingConfig {
             provider: "mock".to_string(),
             model: "test-model".to_string(),
             api_key: None,
@@ -45,7 +45,7 @@ mod tests {
             dimensions: Some(384),
             max_tokens: Some(8192),
         };
-        let service_provider = mcp_context_browser::di::factory::ServiceProvider::new();
+        let service_provider = mcp_context_browser::infrastructure::di::factory::ServiceProvider::new();
         let http_client = get_test_http_client();
 
         let embedding_provider = service_provider
@@ -67,7 +67,7 @@ mod tests {
     #[tokio::test]
     async fn test_openai_mock_batch_embedding() {
         // Use null provider for testing instead of external mock server
-        let config = mcp_context_browser::core::types::EmbeddingConfig {
+        let config = mcp_context_browser::domain::types::EmbeddingConfig {
             provider: "mock".to_string(),
             model: "test-model".to_string(),
             api_key: None,
@@ -75,7 +75,7 @@ mod tests {
             dimensions: Some(384),
             max_tokens: Some(8192),
         };
-        let service_provider = mcp_context_browser::di::factory::ServiceProvider::new();
+        let service_provider = mcp_context_browser::infrastructure::di::factory::ServiceProvider::new();
         let http_client = get_test_http_client();
 
         let embedding_provider = service_provider
@@ -105,7 +105,7 @@ mod tests {
     #[tokio::test]
     async fn test_ollama_embedding() {
         let config = get_ollama_config();
-        let service_provider = mcp_context_browser::di::factory::ServiceProvider::new();
+        let service_provider = mcp_context_browser::infrastructure::di::factory::ServiceProvider::new();
         let http_client = get_test_http_client();
 
         let embedding_provider = service_provider
@@ -126,14 +126,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_milvus_vector_store_operations() {
-        let config = mcp_context_browser::core::types::VectorStoreConfig {
+        let config = mcp_context_browser::domain::types::VectorStoreConfig {
             provider: "in-memory".to_string(),
             address: None,
             token: None,
             collection: Some("test_integration_collection".to_string()),
             dimensions: Some(768),
         };
-        let service_provider = mcp_context_browser::di::factory::ServiceProvider::new();
+        let service_provider = mcp_context_browser::infrastructure::di::factory::ServiceProvider::new();
         let http_client = get_test_http_client();
 
         let vector_store_provider = service_provider
@@ -251,7 +251,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_full_pipeline_openai_milvus() {
-        let embedding_config = mcp_context_browser::core::types::EmbeddingConfig {
+        let embedding_config = mcp_context_browser::domain::types::EmbeddingConfig {
             provider: "mock".to_string(),
             model: "test-model".to_string(),
             api_key: None,
@@ -259,14 +259,14 @@ mod tests {
             dimensions: Some(384),
             max_tokens: Some(8192),
         };
-        let vector_config = mcp_context_browser::core::types::VectorStoreConfig {
+        let vector_config = mcp_context_browser::domain::types::VectorStoreConfig {
             provider: "in-memory".to_string(),
             address: None,
             token: None,
             collection: Some("test_pipeline_collection".to_string()),
             dimensions: Some(384),
         };
-        let service_provider = mcp_context_browser::di::factory::ServiceProvider::new();
+        let service_provider = mcp_context_browser::infrastructure::di::factory::ServiceProvider::new();
         let http_client = get_test_http_client();
 
         let embedding_provider = service_provider
@@ -367,7 +367,7 @@ mod tests {
             max_tokens: Some(8192),
         };
 
-        let service_provider = mcp_context_browser::di::factory::ServiceProvider::new();
+        let service_provider = mcp_context_browser::infrastructure::di::factory::ServiceProvider::new();
         let http_client = get_test_http_client();
 
         let result = service_provider
@@ -383,7 +383,7 @@ mod tests {
     #[tokio::test]
     async fn test_ollama_real_provider_integration() {
         let config = get_ollama_config();
-        let service_provider = mcp_context_browser::di::factory::ServiceProvider::new();
+        let service_provider = mcp_context_browser::infrastructure::di::factory::ServiceProvider::new();
         let http_client = get_test_http_client();
 
         let embedding_provider = service_provider
@@ -412,7 +412,7 @@ mod tests {
     #[tokio::test]
     async fn test_ollama_real_batch_embedding_integration() {
         let config = get_ollama_config();
-        let service_provider = mcp_context_browser::di::factory::ServiceProvider::new();
+        let service_provider = mcp_context_browser::infrastructure::di::factory::ServiceProvider::new();
         let http_client = get_test_http_client();
 
         let embedding_provider = service_provider
@@ -472,7 +472,7 @@ mod tests {
                 max_tokens: Some(8192),
             };
 
-            let service_provider = mcp_context_browser::di::factory::ServiceProvider::new();
+            let service_provider = mcp_context_browser::infrastructure::di::factory::ServiceProvider::new();
             let http_client = get_test_http_client();
             let embedding_provider = service_provider
                 .get_embedding_provider(&config, http_client.clone())
@@ -500,7 +500,7 @@ mod tests {
     #[tokio::test]
     async fn test_ollama_real_empty_batch() {
         let config = get_ollama_config();
-        let service_provider = mcp_context_browser::di::factory::ServiceProvider::new();
+        let service_provider = mcp_context_browser::infrastructure::di::factory::ServiceProvider::new();
         let http_client = get_test_http_client();
 
         let embedding_provider = service_provider
@@ -529,7 +529,7 @@ mod tests {
             max_tokens: Some(8192),
         };
 
-        let service_provider = mcp_context_browser::di::factory::ServiceProvider::new();
+        let service_provider = mcp_context_browser::infrastructure::di::factory::ServiceProvider::new();
         let http_client = get_test_http_client();
         let embedding_provider = service_provider
             .get_embedding_provider(&invalid_config, http_client.clone())
@@ -543,7 +543,7 @@ mod tests {
     #[tokio::test]
     async fn test_ollama_real_large_text() {
         let config = get_ollama_config();
-        let service_provider = mcp_context_browser::di::factory::ServiceProvider::new();
+        let service_provider = mcp_context_browser::infrastructure::di::factory::ServiceProvider::new();
         let http_client = get_test_http_client();
 
         let embedding_provider = service_provider
@@ -567,7 +567,7 @@ mod tests {
     #[tokio::test]
     async fn test_ollama_real_provider_metadata() {
         let config = get_ollama_config();
-        let service_provider = mcp_context_browser::di::factory::ServiceProvider::new();
+        let service_provider = mcp_context_browser::infrastructure::di::factory::ServiceProvider::new();
         let http_client = get_test_http_client();
 
         let embedding_provider = service_provider

@@ -4,9 +4,9 @@
 
 #[cfg(test)]
 mod validation_tests {
-    use mcp_context_browser::core::validation::common;
-    use mcp_context_browser::core::validation::{NumberValidator, StringValidator};
-    use mcp_context_browser::core::validation::{
+    use mcp_context_browser::domain::validation::common;
+    use mcp_context_browser::domain::validation::{NumberValidator, StringValidator};
+    use mcp_context_browser::domain::validation::{
         NumberValidatorTrait, StringValidatorTrait, ValidationError,
     };
 

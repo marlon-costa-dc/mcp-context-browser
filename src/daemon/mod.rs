@@ -9,9 +9,9 @@ pub use crate::sync::manager::{SyncConfig, SyncManager, SyncStats};
 
 // DaemonConfig is defined in this module
 
-use crate::core::cache::get_global_cache_manager;
-use crate::core::error::{Error, Result};
-use crate::core::types::SyncBatch;
+use crate::domain::error::{Error, Result};
+use crate::domain::types::SyncBatch;
+use crate::infrastructure::cache::get_global_cache_manager;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::time::Duration;

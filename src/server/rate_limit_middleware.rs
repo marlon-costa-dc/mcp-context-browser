@@ -7,7 +7,7 @@ use axum::extract::ConnectInfo;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
-use crate::core::rate_limit::{RateLimitKey, RateLimiter};
+use crate::infrastructure::rate_limit::{RateLimitKey, RateLimiter};
 
 /// Simple rate limiting check function
 /// This can be used in route handlers directly
@@ -44,7 +44,7 @@ pub async fn check_rate_limit_for_ip(
 pub fn add_rate_limit_headers(
     headers: &mut axum::http::HeaderMap,
     limiter: &Arc<RateLimiter>,
-    result: &crate::core::rate_limit::RateLimitResult,
+    result: &crate::infrastructure::rate_limit::RateLimitResult,
 ) {
     headers.insert(
         "X-RateLimit-Limit",

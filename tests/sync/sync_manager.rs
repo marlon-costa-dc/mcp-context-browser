@@ -130,7 +130,7 @@ async fn test_sync_returns_changed_files() {
 
 #[tokio::test]
 async fn test_sync_with_event_bus_publishes_event() {
-    use mcp_context_browser::core::events::{EventBus, SystemEvent};
+    use mcp_context_browser::infrastructure::events::{EventBus, SystemEvent};
     use std::sync::Arc;
 
     // Given: A sync manager with event bus

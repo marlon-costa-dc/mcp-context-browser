@@ -4,8 +4,8 @@
 //! and extracts code chunks according to configurable rules.
 
 use crate::chunking::config::NodeExtractionRule;
-use crate::core::error::Result;
-use crate::core::types::{CodeChunk, Language};
+use crate::domain::error::Result;
+use crate::domain::types::{CodeChunk, Language};
 use std::collections::HashMap;
 
 /// Parameters for creating a code chunk
@@ -125,14 +125,14 @@ impl<'a> AstTraverser<'a> {
         let end = node.end_byte();
 
         if start >= content.len() || end > content.len() || start >= end {
-            return Err(crate::core::error::Error::internal(
+            return Err(crate::domain::error::Error::internal(
                 "Invalid node range".to_string(),
             ));
         }
 
         let code = content[start..end].trim();
         if code.is_empty() {
-            return Err(crate::core::error::Error::internal(
+            return Err(crate::domain::error::Error::internal(
                 "Empty node content".to_string(),
             ));
         }

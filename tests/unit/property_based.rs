@@ -5,7 +5,7 @@
 
 #[cfg(test)]
 mod property_tests {
-    use mcp_context_browser::core::types::{CodeChunk, Embedding, Language};
+    use mcp_context_browser::domain::types::{CodeChunk, Embedding, Language};
     use proptest::prelude::*;
 
     // Property: CodeChunk content length should be preserved through operations
@@ -201,7 +201,7 @@ mod property_tests {
 #[cfg(test)]
 mod integration_property_tests {
 
-    use mcp_context_browser::core::types::{CodeChunk, Language};
+    use mcp_context_browser::domain::types::{CodeChunk, Language};
     use proptest::prelude::*;
 
     // Property: System should handle various input sizes gracefully
@@ -294,7 +294,7 @@ mod integration_property_tests {
 #[cfg(test)]
 mod stress_tests {
 
-    use mcp_context_browser::core::types::{CodeChunk, Language};
+    use mcp_context_browser::domain::types::{CodeChunk, Language};
     use proptest::prelude::*;
 
     // Test with extreme but valid inputs

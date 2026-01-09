@@ -4,10 +4,10 @@
 //! - providers.rs: Provider-specific configuration
 //! - types.rs: Core configuration structs
 
-use mcp_context_browser::config::Config;
-use mcp_context_browser::config::providers::ProviderConfigManager;
-use mcp_context_browser::config::providers::ProviderHealth;
-// use mcp_context_browser::core::types::EmbeddingConfig;
+use mcp_context_browser::infrastructure::config::Config;
+use mcp_context_browser::infrastructure::config::providers::ProviderConfigManager;
+use mcp_context_browser::infrastructure::config::providers::ProviderHealth;
+// use mcp_context_browser::domain::types::EmbeddingConfig;
 use validator::Validate;
 
 /// Test validation functionality

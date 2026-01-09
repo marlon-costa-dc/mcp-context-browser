@@ -1,9 +1,9 @@
 //! Unit tests for embedding providers
 
-use mcp_context_browser::core::error::Error;
-use mcp_context_browser::core::http_client::HttpClientPool;
-use mcp_context_browser::providers::EmbeddingProvider;
-use mcp_context_browser::providers::embedding::{
+use mcp_context_browser::adapters::http_client::HttpClientPool;
+use mcp_context_browser::domain::error::Error;
+use mcp_context_browser::adapters::providers::EmbeddingProvider;
+use mcp_context_browser::adapters::providers::embedding::{
     GeminiEmbeddingProvider, OllamaEmbeddingProvider, OpenAIEmbeddingProvider,
     VoyageAIEmbeddingProvider,
 };
@@ -14,7 +14,7 @@ use std::sync::Arc;
 #[cfg(test)]
 mod openai_tests {
     use super::*;
-    use mcp_context_browser::providers::embedding::OpenAIEmbeddingProvider;
+    use mcp_context_browser::adapters::providers::embedding::OpenAIEmbeddingProvider;
     use mockito::Server;
     use serde_json::json;
 
@@ -117,7 +117,7 @@ mod openai_tests {
 #[cfg(test)]
 mod ollama_tests {
     use super::*;
-    use mcp_context_browser::providers::embedding::OllamaEmbeddingProvider;
+    use mcp_context_browser::adapters::providers::embedding::OllamaEmbeddingProvider;
 
     #[test]
     fn test_ollama_provider_creation() {
@@ -189,7 +189,7 @@ mod ollama_tests {
 #[cfg(test)]
 mod voyageai_tests {
     use super::*;
-    use mcp_context_browser::providers::embedding::VoyageAIEmbeddingProvider;
+    use mcp_context_browser::adapters::providers::embedding::VoyageAIEmbeddingProvider;
 
     #[test]
     fn test_voyageai_provider_creation() {
@@ -254,7 +254,7 @@ mod voyageai_tests {
 #[cfg(test)]
 mod gemini_tests {
     use super::*;
-    use mcp_context_browser::providers::embedding::GeminiEmbeddingProvider;
+    use mcp_context_browser::adapters::providers::embedding::GeminiEmbeddingProvider;
 
     #[test]
     fn test_gemini_provider_creation() {
@@ -333,7 +333,7 @@ mod gemini_tests {
 #[cfg(test)]
 mod provider_trait_tests {
     use super::*;
-    use mcp_context_browser::providers::embedding::NullEmbeddingProvider;
+    use mcp_context_browser::adapters::providers::embedding::NullEmbeddingProvider;
 
     #[test]
     fn test_null_provider() {
@@ -1034,10 +1034,10 @@ mod provider_trait_tests {
 #[cfg(test)]
 mod factory_tests {
     use super::*;
-    use mcp_context_browser::core::types::EmbeddingConfig;
-    use mcp_context_browser::di::factory::{DefaultProviderFactory, ProviderFactory};
+    use mcp_context_browser::infrastructure::di::factory::{DefaultProviderFactory, ProviderFactory};
+    use mcp_context_browser::domain::types::EmbeddingConfig;
 
-    fn get_test_http_client() -> Arc<dyn mcp_context_browser::core::http_client::HttpClientProvider>
+    fn get_test_http_client() -> Arc<dyn mcp_context_browser::adapters::http_client::HttpClientProvider>
     {
         Arc::new(HttpClientPool::new().unwrap())
     }

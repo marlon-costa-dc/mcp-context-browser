@@ -4,7 +4,7 @@
 /// Test configuration data structure integrity
 #[cfg(test)]
 mod config_structure_tests {
-    use mcp_context_browser::config::Config;
+    use mcp_context_browser::infrastructure::config::Config;
 
     #[test]
     fn test_config_field_access() {
@@ -31,7 +31,7 @@ mod config_structure_tests {
 /// Test configuration validation rules
 #[cfg(test)]
 mod config_validation_tests {
-    use mcp_context_browser::config::Config;
+    use mcp_context_browser::infrastructure::config::Config;
     use validator::Validate;
 
     #[test]
@@ -56,7 +56,7 @@ mod config_validation_tests {
 /// Test configuration loading mechanisms
 #[cfg(test)]
 mod config_loading_tests {
-    use mcp_context_browser::config::Config;
+    use mcp_context_browser::infrastructure::config::Config;
 
     #[test]
     fn test_config_file_parsing() {

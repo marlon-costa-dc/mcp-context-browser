@@ -5,7 +5,7 @@
 
 use crate::chunking::config::{LanguageConfig, NodeExtractionRule};
 use crate::chunking::processor::{BaseProcessor, LanguageProcessor};
-use crate::core::types::{CodeChunk, Language};
+use crate::domain::types::{CodeChunk, Language};
 
 // Rust processor
 pub struct RustProcessor {

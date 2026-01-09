@@ -1,4 +1,4 @@
-use mcp_context_browser::config::ConfigLoader;
+use mcp_context_browser::infrastructure::config::ConfigLoader;
 use std::env;
 use std::io::Write;
 use tempfile::Builder;

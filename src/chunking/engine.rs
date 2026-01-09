@@ -3,8 +3,8 @@
 //! This module provides the main IntelligentChunker that orchestrates
 //! language-specific chunking using tree-sitter and fallback methods.
 
-use crate::core::error::Result;
-use crate::core::types::{CodeChunk, Language};
+use crate::domain::error::Result;
+use crate::domain::types::{CodeChunk, Language};
 use std::collections::HashMap;
 
 /// Intelligent chunking engine using tree-sitter
@@ -107,14 +107,14 @@ impl IntelligentChunker {
     ) -> Result<tree_sitter::Tree> {
         let mut parser = tree_sitter::Parser::new();
         parser.set_language(&language).map_err(|e| {
-            crate::core::error::Error::internal(format!(
+            crate::domain::error::Error::internal(format!(
                 "Failed to set tree-sitter language: {:?}",
                 e
             ))
         })?;
 
         let tree = parser.parse(content, None).ok_or_else(|| {
-            crate::core::error::Error::internal("Tree-sitter parsing failed".to_string())
+            crate::domain::error::Error::internal("Tree-sitter parsing failed".to_string())
         })?;
 
         Ok(tree)

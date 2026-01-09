@@ -9,9 +9,9 @@ mod types;
 pub use traits::*;
 pub use types::*;
 
-use crate::di::factory::ServiceProviderInterface;
-use crate::metrics::system::SystemMetricsCollectorInterface;
-use crate::server::server::{IndexingOperationsInterface, PerformanceMetricsInterface};
+use crate::infrastructure::di::factory::ServiceProviderInterface;
+use crate::infrastructure::metrics::system::SystemMetricsCollectorInterface;
+use crate::server::mcp_server::{IndexingOperationsInterface, PerformanceMetricsInterface};
 use async_trait::async_trait;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -29,11 +29,11 @@ pub struct AdminServiceImpl {
     #[shaku(inject)]
     system_collector: Arc<dyn SystemMetricsCollectorInterface>,
     #[shaku(default)]
-    event_bus: crate::core::events::SharedEventBus,
+    event_bus: crate::infrastructure::events::SharedEventBus,
     #[shaku(default)]
-    log_buffer: crate::core::logging::SharedLogBuffer,
+    log_buffer: crate::infrastructure::logging::SharedLogBuffer,
     #[shaku(default)]
-    config: Arc<arc_swap::ArcSwap<crate::config::Config>>,
+    config: Arc<arc_swap::ArcSwap<crate::infrastructure::config::Config>>,
 }
 
 impl AdminServiceImpl {
@@ -43,9 +43,9 @@ impl AdminServiceImpl {
         indexing_operations: Arc<dyn IndexingOperationsInterface>,
         service_provider: Arc<dyn ServiceProviderInterface>,
         system_collector: Arc<dyn SystemMetricsCollectorInterface>,
-        event_bus: crate::core::events::SharedEventBus,
-        log_buffer: crate::core::logging::SharedLogBuffer,
-        config: Arc<arc_swap::ArcSwap<crate::config::Config>>,
+        event_bus: crate::infrastructure::events::SharedEventBus,
+        log_buffer: crate::infrastructure::logging::SharedLogBuffer,
+        config: Arc<arc_swap::ArcSwap<crate::infrastructure::config::Config>>,
     ) -> Self {
         Self {
             performance_metrics,
@@ -518,7 +518,7 @@ impl AdminService for AdminServiceImpl {
         };
 
         self.event_bus
-            .publish(crate::core::events::SystemEvent::CacheClear {
+            .publish(crate::infrastructure::events::SystemEvent::CacheClear {
                 namespace: namespace.clone(),
             })
             .map_err(|e| {
@@ -554,7 +554,7 @@ impl AdminService for AdminServiceImpl {
     async fn rebuild_index(&self, index_id: &str) -> Result<MaintenanceResult, AdminError> {
         let start_time = std::time::Instant::now();
         self.event_bus
-            .publish(crate::core::events::SystemEvent::IndexRebuild {
+            .publish(crate::infrastructure::events::SystemEvent::IndexRebuild {
                 collection: Some(index_id.to_string()),
             })
             .map_err(|e| {
@@ -711,7 +711,9 @@ impl AdminService for AdminServiceImpl {
         let path = format!("./backups/{}.tar.gz", backup_config.name);
 
         self.event_bus
-            .publish(crate::core::events::SystemEvent::BackupCreate { path: path.clone() })
+            .publish(crate::infrastructure::events::SystemEvent::BackupCreate {
+                path: path.clone(),
+            })
             .map_err(|e| {
                 AdminError::McpServerError(format!("Failed to publish BackupCreate event: {}", e))
             })?;

@@ -6,9 +6,9 @@
 //! NOTE: Tests are currently disabled due to API changes that broke compatibility.
 //! TODO: Update tests to match current API implementations.
 
-use mcp_context_browser::core::auth::{AuthConfig, AuthService, Permission, UserRole};
-use mcp_context_browser::core::cache::{CacheConfig, CacheManager};
-use mcp_context_browser::core::error::{Error, Result};
+use mcp_context_browser::infrastructure::auth::{AuthConfig, AuthService, Permission, UserRole};
+use mcp_context_browser::infrastructure::cache::{CacheConfig, CacheManager};
+use mcp_context_browser::domain::error::{Error, Result};
 use std::time::Duration;
 
 #[cfg(test)]
@@ -76,7 +76,7 @@ mod auth_error_handling_tests {
 #[ignore = "Tests need updating to match current API"]
 mod cache_error_handling_tests {
     use super::*;
-    use mcp_context_browser::core::cache::CacheResult;
+    use mcp_context_browser::infrastructure::cache::CacheResult;
 
     #[tokio::test]
     async fn test_cache_manager_handles_connection_failures() {
@@ -155,7 +155,7 @@ mod cache_error_handling_tests {
 #[ignore = "Tests need updating to match current API"]
 mod crypto_error_handling_tests {
     use super::*;
-    use mcp_context_browser::core::crypto::{CryptoService, EncryptionConfig};
+    use mcp_context_browser::infrastructure::crypto::{CryptoService, EncryptionConfig};
 
     #[tokio::test]
     async fn test_crypto_service_handles_disabled_crypto_operations() {
@@ -163,7 +163,7 @@ mod crypto_error_handling_tests {
             enabled: false,
             master_key_path: None,
             key_rotation_days: 30,
-            algorithm: mcp_context_browser::core::crypto::EncryptionAlgorithm::Aes256Gcm,
+            algorithm: mcp_context_browser::infrastructure::crypto::EncryptionAlgorithm::Aes256Gcm,
         };
 
         let crypto = CryptoService::new(config).await.unwrap();
@@ -191,7 +191,7 @@ mod crypto_error_handling_tests {
 #[ignore = "Tests need updating to match current API"]
 mod database_error_handling_tests {
     use super::*;
-    use mcp_context_browser::core::database::{DatabaseConfig, DatabasePool};
+    use mcp_context_browser::adapters::database::{DatabaseConfig, DatabasePool};
 
     #[test]
     fn test_database_pool_handles_disabled_database_operations() {

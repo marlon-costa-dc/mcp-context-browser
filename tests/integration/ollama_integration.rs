@@ -3,9 +3,9 @@
 //! These tests verify that the MCP server works end-to-end with real Ollama embeddings
 //! and different vector store backends. They require Ollama to be running locally.
 
-use mcp_context_browser::core::types::Embedding;
-use mcp_context_browser::providers::{EmbeddingProvider, VectorStoreProvider};
-use mcp_context_browser::services::{ContextService, IndexingService, SearchService};
+use mcp_context_browser::domain::types::Embedding;
+use mcp_context_browser::adapters::providers::{EmbeddingProvider, VectorStoreProvider};
+use mcp_context_browser::application::{ContextService, IndexingService, SearchService};
 use std::sync::Arc;
 
 /// Test utilities for Ollama integration tests
@@ -14,7 +14,7 @@ mod test_utils {
 
     pub async fn create_ollama_provider() -> Option<Arc<dyn EmbeddingProvider>> {
         // Try to create Ollama provider - return None if Ollama is not available
-        match mcp_context_browser::providers::OllamaEmbeddingProvider::new(
+        match mcp_context_browser::adapters::providers::OllamaEmbeddingProvider::new(
             "http://localhost:11434".to_string(),
             "nomic-embed-text".to_string(),
         ) {
@@ -89,7 +89,7 @@ mod ollama_in_memory_tests {
             .expect("Ollama provider should be available for integration tests");
 
         let in_memory_store =
-            Arc::new(mcp_context_browser::providers::InMemoryVectorStoreProvider::new());
+            Arc::new(mcp_context_browser::adapters::providers::InMemoryVectorStoreProvider::new());
 
         // Create context service
         let context_service = Arc::new(ContextService::new(
@@ -149,7 +149,7 @@ mod ollama_filesystem_tests {
         let _temp_path = temp_dir.path().to_string_lossy().to_string();
 
         let config =
-            mcp_context_browser::providers::vector_store::filesystem::FilesystemVectorStoreConfig {
+            mcp_context_browser::adapters::providers::vector_store::filesystem::FilesystemVectorStoreConfig {
                 base_path: temp_dir.path().to_path_buf(),
                 max_vectors_per_shard: 1000,
                 dimensions: ollama_provider.dimensions(),
@@ -158,7 +158,7 @@ mod ollama_filesystem_tests {
                 memory_mapping_enabled: false,
             };
         let filesystem_store = Arc::new(
-            mcp_context_browser::providers::vector_store::FilesystemVectorStore::new(config)
+            mcp_context_browser::adapters::providers::vector_store::FilesystemVectorStore::new(config)
                 .await
                 .expect("Failed to create filesystem provider"),
         );
@@ -233,7 +233,7 @@ mod ollama_indexing_tests {
             .expect("Ollama provider should be available for integration tests");
 
         let in_memory_store =
-            Arc::new(mcp_context_browser::providers::InMemoryVectorStoreProvider::new());
+            Arc::new(mcp_context_browser::adapters::providers::InMemoryVectorStoreProvider::new());
 
         // Create context service
         let context_service = Arc::new(ContextService::new(

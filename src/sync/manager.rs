@@ -5,10 +5,10 @@
 //! - Configurable sync intervals
 //! - Debouncing to prevent excessive syncs
 
-use crate::core::cache::get_global_cache_manager;
-use crate::core::error::Result;
-use crate::core::events::{SharedEventBus, SystemEvent};
-use crate::core::types::SyncBatch;
+use crate::domain::error::Result;
+use crate::domain::types::SyncBatch;
+use crate::infrastructure::cache::get_global_cache_manager;
+use crate::infrastructure::events::{SharedEventBus, SystemEvent};
 use dashmap::DashMap;
 use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -172,7 +172,7 @@ impl SyncManager {
     pub async fn sync_codebase(&self, codebase_path: &Path) -> Result<bool> {
         // Verify path exists before proceeding
         if !codebase_path.exists() {
-            return Err(crate::core::error::Error::Io {
+            return Err(crate::domain::error::Error::Io {
                 source: std::io::Error::new(
                     std::io::ErrorKind::NotFound,
                     format!("Path does not exist: {}", codebase_path.display()),

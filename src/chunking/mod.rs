@@ -20,7 +20,7 @@ pub mod traverser;
 pub use languages::*;
 
 // Language configurations registry
-use crate::core::types::Language;
+use crate::domain::types::Language;
 use std::collections::HashMap;
 use std::sync::LazyLock;
 

@@ -1,33 +1,32 @@
 //! MCP Context Browser - A semantic code search server
 
+pub mod adapters;
 pub mod admin;
+pub mod application;
 pub mod chunking;
-pub mod config;
-pub mod core;
 pub mod daemon;
-pub mod di;
-pub mod metrics;
-pub mod providers;
-pub mod repository;
+pub mod domain;
+pub mod infrastructure;
 pub mod server;
-pub mod services;
 pub mod snapshot;
 pub mod sync;
 
-// Re-export rate limiting system
-pub use core::rate_limit::{RateLimitConfig, RateLimitKey, RateLimitResult, RateLimiter};
+// Re-export stable interfaces from domain
+pub use domain::error::{Error, Result};
+pub use domain::types::*;
 
-// Re-export resource limits system
-pub use core::limits::{ResourceLimits, ResourceLimitsConfig, ResourceStats, ResourceViolation};
+// Re-export core systems from infrastructure
+pub use infrastructure::cache::{CacheConfig, CacheManager, CacheResult, CacheStats};
+pub use infrastructure::limits::{
+    ResourceLimits, ResourceLimitsConfig, ResourceStats, ResourceViolation,
+};
+pub use infrastructure::rate_limit::{RateLimitConfig, RateLimitKey, RateLimitResult, RateLimiter};
 
-// Re-export advanced caching system
-pub use core::cache::{CacheConfig, CacheManager, CacheResult, CacheStats};
+// Re-export hybrid search from adapters
+pub use adapters::hybrid_search::{BM25Params, BM25Scorer, HybridSearchConfig, HybridSearchEngine};
 
-// Re-export hybrid search system
-pub use core::hybrid_search::{BM25Params, BM25Scorer, HybridSearchConfig, HybridSearchEngine};
-
-// Re-export multi-provider strategy system
-pub use providers::routing::{
+// Re-export routing from adapters::providers
+pub use adapters::providers::routing::{
     ProviderContext, ProviderRouter, ProviderSelectionStrategy, circuit_breaker::CircuitBreaker,
     metrics::ProviderMetricsCollector,
 };

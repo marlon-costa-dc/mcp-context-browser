@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod reproduction_test {
-    use mcp_context_browser::core::cache::{CacheConfig, CacheManager, CacheNamespacesConfig};
+    use mcp_context_browser::infrastructure::cache::{CacheConfig, CacheManager, CacheNamespacesConfig};
     use std::sync::Arc;
     use tokio::time::{Duration, timeout};
 

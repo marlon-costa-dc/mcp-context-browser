@@ -3,7 +3,7 @@
 //! Tracks file changes using SHA256 hashing for efficient incremental sync.
 //! Avoids reprocessing unchanged files during codebase indexing.
 
-use crate::core::error::{Error, Result};
+use crate::domain::error::{Error, Result};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;

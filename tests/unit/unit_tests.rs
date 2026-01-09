@@ -3,8 +3,8 @@
 //! This module contains focused unit tests for individual functions and methods
 //! across all modules, ensuring comprehensive coverage of business logic.
 
-use mcp_context_browser::core::error::Error;
-use mcp_context_browser::core::types::{CodeChunk, Embedding, Language};
+use mcp_context_browser::domain::error::Error;
+use mcp_context_browser::domain::types::{CodeChunk, Embedding, Language};
 
 /// Test core type constructors and basic functionality
 #[cfg(test)]
@@ -82,8 +82,8 @@ mod error_handling_unit_tests {
 /// Test validation logic using core Error types
 #[cfg(test)]
 mod validation_unit_tests {
-    use mcp_context_browser::core::error::Error;
-    use mcp_context_browser::core::types::EmbeddingConfig;
+    use mcp_context_browser::domain::error::Error;
+    use mcp_context_browser::domain::types::EmbeddingConfig;
 
     #[test]
     fn test_validate_not_empty_string() {
@@ -171,8 +171,8 @@ mod validation_unit_tests {
 /// Test configuration parsing and validation
 #[cfg(test)]
 mod config_unit_tests {
-    use mcp_context_browser::config::providers::ProviderConfigManager;
-    use mcp_context_browser::core::types::EmbeddingConfig;
+    use mcp_context_browser::infrastructure::config::providers::ProviderConfigManager;
+    use mcp_context_browser::domain::types::EmbeddingConfig;
 
     #[test]
     fn test_config_provider_manager_creation() {
@@ -229,7 +229,7 @@ mod config_unit_tests {
 /// Test VectorStoreProvider implementations
 #[cfg(test)]
 mod repository_unit_tests {
-    use mcp_context_browser::providers::{InMemoryVectorStoreProvider, VectorStoreProvider};
+    use mcp_context_browser::adapters::providers::{InMemoryVectorStoreProvider, VectorStoreProvider};
 
     #[test]
     fn test_in_memory_provider_creation() {
@@ -264,7 +264,7 @@ mod repository_unit_tests {
 /// Test EmbeddingProvider implementations
 #[cfg(test)]
 mod provider_unit_tests {
-    use mcp_context_browser::providers::{EmbeddingProvider, MockEmbeddingProvider};
+    use mcp_context_browser::adapters::providers::{EmbeddingProvider, MockEmbeddingProvider};
     use std::sync::Arc;
 
     #[test]
@@ -318,8 +318,8 @@ mod provider_unit_tests {
 /// Test ContextService initialization and operations
 #[cfg(test)]
 mod service_unit_tests {
-    use mcp_context_browser::providers::{InMemoryVectorStoreProvider, MockEmbeddingProvider};
-    use mcp_context_browser::services::ContextService;
+    use mcp_context_browser::adapters::providers::{InMemoryVectorStoreProvider, MockEmbeddingProvider};
+    use mcp_context_browser::application::ContextService;
     use std::sync::Arc;
 
     #[tokio::test]
@@ -422,8 +422,8 @@ mod utility_unit_tests {
 /// Performance tests with timing assertions
 #[cfg(test)]
 mod performance_unit_tests {
-    use mcp_context_browser::providers::EmbeddingProvider;
-    use mcp_context_browser::providers::MockEmbeddingProvider;
+    use mcp_context_browser::adapters::providers::EmbeddingProvider;
+    use mcp_context_browser::adapters::providers::MockEmbeddingProvider;
     use std::time::Instant;
 
     #[tokio::test]
