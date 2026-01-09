@@ -551,6 +551,7 @@ mod tests {
         engine.index_documents(documents);
 
         let semantic_results = vec![SearchResult {
+            id: "test-id".to_string(),
             file_path: "test.rs".to_string(),
             line_number: 1,
             content: "This is a test document about programming".to_string(),

@@ -25,8 +25,10 @@ Thumbs.db
 *.bak
 *.bak?
 *.backup
-*.backup2
+*.backup*
 *.disabled
+*.archive/
+archive/
 *.new
 *.old
 *.broken
@@ -82,4 +84,4 @@ fuzz/artifacts/
 fuzz/corpus/
 
 # Benchmark results
-benchmark_results/
+benchmark_results/.cleanup-dead-code/

@@ -101,23 +101,31 @@ impl VectorStoreProvider for InMemoryVectorStoreProvider {
 
         let search_results = results
             .into_iter()
-            .map(|(score, _i, _embedding, metadata)| SearchResult {
-                file_path: metadata
-                    .get("file_path")
+            .map(|(score, _i, _embedding, metadata)| {
+                let id = metadata
+                    .get("generated_id")
                     .and_then(|v| v.as_str())
                     .unwrap_or("")
-                    .to_string(),
-                line_number: metadata
-                    .get("line_number")
-                    .and_then(|v| v.as_u64())
-                    .unwrap_or(0) as u32,
-                content: metadata
-                    .get("content")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("")
-                    .to_string(),
-                score,
-                metadata: serde_json::to_value(metadata).unwrap_or(serde_json::json!({})),
+                    .to_string();
+                SearchResult {
+                    id,
+                    file_path: metadata
+                        .get("file_path")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string(),
+                    line_number: metadata
+                        .get("line_number")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0) as u32,
+                    content: metadata
+                        .get("content")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string(),
+                    score,
+                    metadata: serde_json::to_value(metadata).unwrap_or(serde_json::json!({})),
+                }
             })
             .collect();
 

@@ -431,6 +431,7 @@ impl EdgeVecActor {
                                         let meta =
                                             meta_val.as_object().cloned().unwrap_or_default();
                                         final_results.push(SearchResult {
+                                            id: ext_id,
                                             file_path: meta
                                                 .get("file_path")
                                                 .and_then(|v| v.as_str())

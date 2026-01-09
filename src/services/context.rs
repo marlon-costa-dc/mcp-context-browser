@@ -131,6 +131,7 @@ impl ContextService {
         let semantic_search_results: Vec<SearchResult> = semantic_results
             .into_iter()
             .map(|result| SearchResult {
+                id: result.id.clone(),
                 file_path: result
                     .metadata
                     .get("file_path")
@@ -312,6 +313,7 @@ where
         let semantic_search_results: Vec<SearchResult> = semantic_results
             .into_iter()
             .map(|result| SearchResult {
+                id: result.id.clone(),
                 file_path: result
                     .metadata
                     .get("file_path")
@@ -456,9 +458,9 @@ where
         query: &str,
         limit: usize,
     ) -> Result<Vec<SearchResult>> {
-        let query_vector = vec![0.0f32; 384]; // Mock dimension
+        let query_embedding = self.embedding_provider.embed(query).await?;
         self.search_repository
-            .hybrid_search(collection, query, &query_vector, limit)
+            .hybrid_search(collection, query, &query_embedding.vector, limit)
             .await
     }
 

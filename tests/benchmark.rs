@@ -541,6 +541,7 @@ pub fn bench_mcp_operations(c: &mut Criterion) {
                 // Note: This would normally call server.call_tool() but we simulate the core logic
                 let _query_vector = vec![0.1; 384]; // Mock embedding
                 let search_result = SearchResult {
+                    id: "bench-test-1".to_string(),
                     file_path: "auth.rs".to_string(),
                     line_number: 1,
                     content: "fn authenticate_user() {}".to_string(),

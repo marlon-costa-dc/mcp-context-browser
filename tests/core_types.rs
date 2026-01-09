@@ -63,6 +63,7 @@ mod tests {
     #[test]
     fn test_search_result_creation() {
         let result = SearchResult {
+            id: "test-id".to_string(),
             file_path: "src/main.rs".to_string(),
             line_number: 42,
             content: "println!(\"Hello, world!\");".to_string(),
@@ -70,6 +71,7 @@ mod tests {
             metadata: serde_json::json!({"context": "main function"}),
         };
 
+        assert_eq!(result.id, "test-id");
         assert_eq!(result.file_path, "src/main.rs");
         assert_eq!(result.line_number, 42);
         assert_eq!(result.content, "println!(\"Hello, world!\");");
@@ -134,6 +136,7 @@ mod tests {
     #[test]
     fn test_search_result_serialization() {
         let result = SearchResult {
+            id: "test-id".to_string(),
             file_path: "src/main.rs".to_string(),
             line_number: 42,
             content: "println!(\"Hello, world!\");".to_string(),
@@ -144,6 +147,7 @@ mod tests {
         let json = serde_json::to_string(&result).unwrap();
         let deserialized: SearchResult = serde_json::from_str(&json).unwrap();
 
+        assert_eq!(result.id, deserialized.id);
         assert_eq!(result.file_path, deserialized.file_path);
         assert_eq!(result.line_number, deserialized.line_number);
         assert_eq!(result.content, deserialized.content);
@@ -212,6 +216,7 @@ mod tests {
     #[test]
     fn test_search_result_with_zero_score() {
         let result = SearchResult {
+            id: "zero-id".to_string(),
             file_path: "src/main.rs".to_string(),
             line_number: 1,
             content: "use std::io;".to_string(),
@@ -225,6 +230,7 @@ mod tests {
     #[test]
     fn test_search_result_with_perfect_score() {
         let result = SearchResult {
+            id: "perfect-id".to_string(),
             file_path: "src/main.rs".to_string(),
             line_number: 1,
             content: "fn main() {}".to_string(),

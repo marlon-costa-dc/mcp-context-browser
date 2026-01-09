@@ -362,6 +362,7 @@ impl VectorStoreProvider for MilvusVectorStoreProvider {
                 let score = (-distance).exp();
 
                 results.push(SearchResult {
+                    id: ids[i].to_string(),
                     file_path: file_paths
                         .get(i)
                         .cloned()

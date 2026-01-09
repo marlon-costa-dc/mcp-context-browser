@@ -3,374 +3,18 @@
 //! This service provides a clean interface to access system data
 //! following SOLID principles and dependency injection.
 
+mod traits;
+mod types;
+
+pub use traits::*;
+pub use types::*;
+
 use crate::di::factory::ServiceProviderInterface;
 use crate::metrics::system::SystemMetricsCollectorInterface;
 use crate::server::server::{IndexingOperationsInterface, PerformanceMetricsInterface};
 use async_trait::async_trait;
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
-use shaku::Interface;
 use std::collections::HashMap;
 use std::sync::Arc;
-
-// Data structures for admin service operations
-
-/// Configuration data structure
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConfigurationData {
-    pub providers: Vec<ProviderInfo>,
-    pub indexing: IndexingConfig,
-    pub security: SecurityConfig,
-    pub metrics: MetricsConfigData,
-    pub cache: CacheConfigData,
-    pub database: DatabaseConfigData,
-}
-
-/// Indexing configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct IndexingConfig {
-    pub chunk_size: usize,
-    pub chunk_overlap: usize,
-    pub max_file_size: u64,
-    pub supported_extensions: Vec<String>,
-    pub exclude_patterns: Vec<String>,
-}
-
-/// Security configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SecurityConfig {
-    pub enable_auth: bool,
-    pub rate_limiting: bool,
-    pub max_requests_per_minute: u32,
-}
-
-/// Metrics configuration data
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MetricsConfigData {
-    pub enabled: bool,
-    pub collection_interval: u64,
-    pub retention_days: u32,
-}
-
-/// Cache configuration data
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CacheConfigData {
-    pub enabled: bool,
-    pub max_size: u64,
-    pub ttl_seconds: u64,
-}
-
-/// Database configuration data
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DatabaseConfigData {
-    pub url: String,
-    pub pool_size: u32,
-    pub connection_timeout: u64,
-}
-
-/// Configuration update result
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConfigurationUpdateResult {
-    pub success: bool,
-    pub changes_applied: Vec<String>,
-    pub requires_restart: bool,
-    pub validation_warnings: Vec<String>,
-}
-
-/// Configuration change record
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConfigurationChange {
-    pub id: String,
-    pub timestamp: DateTime<Utc>,
-    pub user: String,
-    pub path: String,
-    pub old_value: Option<serde_json::Value>,
-    pub new_value: serde_json::Value,
-    pub change_type: String,
-}
-
-/// Log filter for querying logs
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LogFilter {
-    pub level: Option<String>,
-    pub module: Option<String>,
-    pub message_contains: Option<String>,
-    pub start_time: Option<DateTime<Utc>>,
-    pub end_time: Option<DateTime<Utc>>,
-    pub limit: Option<usize>,
-}
-
-/// Log entry structure
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LogEntry {
-    pub timestamp: DateTime<Utc>,
-    pub level: String,
-    pub module: String,
-    pub message: String,
-    pub target: String,
-    pub file: Option<String>,
-    pub line: Option<u32>,
-}
-
-/// Log entries response
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LogEntries {
-    pub entries: Vec<LogEntry>,
-    pub total_count: u64,
-    pub has_more: bool,
-}
-
-/// Log export format
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum LogExportFormat {
-    Json,
-    Csv,
-    PlainText,
-}
-
-/// Log statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LogStats {
-    pub total_entries: u64,
-    pub entries_by_level: HashMap<String, u64>,
-    pub entries_by_module: HashMap<String, u64>,
-    pub oldest_entry: Option<DateTime<Utc>>,
-    pub newest_entry: Option<DateTime<Utc>>,
-}
-
-/// Cache types for maintenance operations
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum CacheType {
-    All,
-    QueryResults,
-    Embeddings,
-    Indexes,
-}
-
-/// Maintenance operation result
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MaintenanceResult {
-    pub success: bool,
-    pub operation: String,
-    pub message: String,
-    pub affected_items: u64,
-    pub execution_time_ms: u64,
-}
-
-/// Data cleanup configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CleanupConfig {
-    pub older_than_days: u32,
-    pub max_items_to_keep: Option<u64>,
-    pub cleanup_types: Vec<String>,
-}
-
-/// Health check result
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct HealthCheckResult {
-    pub overall_status: String,
-    pub checks: Vec<HealthCheck>,
-    pub timestamp: DateTime<Utc>,
-    pub duration_ms: u64,
-}
-
-/// Individual health check
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct HealthCheck {
-    pub name: String,
-    pub status: String,
-    pub message: String,
-    pub duration_ms: u64,
-    pub details: Option<serde_json::Value>,
-}
-
-/// Connectivity test result
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConnectivityTestResult {
-    pub provider_id: String,
-    pub success: bool,
-    pub response_time_ms: Option<u64>,
-    pub error_message: Option<String>,
-    pub details: serde_json::Value,
-}
-
-/// Performance test configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PerformanceTestConfig {
-    pub test_type: String,
-    pub duration_seconds: u32,
-    pub concurrency: u32,
-    pub queries: Vec<String>,
-}
-
-/// Performance test result
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PerformanceTestResult {
-    pub test_id: String,
-    pub test_type: String,
-    pub duration_seconds: u32,
-    pub total_requests: u64,
-    pub successful_requests: u64,
-    pub failed_requests: u64,
-    pub average_response_time_ms: f64,
-    pub p95_response_time_ms: f64,
-    pub p99_response_time_ms: f64,
-    pub throughput_rps: f64,
-}
-
-/// Backup configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BackupConfig {
-    pub name: String,
-    pub include_data: bool,
-    pub include_config: bool,
-    pub compression: bool,
-}
-
-/// Backup result
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BackupResult {
-    pub backup_id: String,
-    pub name: String,
-    pub size_bytes: u64,
-    pub created_at: DateTime<Utc>,
-    pub path: String,
-}
-
-/// Backup information
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BackupInfo {
-    pub id: String,
-    pub name: String,
-    pub created_at: DateTime<Utc>,
-    pub size_bytes: u64,
-    pub status: String,
-}
-
-/// Restore result
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RestoreResult {
-    pub success: bool,
-    pub backup_id: String,
-    pub restored_items: u64,
-    pub errors: Vec<String>,
-}
-
-/// Core admin service trait
-#[async_trait]
-pub trait AdminService: Interface + Send + Sync {
-    /// Get system information
-    async fn get_system_info(&self) -> Result<SystemInfo, AdminError>;
-
-    /// Get all registered providers
-    async fn get_providers(&self) -> Result<Vec<ProviderInfo>, AdminError>;
-
-    /// Add a new provider
-    async fn add_provider(
-        &self,
-        provider_type: &str,
-        config: serde_json::Value,
-    ) -> Result<ProviderInfo, AdminError>;
-
-    /// Remove a provider
-    async fn remove_provider(&self, provider_id: &str) -> Result<(), AdminError>;
-
-    /// Search indexed content
-    async fn search(
-        &self,
-        query: &str,
-        collection: Option<&str>,
-        limit: Option<usize>,
-    ) -> Result<SearchResults, AdminError>;
-
-    /// Get indexing status
-    async fn get_indexing_status(&self) -> Result<IndexingStatus, AdminError>;
-
-    /// Get performance metrics
-    async fn get_performance_metrics(&self) -> Result<PerformanceMetricsData, AdminError>;
-
-    /// Get dashboard data
-    async fn get_dashboard_data(&self) -> Result<DashboardData, AdminError>;
-
-    /// Configuration Management
-    /// Get current system configuration
-    async fn get_configuration(&self) -> Result<ConfigurationData, AdminError>;
-
-    /// Update configuration dynamically
-    async fn update_configuration(
-        &self,
-        updates: HashMap<String, serde_json::Value>,
-        user: &str,
-    ) -> Result<ConfigurationUpdateResult, AdminError>;
-
-    /// Validate configuration changes
-    async fn validate_configuration(
-        &self,
-        updates: &HashMap<String, serde_json::Value>,
-    ) -> Result<Vec<String>, AdminError>;
-
-    /// Get configuration change history
-    async fn get_configuration_history(
-        &self,
-        limit: Option<usize>,
-    ) -> Result<Vec<ConfigurationChange>, AdminError>;
-
-    /// Logging System
-    /// Get recent log entries with filtering
-    async fn get_logs(&self, filter: LogFilter) -> Result<LogEntries, AdminError>;
-
-    /// Export logs to file
-    async fn export_logs(
-        &self,
-        filter: LogFilter,
-        format: LogExportFormat,
-    ) -> Result<String, AdminError>;
-
-    /// Get log statistics
-    async fn get_log_stats(&self) -> Result<LogStats, AdminError>;
-
-    /// Maintenance Operations
-    /// Clear system cache
-    async fn clear_cache(&self, cache_type: CacheType) -> Result<MaintenanceResult, AdminError>;
-
-    /// Restart provider connection
-    async fn restart_provider(&self, provider_id: &str) -> Result<MaintenanceResult, AdminError>;
-
-    /// Rebuild search index
-    async fn rebuild_index(&self, index_id: &str) -> Result<MaintenanceResult, AdminError>;
-
-    /// Cleanup old data
-    async fn cleanup_data(
-        &self,
-        cleanup_config: CleanupConfig,
-    ) -> Result<MaintenanceResult, AdminError>;
-
-    /// Diagnostic Operations
-    /// Run comprehensive health check
-    async fn run_health_check(&self) -> Result<HealthCheckResult, AdminError>;
-
-    /// Test provider connectivity
-    async fn test_provider_connectivity(
-        &self,
-        provider_id: &str,
-    ) -> Result<ConnectivityTestResult, AdminError>;
-
-    /// Run performance benchmark
-    async fn run_performance_test(
-        &self,
-        test_config: PerformanceTestConfig,
-    ) -> Result<PerformanceTestResult, AdminError>;
-
-    /// Data Management
-    /// Create system backup
-    async fn create_backup(&self, backup_config: BackupConfig) -> Result<BackupResult, AdminError>;
-
-    /// List available backups
-    async fn list_backups(&self) -> Result<Vec<BackupInfo>, AdminError>;
-
-    /// Restore from backup
-    async fn restore_backup(&self, backup_id: &str) -> Result<RestoreResult, AdminError>;
-}
 
 /// Concrete implementation of AdminService
 #[derive(shaku::Component)]
@@ -428,29 +72,24 @@ impl AdminService for AdminServiceImpl {
 
     async fn get_providers(&self) -> Result<Vec<ProviderInfo>, AdminError> {
         let (embedding_providers, vector_store_providers) = self.service_provider.list_providers();
-
         let mut providers = Vec::new();
 
-        // Add embedding providers
-        // TODO: Integrate with health monitor to get actual provider status
         for name in embedding_providers {
             providers.push(ProviderInfo {
                 id: name.clone(),
                 name,
                 provider_type: "embedding".to_string(),
-                status: "unknown".to_string(), // Status unknown until health check verifies
+                status: "unknown".to_string(),
                 config: serde_json::json!({ "type": "embedding" }),
             });
         }
 
-        // Add vector store providers
-        // TODO: Integrate with health monitor to get actual provider status
         for name in vector_store_providers {
             providers.push(ProviderInfo {
                 id: name.clone(),
                 name,
                 provider_type: "vector_store".to_string(),
-                status: "unknown".to_string(), // Status unknown until health check verifies
+                status: "unknown".to_string(),
                 config: serde_json::json!({ "type": "vector_store" }),
             });
         }
@@ -463,7 +102,6 @@ impl AdminService for AdminServiceImpl {
         provider_type: &str,
         config: serde_json::Value,
     ) -> Result<ProviderInfo, AdminError> {
-        // Validate provider type
         match provider_type {
             "embedding" | "vector_store" => {}
             _ => {
@@ -474,22 +112,11 @@ impl AdminService for AdminServiceImpl {
             }
         }
 
-        // Generate unique provider ID
         let provider_id = format!("{}-{}", provider_type, uuid::Uuid::new_v4());
-
-        // Log the registration
         tracing::info!(
             "[ADMIN] Registering {} provider: {}",
             provider_type,
             provider_id
-        );
-
-        // Verify registry is accessible
-        let (embedding_providers, vector_store_providers) = self.service_provider.list_providers();
-        tracing::debug!(
-            "[ADMIN] Current providers - embedding: {:?}, vector_store: {:?}",
-            embedding_providers,
-            vector_store_providers
         );
 
         Ok(ProviderInfo {
@@ -525,15 +152,12 @@ impl AdminService for AdminServiceImpl {
     ) -> Result<SearchResults, AdminError> {
         let start = std::time::Instant::now();
         let search_limit = limit.unwrap_or(10);
-
         tracing::info!(
             "[ADMIN] Search request: query='{}', limit={}",
             query,
             search_limit
         );
 
-        // Admin search provides query metadata
-        // Full search via MCP server search_code tool
         Ok(SearchResults {
             query: query.to_string(),
             results: vec![],
@@ -544,10 +168,8 @@ impl AdminService for AdminServiceImpl {
 
     async fn get_indexing_status(&self) -> Result<IndexingStatus, AdminError> {
         let map = self.indexing_operations.get_map();
-        // Check if any indexing operations are active
         let is_indexing = !map.is_empty();
 
-        // Find the most recent operation for current status
         let (current_file, start_time, _processed_files, _total_files): (
             Option<String>,
             Option<u64>,
@@ -565,14 +187,9 @@ impl AdminService for AdminServiceImpl {
             (None, None, 0, 0)
         };
 
-        // Calculate totals across all operations
         let total_documents: usize = map.iter().map(|entry| entry.value().total_files).sum();
         let indexed_documents: usize = map.iter().map(|entry| entry.value().processed_files).sum();
 
-        // For now, no failed documents tracking
-        let failed_documents = 0;
-
-        // Estimate completion based on progress
         let estimated_completion = if is_indexing && total_documents > 0 {
             let progress = indexed_documents as f64 / total_documents as f64;
             if progress > 0.0 {
@@ -591,7 +208,7 @@ impl AdminService for AdminServiceImpl {
             is_indexing,
             total_documents: total_documents as u64,
             indexed_documents: indexed_documents as u64,
-            failed_documents: failed_documents as u64,
+            failed_documents: 0,
             current_file,
             start_time,
             estimated_completion,
@@ -634,7 +251,6 @@ impl AdminService for AdminServiceImpl {
         })
     }
 
-    // Configuration Management Implementation
     async fn get_configuration(&self) -> Result<ConfigurationData, AdminError> {
         let config = self.config.load();
         let providers = self.get_providers().await?;
@@ -642,10 +258,9 @@ impl AdminService for AdminServiceImpl {
         Ok(ConfigurationData {
             providers,
             indexing: IndexingConfig {
-                // Default chunking values (no chunking config in current Config struct)
                 chunk_size: 1000,
                 chunk_overlap: 200,
-                max_file_size: 10 * 1024 * 1024, // 10MB
+                max_file_size: 10 * 1024 * 1024,
                 supported_extensions: vec![
                     ".rs".to_string(),
                     ".py".to_string(),
@@ -667,8 +282,8 @@ impl AdminService for AdminServiceImpl {
             },
             metrics: MetricsConfigData {
                 enabled: config.metrics.enabled,
-                collection_interval: 30, // Default collection interval
-                retention_days: 7,       // Default retention days
+                collection_interval: 30,
+                retention_days: 7,
             },
             cache: CacheConfigData {
                 enabled: config.cache.enabled,
@@ -688,23 +303,17 @@ impl AdminService for AdminServiceImpl {
         updates: HashMap<String, serde_json::Value>,
         user: &str,
     ) -> Result<ConfigurationUpdateResult, AdminError> {
-        // Validate changes first
         let validation_warnings = self.validate_configuration(&updates).await?;
-
-        // Apply changes (in real implementation, this would update the actual config)
         let mut changes_applied = Vec::new();
         let mut requires_restart = false;
 
         for (path, value) in &updates {
             changes_applied.push(format!("{} = {:?}", path, value));
-
-            // Check if this change requires restart
             if path.starts_with("database.") || path.starts_with("server.") {
                 requires_restart = true;
             }
         }
 
-        // Log the configuration change
         tracing::info!(
             "Configuration updated by {}: {} changes applied",
             user,
@@ -741,7 +350,6 @@ impl AdminService for AdminServiceImpl {
                     if let Some(size) = value.as_u64()
                         && size > 10 * 1024 * 1024 * 1024
                     {
-                        // 10GB
                         warnings.push("Cache size above 10GB may cause memory issues".to_string());
                     }
                 }
@@ -766,32 +374,25 @@ impl AdminService for AdminServiceImpl {
         &self,
         _limit: Option<usize>,
     ) -> Result<Vec<ConfigurationChange>, AdminError> {
-        // In a real implementation, this would return actual change history
-        // For now, return empty list
         Ok(Vec::new())
     }
 
-    // Logging System Implementation
     async fn get_logs(&self, filter: LogFilter) -> Result<LogEntries, AdminError> {
-        // Use async get_all from the Actor-based LogBuffer
         let core_entries = self.log_buffer.get_all().await;
 
         let mut entries: Vec<LogEntry> = core_entries
             .into_iter()
-            .map(|e| {
-                LogEntry {
-                    timestamp: e.timestamp,
-                    level: e.level,
-                    module: e.target.clone(),
-                    message: e.message,
-                    target: e.target,
-                    file: None, // RingBuffer doesn't capture file/line by default yet
-                    line: None,
-                }
+            .map(|e| LogEntry {
+                timestamp: e.timestamp,
+                level: e.level,
+                module: e.target.clone(),
+                message: e.message,
+                target: e.target,
+                file: None,
+                line: None,
             })
             .collect();
 
-        // Apply filters
         if let Some(level) = filter.level {
             entries.retain(|e| e.level == level);
         }
@@ -826,10 +427,7 @@ impl AdminService for AdminServiceImpl {
         filter: LogFilter,
         format: LogExportFormat,
     ) -> Result<String, AdminError> {
-        // Get filtered logs
         let log_entries = self.get_logs(filter).await?;
-
-        // Generate filename based on current time and format
         let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S");
         let extension = match format {
             LogExportFormat::Json => "json",
@@ -837,7 +435,6 @@ impl AdminService for AdminServiceImpl {
             LogExportFormat::PlainText => "log",
         };
 
-        // Ensure exports directory exists
         let export_dir = std::path::PathBuf::from("./exports");
         std::fs::create_dir_all(&export_dir).map_err(|e| {
             AdminError::ConfigError(format!("Failed to create exports directory: {}", e))
@@ -846,7 +443,6 @@ impl AdminService for AdminServiceImpl {
         let filename = format!("logs_export_{}.{}", timestamp, extension);
         let filepath = export_dir.join(&filename);
 
-        // Format and write logs to file
         let content = match format {
             LogExportFormat::Json => {
                 serde_json::to_string_pretty(&log_entries.entries).map_err(|e| {
@@ -854,9 +450,9 @@ impl AdminService for AdminServiceImpl {
                 })?
             }
             LogExportFormat::Csv => {
-                let mut csv_content = String::from("timestamp,level,module,target,message\n");
+                let mut csv = String::from("timestamp,level,module,target,message\n");
                 for entry in &log_entries.entries {
-                    csv_content.push_str(&format!(
+                    csv.push_str(&format!(
                         "{},{},{},{},\"{}\"\n",
                         entry.timestamp.to_rfc3339(),
                         entry.level,
@@ -865,12 +461,12 @@ impl AdminService for AdminServiceImpl {
                         entry.message.replace('"', "\"\"")
                     ));
                 }
-                csv_content
+                csv
             }
             LogExportFormat::PlainText => {
-                let mut text_content = String::new();
+                let mut text = String::new();
                 for entry in &log_entries.entries {
-                    text_content.push_str(&format!(
+                    text.push_str(&format!(
                         "[{}] {} [{}] {}\n",
                         entry.timestamp.to_rfc3339(),
                         entry.level,
@@ -878,7 +474,7 @@ impl AdminService for AdminServiceImpl {
                         entry.message
                     ));
                 }
-                text_content
+                text
             }
         };
 
@@ -890,14 +486,11 @@ impl AdminService for AdminServiceImpl {
             filepath.display(),
             log_entries.entries.len()
         );
-
         Ok(filepath.to_string_lossy().to_string())
     }
 
     async fn get_log_stats(&self) -> Result<LogStats, AdminError> {
-        // Use async get_all from the Actor-based LogBuffer
         let all_entries = self.log_buffer.get_all().await;
-
         let mut entries_by_level = HashMap::new();
         let mut entries_by_module = HashMap::new();
 
@@ -915,10 +508,8 @@ impl AdminService for AdminServiceImpl {
         })
     }
 
-    // Maintenance Operations Implementation
     async fn clear_cache(&self, cache_type: CacheType) -> Result<MaintenanceResult, AdminError> {
         let start_time = std::time::Instant::now();
-
         let namespace = match cache_type {
             CacheType::All => None,
             CacheType::QueryResults => Some("search_results".to_string()),
@@ -934,37 +525,34 @@ impl AdminService for AdminServiceImpl {
                 AdminError::McpServerError(format!("Failed to publish CacheClear event: {}", e))
             })?;
 
-        let execution_time = start_time.elapsed().as_millis() as u64;
-
         Ok(MaintenanceResult {
             success: true,
             operation: format!("clear_cache_{:?}", cache_type),
             message: format!("Successfully requested cache clear for {:?}", cache_type),
-            affected_items: 0, // Event-based, so we don't know affected items immediately
-            execution_time_ms: execution_time,
+            affected_items: 0,
+            execution_time_ms: start_time.elapsed().as_millis() as u64,
         })
     }
 
     async fn restart_provider(&self, provider_id: &str) -> Result<MaintenanceResult, AdminError> {
         let start_time = std::time::Instant::now();
-
-        // In real implementation, this would restart the provider connection
-        let execution_time = start_time.elapsed().as_millis() as u64;
-
-        tracing::info!("Provider {} restarted in {}ms", provider_id, execution_time);
+        tracing::info!(
+            "Provider {} restarted in {}ms",
+            provider_id,
+            start_time.elapsed().as_millis()
+        );
 
         Ok(MaintenanceResult {
             success: true,
             operation: "restart_provider".to_string(),
             message: format!("Provider {} restarted successfully", provider_id),
             affected_items: 1,
-            execution_time_ms: execution_time,
+            execution_time_ms: start_time.elapsed().as_millis() as u64,
         })
     }
 
     async fn rebuild_index(&self, index_id: &str) -> Result<MaintenanceResult, AdminError> {
         let start_time = std::time::Instant::now();
-
         self.event_bus
             .publish(crate::core::events::SystemEvent::IndexRebuild {
                 collection: Some(index_id.to_string()),
@@ -973,14 +561,12 @@ impl AdminService for AdminServiceImpl {
                 AdminError::McpServerError(format!("Failed to publish IndexRebuild event: {}", e))
             })?;
 
-        let execution_time = start_time.elapsed().as_millis() as u64;
-
         Ok(MaintenanceResult {
             success: true,
             operation: "rebuild_index".to_string(),
             message: format!("Successfully requested rebuild for index {}", index_id),
             affected_items: 0,
-            execution_time_ms: execution_time,
+            execution_time_ms: start_time.elapsed().as_millis() as u64,
         })
     }
 
@@ -989,29 +575,19 @@ impl AdminService for AdminServiceImpl {
         _cleanup_config: CleanupConfig,
     ) -> Result<MaintenanceResult, AdminError> {
         let start_time = std::time::Instant::now();
-
-        // In real implementation, this would clean up old data
-        let affected_items = 0;
-
-        let execution_time = start_time.elapsed().as_millis() as u64;
-
         Ok(MaintenanceResult {
             success: true,
             operation: "cleanup_data".to_string(),
             message: "Data cleanup requested".to_string(),
-            affected_items,
-            execution_time_ms: execution_time,
+            affected_items: 0,
+            execution_time_ms: start_time.elapsed().as_millis() as u64,
         })
     }
 
-    // Diagnostic Operations Implementation
     async fn run_health_check(&self) -> Result<HealthCheckResult, AdminError> {
         let start_time = std::time::Instant::now();
-
-        // Run various health checks
         let mut checks = Vec::new();
 
-        // System health
         let cpu_metrics = self
             .system_collector
             .collect_cpu_metrics()
@@ -1034,7 +610,6 @@ impl AdminService for AdminServiceImpl {
             })),
         });
 
-        // Provider health
         let providers = self.get_providers().await?;
         for provider in providers {
             checks.push(HealthCheck {
@@ -1060,13 +635,11 @@ impl AdminService for AdminServiceImpl {
         }
         .to_string();
 
-        let duration_ms = start_time.elapsed().as_millis() as u64;
-
         Ok(HealthCheckResult {
             overall_status,
             checks,
             timestamp: chrono::Utc::now(),
-            duration_ms,
+            duration_ms: start_time.elapsed().as_millis() as u64,
         })
     }
 
@@ -1075,11 +648,8 @@ impl AdminService for AdminServiceImpl {
         provider_id: &str,
     ) -> Result<ConnectivityTestResult, AdminError> {
         let start_time = std::time::Instant::now();
-
-        // Get list of registered providers
         let (embedding_providers, vector_store_providers) = self.service_provider.list_providers();
 
-        // Check if provider exists
         let is_embedding = embedding_providers.iter().any(|p| p == provider_id);
         let is_vector_store = vector_store_providers.iter().any(|p| p == provider_id);
 
@@ -1102,8 +672,6 @@ impl AdminService for AdminServiceImpl {
         } else {
             "vector_store"
         };
-
-        // Provider exists in registry - report as successful connectivity
         let response_time = start_time.elapsed().as_millis() as u64;
 
         Ok(ConnectivityTestResult {
@@ -1124,8 +692,6 @@ impl AdminService for AdminServiceImpl {
         &self,
         test_config: PerformanceTestConfig,
     ) -> Result<PerformanceTestResult, AdminError> {
-        let _start_time = std::time::Instant::now();
-
         Ok(PerformanceTestResult {
             test_id: format!("perf_test_{}", chrono::Utc::now().timestamp()),
             test_type: test_config.test_type,
@@ -1140,10 +706,8 @@ impl AdminService for AdminServiceImpl {
         })
     }
 
-    // Data Management Implementation
     async fn create_backup(&self, backup_config: BackupConfig) -> Result<BackupResult, AdminError> {
         let backup_id = format!("backup_{}", chrono::Utc::now().format("%Y%m%d_%H%M%S"));
-        let created_at = chrono::Utc::now();
         let path = format!("./backups/{}.tar.gz", backup_config.name);
 
         self.event_bus
@@ -1155,56 +719,46 @@ impl AdminService for AdminServiceImpl {
         Ok(BackupResult {
             backup_id,
             name: backup_config.name,
-            size_bytes: 0, // Event-based, size unknown yet
-            created_at,
+            size_bytes: 0,
+            created_at: chrono::Utc::now(),
             path,
         })
     }
 
     async fn list_backups(&self) -> Result<Vec<BackupInfo>, AdminError> {
         let backups_dir = std::path::PathBuf::from("./backups");
-
-        // If backups directory doesn't exist, return empty list
         if !backups_dir.exists() {
             return Ok(Vec::new());
         }
 
         let mut backups = Vec::new();
-
-        // Read backup directory entries
         let entries = std::fs::read_dir(&backups_dir).map_err(|e| {
             AdminError::ConfigError(format!("Failed to read backups directory: {}", e))
         })?;
 
         for entry in entries.flatten() {
             let path = entry.path();
-
-            // Only include files with .tar.gz extension
             if path.extension().is_some_and(|e| e == "gz")
                 && let Some(filename) = path.file_stem().and_then(|s| s.to_str())
+                && let Ok(metadata) = entry.metadata()
             {
-                // Try to get file metadata
-                if let Ok(metadata) = entry.metadata() {
-                    let created_at = metadata
-                        .created()
-                        .or_else(|_| metadata.modified())
-                        .map(chrono::DateTime::<chrono::Utc>::from)
-                        .unwrap_or_else(|_| chrono::Utc::now());
+                let created_at = metadata
+                    .created()
+                    .or_else(|_| metadata.modified())
+                    .map(chrono::DateTime::<chrono::Utc>::from)
+                    .unwrap_or_else(|_| chrono::Utc::now());
 
-                    backups.push(BackupInfo {
-                        id: filename.to_string(),
-                        name: filename.replace("_", " ").replace(".tar", ""),
-                        created_at,
-                        size_bytes: metadata.len(),
-                        status: "completed".to_string(),
-                    });
-                }
+                backups.push(BackupInfo {
+                    id: filename.to_string(),
+                    name: filename.replace("_", " ").replace(".tar", ""),
+                    created_at,
+                    size_bytes: metadata.len(),
+                    status: "completed".to_string(),
+                });
             }
         }
 
-        // Sort by creation time, newest first
         backups.sort_by(|a, b| b.created_at.cmp(&a.created_at));
-
         Ok(backups)
     }
 
@@ -1215,97 +769,5 @@ impl AdminService for AdminServiceImpl {
             restored_items: 0,
             errors: vec![],
         })
-    }
-}
-
-/// Data structures for admin service
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct SystemInfo {
-    pub version: String,
-    pub uptime: u64,
-    pub pid: u32,
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct ProviderInfo {
-    pub id: String,
-    pub name: String,
-    pub provider_type: String,
-    pub status: String,
-    pub config: serde_json::Value,
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct IndexingStatus {
-    pub is_indexing: bool,
-    pub total_documents: u64,
-    pub indexed_documents: u64,
-    pub failed_documents: u64,
-    pub current_file: Option<String>,
-    pub start_time: Option<u64>,
-    pub estimated_completion: Option<u64>,
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct PerformanceMetricsData {
-    pub total_queries: u64,
-    pub successful_queries: u64,
-    pub failed_queries: u64,
-    pub average_response_time_ms: f64,
-    pub cache_hit_rate: f64,
-    pub active_connections: u32,
-    pub uptime_seconds: u64,
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct DashboardData {
-    pub system_info: SystemInfo,
-    pub active_providers: usize,
-    pub total_providers: usize,
-    pub active_indexes: usize,
-    pub total_documents: u64,
-    pub cpu_usage: f64,
-    pub memory_usage: f64,
-    pub performance: PerformanceMetricsData,
-}
-
-/// Search results returned from admin search
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct SearchResults {
-    pub query: String,
-    pub results: Vec<SearchResultItem>,
-    pub total: usize,
-    pub took_ms: u64,
-}
-
-/// Individual search result item
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct SearchResultItem {
-    pub id: String,
-    pub content: String,
-    pub file_path: String,
-    pub score: f64,
-}
-
-/// Admin service errors
-#[derive(Debug, thiserror::Error)]
-pub enum AdminError {
-    #[error("MCP server error: {0}")]
-    McpServerError(String),
-
-    #[error("Configuration error: {0}")]
-    ConfigError(String),
-
-    #[error("Database error: {0}")]
-    DatabaseError(String),
-
-    #[error("Network error: {0}")]
-    NetworkError(String),
-}
-
-impl From<crate::core::error::Error> for AdminError {
-    fn from(err: crate::core::error::Error) -> Self {
-        AdminError::McpServerError(err.to_string())
     }
 }

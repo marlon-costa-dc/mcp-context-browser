@@ -7,12 +7,14 @@
 
 use crate::core::cache::get_global_cache_manager;
 use crate::core::error::Result;
+use crate::core::events::{SharedEventBus, SystemEvent};
 use crate::core::types::SyncBatch;
 use dashmap::DashMap;
 use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
+use walkdir::WalkDir;
 
 /// Synchronization configuration
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -96,7 +98,9 @@ impl AtomicSyncStats {
 pub struct SyncManager {
     config: SyncConfig,
     last_sync_times: DashMap<String, Instant>,
+    file_mod_times: DashMap<String, u64>,
     stats: AtomicSyncStats,
+    event_bus: Option<SharedEventBus>,
 }
 
 impl Default for SyncManager {
@@ -116,7 +120,20 @@ impl SyncManager {
         Self {
             config,
             last_sync_times: DashMap::new(),
+            file_mod_times: DashMap::new(),
             stats: AtomicSyncStats::new(),
+            event_bus: None,
+        }
+    }
+
+    /// Create a new sync manager with event bus for publishing sync events
+    pub fn with_event_bus(config: SyncConfig, event_bus: SharedEventBus) -> Self {
+        Self {
+            config,
+            last_sync_times: DashMap::new(),
+            file_mod_times: DashMap::new(),
+            stats: AtomicSyncStats::new(),
+            event_bus: Some(event_bus),
         }
     }
 
@@ -150,6 +167,16 @@ impl SyncManager {
 
     /// Handle synchronization with batch queue coordination
     pub async fn sync_codebase(&self, codebase_path: &Path) -> Result<bool> {
+        // Verify path exists before proceeding
+        if !codebase_path.exists() {
+            return Err(crate::core::error::Error::Io {
+                source: std::io::Error::new(
+                    std::io::ErrorKind::NotFound,
+                    format!("Path does not exist: {}", codebase_path.display()),
+                ),
+            });
+        }
+
         self.stats.total_attempts.fetch_add(1, Ordering::Relaxed);
 
         // Check debounce
@@ -167,12 +194,34 @@ impl SyncManager {
             }
         };
 
-        // Perform sync operation (placeholder for actual sync logic)
+        // Perform actual sync operation
         tracing::info!("[SYNC] Starting sync for {}", codebase_path.display());
 
-        // TODO: Implement actual sync logic here
-        // For now, just simulate successful sync
-        tokio::time::sleep(Duration::from_millis(100)).await;
+        // Scan codebase for changed files
+        let changed_files = self.scan_for_changes(codebase_path).await;
+
+        if !changed_files.is_empty() {
+            tracing::info!(
+                "[SYNC] Found {} changed files in {}",
+                changed_files.len(),
+                codebase_path.display()
+            );
+
+            // Update modification times for changed files (using millis for precision)
+            for file_path in &changed_files {
+                if let Ok(metadata) = std::fs::metadata(file_path)
+                    && let Ok(modified) = metadata.modified()
+                {
+                    let mod_time = modified
+                        .duration_since(UNIX_EPOCH)
+                        .unwrap_or(Duration::from_secs(0))
+                        .as_millis() as u64;
+                    self.file_mod_times.insert(file_path.clone(), mod_time);
+                }
+            }
+        } else {
+            tracing::debug!("[SYNC] No changes detected in {}", codebase_path.display());
+        }
 
         // Update last sync time
         self.update_last_sync(codebase_path).await;
@@ -181,6 +230,18 @@ impl SyncManager {
         self.release_sync_slot(codebase_path, batch).await?;
 
         self.stats.successful.fetch_add(1, Ordering::Relaxed);
+
+        // Publish SyncCompleted event if event bus is available
+        if let Some(ref event_bus) = self.event_bus {
+            let path = codebase_path.to_string_lossy().to_string();
+            let files_changed = changed_files.len() as i32;
+            if let Err(e) = event_bus.publish(SystemEvent::SyncCompleted {
+                path,
+                files_changed,
+            }) {
+                tracing::warn!("[SYNC] Failed to publish SyncCompleted event: {}", e);
+            }
+        }
 
         tracing::info!("[SYNC] Completed sync for {}", codebase_path.display());
         Ok(true)
@@ -242,8 +303,18 @@ impl SyncManager {
     }
 
     /// Get current sync statistics
-    pub async fn get_stats(&self) -> SyncStats {
+    pub fn get_stats(&self) -> SyncStats {
         self.stats.to_stats()
+    }
+
+    /// Get the count of tracked files
+    pub fn get_tracked_file_count(&self) -> usize {
+        self.file_mod_times.len()
+    }
+
+    /// Get list of files that have changed since last sync
+    pub async fn get_changed_files(&self, codebase_path: &Path) -> Result<Vec<String>> {
+        Ok(self.scan_for_changes(codebase_path).await)
     }
 
     /// Get sync configuration
@@ -279,6 +350,58 @@ impl SyncManager {
                 }
             }
         }
+    }
+
+    /// Scan codebase for files that have changed since last sync
+    async fn scan_for_changes(&self, codebase_path: &Path) -> Vec<String> {
+        let mut changed_files = Vec::new();
+
+        // Walk directory tree looking for source files
+        for entry in WalkDir::new(codebase_path)
+            .follow_links(false)
+            .into_iter()
+            .filter_map(|e| e.ok())
+        {
+            let path = entry.path();
+
+            // Skip directories and non-source files
+            if !path.is_file() {
+                continue;
+            }
+
+            // Check common source file extensions
+            let extension = path.extension().and_then(|e| e.to_str()).unwrap_or("");
+            if !matches!(
+                extension,
+                "rs" | "py" | "js" | "ts" | "go" | "java" | "c" | "cpp" | "h" | "hpp"
+            ) {
+                continue;
+            }
+
+            let path_str = path.to_string_lossy().to_string();
+
+            // Check if file has been modified since last sync (using millis for precision)
+            if let Ok(metadata) = std::fs::metadata(path)
+                && let Ok(modified) = metadata.modified()
+            {
+                let mod_time = modified
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap_or(Duration::from_secs(0))
+                    .as_millis() as u64;
+
+                // Check if we have a previous modification time
+                if let Some(prev_mod_time) = self.file_mod_times.get(&path_str) {
+                    if mod_time > *prev_mod_time {
+                        changed_files.push(path_str);
+                    }
+                } else {
+                    // New file, not seen before
+                    changed_files.push(path_str);
+                }
+            }
+        }
+
+        changed_files
     }
 
     /// Get sync interval as Duration
@@ -320,24 +443,25 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_should_debounce() {
+    async fn test_should_debounce() -> Result<()> {
         let manager = SyncManager::new();
         let path = PathBuf::from("/tmp/test");
 
         // First call should not debounce
-        assert!(!manager.should_debounce(&path).await.unwrap());
+        assert!(!manager.should_debounce(&path).await?);
 
         // Update last sync time
         manager.update_last_sync(&path).await;
 
         // Second call should debounce (within 60 seconds)
-        assert!(manager.should_debounce(&path).await.unwrap());
+        assert!(manager.should_debounce(&path).await?);
+        Ok(())
     }
 
     #[tokio::test]
     async fn test_sync_stats_initialization() {
         let manager = SyncManager::new();
-        let stats = manager.get_stats().await;
+        let stats = manager.get_stats();
 
         assert_eq!(stats.total_attempts, 0);
         assert_eq!(stats.successful, 0);

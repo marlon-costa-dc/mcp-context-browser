@@ -438,6 +438,7 @@ impl FilesystemVectorStore {
                     .to_string();
 
                 results.push(SearchResult {
+                    id: entry.id.clone(),
                     file_path,
                     line_number,
                     content,

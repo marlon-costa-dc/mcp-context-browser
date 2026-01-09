@@ -139,7 +139,6 @@ mod ollama_filesystem_tests {
     use tempfile::tempdir;
 
     #[tokio::test]
-    #[ignore] // TODO: Filesystem store search not working - needs investigation
     async fn test_ollama_with_filesystem_store() {
         let ollama_provider = test_utils::create_ollama_provider()
             .await
@@ -228,7 +227,6 @@ mod ollama_indexing_tests {
     use tempfile::tempdir;
 
     #[tokio::test]
-    #[ignore] // TODO: Snapshot conflict issue - needs investigation
     async fn test_ollama_full_indexing_workflow() {
         let ollama_provider = test_utils::create_ollama_provider()
             .await
@@ -253,15 +251,9 @@ mod ollama_indexing_tests {
         // Clean any existing snapshots to ensure clean test
         let _ = std::fs::remove_dir_all(".snapshots");
 
-        // Create unique test directory name to avoid snapshot conflicts
-        let _test_id = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_millis();
-        let _temp_dir = tempdir().expect("Failed to create temp dir");
-
-        let _test_file_path = temp_dir.path().join("test.rs");
-        let _content = r#"// Test Rust file for indexing
+        // Create test file with Rust code
+        let test_file_path = temp_dir.path().join("test.rs");
+        let content = r#"// Test Rust file for indexing
 fn main() {
     println!("Hello, World!");
     let x = 42;
@@ -284,6 +276,9 @@ impl TestStruct {
     }
 }
 "#;
+        // Write the test file to disk
+        std::fs::write(&test_file_path, content).expect("Failed to write test file");
+        println!("📝 Created test file at: {}", test_file_path.display());
 
         // Index the directory
         let collection = "ollama_indexing_test";

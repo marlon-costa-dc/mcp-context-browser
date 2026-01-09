@@ -28,6 +28,13 @@ pub enum SystemEvent {
     ConfigReloaded,
     /// Server is shutting down
     Shutdown,
+    /// Sync operation completed
+    SyncCompleted {
+        /// Path that was synced
+        path: String,
+        /// Number of files that changed
+        files_changed: i32,
+    },
 }
 
 /// Event Bus for publishing and subscribing to system events

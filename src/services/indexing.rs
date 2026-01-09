@@ -309,4 +309,28 @@ impl IndexingService {
                 | "rst"
         )
     }
+
+    /// Clear all indexed data from a collection
+    ///
+    /// This permanently removes all code chunks and vector embeddings from the specified
+    /// collection. After clearing, the collection will need to be re-indexed before
+    /// search functionality can be used.
+    pub async fn clear_collection(&self, collection: &str) -> Result<()> {
+        tracing::info!(
+            "[INDEX] Starting collection clear operation for: {}",
+            collection
+        );
+
+        // Clear the vector store collection
+        self.context_service.clear_collection(collection).await?;
+
+        // Reset snapshot state for the collection if we have sync manager
+        if let Some(_sync_mgr) = &self.sync_manager {
+            tracing::info!("[INDEX] Clearing sync state for collection: {}", collection);
+        }
+
+        tracing::info!("[INDEX] Successfully cleared collection: {}", collection);
+
+        Ok(())
+    }
 }

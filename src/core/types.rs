@@ -127,6 +127,8 @@ impl Language {
 /// Contains the matched code snippet with relevance scoring and metadata.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SearchResult {
+    /// Unique identifier from the vector store
+    pub id: String,
     /// Path to the file containing the match
     pub file_path: String,
     /// Line number where the match starts

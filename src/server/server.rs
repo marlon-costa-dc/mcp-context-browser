@@ -328,7 +328,7 @@ impl McpServer {
                 cache_manager,
             )),
             Arc::new(GetIndexingStatusHandler::new(admin_service)),
-            Arc::new(ClearIndexHandler::new()),
+            Arc::new(ClearIndexHandler::new(indexing_service)),
         ))
     }
 
@@ -774,7 +774,8 @@ impl ServerHandler for McpServer {
                     "Index a codebase directory for semantic search using vector embeddings",
                 )),
                 input_schema: Arc::new(serialize_schema(
-                    serde_json::to_value(schemars::schema_for!(IndexCodebaseArgs)).unwrap(),
+                    serde_json::to_value(schemars::schema_for!(IndexCodebaseArgs))
+                        .map_err(|e| McpError::internal_error(e.to_string(), None))?,
                     "index_codebase",
                 )?),
                 output_schema: None,
@@ -789,7 +790,8 @@ impl ServerHandler for McpServer {
                     "Search for code using natural language queries",
                 )),
                 input_schema: Arc::new(serialize_schema(
-                    serde_json::to_value(schemars::schema_for!(SearchCodeArgs)).unwrap(),
+                    serde_json::to_value(schemars::schema_for!(SearchCodeArgs))
+                        .map_err(|e| McpError::internal_error(e.to_string(), None))?,
                     "search_code",
                 )?),
                 output_schema: None,
@@ -804,7 +806,7 @@ impl ServerHandler for McpServer {
                     "Get the current indexing status and statistics",
                 )),
                 input_schema: Arc::new(serialize_schema(
-                    serde_json::to_value(schemars::schema_for!(GetIndexingStatusArgs)).unwrap(),
+                    serde_json::to_value(schemars::schema_for!(GetIndexingStatusArgs)),
                     "get_indexing_status",
                 )?),
                 output_schema: None,
@@ -817,7 +819,7 @@ impl ServerHandler for McpServer {
                 title: None,
                 description: Some(Cow::Borrowed("Clear the search index for a collection")),
                 input_schema: Arc::new(serialize_schema(
-                    serde_json::to_value(schemars::schema_for!(ClearIndexArgs)).unwrap(),
+                    serde_json::to_value(schemars::schema_for!(ClearIndexArgs)),
                     "clear_index",
                 )?),
                 output_schema: None,

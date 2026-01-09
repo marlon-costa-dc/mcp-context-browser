@@ -166,8 +166,10 @@ impl SnapshotManager {
 
     /// Get files that need processing (added or modified)
     pub async fn get_changed_files(&self, root_path: &Path) -> Result<Vec<String>> {
-        let current_snapshot = self.create_snapshot(root_path).await?;
+        // Load previous snapshot FIRST, before creating new one
+        // (create_snapshot saves to disk, which would overwrite the previous snapshot)
         let previous_snapshot = self.load_snapshot(root_path).await?;
+        let current_snapshot = self.create_snapshot(root_path).await?;
 
         let changes = if let Some(prev) = previous_snapshot {
             self.compare_snapshots(&prev, &current_snapshot).await?

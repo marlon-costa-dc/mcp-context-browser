@@ -1,11 +1,12 @@
 //! End-to-end tests for MCP server with Ollama
 //!
 //! These tests simulate real MCP client interactions using stdio transport.
+//! The rmcp stdio transport uses newline-delimited JSON (NDJSON) format.
 
 use mcp_context_browser::server::McpServer;
 use rmcp::ServerHandler;
 use tempfile::tempdir;
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::Command;
 
 /// Test utilities for MCP end-to-end tests
@@ -45,56 +46,49 @@ mod test_utils {
         let stdout = child.stdout.take().expect("Failed to get stdout");
 
         let mut stdin_writer = tokio::io::BufWriter::new(stdin);
-        let mut stdout_reader = tokio::io::BufReader::new(stdout).lines();
+        let mut stdout_reader = BufReader::new(stdout).lines();
 
-        // Initialize MCP protocol
-        let init_message = r#"{"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2024-11-05", "capabilities": {}, "clientInfo": {"name": "test-client", "version": "1.0.0"}}}"#;
+        // Initialize MCP protocol - using newline-delimited JSON (NDJSON) format
+        let init_message = r#"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test-client","version":"1.0.0"}}}"#;
 
-        // Send initialize request
-        AsyncWriteExt::write_all(
-            &mut stdin_writer,
-            format!(
-                "Content-Length: {}\r\n\r\n{}",
-                init_message.len(),
-                init_message
-            )
-            .as_bytes(),
-        )
-        .await?;
+        // Send initialize request as NDJSON (JSON followed by newline)
+        AsyncWriteExt::write_all(&mut stdin_writer, format!("{}\n", init_message).as_bytes())
+            .await?;
         AsyncWriteExt::flush(&mut stdin_writer).await?;
 
-        // Read response
+        // Read response (NDJSON)
         let response = tokio::time::timeout(
-            tokio::time::Duration::from_secs(5),
+            tokio::time::Duration::from_secs(15),
             stdout_reader.next_line(),
         )
-        .await??;
+        .await??
+        .ok_or("Empty response")?;
 
-        let response = response.ok_or("Empty response")?;
         assert!(response.contains("jsonrpc"));
         assert!(response.contains("result") || response.contains("error"));
 
-        // Test tools request
-        let tools_message = r#"{"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}}"#;
+        // Send initialized notification (required by MCP protocol before other requests)
+        let initialized_message = r#"{"jsonrpc":"2.0","method":"notifications/initialized"}"#;
         AsyncWriteExt::write_all(
             &mut stdin_writer,
-            format!(
-                "Content-Length: {}\r\n\r\n{}",
-                tools_message.len(),
-                tools_message
-            )
-            .as_bytes(),
+            format!("{}\n", initialized_message).as_bytes(),
         )
         .await?;
         AsyncWriteExt::flush(&mut stdin_writer).await?;
 
+        // Test tools request
+        let tools_message = r#"{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}"#;
+        AsyncWriteExt::write_all(&mut stdin_writer, format!("{}\n", tools_message).as_bytes())
+            .await?;
+        AsyncWriteExt::flush(&mut stdin_writer).await?;
+
         let tools_response = tokio::time::timeout(
-            tokio::time::Duration::from_secs(5),
+            tokio::time::Duration::from_secs(15),
             stdout_reader.next_line(),
         )
-        .await??;
+        .await??
+        .ok_or("Empty tools response")?;
 
-        let tools_response = tools_response.ok_or("Empty tools response")?;
         assert!(tools_response.contains("index_codebase"));
         assert!(tools_response.contains("search_code"));
 
@@ -259,7 +253,6 @@ mod mcp_server_tests {
     }
 
     #[tokio::test]
-    #[ignore] // TODO: E2E test needs proper server setup
     async fn test_mcp_stdio_integration() {
         // Test the full MCP protocol integration via stdio transport
         test_utils::run_stdio_integration_test()
@@ -277,7 +270,6 @@ mod stdio_transport_tests {
     use tokio::time::{Duration, timeout};
 
     #[tokio::test]
-    #[ignore] // TODO: E2E test needs proper server setup
     async fn test_stdio_transport_basic() {
         // This test requires the binary to be built
         // We'll skip if binary doesn't exist
@@ -304,32 +296,23 @@ mod stdio_transport_tests {
         let stdin = child.stdin.take().expect("Failed to get stdin");
         let stdout = child.stdout.take().expect("Failed to get stdout");
 
-        // Initialize MCP protocol
-        let init_message = r#"{"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2024-11-05", "capabilities": {}, "clientInfo": {"name": "test-client", "version": "1.0.0"}}}"#;
+        // Initialize MCP protocol - using newline-delimited JSON (NDJSON) format
+        let init_message = r#"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test-client","version":"1.0.0"}}}"#;
 
         let mut stdin_writer = tokio::io::BufWriter::new(stdin);
-        let mut stdout_reader = tokio::io::BufReader::new(stdout).lines();
+        let mut stdout_reader = BufReader::new(stdout).lines();
 
-        // Send initialize request
+        // Send initialize request as NDJSON (JSON followed by newline)
         stdin_writer
-            .write_all(
-                format!(
-                    "Content-Length: {}\r\n\r\n{}",
-                    init_message.len(),
-                    init_message
-                )
-                .as_bytes(),
-            )
+            .write_all(format!("{}\n", init_message).as_bytes())
             .await
             .expect("Failed to send initialize request");
         stdin_writer.flush().await.expect("Failed to flush");
 
-        // Read response with timeout
-        let response: Result<Option<String>, _> =
-            timeout(Duration::from_secs(5), stdout_reader.next_line())
-                .await
-                .expect("Initialize response timeout");
-        let response = response
+        // Read response with timeout (NDJSON)
+        let response = timeout(Duration::from_secs(15), stdout_reader.next_line())
+            .await
+            .expect("Initialize response timeout")
             .expect("Failed to read initialize response")
             .expect("Empty response");
 
