@@ -1,7 +1,7 @@
 //! Null vector store provider for testing
 
-use crate::adapters::providers::VectorStoreProvider;
 use crate::domain::error::{Error, Result};
+use crate::domain::ports::VectorStoreProvider;
 use crate::domain::types::Embedding;
 use async_trait::async_trait;
 use dashmap::DashMap;

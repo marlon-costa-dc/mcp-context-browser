@@ -1,7 +1,7 @@
 //! Null embedding provider for testing and development
 
-use crate::adapters::providers::EmbeddingProvider;
 use crate::domain::error::Result;
+use crate::domain::ports::EmbeddingProvider;
 use crate::domain::types::Embedding;
 use async_trait::async_trait;
 

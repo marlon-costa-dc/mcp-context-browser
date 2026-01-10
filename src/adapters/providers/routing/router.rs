@@ -4,8 +4,8 @@
 //! and dependency injection, following SOLID principles with proper separation of concerns.
 
 use crate::adapters::providers::routing::circuit_breaker::CircuitBreakerConfig;
-use crate::adapters::providers::{EmbeddingProvider, VectorStoreProvider};
 use crate::domain::error::{Error, Result};
+use crate::domain::ports::{EmbeddingProvider, VectorStoreProvider};
 use crate::infrastructure::di::registry::{ProviderRegistry, ProviderRegistryTrait};
 use std::sync::Arc;
 use tracing::{debug, info, instrument};

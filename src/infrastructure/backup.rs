@@ -254,20 +254,20 @@ impl BackupActor {
 
         for entry in entries.flatten() {
             let path = entry.path();
-            if path.extension().and_then(|e| e.to_str()) == Some("gz") {
-                if let Ok(metadata) = fs::metadata(&path) {
-                    let created_at = metadata
-                        .created()
-                        .ok()
-                        .map(|t| chrono::DateTime::<chrono::Utc>::from(t))
-                        .unwrap_or_else(chrono::Utc::now);
+            if path.extension().and_then(|e| e.to_str()) == Some("gz")
+                && let Ok(metadata) = fs::metadata(&path)
+            {
+                let created_at = metadata
+                    .created()
+                    .ok()
+                    .map(chrono::DateTime::<chrono::Utc>::from)
+                    .unwrap_or_else(chrono::Utc::now);
 
-                    backups.push(BackupInfo {
-                        path: path.to_string_lossy().to_string(),
-                        size_bytes: metadata.len(),
-                        created_at,
-                    });
-                }
+                backups.push(BackupInfo {
+                    path: path.to_string_lossy().to_string(),
+                    size_bytes: metadata.len(),
+                    created_at,
+                });
             }
         }
 

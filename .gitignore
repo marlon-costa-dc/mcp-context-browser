@@ -33,6 +33,7 @@ archive/
 *.old
 *.broken
 *.clean
+*.removed
 .fastembed_cache/
 
 # Rust-specific temporary files

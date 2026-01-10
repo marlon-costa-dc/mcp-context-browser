@@ -1,7 +1,7 @@
 //! OpenAI embedding provider implementation
 
-use crate::adapters::providers::EmbeddingProvider;
 use crate::domain::error::{Error, Result};
+use crate::domain::ports::EmbeddingProvider;
 use crate::domain::types::Embedding;
 use crate::infrastructure::cache::{CacheResult, get_global_cache_manager};
 use async_trait::async_trait;

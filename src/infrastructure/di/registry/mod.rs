@@ -1,7 +1,7 @@
 //! Provider registry for dependency injection
 
-use crate::adapters::providers::{EmbeddingProvider, VectorStoreProvider};
 use crate::domain::error::{Error, Result};
+use crate::domain::ports::{EmbeddingProvider, VectorStoreProvider};
 use dashmap::DashMap;
 use std::sync::Arc;
 

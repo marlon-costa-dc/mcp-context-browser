@@ -1,8 +1,8 @@
 #![allow(clippy::assertions_on_constants)]
 //! Unit tests for repository pattern implementations
 
-use mcp_context_browser::domain::types::{CodeChunk, Language};
 use mcp_context_browser::adapters::repository::{RepositoryStats, SearchStats};
+use mcp_context_browser::domain::types::{CodeChunk, Language};
 
 /// Test repository trait implementations
 #[cfg(test)]

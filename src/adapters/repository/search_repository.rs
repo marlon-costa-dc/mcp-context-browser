@@ -3,9 +3,9 @@
 //! This module provides search functionality over indexed code chunks.
 
 use crate::adapters::hybrid_search::HybridSearchEngine;
-use crate::adapters::providers::VectorStoreProvider;
 use crate::adapters::repository::{SearchRepository, SearchStats};
 use crate::domain::error::Result;
+use crate::domain::ports::VectorStoreProvider;
 use crate::domain::types::{CodeChunk, SearchResult};
 use async_trait::async_trait;
 use std::sync::Arc;

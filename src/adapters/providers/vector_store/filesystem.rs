@@ -3,8 +3,8 @@
 //! Provides high-performance vector storage using memory-mapped files
 //! with optimized indexing for production workloads.
 
-use crate::adapters::providers::VectorStoreProvider;
 use crate::domain::error::Result;
+use crate::domain::ports::VectorStoreProvider;
 use crate::domain::types::{Embedding, SearchResult};
 use async_trait::async_trait;
 use dashmap::DashMap;

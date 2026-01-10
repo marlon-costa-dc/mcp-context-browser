@@ -3,8 +3,8 @@
 //! Provides encryption at rest for any vector store provider.
 //! Wraps existing providers with AES-256-GCM encryption.
 
-use crate::adapters::providers::VectorStoreProvider;
 use crate::domain::error::Result;
+use crate::domain::ports::VectorStoreProvider;
 use crate::domain::types::{Embedding, SearchResult};
 use crate::infrastructure::crypto::{CryptoService, EncryptedEnvelope, EncryptionConfig};
 use async_trait::async_trait;

@@ -34,8 +34,8 @@ use crate::server::handlers::{
 
 /// Type alias for provider tuple to reduce complexity
 type ProviderTuple = (
-    Arc<dyn crate::adapters::providers::EmbeddingProvider>,
-    Arc<dyn crate::adapters::providers::VectorStoreProvider>,
+    Arc<dyn crate::domain::ports::EmbeddingProvider>,
+    Arc<dyn crate::domain::ports::VectorStoreProvider>,
 );
 
 /// Real-time performance metrics tracking interface
@@ -301,9 +301,23 @@ impl McpServer {
         // Create context service with configured providers
         let (embedding_provider, vector_store_provider) =
             Self::create_providers(&service_provider, config, http_client).await?;
+
+        // Initialize hybrid search
+        let (sender, receiver) = tokio::sync::mpsc::channel(100);
+        let actor = crate::adapters::HybridSearchActor::new(
+            receiver,
+            config.hybrid_search.bm25_weight,
+            config.hybrid_search.semantic_weight,
+        );
+        tokio::spawn(async move {
+            actor.run().await;
+        });
+        let hybrid_search_provider = Arc::new(crate::adapters::HybridSearchAdapter::new(sender));
+
         let context_service = Arc::new(crate::application::ContextService::new(
             embedding_provider,
             vector_store_provider,
+            hybrid_search_provider,
         ));
 
         // Create services

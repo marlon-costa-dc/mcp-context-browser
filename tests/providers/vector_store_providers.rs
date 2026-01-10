@@ -5,8 +5,8 @@
 //! - NullVectorStoreProvider: No-op behavior validation
 //! - MilvusVectorStoreProvider: Integration tests with proper mocking
 
+use mcp_context_browser::domain::ports::VectorStoreProvider;
 use mcp_context_browser::domain::types::{Embedding, SearchResult};
-use mcp_context_browser::adapters::providers::VectorStoreProvider;
 use std::collections::HashMap;
 
 /// Test utilities for vector store providers
@@ -712,7 +712,8 @@ mod common_provider_tests {
 
     #[tokio::test]
     async fn test_null_provider_compliance() {
-        let provider = mcp_context_browser::adapters::providers::vector_store::NullVectorStoreProvider::new();
+        let provider =
+            mcp_context_browser::adapters::providers::vector_store::NullVectorStoreProvider::new();
         test_provider_interface_compliance(provider).await;
     }
 }

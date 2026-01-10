@@ -5,19 +5,17 @@
 //! intelligence behind semantic code search, enabling development teams to find
 //! code by meaning rather than keywords.
 
-use crate::adapters::hybrid_search::{HybridSearchActor, HybridSearchConfig, HybridSearchMessage};
-use crate::adapters::providers::{EmbeddingProvider, VectorStoreProvider};
 use crate::domain::error::{Error, Result};
+use crate::domain::ports::{EmbeddingProvider, HybridSearchProvider, VectorStoreProvider};
 use crate::domain::types::{CodeChunk, Embedding, SearchResult};
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::{mpsc, oneshot};
 
 /// Enterprise Code Intelligence Coordinator
 pub struct ContextService {
     embedding_provider: Arc<dyn EmbeddingProvider>,
     vector_store_provider: Arc<dyn VectorStoreProvider>,
-    hybrid_search_sender: mpsc::Sender<HybridSearchMessage>,
+    hybrid_search_provider: Arc<dyn HybridSearchProvider>,
 }
 
 impl ContextService {
@@ -25,26 +23,12 @@ impl ContextService {
     pub fn new(
         embedding_provider: Arc<dyn EmbeddingProvider>,
         vector_store_provider: Arc<dyn VectorStoreProvider>,
+        hybrid_search_provider: Arc<dyn HybridSearchProvider>,
     ) -> Self {
-        let config = HybridSearchConfig::from_env();
-        let (bm25_weight, semantic_weight) = if config.enabled {
-            (config.bm25_weight, config.semantic_weight)
-        } else {
-            (0.0, 1.0)
-        };
-
-        let (sender, receiver) = mpsc::channel(100);
-        let actor = HybridSearchActor::new(receiver, bm25_weight, semantic_weight);
-
-        // Start the hybrid search actor in the background
-        tokio::spawn(async move {
-            actor.run().await;
-        });
-
         Self {
             embedding_provider,
             vector_store_provider,
-            hybrid_search_sender: sender,
+            hybrid_search_provider,
         }
     }
 
@@ -98,16 +82,10 @@ impl ContextService {
             .insert_vectors(collection, &embeddings, metadata)
             .await?;
 
-        // Index documents for hybrid search (BM25) via Actor
-        self.hybrid_search_sender
-            .send(HybridSearchMessage::Index {
-                collection: collection.to_string(),
-                chunks: chunks.to_vec(),
-            })
-            .await
-            .map_err(|e| {
-                Error::internal(format!("Failed to send to hybrid search actor: {}", e))
-            })?;
+        // Index documents for hybrid search (BM25) via Provider
+        self.hybrid_search_provider
+            .index_chunks(collection, chunks)
+            .await?;
 
         Ok(())
     }
@@ -154,54 +132,10 @@ impl ContextService {
             })
             .collect();
 
-        // Request hybrid search from Actor
-        let (respond_to, receiver) = oneshot::channel();
-        self.hybrid_search_sender
-            .send(HybridSearchMessage::Search {
-                query: query.to_string(),
-                semantic_results: semantic_search_results,
-                limit,
-                respond_to,
-            })
+        // Request hybrid search from Provider
+        self.hybrid_search_provider
+            .search(collection, query, semantic_search_results, limit)
             .await
-            .map_err(|e| {
-                Error::internal(format!(
-                    "Failed to send search to hybrid search actor: {}",
-                    e
-                ))
-            })?;
-
-        let hybrid_results = receiver.await.map_err(|e| {
-            Error::internal(format!("Failed to receive hybrid search results: {}", e))
-        })??;
-
-        Ok(hybrid_results
-            .into_iter()
-            .map(|hybrid_result| {
-                let mut result = hybrid_result.result;
-                result.score = hybrid_result.hybrid_score;
-
-                let mut new_metadata = serde_json::Map::new();
-                if let serde_json::Value::Object(existing) = &result.metadata {
-                    new_metadata.extend(existing.clone());
-                }
-                new_metadata.insert(
-                    "bm25_score".to_string(),
-                    serde_json::json!(hybrid_result.bm25_score),
-                );
-                new_metadata.insert(
-                    "semantic_score".to_string(),
-                    serde_json::json!(hybrid_result.semantic_score),
-                );
-                new_metadata.insert(
-                    "hybrid_score".to_string(),
-                    serde_json::json!(hybrid_result.hybrid_score),
-                );
-                result.metadata = serde_json::Value::Object(new_metadata);
-
-                result
-            })
-            .collect())
     }
 
     /// Clear a collection
@@ -210,17 +144,9 @@ impl ContextService {
             .delete_collection(collection)
             .await?;
 
-        self.hybrid_search_sender
-            .send(HybridSearchMessage::Clear {
-                collection: collection.to_string(),
-            })
-            .await
-            .map_err(|e| {
-                Error::internal(format!(
-                    "Failed to send clear to hybrid search actor: {}",
-                    e
-                ))
-            })?;
+        self.hybrid_search_provider
+            .clear_collection(collection)
+            .await?;
 
         Ok(())
     }
@@ -232,56 +158,38 @@ impl ContextService {
 
     /// Get hybrid search statistics
     pub async fn get_hybrid_search_stats(&self) -> HashMap<String, serde_json::Value> {
-        let (respond_to, receiver) = oneshot::channel();
-        if self
-            .hybrid_search_sender
-            .send(HybridSearchMessage::GetStats { respond_to })
-            .await
-            .is_err()
-        {
-            return HashMap::new();
-        }
-
-        receiver.await.unwrap_or_default()
+        self.hybrid_search_provider.get_stats().await
     }
 }
 
 /// Generic context service using Strategy pattern with trait bounds
-pub struct GenericContextService<E, V>
+pub struct GenericContextService<E, V, H>
 where
     E: EmbeddingProvider + Send + Sync,
     V: VectorStoreProvider + Send + Sync,
+    H: HybridSearchProvider + Send + Sync,
 {
     embedding_provider: Arc<E>,
     vector_store_provider: Arc<V>,
-    hybrid_search_sender: mpsc::Sender<HybridSearchMessage>,
+    hybrid_search_provider: Arc<H>,
 }
 
-impl<E, V> GenericContextService<E, V>
+impl<E, V, H> GenericContextService<E, V, H>
 where
     E: EmbeddingProvider + Send + Sync,
     V: VectorStoreProvider + Send + Sync,
+    H: HybridSearchProvider + Send + Sync,
 {
     /// Create a new generic context service with specified provider strategies
-    pub fn new(embedding_provider: Arc<E>, vector_store_provider: Arc<V>) -> Self {
-        let config = HybridSearchConfig::from_env();
-        let (bm25_weight, semantic_weight) = if config.enabled {
-            (config.bm25_weight, config.semantic_weight)
-        } else {
-            (0.0, 1.0)
-        };
-
-        let (sender, receiver) = mpsc::channel(100);
-        let actor = HybridSearchActor::new(receiver, bm25_weight, semantic_weight);
-
-        tokio::spawn(async move {
-            actor.run().await;
-        });
-
+    pub fn new(
+        embedding_provider: Arc<E>,
+        vector_store_provider: Arc<V>,
+        hybrid_search_provider: Arc<H>,
+    ) -> Self {
         Self {
             embedding_provider,
             vector_store_provider,
-            hybrid_search_sender: sender,
+            hybrid_search_provider,
         }
     }
 
@@ -336,53 +244,9 @@ where
             })
             .collect();
 
-        let (respond_to, receiver) = oneshot::channel();
-        self.hybrid_search_sender
-            .send(HybridSearchMessage::Search {
-                query: query.to_string(),
-                semantic_results: semantic_search_results,
-                limit,
-                respond_to,
-            })
+        self.hybrid_search_provider
+            .search(collection, query, semantic_search_results, limit)
             .await
-            .map_err(|e| {
-                Error::internal(format!(
-                    "Failed to send search to hybrid search actor: {}",
-                    e
-                ))
-            })?;
-
-        let hybrid_results = receiver.await.map_err(|e| {
-            Error::internal(format!("Failed to receive hybrid search results: {}", e))
-        })??;
-
-        Ok(hybrid_results
-            .into_iter()
-            .map(|hybrid_result| {
-                let mut result = hybrid_result.result;
-                result.score = hybrid_result.hybrid_score;
-
-                let mut new_metadata = serde_json::Map::new();
-                if let serde_json::Value::Object(existing) = &result.metadata {
-                    new_metadata.extend(existing.clone());
-                }
-                new_metadata.insert(
-                    "bm25_score".to_string(),
-                    serde_json::json!(hybrid_result.bm25_score),
-                );
-                new_metadata.insert(
-                    "semantic_score".to_string(),
-                    serde_json::json!(hybrid_result.semantic_score),
-                );
-                new_metadata.insert(
-                    "hybrid_score".to_string(),
-                    serde_json::json!(hybrid_result.hybrid_score),
-                );
-                result.metadata = serde_json::Value::Object(new_metadata);
-
-                result
-            })
-            .collect())
     }
 
     /// Get embedding dimensions
@@ -392,17 +256,7 @@ where
 
     /// Get hybrid search statistics
     pub async fn get_hybrid_search_stats(&self) -> HashMap<String, serde_json::Value> {
-        let (respond_to, receiver) = oneshot::channel();
-        if self
-            .hybrid_search_sender
-            .send(HybridSearchMessage::GetStats { respond_to })
-            .await
-            .is_err()
-        {
-            return HashMap::new();
-        }
-
-        receiver.await.unwrap_or_default()
+        self.hybrid_search_provider.get_stats().await
     }
 }
 
@@ -490,6 +344,21 @@ impl Default for ContextService {
             Arc::new(crate::adapters::providers::embedding::MockEmbeddingProvider::new());
         let vector_store_provider =
             Arc::new(crate::adapters::providers::vector_store::InMemoryVectorStoreProvider::new());
-        Self::new(embedding_provider, vector_store_provider)
+
+        // Default hybrid search implementation
+        let (sender, receiver) = tokio::sync::mpsc::channel(100);
+        let actor = crate::adapters::hybrid_search::HybridSearchActor::new(receiver, 0.4, 0.6);
+        tokio::spawn(async move {
+            actor.run().await;
+        });
+        let hybrid_search_provider = Arc::new(
+            crate::adapters::hybrid_search::HybridSearchAdapter::new(sender),
+        );
+
+        Self::new(
+            embedding_provider,
+            vector_store_provider,
+            hybrid_search_provider,
+        )
     }
 }

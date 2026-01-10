@@ -4,32 +4,51 @@
 //! to ensure they meet performance requirements.
 
 use criterion::{Criterion, criterion_group, criterion_main};
-use mcp_context_browser::infrastructure::cache::CacheManager;
-use mcp_context_browser::domain::types::{CodeChunk, Embedding, Language, SearchResult};
-use mcp_context_browser::adapters::providers::{EmbeddingProvider, VectorStoreProvider};
 use mcp_context_browser::adapters::repository::{RepositoryStats, SearchStats};
-use mcp_context_browser::server::McpServer;
 use mcp_context_browser::application::ContextService;
+use mcp_context_browser::domain::ports::{EmbeddingProvider, VectorStoreProvider};
+use mcp_context_browser::domain::types::{CodeChunk, Embedding, Language, SearchResult};
+use mcp_context_browser::infrastructure::cache::CacheManager;
+use mcp_context_browser::server::McpServer;
 use std::hint::black_box;
 use std::sync::Arc;
 use tokio::runtime::Runtime;
 
+use mcp_context_browser::domain::ports::HybridSearchProvider;
+
 /// Create real providers for benchmarking
 #[allow(dead_code)]
-fn create_benchmark_providers() -> (Arc<dyn EmbeddingProvider>, Arc<dyn VectorStoreProvider>) {
-    let embedding_provider: Arc<dyn EmbeddingProvider> =
-        Arc::new(mcp_context_browser::adapters::providers::embedding::null::NullEmbeddingProvider::new());
+fn create_benchmark_providers() -> (
+    Arc<dyn EmbeddingProvider>,
+    Arc<dyn VectorStoreProvider>,
+    Arc<dyn HybridSearchProvider>,
+) {
+    let embedding_provider: Arc<dyn EmbeddingProvider> = Arc::new(
+        mcp_context_browser::adapters::providers::embedding::null::NullEmbeddingProvider::new(),
+    );
     let vector_store_provider: Arc<dyn VectorStoreProvider> = Arc::new(
         mcp_context_browser::adapters::providers::vector_store::in_memory::InMemoryVectorStoreProvider::new(),
     );
-    (embedding_provider, vector_store_provider)
+    let (sender, _receiver) = tokio::sync::mpsc::channel(1);
+    let hybrid_search_provider =
+        Arc::new(mcp_context_browser::adapters::hybrid_search::HybridSearchAdapter::new(sender));
+    (
+        embedding_provider,
+        vector_store_provider,
+        hybrid_search_provider,
+    )
 }
 
 /// Create a benchmark context service
 #[allow(dead_code)]
 fn create_benchmark_context_service() -> ContextService {
-    let (embedding_provider, vector_store_provider) = create_benchmark_providers();
-    ContextService::new(embedding_provider, vector_store_provider)
+    let (embedding_provider, vector_store_provider, hybrid_search_provider) =
+        create_benchmark_providers();
+    ContextService::new(
+        embedding_provider,
+        vector_store_provider,
+        hybrid_search_provider,
+    )
 }
 
 /// Create a benchmark MCP server
@@ -290,7 +309,8 @@ pub fn bench_repository_operations(c: &mut Criterion) {
 #[allow(dead_code)]
 pub fn bench_provider_operations(c: &mut Criterion) {
     let rt = Runtime::new().expect("Failed to create Tokio runtime");
-    let (embedding_provider, vector_store_provider) = create_benchmark_providers();
+    let (embedding_provider, vector_store_provider, _hybrid_search_provider) =
+        create_benchmark_providers();
 
     c.bench_function("provider_embedding_operation", |b| {
         let provider = black_box(&embedding_provider);

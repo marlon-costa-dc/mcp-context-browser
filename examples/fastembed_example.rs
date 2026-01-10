@@ -4,8 +4,8 @@
 //! to generate embeddings for text without external API dependencies.
 
 use mcp_context_browser::adapters::http_client::HttpClientPool;
-use mcp_context_browser::infrastructure::di::factory::{DefaultProviderFactory, ProviderFactory};
 use mcp_context_browser::domain::types::EmbeddingConfig;
+use mcp_context_browser::infrastructure::di::factory::{DefaultProviderFactory, ProviderFactory};
 use std::sync::Arc;
 
 #[tokio::main]

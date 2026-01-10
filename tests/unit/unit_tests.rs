@@ -171,8 +171,8 @@ mod validation_unit_tests {
 /// Test configuration parsing and validation
 #[cfg(test)]
 mod config_unit_tests {
-    use mcp_context_browser::infrastructure::config::providers::ProviderConfigManager;
     use mcp_context_browser::domain::types::EmbeddingConfig;
+    use mcp_context_browser::infrastructure::config::providers::ProviderConfigManager;
 
     #[test]
     fn test_config_provider_manager_creation() {
@@ -229,7 +229,8 @@ mod config_unit_tests {
 /// Test VectorStoreProvider implementations
 #[cfg(test)]
 mod repository_unit_tests {
-    use mcp_context_browser::adapters::providers::{InMemoryVectorStoreProvider, VectorStoreProvider};
+    use mcp_context_browser::adapters::providers::InMemoryVectorStoreProvider;
+    use mcp_context_browser::domain::ports::VectorStoreProvider;
 
     #[test]
     fn test_in_memory_provider_creation() {
@@ -264,7 +265,8 @@ mod repository_unit_tests {
 /// Test EmbeddingProvider implementations
 #[cfg(test)]
 mod provider_unit_tests {
-    use mcp_context_browser::adapters::providers::{EmbeddingProvider, MockEmbeddingProvider};
+    use mcp_context_browser::adapters::providers::MockEmbeddingProvider;
+    use mcp_context_browser::domain::ports::EmbeddingProvider;
     use std::sync::Arc;
 
     #[test]
@@ -318,15 +320,37 @@ mod provider_unit_tests {
 /// Test ContextService initialization and operations
 #[cfg(test)]
 mod service_unit_tests {
-    use mcp_context_browser::adapters::providers::{InMemoryVectorStoreProvider, MockEmbeddingProvider};
+    use mcp_context_browser::adapters::providers::{
+        InMemoryVectorStoreProvider, MockEmbeddingProvider,
+    };
     use mcp_context_browser::application::ContextService;
+    use mcp_context_browser::domain::ports::{EmbeddingProvider, VectorStoreProvider};
     use std::sync::Arc;
 
     #[tokio::test]
     async fn test_context_service_creation() {
         let embedding_provider = Arc::new(MockEmbeddingProvider::new());
         let vector_store = Arc::new(InMemoryVectorStoreProvider::new());
-        let service = ContextService::new(embedding_provider, vector_store);
+        let (sender, receiver) = tokio::sync::mpsc::channel(100);
+        tokio::spawn(async move {
+            let mut receiver = receiver;
+            while let Some(msg) = receiver.recv().await {
+                use mcp_context_browser::adapters::hybrid_search::HybridSearchMessage;
+                match msg {
+                    HybridSearchMessage::Search { respond_to, .. } => {
+                        let _ = respond_to.send(Ok(Vec::new()));
+                    }
+                    HybridSearchMessage::GetStats { respond_to } => {
+                        let _ = respond_to.send(std::collections::HashMap::new());
+                    }
+                    _ => {}
+                }
+            }
+        });
+        let hybrid_search = Arc::new(mcp_context_browser::adapters::HybridSearchAdapter::new(
+            sender,
+        ));
+        let service = ContextService::new(embedding_provider, vector_store, hybrid_search);
 
         // NullEmbeddingProvider returns dimension=1 for minimal test vectors
         assert_eq!(service.embedding_dimensions(), 1);
@@ -336,7 +360,26 @@ mod service_unit_tests {
     async fn test_context_service_embed_text() {
         let embedding_provider = Arc::new(MockEmbeddingProvider::new());
         let vector_store = Arc::new(InMemoryVectorStoreProvider::new());
-        let service = ContextService::new(embedding_provider, vector_store);
+        let (sender, receiver) = tokio::sync::mpsc::channel(100);
+        tokio::spawn(async move {
+            let mut receiver = receiver;
+            while let Some(msg) = receiver.recv().await {
+                use mcp_context_browser::adapters::hybrid_search::HybridSearchMessage;
+                match msg {
+                    HybridSearchMessage::Search { respond_to, .. } => {
+                        let _ = respond_to.send(Ok(Vec::new()));
+                    }
+                    HybridSearchMessage::GetStats { respond_to } => {
+                        let _ = respond_to.send(std::collections::HashMap::new());
+                    }
+                    _ => {}
+                }
+            }
+        });
+        let hybrid_search = Arc::new(mcp_context_browser::adapters::HybridSearchAdapter::new(
+            sender,
+        ));
+        let service = ContextService::new(embedding_provider, vector_store, hybrid_search);
 
         let result = service.embed_text("test query").await;
         assert!(result.is_ok());
@@ -422,8 +465,8 @@ mod utility_unit_tests {
 /// Performance tests with timing assertions
 #[cfg(test)]
 mod performance_unit_tests {
-    use mcp_context_browser::adapters::providers::EmbeddingProvider;
     use mcp_context_browser::adapters::providers::MockEmbeddingProvider;
+    use mcp_context_browser::domain::ports::EmbeddingProvider;
     use std::time::Instant;
 
     #[tokio::test]

@@ -9,8 +9,8 @@ use dashmap::DashMap;
 use std::collections::HashMap;
 use tokio::sync::{mpsc, oneshot};
 
-use crate::application::VectorStoreProvider;
 use crate::domain::error::{Error, Result};
+use crate::domain::ports::VectorStoreProvider;
 use crate::domain::types::{Embedding, SearchResult};
 use edgevec::hnsw::VectorId;
 

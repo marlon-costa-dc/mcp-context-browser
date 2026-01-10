@@ -59,15 +59,15 @@ pub struct Service {
 
 ```text
 src/
-├── core/           # Auth, cache, error types
-├── providers/      # Embedding (OpenAI, Ollama) + vector stores
-├── services/       # Context, indexing, search
-├── server/         # MCP protocol, HTTP handlers
-├── metrics/        # System monitoring
-└── config/         # Configuration management
-
-tests/              # 214 tests (unit + integration)
-docs/architecture/  # ADRs and diagrams
+├── domain/         # Domain types, validation, error, ports (traits)
+├── application/    # Business services (indexing, search, context)
+├── adapters/       # Infrastructure implementations (providers, db, repositories)
+├── infrastructure/ # Shared systems (cache, auth, config, metrics, events)
+├── server/         # MCP protocol implementation
+├── chunking/       # Code chunking logic
+├── daemon/         # Background processes
+├── snapshot/       # Snapshot management
+└── sync/           # Codebase synchronization
 ```
 
 ## Testing

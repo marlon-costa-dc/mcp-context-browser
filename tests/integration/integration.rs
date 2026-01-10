@@ -381,7 +381,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_milvus_provider_connection() {
-        use mcp_context_browser::adapters::providers::VectorStoreProvider;
+        use mcp_context_browser::domain::ports::VectorStoreProvider;
 
         // Test that we can create a Milvus provider and connect to the local instance
         let milvus_address = "http://localhost:19530";

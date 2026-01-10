@@ -1,6 +1,6 @@
 //! Factory implementations for creating providers
 
-use crate::adapters::providers::{EmbeddingProvider, VectorStoreProvider};
+use crate::domain::ports::{EmbeddingProvider, VectorStoreProvider};
 use crate::infrastructure::di::registry::{ProviderRegistry, ProviderRegistryTrait};
 use crate::{EmbeddingConfig, Error, Result, VectorStoreConfig};
 

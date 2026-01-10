@@ -1,7 +1,7 @@
 //! Ollama embedding provider implementation
 
-use crate::adapters::providers::EmbeddingProvider;
 use crate::domain::error::{Error, Result};
+use crate::domain::ports::EmbeddingProvider;
 use crate::domain::types::Embedding;
 use async_trait::async_trait;
 use std::sync::Arc;

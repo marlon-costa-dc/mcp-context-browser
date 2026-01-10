@@ -3,8 +3,8 @@
 //! This provider uses the fastembed library to generate embeddings locally
 //! without requiring external API calls. It uses ONNX models for inference.
 
-use crate::adapters::providers::EmbeddingProvider;
 use crate::domain::error::{Error, Result};
+use crate::domain::ports::EmbeddingProvider;
 use crate::domain::types::Embedding;
 use async_trait::async_trait;
 use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};

@@ -3,9 +3,9 @@
 //! This module provides failover management capabilities using established patterns,
 //! following SOLID principles with proper separation of concerns.
 
-use crate::infrastructure::di::registry::ProviderRegistry;
-use crate::domain::error::{Error, Result};
 use crate::adapters::providers::routing::health::{HealthMonitor, HealthMonitorTrait};
+use crate::domain::error::{Error, Result};
+use crate::infrastructure::di::registry::ProviderRegistry;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tracing::{debug, info, warn};
@@ -545,9 +545,12 @@ mod tests {
             async fn check_health(
                 &self,
                 provider_id: &str,
-            ) -> crate::domain::error::Result<crate::adapters::providers::routing::health::HealthCheckResult>
-            {
-                use crate::adapters::providers::routing::health::{HealthCheckResult, ProviderHealthStatus};
+            ) -> crate::domain::error::Result<
+                crate::adapters::providers::routing::health::HealthCheckResult,
+            > {
+                use crate::adapters::providers::routing::health::{
+                    HealthCheckResult, ProviderHealthStatus,
+                };
                 use std::time::Duration;
                 Ok(HealthCheckResult {
                     provider_id: provider_id.to_string(),

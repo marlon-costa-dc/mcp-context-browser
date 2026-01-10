@@ -3,9 +3,9 @@
 //! This module provides a repository pattern for storing and retrieving
 //! code chunks with their associated vector embeddings.
 
-use crate::adapters::providers::{EmbeddingProvider, VectorStoreProvider};
 use crate::adapters::repository::{ChunkRepository, RepositoryStats};
 use crate::domain::error::{Error, Result};
+use crate::domain::ports::{EmbeddingProvider, VectorStoreProvider};
 use crate::domain::types::{CodeChunk, Language};
 use async_trait::async_trait;
 use std::collections::HashMap;

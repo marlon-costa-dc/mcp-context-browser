@@ -3,17 +3,28 @@
 //! This module tests the generic provider services that use trait bounds
 //! instead of dynamic dispatch, implementing the Strategy pattern.
 
-use mcp_context_browser::{CodeChunk, Embedding, SearchResult};
-use mcp_context_browser::domain::error::Result;
-use mcp_context_browser::adapters::providers::{EmbeddingProvider, VectorStoreProvider};
+use mcp_context_browser::domain::ports::{EmbeddingProvider, VectorStoreProvider};
 use mcp_context_browser::application::context::{ContextService, GenericContextService};
+use mcp_context_browser::domain::error::Result;
+use mcp_context_browser::{CodeChunk, Embedding, SearchResult};
 use std::sync::Arc;
 
 /// Test generic context service with strategy pattern
 #[cfg(test)]
 mod generic_context_service_tests {
     use super::*;
-    use mcp_context_browser::adapters::providers::{InMemoryVectorStoreProvider, MockEmbeddingProvider};
+    use mcp_context_browser::adapters::providers::{
+        InMemoryVectorStoreProvider, MockEmbeddingProvider,
+    };
+
+    use mcp_context_browser::domain::ports::HybridSearchProvider;
+
+    fn dummy_hybrid_search() -> Arc<dyn HybridSearchProvider> {
+        let (sender, _receiver) = tokio::sync::mpsc::channel(1);
+        Arc::new(mcp_context_browser::adapters::HybridSearchAdapter::new(
+            sender,
+        ))
+    }
 
     #[test]
     fn test_generic_context_service_creation() {
@@ -22,7 +33,11 @@ mod generic_context_service_tests {
         let vector_store_provider = Arc::new(InMemoryVectorStoreProvider::new());
 
         // Create generic context service with compile-time strategy types
-        let context_service = GenericContextService::new(embedding_provider, vector_store_provider);
+        let context_service = GenericContextService::new(
+            embedding_provider,
+            vector_store_provider,
+            dummy_hybrid_search(),
+        );
 
         assert_eq!(context_service.embedding_dimensions(), 384); // Mock provider dimensions
     }
@@ -32,7 +47,11 @@ mod generic_context_service_tests {
         let embedding_provider = Arc::new(MockEmbeddingProvider::new());
         let vector_store_provider = Arc::new(InMemoryVectorStoreProvider::new());
 
-        let context_service = GenericContextService::new(embedding_provider, vector_store_provider);
+        let context_service = GenericContextService::new(
+            embedding_provider,
+            vector_store_provider,
+            dummy_hybrid_search(),
+        );
 
         // Test that we can embed text
         let text = "fn hello() { println!(\"Hello, world!\"); }";
@@ -53,7 +72,11 @@ mod generic_context_service_tests {
         let embedding_provider = Arc::new(MockEmbeddingProvider::new());
         let vector_store_provider = Arc::new(InMemoryVectorStoreProvider::new());
 
-        let context_service = GenericContextService::new(embedding_provider, vector_store_provider);
+        let context_service = GenericContextService::new(
+            embedding_provider,
+            vector_store_provider,
+            dummy_hybrid_search(),
+        );
 
         // Verify the service is properly constructed
         assert!(context_service.embedding_dimensions() > 0);
@@ -86,7 +109,11 @@ mod strategy_pattern_tests {
         let vector_store_provider = Arc::new(InMemoryVectorStoreProvider::new());
 
         // Create a service that composes these strategies
-        let service = GenericContextService::new(embedding_provider, vector_store_provider);
+        let service = GenericContextService::new(
+            embedding_provider,
+            vector_store_provider,
+            dummy_hybrid_search(),
+        );
 
         // The service should be able to perform operations using both strategies
         assert_eq!(service.embedding_dimensions(), 384);
@@ -102,8 +129,11 @@ mod strategy_pattern_tests {
         let embedding_provider = Arc::new(MockEmbeddingProvider::new());
         let vector_store_provider = Arc::new(InMemoryVectorStoreProvider::new());
 
-        let service =
-            GenericContextService::new(embedding_provider.clone(), vector_store_provider.clone());
+        let service = GenericContextService::new(
+            embedding_provider.clone(),
+            vector_store_provider.clone(),
+            dummy_hybrid_search(),
+        );
 
         // Test that we can call methods directly on the concrete types
         // while still using the trait bounds for polymorphism
@@ -153,7 +183,11 @@ mod integration_tests {
         let embedding_provider = Arc::new(MockEmbeddingProvider::new());
         let vector_store_provider = Arc::new(InMemoryVectorStoreProvider::new());
 
-        let context_service = GenericContextService::new(embedding_provider, vector_store_provider);
+        let context_service = GenericContextService::new(
+            embedding_provider,
+            vector_store_provider,
+            dummy_hybrid_search(),
+        );
 
         // Test basic functionality
         assert_eq!(context_service.embedding_dimensions(), 384);
@@ -174,7 +208,11 @@ mod integration_tests {
         let embedding_provider = Arc::new(MockEmbeddingProvider::new());
         let vector_store_provider = Arc::new(InMemoryVectorStoreProvider::new());
 
-        let service = GenericContextService::new(embedding_provider, vector_store_provider);
+        let service = GenericContextService::new(
+            embedding_provider,
+            vector_store_provider,
+            dummy_hybrid_search(),
+        );
 
         // Performance should be consistent (no dynamic dispatch overhead)
         let start = std::time::Instant::now();

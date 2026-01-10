@@ -1,12 +1,12 @@
 //! Unit tests for embedding providers
 
 use mcp_context_browser::adapters::http_client::HttpClientPool;
-use mcp_context_browser::domain::error::Error;
-use mcp_context_browser::adapters::providers::EmbeddingProvider;
 use mcp_context_browser::adapters::providers::embedding::{
     GeminiEmbeddingProvider, OllamaEmbeddingProvider, OpenAIEmbeddingProvider,
     VoyageAIEmbeddingProvider,
 };
+use mcp_context_browser::domain::error::Error;
+use mcp_context_browser::domain::ports::EmbeddingProvider;
 use std::sync::Arc;
 
 // Note: MockHttpServer removed as it was unused and causing warnings
@@ -1034,11 +1034,13 @@ mod provider_trait_tests {
 #[cfg(test)]
 mod factory_tests {
     use super::*;
-    use mcp_context_browser::infrastructure::di::factory::{DefaultProviderFactory, ProviderFactory};
     use mcp_context_browser::domain::types::EmbeddingConfig;
+    use mcp_context_browser::infrastructure::di::factory::{
+        DefaultProviderFactory, ProviderFactory,
+    };
 
-    fn get_test_http_client() -> Arc<dyn mcp_context_browser::adapters::http_client::HttpClientProvider>
-    {
+    fn get_test_http_client()
+    -> Arc<dyn mcp_context_browser::adapters::http_client::HttpClientProvider> {
         Arc::new(HttpClientPool::new().unwrap())
     }
 
