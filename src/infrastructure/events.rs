@@ -28,6 +28,15 @@ pub enum SystemEvent {
     ConfigReloaded,
     /// Server is shutting down
     Shutdown,
+    /// Request to reload configuration (SIGHUP)
+    Reload,
+    /// Request to respawn the server binary (SIGUSR1)
+    Respawn,
+    /// Binary file was updated, prepare for respawn
+    BinaryUpdated {
+        /// New binary path
+        path: String,
+    },
     /// Sync operation completed
     SyncCompleted {
         /// Path that was synced

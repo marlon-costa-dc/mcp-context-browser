@@ -1,7 +1,9 @@
 pub mod auth;
 pub mod backup;
+pub mod binary_watcher;
 pub mod cache;
 pub mod config;
+pub mod connection_tracker;
 pub mod crypto;
 pub mod di;
 pub mod events;
@@ -10,4 +12,6 @@ pub mod logging;
 pub mod merkle;
 pub mod metrics;
 pub mod rate_limit;
+pub mod respawn;
+pub mod signals;
 pub mod utils;

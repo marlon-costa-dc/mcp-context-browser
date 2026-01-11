@@ -5,7 +5,7 @@
 //! intelligence behind semantic code search, enabling development teams to find
 //! code by meaning rather than keywords.
 
-use crate::domain::error::{Error, Result};
+use crate::domain::error::Result;
 use crate::domain::ports::{EmbeddingProvider, HybridSearchProvider, VectorStoreProvider};
 use crate::domain::types::{CodeChunk, Embedding, SearchResult};
 use std::collections::HashMap;

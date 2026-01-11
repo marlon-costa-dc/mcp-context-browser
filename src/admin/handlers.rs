@@ -60,13 +60,114 @@ pub async fn get_config_handler(
 
 /// Update system configuration
 pub async fn update_config_handler(
-    State(_state): State<AdminState>,
-    Json(_config): Json<SystemConfig>,
+    State(state): State<AdminState>,
+    Json(config): Json<SystemConfig>,
 ) -> Result<Json<ApiResponse<SystemConfig>>, StatusCode> {
-    // TODO: Implement config update
-    Ok(Json(ApiResponse::error(
-        "Configuration update not yet implemented".to_string(),
-    )))
+    // Convert SystemConfig to HashMap for admin service
+    let mut updates = std::collections::HashMap::new();
+
+    // Indexing settings
+    updates.insert(
+        "indexing.chunk_size".to_string(),
+        serde_json::json!(config.indexing.chunk_size),
+    );
+    updates.insert(
+        "indexing.chunk_overlap".to_string(),
+        serde_json::json!(config.indexing.chunk_overlap),
+    );
+    updates.insert(
+        "indexing.max_file_size".to_string(),
+        serde_json::json!(config.indexing.max_file_size),
+    );
+    updates.insert(
+        "indexing.supported_extensions".to_string(),
+        serde_json::json!(config.indexing.supported_extensions),
+    );
+    updates.insert(
+        "indexing.exclude_patterns".to_string(),
+        serde_json::json!(config.indexing.exclude_patterns),
+    );
+
+    // Security settings
+    updates.insert(
+        "security.enable_auth".to_string(),
+        serde_json::json!(config.security.enable_auth),
+    );
+    updates.insert(
+        "security.rate_limiting".to_string(),
+        serde_json::json!(config.security.rate_limiting),
+    );
+    updates.insert(
+        "security.max_requests_per_minute".to_string(),
+        serde_json::json!(config.security.max_requests_per_minute),
+    );
+
+    // Metrics settings
+    updates.insert(
+        "metrics.enabled".to_string(),
+        serde_json::json!(config.metrics.enabled),
+    );
+    updates.insert(
+        "metrics.collection_interval".to_string(),
+        serde_json::json!(config.metrics.collection_interval),
+    );
+    updates.insert(
+        "metrics.retention_days".to_string(),
+        serde_json::json!(config.metrics.retention_days),
+    );
+
+    // Update configuration via admin service
+    match state
+        .admin_service
+        .update_configuration(updates, "admin")
+        .await
+    {
+        Ok(_result) => {
+            // Fetch updated configuration to return
+            let updated_config = state
+                .admin_service
+                .get_configuration()
+                .await
+                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+            let response_config = SystemConfig {
+                providers: updated_config
+                    .providers
+                    .into_iter()
+                    .map(|p| ProviderInfo {
+                        id: p.id,
+                        name: p.name,
+                        provider_type: p.provider_type,
+                        status: p.status,
+                        config: p.config,
+                    })
+                    .collect(),
+                indexing: crate::admin::models::IndexingConfig {
+                    chunk_size: updated_config.indexing.chunk_size,
+                    chunk_overlap: updated_config.indexing.chunk_overlap,
+                    max_file_size: updated_config.indexing.max_file_size,
+                    supported_extensions: updated_config.indexing.supported_extensions,
+                    exclude_patterns: updated_config.indexing.exclude_patterns,
+                },
+                security: crate::admin::models::SecurityConfig {
+                    enable_auth: updated_config.security.enable_auth,
+                    rate_limiting: updated_config.security.rate_limiting,
+                    max_requests_per_minute: updated_config.security.max_requests_per_minute,
+                },
+                metrics: crate::admin::models::MetricsConfig {
+                    enabled: updated_config.metrics.enabled,
+                    collection_interval: updated_config.metrics.collection_interval,
+                    retention_days: updated_config.metrics.retention_days,
+                },
+            };
+
+            Ok(Json(ApiResponse::success(response_config)))
+        }
+        Err(e) => Ok(Json(ApiResponse::error(format!(
+            "Failed to update configuration: {}",
+            e
+        )))),
+    }
 }
 
 /// List all providers

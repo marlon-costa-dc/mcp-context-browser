@@ -3,27 +3,73 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange)](https://www.rust-lang.org/)
 [![MCP](https://img.shields.io/badge/MCP-2024--11--05-blue)](https://modelcontextprotocol.io/)
-[![Version](https://img.shields.io/badge/version-0.0.4-blue)](https://github.com/marlonsc/mcp-context-browser/releases)
+[![Version](https://img.shields.io/badge/version-0.1.0-blue)](https://github.com/marlonsc/mcp-context-browser/releases)
 
-AI-powered semantic code search for development teams. Natural language queries transformed into precise code locations with context.
+**Drop-in replacement for [claude-context](https://github.com/zilliztech/claude-context)** - AI-powered semantic code search as a single native binary. Same MCP tools, same environment variables, better performance.
+
+## Why Switch from claude-context?
+
+| | claude-context | mcp-context-browser |
+|---|----------------|---------------------|
+| **Runtime** | Node.js 20-23 | Single binary |
+| **Startup** | npm/npx overhead | Instant |
+| **Memory** | Node.js interpreter | Native efficiency |
+| **Providers** | 4 embedding | 6 embedding |
+| **Vector Stores** | 2 (Milvus/Zilliz) | 6 options |
+| **Languages** | 13+ | 13 with AST parsing |
+
+**Same environment variables work!** No configuration changes needed.
 
 ## Quick Start
 
+### Claude Desktop Integration
+
+Add to your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "context": {
+      "command": "/path/to/mcp-context-browser",
+      "args": [],
+      "env": {
+        "OPENAI_API_KEY": "sk-...",
+        "MILVUS_ADDRESS": "http://localhost:19530"
+      }
+    }
+  }
+}
+```
+
+### From Source
+
 ```bash
-# Setup
+# Build
 git clone https://github.com/marlonsc/mcp-context-browser.git
 cd mcp-context-browser
-make setup
-
-# Development
-make docker-up  # Start test services (Ollama, Milvus)
-make run        # Start MCP server
-
-# Production
-export MCP_EMBEDDING_PROVIDER=ollama
-export MCP_VECTOR_STORE=milvus
-export MCP_METRICS_ENABLED=true
 make build-release
+
+# Run with your existing env vars
+export OPENAI_API_KEY=sk-...
+./target/release/mcp-context-browser
+```
+
+### Environment Variables (claude-context compatible)
+
+```bash
+# Embedding providers
+EMBEDDING_PROVIDER=openai|voyageai|ollama|gemini|fastembed
+
+# API keys (same as claude-context)
+OPENAI_API_KEY=sk-...
+VOYAGE_API_KEY=...
+GEMINI_API_KEY=...
+OLLAMA_BASE_URL=http://localhost:11434
+
+# Vector store
+VECTOR_STORE_PROVIDER=milvus|in-memory|filesystem|edgevec
+MILVUS_ADDRESS=http://localhost:19530
+MILVUS_TOKEN=...
 ```
 
 ## Core Features
@@ -90,6 +136,8 @@ Test coverage:
 
 ## Documentation
 
+-   [**Migration Guide**](docs/migration/FROM_CLAUDE_CONTEXT.md) - Migrating from claude-context
+-   [**QUICKSTART.md**](docs/user-guide/QUICKSTART.md) - Get started in 5 minutes
 -   [**Claude.md**](CLAUDE.md) - Development guide and project rules
 -   [**ARCHITECTURE.md**](docs/architecture/ARCHITECTURE.md) - Technical architecture
 -   [**DEPLOYMENT.md**](docs/operations/DEPLOYMENT.md) - Deployment guides
@@ -117,17 +165,20 @@ Test coverage:
 -   Multi-language support (Rust, Python, JavaScript, etc.)
 -   Security compliance with audit trails
 
-## Current Status: v0.0.4
+## Current Status: v0.1.0
 
-Production-ready with comprehensive features:
+First stable release - drop-in replacement for claude-context:
 
--   ✅ Full MCP protocol implementation
--   ✅ Advanced provider routing with failover
--   ✅ Real-time synchronization with change detection
--   ✅ JWT authentication and authorization
--   ✅ Comprehensive monitoring and health checks
--   ✅ 214 tests with 100% pass rate
--   ✅ Security audit complete (3 known dependency issues, non-blocking)
+-   ✅ Full MCP protocol implementation (4 tools)
+-   ✅ 13 languages with AST parsing (Rust, Python, JS/TS, Go, Java, C, C++, C#, Ruby, PHP, Swift, Kotlin)
+-   ✅ 6 embedding providers (OpenAI, VoyageAI, Ollama, Gemini, FastEmbed, Mock)
+-   ✅ 6 vector stores (Milvus, EdgeVec, In-Memory, Filesystem, Encrypted, Null)
+-   ✅ claude-context environment variable compatibility
+-   ✅ 150+ tests with 100% pass rate
+-   ✅ JWT authentication and rate limiting
+-   ✅ Clean architecture with trait-based DI
+
+**Migrating from claude-context?** See [Migration Guide](docs/migration/FROM_CLAUDE_CONTEXT.md)
 
 ## Contributing
 

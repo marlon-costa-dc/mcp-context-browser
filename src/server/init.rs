@@ -6,18 +6,24 @@
 use crate::adapters::http_client::{HttpClientConfig, HttpClientPool};
 use crate::infrastructure::cache::CacheManager;
 use crate::infrastructure::config::ConfigLoader;
+use crate::infrastructure::connection_tracker::{ConnectionTracker, ConnectionTrackerConfig};
 use crate::infrastructure::limits::ResourceLimits;
 use crate::infrastructure::metrics::MetricsApiServer;
 use crate::infrastructure::rate_limit::RateLimiter;
+use crate::server::transport::{
+    create_mcp_router, HttpTransportState, SessionManager, TransportConfig, TransportMode,
+    VersionChecker,
+};
 use crate::server::McpServer;
 use rmcp::ServerHandler;
 use rmcp::ServiceExt;
 use rmcp::transport::stdio;
+use std::net::SocketAddr;
 use std::sync::Arc;
 use tracing_subscriber::{self, EnvFilter};
 
 use crate::infrastructure::events::create_shared_event_bus;
-use crate::infrastructure::logging::{RingBufferLayer, create_shared_log_buffer};
+use crate::infrastructure::logging::{create_shared_log_buffer, RingBufferLayer};
 use crate::server::McpServerBuilder;
 use tracing_subscriber::prelude::*;
 
@@ -198,8 +204,13 @@ async fn initialize_server_components(
 
 /// Run the MCP Context Browser server
 ///
-/// This is the main entry point that starts the MCP server with stdio transport.
+/// This is the main entry point that starts the MCP server with configurable transport.
 /// The server implements the MCP protocol for semantic code search and indexing.
+///
+/// # Transport Modes
+/// - **Stdio**: Traditional child process pattern (stdin/stdout)
+/// - **HTTP**: Independent HTTP server (Streamable HTTP per MCP spec)
+/// - **Hybrid**: Both stdio and HTTP simultaneously (default)
 ///
 /// # Architecture Notes
 /// - Async-first design using Tokio runtime
@@ -214,6 +225,8 @@ async fn initialize_server_components(
 /// - Enterprise-grade error handling and timeouts
 /// - SOC 2 compliant logging and security
 /// - Production-ready rate limiting
+/// - Server version compatibility (±1 minor version)
+/// - Session management with resumption support
 pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let log_buffer = create_shared_log_buffer(1000);
     // Initialize tracing first for proper error reporting
@@ -233,38 +246,113 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let (server, metrics_handle, _resource_limits, _http_client) =
         initialize_server_components(None, log_buffer).await?;
 
-    tracing::info!("📡 Starting MCP protocol server on stdio transport");
-    tracing::info!("🎯 Ready to accept MCP client connections");
+    // Initialize transport configuration
+    let transport_config = TransportConfig::default();
+    tracing::info!("🔧 Transport mode: {:?}", transport_config.mode);
+
+    // Initialize HTTP transport components
+    let session_manager = Arc::new(SessionManager::with_defaults());
+    let version_checker = Arc::new(VersionChecker::with_defaults());
+    let connection_tracker = Arc::new(ConnectionTracker::new(ConnectionTrackerConfig::default()));
+
+    // Start HTTP transport if enabled
+    let http_handle = match transport_config.mode {
+        TransportMode::Http | TransportMode::Hybrid => {
+            let http_state = HttpTransportState {
+                session_manager: Arc::clone(&session_manager),
+                version_checker: Arc::clone(&version_checker),
+                connection_tracker: Arc::clone(&connection_tracker),
+                config: transport_config.clone(),
+            };
+
+            let mcp_router = create_mcp_router(http_state);
+            let addr: SocketAddr = format!(
+                "{}:{}",
+                transport_config.http.bind_address, transport_config.http.port
+            )
+            .parse()
+            .map_err(|e| format!("Invalid HTTP bind address: {}", e))?;
+
+            tracing::info!(
+                "🌐 Starting MCP HTTP transport on {}:{}",
+                transport_config.http.bind_address,
+                transport_config.http.port
+            );
+
+            let listener = tokio::net::TcpListener::bind(addr).await?;
+
+            Some(tokio::spawn(async move {
+                if let Err(e) = axum::serve(listener, mcp_router).await {
+                    tracing::error!("💥 HTTP transport server failed: {}", e);
+                }
+            }))
+        }
+        TransportMode::Stdio => {
+            tracing::info!("ℹ️  HTTP transport disabled (stdio-only mode)");
+            None
+        }
+    };
 
     // Handle graceful shutdown signals
-    let shutdown_signal = async {
+    let connection_tracker_shutdown = Arc::clone(&connection_tracker);
+    let shutdown_signal = async move {
         if let Err(e) = tokio::signal::ctrl_c().await {
             tracing::error!("Failed to listen for shutdown signal: {}", e);
             return;
         }
         tracing::info!("🛑 Received shutdown signal, initiating graceful shutdown...");
+
+        // Drain HTTP connections gracefully
+        let drained = connection_tracker_shutdown.drain(None).await;
+        if drained {
+            tracing::info!("✅ All HTTP connections drained successfully");
+        } else {
+            tracing::warn!("⚠️ HTTP connection drain timed out");
+        }
     };
 
-    // Start the MCP service with stdio transport
-    let service_future = server.serve(stdio());
+    // Start the MCP service based on transport mode
+    match transport_config.mode {
+        TransportMode::Stdio | TransportMode::Hybrid => {
+            tracing::info!("📡 Starting MCP protocol server on stdio transport");
+            tracing::info!("🎯 Ready to accept MCP client connections");
 
-    tokio::select! {
-        result = service_future => {
-            match result {
-                Ok(service) => {
-                    tracing::info!("🎉 MCP server started successfully, waiting for connections...");
-                    service.waiting().await?;
-                    tracing::info!("👋 MCP server shutdown complete");
+            // Start the MCP service with stdio transport
+            let service_future = server.serve(stdio());
+
+            tokio::select! {
+                result = service_future => {
+                    match result {
+                        Ok(service) => {
+                            tracing::info!("🎉 MCP server started successfully, waiting for connections...");
+                            service.waiting().await?;
+                            tracing::info!("👋 MCP server shutdown complete");
+                        }
+                        Err(e) => {
+                            tracing::error!("💥 Failed to start MCP service: {:?}", e);
+                            return Err(e.into());
+                        }
+                    }
                 }
-                Err(e) => {
-                    tracing::error!("💥 Failed to start MCP service: {:?}", e);
-                    return Err(e.into());
+                _ = shutdown_signal => {
+                    tracing::info!("🔄 Graceful shutdown initiated");
                 }
             }
         }
-        _ = shutdown_signal => {
-            tracing::info!("🔄 Graceful shutdown initiated");
+        TransportMode::Http => {
+            tracing::info!("📡 Running in HTTP-only mode (no stdio)");
+            tracing::info!("🎯 Ready to accept MCP HTTP connections");
+
+            // In HTTP-only mode, just wait for shutdown
+            shutdown_signal.await;
         }
+    }
+
+    // Wait for HTTP server to finish if it was started
+    if let Some(handle) = http_handle {
+        tracing::info!("⏳ Waiting for HTTP transport to shutdown...");
+        let _ = handle.await;
+        tracing::info!("✅ HTTP transport shutdown complete");
     }
 
     // Wait for metrics server to finish if it was started

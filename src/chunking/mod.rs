@@ -68,6 +68,22 @@ pub(crate) static LANGUAGE_CONFIGS: LazyLock<
         Language::CSharp,
         Box::new(CSharpProcessor::new()) as Box<dyn LanguageProcessor + Send + Sync>,
     );
+    configs.insert(
+        Language::Ruby,
+        Box::new(RubyProcessor::new()) as Box<dyn LanguageProcessor + Send + Sync>,
+    );
+    configs.insert(
+        Language::Php,
+        Box::new(PhpProcessor::new()) as Box<dyn LanguageProcessor + Send + Sync>,
+    );
+    configs.insert(
+        Language::Swift,
+        Box::new(SwiftProcessor::new()) as Box<dyn LanguageProcessor + Send + Sync>,
+    );
+    configs.insert(
+        Language::Kotlin,
+        Box::new(KotlinProcessor::new()) as Box<dyn LanguageProcessor + Send + Sync>,
+    );
 
     configs
 });

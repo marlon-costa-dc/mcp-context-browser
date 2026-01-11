@@ -3,14 +3,22 @@
 //! Implements resource monitoring and limits to prevent system overload.
 //! Supports memory, CPU, disk, and concurrent operation limits.
 
+mod config;
+mod types;
+
+// Re-export configuration types
+pub use config::{CpuLimits, DiskLimits, MemoryLimits, OperationLimits, ResourceLimitsConfig};
+
+// Re-export types
+pub use types::{
+    CpuStats, DiskStats, MemoryStats, OperationStats, ResourceStats, ResourceViolation,
+};
+
 use crate::domain::error::{Error, Result};
 use async_trait::async_trait;
-use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::time::Duration;
 use tokio::sync::Semaphore;
-use validator::Validate;
 
 /// Trait for resource limits operations (enables DI and testing)
 ///
@@ -37,209 +45,15 @@ pub trait ResourceLimitsProvider: Send + Sync {
 /// Type alias for shared resource limits provider
 pub type SharedResourceLimits = Arc<dyn ResourceLimitsProvider>;
 
-/// Resource limits configuration
-#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
-pub struct ResourceLimitsConfig {
-    /// Memory limits
-    #[validate(nested)]
-    pub memory: MemoryLimits,
-    /// CPU limits
-    #[validate(nested)]
-    pub cpu: CpuLimits,
-    /// Disk limits
-    #[validate(nested)]
-    pub disk: DiskLimits,
-    /// Operation concurrency limits
-    #[validate(nested)]
-    pub operations: OperationLimits,
-    /// Whether resource limits are enabled
-    pub enabled: bool,
-}
-
-impl Default for ResourceLimitsConfig {
-    fn default() -> Self {
-        Self {
-            memory: MemoryLimits::default(),
-            cpu: CpuLimits::default(),
-            disk: DiskLimits::default(),
-            operations: OperationLimits::default(),
-            enabled: true,
-        }
-    }
-}
-
-/// Memory resource limits
-#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
-pub struct MemoryLimits {
-    /// Maximum memory usage percentage (0-100)
-    #[validate(range(min = 0.0, max = 100.0))]
-    pub max_usage_percent: f32,
-    /// Maximum memory per operation (bytes)
-    #[validate(range(min = 1))]
-    pub max_per_operation: u64,
-    /// Warning threshold percentage
-    #[validate(range(min = 0.0, max = 100.0))]
-    pub warning_threshold: f32,
-}
-
-impl Default for MemoryLimits {
-    fn default() -> Self {
-        Self {
-            max_usage_percent: 85.0,
-            max_per_operation: 512 * 1024 * 1024, // 512MB
-            warning_threshold: 75.0,
-        }
-    }
-}
-
-/// CPU resource limits
-#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
-pub struct CpuLimits {
-    /// Maximum CPU usage percentage (0-100)
-    #[validate(range(min = 0.0, max = 100.0))]
-    pub max_usage_percent: f32,
-    /// Maximum CPU time per operation (seconds)
-    pub max_time_per_operation: Duration,
-    /// Warning threshold percentage
-    #[validate(range(min = 0.0, max = 100.0))]
-    pub warning_threshold: f32,
-}
-
-impl Default for CpuLimits {
-    fn default() -> Self {
-        Self {
-            max_usage_percent: 80.0,
-            max_time_per_operation: Duration::from_secs(300), // 5 minutes
-            warning_threshold: 70.0,
-        }
-    }
-}
-
-/// Disk resource limits
-#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
-pub struct DiskLimits {
-    /// Maximum disk usage percentage (0-100)
-    #[validate(range(min = 0.0, max = 100.0))]
-    pub max_usage_percent: f32,
-    /// Minimum free space required (bytes)
-    #[validate(range(min = 1))]
-    pub min_free_space: u64,
-    /// Warning threshold percentage
-    #[validate(range(min = 0.0, max = 100.0))]
-    pub warning_threshold: f32,
-}
-
-impl Default for DiskLimits {
-    fn default() -> Self {
-        Self {
-            max_usage_percent: 90.0,
-            min_free_space: 1024 * 1024 * 1024, // 1GB
-            warning_threshold: 80.0,
-        }
-    }
-}
-
-/// Operation concurrency limits
-#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
-pub struct OperationLimits {
-    /// Maximum concurrent indexing operations
-    #[validate(range(min = 1))]
-    pub max_concurrent_indexing: usize,
-    /// Maximum concurrent search operations
-    #[validate(range(min = 1))]
-    pub max_concurrent_search: usize,
-    /// Maximum concurrent embedding operations
-    #[validate(range(min = 1))]
-    pub max_concurrent_embedding: usize,
-    /// Maximum queue size for operations
-    #[validate(range(min = 1))]
-    pub max_queue_size: usize,
-}
-
-impl Default for OperationLimits {
-    fn default() -> Self {
-        Self {
-            max_concurrent_indexing: 3,
-            max_concurrent_search: 10,
-            max_concurrent_embedding: 5,
-            max_queue_size: 100,
-        }
-    }
-}
-
-/// Resource usage statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ResourceStats {
-    /// Memory usage
-    pub memory: MemoryStats,
-    /// CPU usage
-    pub cpu: CpuStats,
-    /// Disk usage
-    pub disk: DiskStats,
-    /// Operation counts
-    pub operations: OperationStats,
-    /// Timestamp of measurement
-    pub timestamp: u64,
-}
-
-/// Memory usage statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MemoryStats {
-    pub total: u64,
-    pub used: u64,
-    pub available: u64,
-    pub usage_percent: f32,
-}
-
-/// CPU usage statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CpuStats {
-    pub usage_percent: f32,
-    pub cores: usize,
-}
-
-/// Disk usage statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DiskStats {
-    pub total: u64,
-    pub used: u64,
-    pub available: u64,
-    pub usage_percent: f32,
-}
-
-/// Operation statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OperationStats {
-    pub active_indexing: usize,
-    pub active_search: usize,
-    pub active_embedding: usize,
-    pub queued_operations: usize,
-}
-
-/// Resource limit violations
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ResourceViolation {
-    MemoryLimitExceeded {
-        current_percent: f32,
-        limit_percent: f32,
-    },
-    CpuLimitExceeded {
-        current_percent: f32,
-        limit_percent: f32,
-    },
-    DiskLimitExceeded {
-        current_percent: f32,
-        limit_percent: f32,
-    },
-    DiskSpaceLow {
-        available_bytes: u64,
-        required_bytes: u64,
-    },
-    ConcurrencyLimitExceeded {
-        operation_type: String,
-        current: usize,
-        limit: usize,
-    },
+#[derive(Debug, Default)]
+struct OperationCounters {
+    active_indexing: AtomicUsize,
+    active_search: AtomicUsize,
+    active_embedding: AtomicUsize,
+    /// Tracks operations waiting to acquire permits
+    queued_indexing: AtomicUsize,
+    queued_search: AtomicUsize,
+    queued_embedding: AtomicUsize,
 }
 
 /// Resource limits enforcer
@@ -254,17 +68,6 @@ pub struct ResourceLimits {
     embedding_semaphore: Arc<Semaphore>,
     /// Current operation counters
     operation_counters: Arc<OperationCounters>,
-}
-
-#[derive(Debug, Default)]
-struct OperationCounters {
-    active_indexing: AtomicUsize,
-    active_search: AtomicUsize,
-    active_embedding: AtomicUsize,
-    /// Tracks operations waiting to acquire permits
-    queued_indexing: AtomicUsize,
-    queued_search: AtomicUsize,
-    queued_embedding: AtomicUsize,
 }
 
 impl ResourceLimits {
@@ -303,9 +106,6 @@ impl ResourceLimits {
     }
 
     /// Acquire a permit for an operation
-    ///
-    /// Tracks both queued and active operations. Operations are considered queued
-    /// while waiting for a semaphore permit, then transition to active once acquired.
     pub async fn acquire_operation_permit(
         &self,
         operation_type: &str,
@@ -320,14 +120,12 @@ impl ResourceLimits {
 
         let permit = match operation_type {
             "indexing" => {
-                // Track as queued while waiting
                 self.operation_counters
                     .queued_indexing
                     .fetch_add(1, Ordering::Relaxed);
 
                 let permit_result = self.indexing_semaphore.acquire().await;
 
-                // Remove from queue (whether success or failure)
                 self.operation_counters
                     .queued_indexing
                     .fetch_sub(1, Ordering::Relaxed);
@@ -342,14 +140,12 @@ impl ResourceLimits {
                 Some(permit)
             }
             "search" => {
-                // Track as queued while waiting
                 self.operation_counters
                     .queued_search
                     .fetch_add(1, Ordering::Relaxed);
 
                 let permit_result = self.search_semaphore.acquire().await;
 
-                // Remove from queue (whether success or failure)
                 self.operation_counters
                     .queued_search
                     .fetch_sub(1, Ordering::Relaxed);
@@ -364,14 +160,12 @@ impl ResourceLimits {
                 Some(permit)
             }
             "embedding" => {
-                // Track as queued while waiting
                 self.operation_counters
                     .queued_embedding
                     .fetch_add(1, Ordering::Relaxed);
 
                 let permit_result = self.embedding_semaphore.acquire().await;
 
-                // Remove from queue (whether success or failure)
                 self.operation_counters
                     .queued_embedding
                     .fetch_sub(1, Ordering::Relaxed);
@@ -577,7 +371,6 @@ impl ResourceLimits {
 
     /// Get operation statistics
     async fn get_operation_stats(&self) -> Result<OperationStats> {
-        // Sum all queued operations across operation types
         let queued_operations = self
             .operation_counters
             .queued_indexing
@@ -648,7 +441,6 @@ pub struct OperationPermit<'a> {
 
 impl Drop for OperationPermit<'_> {
     fn drop(&mut self) {
-        // Decrement counter when permit is dropped
         match self.operation_type.as_str() {
             "indexing" => {
                 self.counters
@@ -735,53 +527,10 @@ impl ResourceLimitsProvider for NullResourceLimits {
     }
 }
 
-/// Global resource limits instance
-///
-/// **DEPRECATED**: Use dependency injection with `Arc<dyn ResourceLimitsProvider>` instead.
-/// This global static will be removed in a future release.
-static RESOURCE_LIMITS: std::sync::OnceLock<ResourceLimits> = std::sync::OnceLock::new();
-
-/// Initialize global resource limits
-///
-/// **DEPRECATED**: Use `ResourceLimits::new()` and pass via DI instead.
-#[deprecated(
-    since = "0.0.5",
-    note = "Use ResourceLimits::new() and pass Arc<dyn ResourceLimitsProvider> via dependency injection"
-)]
-pub fn init_global_resource_limits(config: ResourceLimitsConfig) -> Result<()> {
-    // Check if we already have resource limits
-    // Use RESOURCE_LIMITS.get() directly to avoid calling deprecated get_global_resource_limits()
-    if RESOURCE_LIMITS.get().is_some() {
-        return Ok(());
-    }
-
-    // Try to create and set new limits
-    let limits = ResourceLimits::new(config);
-
-    // Try to set it, but if it fails (already set), just return success
-    match RESOURCE_LIMITS.set(limits) {
-        Ok(()) => Ok(()),
-        Err(_) => {
-            // Already set by another thread/test, just return success
-            Ok(())
-        }
-    }
-}
-
-/// Get global resource limits
-///
-/// **DEPRECATED**: Use dependency injection with `Arc<dyn ResourceLimitsProvider>` instead.
-#[deprecated(
-    since = "0.0.5",
-    note = "Use Arc<dyn ResourceLimitsProvider> via dependency injection"
-)]
-pub fn get_global_resource_limits() -> Option<&'static ResourceLimits> {
-    RESOURCE_LIMITS.get()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::time::Duration;
 
     #[test]
     fn test_resource_limits_config_default() {
@@ -808,7 +557,6 @@ mod tests {
 
         assert!(limits.is_enabled());
 
-        // Test stats collection
         let stats = limits.get_stats().await?;
         assert!(stats.timestamp > 0);
         assert!(stats.memory.total > 0);
@@ -822,20 +570,16 @@ mod tests {
         let config = ResourceLimitsConfig::default();
         let limits = ResourceLimits::new(config);
 
-        // Acquire permits
         let _permit1 = limits.acquire_operation_permit("indexing").await?;
         let _permit2 = limits.acquire_operation_permit("search").await?;
 
-        // Check that counters are updated
         let stats = limits.get_stats().await?;
         assert_eq!(stats.operations.active_indexing, 1);
         assert_eq!(stats.operations.active_search, 1);
 
-        // Permits should be released when dropped
         drop(_permit1);
         drop(_permit2);
 
-        // Give a moment for async cleanup
         tokio::time::sleep(Duration::from_millis(10)).await;
 
         let stats = limits.get_stats().await?;
@@ -855,7 +599,6 @@ mod tests {
 
         assert!(!limits.is_enabled());
 
-        // Should always allow operations when disabled
         limits.check_operation_allowed("indexing").await?;
         let _permit = limits.acquire_operation_permit("search").await?;
         Ok(())
@@ -879,10 +622,8 @@ mod tests {
         let null_limits = NullResourceLimits::new();
         assert!(!null_limits.is_enabled());
 
-        // Should always succeed
         null_limits.check_operation_allowed("indexing").await?;
 
-        // Stats should return zeroes
         let stats = null_limits.get_stats().await?;
         assert_eq!(stats.memory.total, 0);
         assert_eq!(stats.cpu.cores, 0);

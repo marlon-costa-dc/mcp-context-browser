@@ -673,20 +673,20 @@ pub struct Test {
             "Should support C#"
         );
         assert!(
-            !IntelligentChunker::is_language_supported(&Language::Php),
-            "Should not support PHP yet"
+            IntelligentChunker::is_language_supported(&Language::Php),
+            "Should support PHP"
         );
         assert!(
-            !IntelligentChunker::is_language_supported(&Language::Ruby),
-            "Should not support Ruby yet"
+            IntelligentChunker::is_language_supported(&Language::Ruby),
+            "Should support Ruby"
         );
         assert!(
-            !IntelligentChunker::is_language_supported(&Language::Swift),
-            "Should not support Swift yet"
+            IntelligentChunker::is_language_supported(&Language::Swift),
+            "Should support Swift"
         );
         assert!(
-            !IntelligentChunker::is_language_supported(&Language::Kotlin),
-            "Should not support Kotlin yet"
+            IntelligentChunker::is_language_supported(&Language::Kotlin),
+            "Should support Kotlin"
         );
         assert!(
             !IntelligentChunker::is_language_supported(&Language::Scala),

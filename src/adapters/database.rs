@@ -252,64 +252,6 @@ pub struct DatabaseStats {
     pub min_idle: u32,
 }
 
-/// Global database pool instance
-///
-/// **DEPRECATED**: Use dependency injection with `Arc<dyn DatabasePoolProvider>` instead.
-/// This global static will be removed in a future release.
-static DB_POOL: std::sync::OnceLock<DatabasePool> = std::sync::OnceLock::new();
-
-/// Initialize the global database pool
-///
-/// **DEPRECATED**: Use `DatabasePool::new()` and pass via DI instead.
-#[deprecated(
-    since = "0.0.5",
-    note = "Use DatabasePool::new() and pass Arc<dyn DatabasePoolProvider> via dependency injection"
-)]
-pub fn init_global_database_pool(config: DatabaseConfig) -> Result<()> {
-    let pool = DatabasePool::new(config)?;
-    DB_POOL
-        .set(pool)
-        .map_err(|_| "Database pool already initialized".into())
-}
-
-/// Get the global database pool
-///
-/// **DEPRECATED**: Use dependency injection with `Arc<dyn DatabasePoolProvider>` instead.
-#[deprecated(
-    since = "0.0.5",
-    note = "Use Arc<dyn DatabasePoolProvider> via dependency injection"
-)]
-pub fn get_global_database_pool() -> Option<&'static DatabasePool> {
-    DB_POOL.get()
-}
-
-/// Get the global database pool or create a default one
-///
-/// **DEPRECATED**: Use `DatabasePool::new()` or `NullDatabasePool::new()` and pass via DI instead.
-#[deprecated(
-    since = "0.0.5",
-    note = "Use DatabasePool::new() or NullDatabasePool::new() and pass via DI"
-)]
-pub fn get_or_create_global_database_pool() -> Result<&'static DatabasePool> {
-    // Use DB_POOL.get() directly instead of calling deprecated get_global_database_pool()
-    if let Some(pool) = DB_POOL.get() {
-        Ok(pool)
-    } else {
-        // Create disabled pool if not configured
-        let config = DatabaseConfig {
-            enabled: false,
-            ..Default::default()
-        };
-        let _pool = DatabasePool::new(config)?;
-        DB_POOL
-            .set(_pool)
-            .map_err(|_| Error::internal("Database pool already initialized"))?;
-        DB_POOL
-            .get()
-            .ok_or_else(|| Error::internal("Failed to retrieve database pool after initialization"))
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

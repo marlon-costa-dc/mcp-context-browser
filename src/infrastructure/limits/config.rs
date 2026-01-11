@@ -1,0 +1,138 @@
+//! Resource limits configuration types
+//!
+//! Defines configuration structures for resource limits including
+//! memory, CPU, disk, and operation concurrency limits.
+
+use serde::{Deserialize, Serialize};
+use std::time::Duration;
+use validator::Validate;
+
+/// Resource limits configuration
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+pub struct ResourceLimitsConfig {
+    /// Memory limits
+    #[validate(nested)]
+    pub memory: MemoryLimits,
+    /// CPU limits
+    #[validate(nested)]
+    pub cpu: CpuLimits,
+    /// Disk limits
+    #[validate(nested)]
+    pub disk: DiskLimits,
+    /// Operation concurrency limits
+    #[validate(nested)]
+    pub operations: OperationLimits,
+    /// Whether resource limits are enabled
+    pub enabled: bool,
+}
+
+impl Default for ResourceLimitsConfig {
+    fn default() -> Self {
+        Self {
+            memory: MemoryLimits::default(),
+            cpu: CpuLimits::default(),
+            disk: DiskLimits::default(),
+            operations: OperationLimits::default(),
+            enabled: true,
+        }
+    }
+}
+
+/// Memory resource limits
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+pub struct MemoryLimits {
+    /// Maximum memory usage percentage (0-100)
+    #[validate(range(min = 0.0, max = 100.0))]
+    pub max_usage_percent: f32,
+    /// Maximum memory per operation (bytes)
+    #[validate(range(min = 1))]
+    pub max_per_operation: u64,
+    /// Warning threshold percentage
+    #[validate(range(min = 0.0, max = 100.0))]
+    pub warning_threshold: f32,
+}
+
+impl Default for MemoryLimits {
+    fn default() -> Self {
+        Self {
+            max_usage_percent: 85.0,
+            max_per_operation: 512 * 1024 * 1024, // 512MB
+            warning_threshold: 75.0,
+        }
+    }
+}
+
+/// CPU resource limits
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+pub struct CpuLimits {
+    /// Maximum CPU usage percentage (0-100)
+    #[validate(range(min = 0.0, max = 100.0))]
+    pub max_usage_percent: f32,
+    /// Maximum CPU time per operation (seconds)
+    pub max_time_per_operation: Duration,
+    /// Warning threshold percentage
+    #[validate(range(min = 0.0, max = 100.0))]
+    pub warning_threshold: f32,
+}
+
+impl Default for CpuLimits {
+    fn default() -> Self {
+        Self {
+            max_usage_percent: 80.0,
+            max_time_per_operation: Duration::from_secs(300), // 5 minutes
+            warning_threshold: 70.0,
+        }
+    }
+}
+
+/// Disk resource limits
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+pub struct DiskLimits {
+    /// Maximum disk usage percentage (0-100)
+    #[validate(range(min = 0.0, max = 100.0))]
+    pub max_usage_percent: f32,
+    /// Minimum free space required (bytes)
+    #[validate(range(min = 1))]
+    pub min_free_space: u64,
+    /// Warning threshold percentage
+    #[validate(range(min = 0.0, max = 100.0))]
+    pub warning_threshold: f32,
+}
+
+impl Default for DiskLimits {
+    fn default() -> Self {
+        Self {
+            max_usage_percent: 90.0,
+            min_free_space: 1024 * 1024 * 1024, // 1GB
+            warning_threshold: 80.0,
+        }
+    }
+}
+
+/// Operation concurrency limits
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+pub struct OperationLimits {
+    /// Maximum concurrent indexing operations
+    #[validate(range(min = 1))]
+    pub max_concurrent_indexing: usize,
+    /// Maximum concurrent search operations
+    #[validate(range(min = 1))]
+    pub max_concurrent_search: usize,
+    /// Maximum concurrent embedding operations
+    #[validate(range(min = 1))]
+    pub max_concurrent_embedding: usize,
+    /// Maximum queue size for operations
+    #[validate(range(min = 1))]
+    pub max_queue_size: usize,
+}
+
+impl Default for OperationLimits {
+    fn default() -> Self {
+        Self {
+            max_concurrent_indexing: 3,
+            max_concurrent_search: 10,
+            max_concurrent_embedding: 5,
+            max_queue_size: 100,
+        }
+    }
+}

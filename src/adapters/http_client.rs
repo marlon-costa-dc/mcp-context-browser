@@ -189,69 +189,6 @@ impl HttpClientProvider for NullHttpClientPool {
     }
 }
 
-/// Global HTTP client pool instance
-///
-/// **DEPRECATED**: Use dependency injection with `Arc<dyn HttpClientProvider>` instead.
-/// This global static will be removed in a future release.
-static HTTP_CLIENT_POOL: std::sync::OnceLock<Arc<HttpClientPool>> = std::sync::OnceLock::new();
-
-/// Initialize the global HTTP client pool
-///
-/// **DEPRECATED**: Use `HttpClientPool::with_config()` and pass via DI instead.
-#[deprecated(
-    since = "0.0.5",
-    note = "Use HttpClientPool::with_config() and pass Arc<dyn HttpClientProvider> via dependency injection"
-)]
-pub fn init_global_http_client(
-    config: HttpClientConfig,
-) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let pool = Arc::new(HttpClientPool::with_config(config)?);
-    HTTP_CLIENT_POOL
-        .set(pool)
-        .map_err(|_| "HTTP client pool already initialized".into())
-}
-
-/// Get the global HTTP client pool
-///
-/// **DEPRECATED**: Use dependency injection with `Arc<dyn HttpClientProvider>` instead.
-#[deprecated(
-    since = "0.0.5",
-    note = "Use Arc<dyn HttpClientProvider> via dependency injection"
-)]
-pub fn get_global_http_client() -> Option<Arc<HttpClientPool>> {
-    HTTP_CLIENT_POOL.get().cloned()
-}
-
-/// Get the global HTTP client or create a default one
-///
-/// **DEPRECATED**: Use `HttpClientPool::new()` or `NullHttpClientPool::new()` and pass via DI instead.
-#[deprecated(
-    since = "0.0.5",
-    note = "Use HttpClientPool::new() or NullHttpClientPool::new() and pass via DI"
-)]
-pub fn get_or_create_global_http_client()
--> Result<Arc<HttpClientPool>, Box<dyn std::error::Error + Send + Sync>> {
-    // Use HTTP_CLIENT_POOL.get() directly instead of calling deprecated get_global_http_client()
-    if let Some(pool) = HTTP_CLIENT_POOL.get().cloned() {
-        return Ok(pool);
-    }
-
-    // Try to create and set a new pool
-    let pool = Arc::new(HttpClientPool::new()?);
-
-    // Try to set it, but if it fails (already set), get the existing one
-    match HTTP_CLIENT_POOL.set(Arc::clone(&pool)) {
-        Ok(()) => Ok(pool),
-        Err(_) => {
-            // Already set by another thread/test, get the existing one
-            HTTP_CLIENT_POOL
-                .get()
-                .cloned()
-                .ok_or_else(|| "HTTP client pool not available".into())
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

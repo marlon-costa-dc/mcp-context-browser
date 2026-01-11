@@ -47,7 +47,7 @@ impl HybridSearchProvider for HybridSearchAdapter {
 
     async fn search(
         &self,
-        collection: &str,
+        _collection: &str,
         query: &str,
         semantic_results: Vec<SearchResult>,
         limit: usize,

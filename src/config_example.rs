@@ -158,10 +158,32 @@ impl ConfigManager {
             "voyageai" => EmbeddingProviderConfig::VoyageAI {
                 model: self.env_config.get("EMBEDDING_MODEL")
                     .unwrap_or(&"voyage-code-3".to_string()).clone(),
-                api_key: self.env_config.get("VOYAGEAI_API_KEY")
-                    .ok_or("VOYAGEAI_API_KEY required")?.clone(),
+                // Accept both VOYAGE_API_KEY (claude-context) and VOYAGEAI_API_KEY
+                api_key: self.env_config.get("VOYAGE_API_KEY")
+                    .or(self.env_config.get("VOYAGEAI_API_KEY"))
+                    .ok_or("VOYAGE_API_KEY or VOYAGEAI_API_KEY required")?.clone(),
                 dimensions: Some(1024),
                 max_tokens: Some(32000),
+            },
+            "ollama" => EmbeddingProviderConfig::OpenAI {
+                model: self.env_config.get("EMBEDDING_MODEL")
+                    .unwrap_or(&"nomic-embed-text".to_string()).clone(),
+                api_key: "ollama".to_string(), // Ollama doesn't require an API key
+                // Accept both OLLAMA_BASE_URL (claude-context) and OLLAMA_HOST
+                base_url: Some(self.env_config.get("OLLAMA_BASE_URL")
+                    .or(self.env_config.get("OLLAMA_HOST"))
+                    .unwrap_or(&"http://localhost:11434/v1".to_string()).clone()),
+                dimensions: Some(768),
+                max_tokens: Some(8192),
+            },
+            "gemini" => EmbeddingProviderConfig::OpenAI {
+                model: self.env_config.get("EMBEDDING_MODEL")
+                    .unwrap_or(&"text-embedding-004".to_string()).clone(),
+                api_key: self.env_config.get("GEMINI_API_KEY")
+                    .ok_or("GEMINI_API_KEY required")?.clone(),
+                base_url: Some("https://generativelanguage.googleapis.com/v1beta".to_string()),
+                dimensions: Some(768),
+                max_tokens: Some(2048),
             },
             "mock" => EmbeddingProviderConfig::Mock {
                 dimensions: Some(128),
@@ -424,16 +446,18 @@ dimensions = 1536
         println!("🌐 Environment Variables Reference:");
         println!();
         println!("# Core Providers");
-        println!("EMBEDDING_PROVIDER=openai|voyageai|mock");
+        println!("EMBEDDING_PROVIDER=openai|voyageai|ollama|gemini|mock");
         println!("VECTOR_STORE_PROVIDER=milvus|pinecone");
         println!();
-        println!("# API Keys");
+        println!("# API Keys (claude-context compatible)");
         println!("OPENAI_API_KEY=sk-your-openai-key");
-        println!("VOYAGEAI_API_KEY=your-voyageai-key");
+        println!("VOYAGE_API_KEY=your-voyageai-key   # or VOYAGEAI_API_KEY");
+        println!("GEMINI_API_KEY=your-gemini-key");
         println!("MILVUS_TOKEN=your-milvus-token");
         println!("PINECONE_API_KEY=your-pinecone-key");
         println!();
-        println!("# Network Configuration");
+        println!("# Network Configuration (claude-context compatible)");
+        println!("OLLAMA_BASE_URL=http://localhost:11434  # or OLLAMA_HOST");
         println!("MILVUS_ADDRESS=http://localhost:19530");
         println!("MCP_HOST=127.0.0.1");
         println!("MCP_PORT=3000");
