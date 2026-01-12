@@ -1,228 +1,108 @@
+# =============================================================================
+# Documentation Pipeline - Uses Makefile as Single Source of Truth
+# =============================================================================
+# Triggered on docs/ or src/ changes
+# =============================================================================
+
 name: Documentation
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
     paths:
-      - 'docs/**'
-      - 'ARCHITECTURE.md'
-      - 'src/**'
-      - 'Makefile'
-      - 'scripts/docs/**'
+      - "docs/**"
+      - "src/**"
+      - "scripts/docs/**"
+      - "Makefile"
+      - "make/*.mk"
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
     paths:
-      - 'docs/**'
-      - 'ARCHITECTURE.md'
-      - 'src/**'
-      - 'Makefile'
-      - 'scripts/docs/**'
+      - "docs/**"
+      - "src/**"
+      - "scripts/docs/**"
 
 jobs:
-  validate-diagrams:
-    name: Validate PlantUML Diagrams
+  validate:
+    name: Validate Documentation
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - run: make ci-docs
 
-      - name: Setup Java
-        uses: actions/setup-java@v4
+  diagrams:
+    name: Generate Diagrams
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
         with:
-          java-version: '17'
-          distribution: 'temurin'
+          java-version: "17"
+          distribution: "temurin"
 
       - name: Install PlantUML
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y plantuml
+        run: sudo apt-get update && sudo apt-get install -y plantuml
 
-      - name: Validate PlantUML syntax
-        run: |
-          bash scripts/docs/generate-diagrams.sh validate
+      - run: make diagrams
 
-  generate-diagrams:
-    name: Generate Architecture Diagrams
-    runs-on: ubuntu-latest
-    needs: validate-diagrams
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-
-      - name: Install PlantUML
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y plantuml
-
-      - name: Generate diagrams
-        run: |
-          bash scripts/docs/generate-diagrams.sh all
-
-      - name: Upload diagram artifacts
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: architecture-diagrams
-          path: docs/diagrams/generated/
+          path: docs/architecture/diagrams/generated/
           retention-days: 30
 
-  validate-architecture-docs:
-    name: Validate Architecture Documentation
+  rust-docs:
+    name: Rust API Docs
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: make ci-rust-docs
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/upload-artifact@v4
         with:
-          node-version: '18'
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install documentation tools
-        run: |
-          sudo apt-get update && sudo apt-get install -y libclang-dev llvm-config
-          # Install ADR tools
-          cargo install adrs
-          # Install other documentation tools
-          cargo install cargo-spellcheck
-          cargo install cargo-deadlinks
-          cargo install mdbook
-
-      - name: Setup documentation environment
-        run: |
-          ./scripts/docs/automation.sh setup
-
-      - name: Lint documentation
-        run: |
-          ./scripts/docs/automation.sh quality
-
-      - name: Validate ADR compliance
-        run: |
-          ./scripts/docs/automation.sh adr-check
-
-      - name: Generate documentation
-        run: |
-          ./scripts/docs/automation.sh generate
-
-      - name: Check ADR format
-        run: |
-          # Validate ADR files have required sections
-          for adr_file in docs/adr/*.md; do
-            if [ -f "$adr_file" ] && [ "$(basename "$adr_file")" != "README.md" ] && [ "$(basename "$adr_file")" != "TEMPLATE.md" ]; then
-              echo "Validating ADR: $(basename "$adr_file")"
-
-              # Check for required sections
-              if ! grep -q "^## Status" "$adr_file"; then
-                echo "❌ Missing Status section in $adr_file"
-                exit 1
-              fi
-
-              if ! grep -q "^## Context" "$adr_file"; then
-                echo "❌ Missing Context section in $adr_file"
-                exit 1
-              fi
-
-              if ! grep -q "^## Decision" "$adr_file"; then
-                echo "❌ Missing Decision section in $adr_file"
-                exit 1
-              fi
-
-              echo "✅ ADR format valid: $(basename "$adr_file")"
-            fi
-          done
-
-  build-docs:
-    name: Build Documentation
-    runs-on: ubuntu-latest
-    needs: [generate-diagrams, validate-architecture-docs]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Generate Rust documentation
-        run: |
-          cargo doc --no-deps --document-private-items
-
-      - name: Download diagram artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: architecture-diagrams
-          path: docs/diagrams/generated/
-
-      - name: Create documentation archive
-        run: |
-          mkdir -p docs/build
-          cp -r target/doc docs/build/api-docs
-          cp -r docs/diagrams/generated docs/build/diagrams
-          cp ARCHITECTURE.md docs/build/
-          cp README.md docs/build/
-          cp docs/adr/README.md docs/build/adr-index.md
-
-          # Create index page
-          cat > docs/build/index.html << 'EOF'
-          <!DOCTYPE html>
-          <html>
-          <head>
-              <title>MCP Context Browser - Documentation</title>
-              <style>
-                  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 40px; }
-                  .doc-section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
-                  .doc-link { display: inline-block; margin: 10px; padding: 10px; background: #f0f0f0; text-decoration: none; border-radius: 4px; }
-              </style>
-          </head>
-          <body>
-              <h1>MCP Context Browser - Documentation</h1>
-              <div class="doc-section">
-                  <h2>📚 Documentation</h2>
-                  <a href="ARCHITECTURE.html" class="doc-link">🏗️ Architecture Overview</a>
-                  <a href="adr-index.html" class="doc-link">📋 Architecture Decisions</a>
-                  <a href="README.html" class="doc-link">📖 README</a>
-              </div>
-              <div class="doc-section">
-                  <h2>🔧 API Documentation</h2>
-                  <a href="api-docs/mcp_context_browser/index.html" class="doc-link">🦀 Rust API Docs</a>
-              </div>
-              <div class="doc-section">
-                  <h2>📊 Architecture Diagrams</h2>
-                  <a href="diagrams/index.html" class="doc-link">🎨 View Diagrams</a>
-              </div>
-          </body>
-          </html>
-          EOF
-
-      - name: Upload documentation artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: documentation
-          path: docs/build/
+          name: rust-api-docs
+          path: target/doc/
           retention-days: 30
 
-  deploy-docs:
-    name: Deploy Documentation
+  build-book:
+    name: Build mdBook
     runs-on: ubuntu-latest
-    needs: build-docs
+    needs: [validate]
+    steps:
+      - uses: actions/checkout@v4
+
+      - run: make ci-setup-docs
+      - run: make docs-sync
+      - run: make docs-build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mdbook-docs
+          path: book/book/
+          retention-days: 30
+
+  deploy:
+    name: Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    needs: [validate, rust-docs, build-book]
     if: github.ref == 'refs/heads/main'
     steps:
-      - name: Download documentation artifacts
-        uses: actions/download-artifact@v4
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
         with:
-          name: documentation
+          name: rust-api-docs
+          path: docs-site/api/
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: mdbook-docs
           path: docs-site/
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+      - uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: docs-site
-          cname: docs.mcp-context-browser.dev

@@ -49,6 +49,29 @@ pub enum SystemEvent {
         /// Number of files that changed
         files_changed: i32,
     },
+
+    // === Subsystem Control Events (ADR-007) ===
+    /// Request to restart a provider
+    ProviderRestart {
+        /// Type of provider (embedding, vector_store, etc.)
+        provider_type: String,
+        /// Unique identifier for the provider instance
+        provider_id: String,
+    },
+    /// Request to reconfigure a provider without full restart
+    ProviderReconfigure {
+        /// Type of provider (embedding, vector_store, etc.)
+        provider_type: String,
+        /// New configuration to apply
+        config: serde_json::Value,
+    },
+    /// Request a health check on a specific subsystem
+    SubsystemHealthCheck {
+        /// Subsystem identifier to check
+        subsystem_id: String,
+    },
+    /// Request to reload router configuration
+    RouterReload,
 }
 
 /// Event Bus for publishing and subscribing to system events

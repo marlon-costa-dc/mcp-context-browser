@@ -1,285 +1,137 @@
+# =============================================================================
+# CI Pipeline - Uses Makefile as Single Source of Truth
+# =============================================================================
+# All CI logic is in make/Makefile.ci.mk
+# This workflow simply calls `make ci-*` targets
+# =============================================================================
+
 name: CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
 
 jobs:
+  # ===========================================================================
+  # Core CI Jobs
+  # ===========================================================================
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: make ci-lint
+
   test:
     name: Test
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        rust:
-          - stable
-          - beta
-
+        rust: [stable, beta]
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install protobuf-compiler
+      - uses: actions/checkout@v4
+      - name: Install protobuf
         run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@master
+      - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.rust }}
-
-      - name: Cache dependencies
-        uses: Swatinem/rust-cache@v2
-
-      - name: Run tests
-        run: cargo test --verbose
-
-      - name: Run tests with all features
-        run: cargo test --all-features --verbose
-
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: stable
-          components: rustfmt, clippy
-
-      - name: Cache dependencies
-        uses: Swatinem/rust-cache@v2
-
-      - name: Check formatting
-        run: cargo fmt --all -- --check
-
-      - name: Run clippy
-        run: cargo clippy -- -D warnings
-
-      - name: Check documentation
-        run: cargo doc --no-deps --document-private-items
+      - uses: Swatinem/rust-cache@v2
+      - run: make ci-test
 
   security:
-    name: Security Audit
+    name: Security
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: stable
-
-      - name: Cache dependencies
-        uses: Swatinem/rust-cache@v2
-
-      - name: Install cargo-audit
-        run: cargo install cargo-audit
-
-      - name: Run security audit
-        run: cargo audit
-
-  coverage:
-    name: Code Coverage
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: stable
-
-      - name: Cache dependencies
-        uses: Swatinem/rust-cache@v2
-
-      - name: Install cargo-tarpaulin
-        run: cargo install cargo-tarpaulin
-
-      - name: Generate coverage report
-        run: cargo tarpaulin --out Lcov --output-dir coverage
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          file: ./coverage/lcov.info
-          fail_ci_if_error: false
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: make ci-setup-tools
+      - run: make ci-security
 
   build:
     name: Build
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install protobuf-compiler
+      - uses: actions/checkout@v4
+      - name: Install protobuf
         run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: make ci-build
+      - run: make ci-rust-docs
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@master
+  docs:
+    name: Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: make ci-docs
+
+  coverage:
+    name: Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install protobuf
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: make ci-setup-tools
+      - run: make ci-coverage
+      - uses: codecov/codecov-action@v4
         with:
-          toolchain: stable
+          file: ./coverage/lcov.info
+          fail_ci_if_error: false
 
-      - name: Cache dependencies
-        uses: Swatinem/rust-cache@v2
+  # ===========================================================================
+  # Release Builds (multi-platform)
+  # ===========================================================================
 
-      - name: Build
-        run: cargo build --release
-
-      - name: Build documentation
-        run: cargo doc --no-deps
-
-  adr-validation:
-    name: ADR Validation
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup ADR Tools
-        run: bash scripts/setup/install-adr-tools.sh
-
-      - name: Validate ADR Compliance
-        run: bash scripts/docs/validate-adrs.sh
-
-      - name: ADR Automation Check
-        run: bash scripts/docs/automation.sh adr-check
-
-  docs-quality:
-    name: Documentation Quality
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Documentation Tools
-        run: |
-          bash scripts/setup/install-adr-tools.sh
-          bash scripts/docs/automation.sh setup
-
-      - name: Validate Documentation
-        run: bash scripts/docs/automation.sh validate
-
-      - name: Run Quality Checks
-        run: bash scripts/docs/automation.sh quality
-
-      - name: Check Documentation Links
-        run: bash scripts/docs/validate-links.sh
-
-      - name: Lint Markdown Files
-        run: bash scripts/docs/lint-markdown.sh
-
-  docs-interactive:
-    name: Interactive Documentation
-    runs-on: ubuntu-latest
-    needs: [docs-quality]
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup mdbook
-        run: bash scripts/docs/automation.sh setup
-
-      - name: Initialize mdbook (if needed)
-        run: |
-          if [ ! -f "docs/book/book.toml" ]; then
-            bash scripts/docs/init-mdbook.sh
-          fi
-
-      - name: Build Interactive Documentation
-        run: bash scripts/docs/automation.sh mdbook build
-
-      - name: Upload mdbook
-        uses: actions/upload-artifact@v4
-        with:
-          name: mdbook-docs
-          path: docs/book/book/
-          retention-days: 30
-
-  # Platform-specific builds for releases
-  build-release:
-    name: Build Release
+  release-build:
+    name: Release (${{ matrix.target }})
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
+            protobuf: sudo apt-get update && sudo apt-get install -y protobuf-compiler
           - os: macos-latest
             target: x86_64-apple-darwin
+            protobuf: brew install protobuf
           - os: windows-latest
             target: x86_64-pc-windows-msvc
+            protobuf: choco install protoc
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Install protobuf-compiler
-        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+      - name: Install protobuf
+        run: ${{ matrix.protobuf }}
+        shell: bash
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@master
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
           targets: ${{ matrix.target }}
 
-      - name: Cache dependencies
-        uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@v2
 
-      - name: Build release
-        run: cargo build --release --target ${{ matrix.target }}
+      - name: Build
+        run: make ci-build-target TARGET=${{ matrix.target }}
+        shell: bash
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: mcp-context-browser-${{ matrix.target }}
           path: target/${{ matrix.target }}/release/mcp-context-browser${{ matrix.os == 'windows-latest' && '.exe' || '' }}
-
-  docs:
-    name: Documentation Quality
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: stable
-
-      - name: Cache dependencies
-        uses: Swatinem/rust-cache@v2
-
-      - name: Setup documentation tools
-        run: ./scripts/docs/automation.sh setup
-
-      - name: Check documentation generation
-        run: cargo doc --no-deps --document-private-items
-
-      - name: Run documentation validation
-        run: ./scripts/docs/automation.sh validate
-
-      - name: Run quality checks
-        run: ./scripts/docs/automation.sh quality
-
-      - name: Generate automated documentation
-        run: ./scripts/docs/automation.sh generate
-
-      - name: Check for documentation changes
-        run: |
-          if [ -n "$(git status --porcelain docs/)" ]; then
-            echo "📝 Documentation files have changed"
-            git status docs/
-            echo "This is expected during development. In production, this should be committed."
-          else
-            echo "✅ Documentation is up to date"
-          fi

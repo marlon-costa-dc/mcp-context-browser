@@ -7,7 +7,7 @@
 
 use crate::domain::error::Result;
 use crate::domain::ports::{ChunkRepository, EmbeddingProvider, SearchRepository};
-use crate::domain::types::{CodeChunk, Embedding, SearchResult, RepositoryStats, SearchStats};
+use crate::domain::types::{CodeChunk, Embedding, RepositoryStats, SearchResult, SearchStats};
 use std::sync::Arc;
 
 /// Enterprise Code Intelligence Coordinator
@@ -34,34 +34,49 @@ impl ContextService {
         }
     }
 
-    /// Create a new context service with specified providers (Backwards Compatibility)
+    /// Create a new context service with specified providers (test-friendly constructor)
     pub fn new_with_providers(
         embedding_provider: Arc<dyn EmbeddingProvider>,
         vector_store_provider: Arc<dyn crate::domain::ports::VectorStoreProvider>,
         _hybrid_search_provider: Arc<dyn crate::domain::ports::HybridSearchProvider>,
     ) -> Self {
-        let chunk_repo = Arc::new(crate::adapters::repository::VectorStoreChunkRepository::new(
-            Arc::clone(&embedding_provider),
-            Arc::clone(&vector_store_provider),
-        ));
-        let search_repo = Arc::new(crate::adapters::repository::VectorStoreSearchRepository::new(
-            Arc::clone(&vector_store_provider),
-        ));
+        let chunk_repo = Arc::new(
+            crate::adapters::repository::VectorStoreChunkRepository::new(
+                Arc::clone(&embedding_provider),
+                Arc::clone(&vector_store_provider),
+            ),
+        );
+        let search_repo = Arc::new(
+            crate::adapters::repository::VectorStoreSearchRepository::new(Arc::clone(
+                &vector_store_provider,
+            )),
+        );
         Self::new(chunk_repo, search_repo, embedding_provider)
     }
 
     /// Initialize the context service by loading existing data
     pub async fn initialize(&self, collection: &str) -> Result<()> {
-        tracing::info!("[CONTEXT] Initializing hybrid search index for collection: {}", collection);
-        
+        tracing::info!(
+            "[CONTEXT] Initializing hybrid search index for collection: {}",
+            collection
+        );
+
         // Load chunks from the repository
-        let chunks = self.chunk_repository.find_by_collection(collection, 10000).await?;
-        
+        let chunks = self
+            .chunk_repository
+            .find_by_collection(collection, 10000)
+            .await?;
+
         if !chunks.is_empty() {
-            tracing::info!("[CONTEXT] Loading {} chunks into hybrid search engine", chunks.len());
-            self.search_repository.index_for_hybrid_search(&chunks).await?;
+            tracing::info!(
+                "[CONTEXT] Loading {} chunks into hybrid search engine",
+                chunks.len()
+            );
+            self.search_repository
+                .index_for_hybrid_search(&chunks)
+                .await?;
         }
-        
+
         Ok(())
     }
 
@@ -79,12 +94,12 @@ impl ContextService {
     pub async fn store_chunks(&self, collection: &str, chunks: &[CodeChunk]) -> Result<()> {
         // Save chunks to primary storage (vector store via repository)
         self.chunk_repository.save_batch(collection, chunks).await?;
-        
+
         // Index chunks for hybrid search (lexical search)
         self.search_repository
             .index_for_hybrid_search(chunks)
             .await?;
-            
+
         Ok(())
     }
 
@@ -96,7 +111,7 @@ impl ContextService {
         limit: usize,
     ) -> Result<Vec<SearchResult>> {
         let query_embedding = self.embed_text(query).await?;
-        
+
         // Delegate hybrid search to the search repository
         self.search_repository
             .hybrid_search(collection, query, &query_embedding.vector, limit)
@@ -132,13 +147,17 @@ impl Default for ContextService {
             Arc::new(crate::adapters::providers::vector_store::InMemoryVectorStoreProvider::new());
 
         // Create default repositories
-        let chunk_repo = Arc::new(crate::adapters::repository::VectorStoreChunkRepository::new(
-            Arc::clone(&embedding_provider),
-            Arc::clone(&vector_store_provider),
-        ));
-        let search_repo = Arc::new(crate::adapters::repository::VectorStoreSearchRepository::new(
-            Arc::clone(&vector_store_provider),
-        ));
+        let chunk_repo = Arc::new(
+            crate::adapters::repository::VectorStoreChunkRepository::new(
+                Arc::clone(&embedding_provider),
+                Arc::clone(&vector_store_provider),
+            ),
+        );
+        let search_repo = Arc::new(
+            crate::adapters::repository::VectorStoreSearchRepository::new(Arc::clone(
+                &vector_store_provider,
+            )),
+        );
 
         Self::new(chunk_repo, search_repo, embedding_provider)
     }

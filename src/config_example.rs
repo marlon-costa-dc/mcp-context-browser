@@ -359,7 +359,7 @@ port = 3000
 
 # Embedding provider configuration
 [providers.embedding]
-# Available providers: openai, voyageai, mock
+# Available providers: openai, voyageai, ollama, gemini, fastembed, null
 provider = "openai"
 model = "text-embedding-3-small"
 api_key = "your-openai-api-key-here"
@@ -376,7 +376,7 @@ max_tokens = 8191
 # max_tokens = 32000
 
 # [providers.embedding]
-# provider = "mock"
+# provider = "null"  # WARNING: Returns empty embeddings, testing only
 # dimensions = 128
 # max_tokens = 512
 

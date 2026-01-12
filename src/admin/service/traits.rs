@@ -116,4 +116,28 @@ pub trait AdminService: Interface + Send + Sync {
 
     /// Restore from backup
     async fn restore_backup(&self, backup_id: &str) -> Result<RestoreResult, AdminError>;
+
+    // === Subsystem Control Methods (ADR-007) ===
+
+    /// Get all subsystems and their current status
+    async fn get_subsystems(&self) -> Result<Vec<SubsystemInfo>, AdminError>;
+
+    /// Send a control signal to a subsystem
+    async fn send_subsystem_signal(
+        &self,
+        subsystem_id: &str,
+        signal: SubsystemSignal,
+    ) -> Result<SignalResult, AdminError>;
+
+    /// Get all registered HTTP routes
+    async fn get_routes(&self) -> Result<Vec<RouteInfo>, AdminError>;
+
+    /// Reload router configuration
+    async fn reload_routes(&self) -> Result<MaintenanceResult, AdminError>;
+
+    /// Persist current runtime configuration to file
+    async fn persist_configuration(&self) -> Result<ConfigPersistResult, AdminError>;
+
+    /// Get difference between runtime and file configuration
+    async fn get_config_diff(&self) -> Result<ConfigDiff, AdminError>;
 }

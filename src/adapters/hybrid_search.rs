@@ -5,14 +5,14 @@
 //! - Semantic Embeddings: Vector similarity for semantic understanding
 
 mod actor;
+mod adapter;
 mod bm25;
 pub mod config;
 mod engine;
-mod adapter;
 
 // Re-export public types
 pub use actor::{HybridSearchActor, HybridSearchMessage};
+pub use adapter::HybridSearchAdapter;
 pub use bm25::{BM25Params, BM25Scorer};
 pub use config::HybridSearchConfig;
 pub use engine::{HybridSearchEngine, HybridSearchResult};
-pub use adapter::HybridSearchAdapter;

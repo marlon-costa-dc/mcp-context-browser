@@ -2,7 +2,19 @@
 
 ## Status
 
-Proposed
+**In Progress** (v0.1.0 → v0.2.0)
+
+> Backend infrastructure implemented in `src/admin/`:
+> - AdminService trait with 32 methods (traits.rs)
+> - AdminServiceImpl with full implementation (implementation.rs, helpers/)
+> - REST API routes for config, health, backup, maintenance (routes.rs, handlers.rs)
+> - JWT authentication integration
+> - **New (v0.2.0)**:
+>   - Unified port architecture (MCP + Admin + Metrics on port 3001)
+>   - Subsystem control via EventBus (6 new AdminService methods)
+>   - Configuration persistence with explicit save pattern
+>   - 14 SystemEvent variants for inter-subsystem communication
+> - **Pending**: Frontend HTML/CSS/JS refinement, WebSocket real-time updates
 
 ## Context
 
@@ -183,9 +195,188 @@ assets/
 -   Database migrations (if any) are reversible
 -   Static assets can be excluded from builds
 
+## Unified Port Architecture (v0.2.0)
+
+All HTTP services now run on a single unified port (default: 3001, configurable):
+
+```
+Port 3001 (Unified)
+├── /api/*           - Metrics API endpoints
+├── /admin/*         - Admin web interface and API
+├── /mcp             - MCP protocol HTTP transport
+└── /static/*        - CSS/JS assets
+```
+
+### Implementation
+
+The `MetricsApiServer` now accepts multiple routers via builder pattern:
+
+```rust
+// src/infrastructure/metrics/http_server.rs
+impl MetricsApiServer {
+    pub fn with_external_router(mut self, router: Router) -> Self;
+    pub fn with_mcp_router(mut self, router: Router) -> Self;
+}
+```
+
+Initialization in `src/server/init.rs`:
+
+```rust
+let metrics_server = MetricsApiServer::with_limits(...)
+    .with_external_router(admin_router)   // Admin routes
+    .with_mcp_router(mcp_router);         // MCP protocol
+```
+
+### Benefits
+
+- Single port simplifies firewall/proxy configuration
+- Eliminates port 3002 (previously MCP HTTP transport)
+- Unified graceful shutdown via ConnectionTracker
+- Consistent rate limiting and CORS across all endpoints
+
+## Subsystem Control Protocol (v0.2.0)
+
+Web admin can monitor and control all MCP subsystems via EventBus.
+
+### New SystemEvent Variants
+
+Added to `src/infrastructure/events.rs`:
+
+```rust
+pub enum SystemEvent {
+    // Existing (10 variants): CacheClear, BackupCreate, BackupRestore,
+    // IndexRebuild, ConfigReloaded, Shutdown, Reload, Respawn,
+    // BinaryUpdated, SyncCompleted
+
+    // New (4 variants for subsystem control):
+    ProviderRestart { provider_type: String, provider_id: String },
+    ProviderReconfigure { provider_type: String, config: serde_json::Value },
+    SubsystemHealthCheck { subsystem_id: String },
+    RouterReload,
+}
+```
+
+### New AdminService Methods
+
+Added to `src/admin/service/traits.rs`:
+
+```rust
+#[async_trait]
+pub trait AdminService: Interface + Send + Sync {
+    // ... existing 26 methods ...
+
+    // Subsystem introspection (6 new methods)
+    async fn get_subsystems(&self) -> Result<Vec<SubsystemInfo>, AdminError>;
+    async fn send_subsystem_signal(&self, id: &str, signal: SubsystemSignal) -> Result<SignalResult, AdminError>;
+    async fn get_routes(&self) -> Result<Vec<RouteInfo>, AdminError>;
+    async fn reload_routes(&self) -> Result<MaintenanceResult, AdminError>;
+    async fn persist_configuration(&self) -> Result<ConfigPersistResult, AdminError>;
+    async fn get_config_diff(&self) -> Result<ConfigDiff, AdminError>;
+}
+```
+
+### Subsystem Types
+
+Defined in `src/admin/service/types.rs`:
+
+```rust
+pub enum SubsystemType {
+    Embedding,      // Embedding providers
+    VectorStore,    // Vector database providers
+    Search,         // Search service
+    Indexing,       // Indexing service
+    Cache,          // Cache manager
+    Metrics,        // Metrics collector
+    Daemon,         // Background daemon
+    HttpTransport,  // HTTP server
+}
+
+pub enum SubsystemStatus {
+    Running, Stopped, Error, Starting, Paused, Unknown
+}
+
+pub struct SubsystemInfo {
+    pub id: String,
+    pub name: String,
+    pub subsystem_type: SubsystemType,
+    pub status: SubsystemStatus,
+    pub health: HealthCheck,
+    pub config: serde_json::Value,
+    pub metrics: SubsystemMetrics,
+}
+```
+
+### Event Flow Example
+
+```
+1. User clicks "Restart" on embedding subsystem
+2. POST /admin/subsystems/embedding:ollama/signal {"signal":"restart"}
+3. AdminService::send_subsystem_signal() called
+4. EventBus publishes SystemEvent::ProviderRestart
+5. Embedding provider's event listener receives and restarts
+6. Dashboard HTMX poll shows updated status
+```
+
+## Configuration Management (v0.2.0)
+
+Implements explicit save pattern for configuration changes.
+
+### Runtime vs Persisted Configuration
+
+- **Runtime**: Changes via `update_configuration()` apply immediately (ArcSwap)
+- **Persisted**: `persist_configuration()` writes to `~/.context/config.toml`
+- **Diff**: `get_config_diff()` shows runtime vs file differences
+
+### API Flow
+
+```
+1. GET /admin/configuration         # View current config
+2. PUT /admin/configuration         # Update runtime only
+3. POST /admin/configuration/save   # Persist to file
+4. GET /admin/configuration/diff    # Compare runtime vs file
+```
+
+### Implementation Pattern
+
+```rust
+// Runtime update (immediate, not persisted)
+pub async fn update_configuration(&self, updates: HashMap<String, Value>, user: &str)
+    -> Result<ConfigurationUpdateResult, AdminError>;
+
+// Explicit persist to file
+pub async fn persist_configuration(&self) -> Result<ConfigPersistResult, AdminError>;
+
+// Check for unsaved changes
+pub async fn get_config_diff(&self) -> Result<ConfigDiff, AdminError>;
+```
+
+## Template Organization
+
+Templates located in `src/admin/web/templates/`:
+
+```
+templates/
+├── base.html           # Master layout (Alpine.js + Tailwind + HTMX)
+├── dashboard.html      # Real-time metrics dashboard
+├── providers.html      # Provider management
+├── indexes.html        # Index management
+├── configuration.html  # Config editor
+├── maintenance.html    # Maintenance operations
+├── diagnostics.html    # Diagnostic tools
+├── data_management.html # Backup UI
+├── logs.html           # Log viewer
+├── login.html          # Authentication
+├── admin.css           # Custom styles
+└── htmx/               # HTMX partials for dynamic updates
+    ├── dashboard_metrics.html
+    ├── providers_list.html
+    └── indexes_list.html
+```
+
 ## References
 
 -   [ADR 006: Code Audit and Improvements](006-code-audit-and-improvements.md)
--   [Existing HTTP Server](src/metrics/http_server.rs)
--   [Current Dashboard](assets/dashboard.html)
--   [Metrics API Design](docs/api-reference.md)
+-   [ADR 008: Git-Aware Semantic Indexing](008-git-aware-semantic-indexing-v0.2.0.md)
+-   [Existing HTTP Server](../../src/infrastructure/metrics/http_server.rs)
+-   [Server Initialization](../../src/server/init.rs)
+-   [Admin Service](../../src/admin/service/)

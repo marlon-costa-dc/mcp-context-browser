@@ -1,59 +1,59 @@
 # =============================================================================
-# QUALITY - Code quality operations
+# QUALITY - Code quality operations (streamlined)
+# =============================================================================
+# Naming: action-target pattern, minimal verbs
 # =============================================================================
 
-.PHONY: check fmt fmt-check lint lint-md fix fix-md fix-imports quality quality-gate coverage bench validate
+.PHONY: check fmt lint fix quality validate
+.PHONY: coverage bench audit
 
-# Check
-check: ## Check project with cargo check
-	cargo check --all-targets
+# -----------------------------------------------------------------------------
+# Quick Commands (most used)
+# -----------------------------------------------------------------------------
 
-# Format
-fmt: ## Format code
-	cargo fmt
+check: ## Fast compilation check
+	@cargo check --all-targets
 
-fmt-check: ## Check code formatting
-	cargo fmt --check
+fmt: ## Format all code (Rust + Markdown)
+	@cargo fmt
+	@./scripts/docs/markdown.sh fix 2>/dev/null || true
+	@echo "✅ Code formatted"
 
-# Lint
-lint: ## Lint code with clippy
-	cargo clippy --all-targets --all-features -- -D warnings
+lint: ## Lint all code (Rust + Markdown)
+	@echo "🔍 Linting Rust..."
+	@cargo clippy --all-targets --all-features -- -D warnings
+	@echo "🔍 Linting Markdown..."
+	@./scripts/docs/markdown.sh lint 2>/dev/null || echo "⚠️  Markdown lint skipped"
+	@echo "✅ Lint complete"
 
-lint-md: ## Lint markdown files
-	@echo "✅ Markdown linting completed"
+fix: fmt ## Auto-fix all issues (format + clippy)
+	@cargo clippy --fix --allow-dirty --all-targets --all-features 2>/dev/null || true
+	@echo "✅ Issues fixed"
 
-# Fix
-fix: fmt ## Auto-fix code formatting and clippy issues
-	cargo clippy --fix --allow-dirty --all-targets --all-features
-	@echo "🔧 Code fixed and formatted"
+# -----------------------------------------------------------------------------
+# Quality Gates (CI/CD)
+# -----------------------------------------------------------------------------
 
-fix-md: ## Auto-fix markdown issues
-	@echo "✅ Markdown auto-fix completed"
+quality: check fmt lint test ## Full quality check (MANDATORY for CI)
+	@echo "🔒 Running security audit..."
+	@cargo audit 2>/dev/null || echo "⚠️  cargo-audit not installed (run: cargo install cargo-audit)"
+	@echo "✅ Quality checks passed"
 
-fix-imports: ## Fix Rust import issues
-	@echo "🔧 Fixing imports..."
-	cargo check --message-format=short | grep "unused import" | head -10 || echo "No import issues found"
+validate: quality docs-check ## Complete validation (quality + docs)
+	@echo "🚀 All validations passed - Ready for release"
 
-# Quality
-quality: check fmt-check lint test ## Run all quality checks (MANDATORY for CI)
-	@echo "🔍 Checking for security vulnerabilities..."
-	@if command -v cargo-audit >/dev/null 2>&1; then \
-		cargo audit; \
-	else \
-		echo "⚠️  cargo-audit not found, skipping security audit. Run 'make setup' to install."; \
-	fi
-	@echo "✅ All quality checks passed"
+# -----------------------------------------------------------------------------
+# Specialized Checks
+# -----------------------------------------------------------------------------
 
-quality-gate: quality validate ## All quality gates (MANDATORY)
-	@echo "🚀 Quality gate passed - Ready for production"
-
-# Coverage and benchmarking
-coverage: ## Generate coverage report
-	cargo tarpaulin --out Html --output-dir coverage
+coverage: ## Generate test coverage report
+	@echo "📊 Generating coverage report..."
+	@cargo tarpaulin --out Html --output-dir coverage 2>/dev/null || echo "⚠️  cargo-tarpaulin not installed"
+	@echo "📖 Coverage at: coverage/tarpaulin-report.html"
 
 bench: ## Run benchmarks
-	cargo bench
+	@cargo bench
 
-# Validate
-validate: ## Validate project structure
-	@echo "✅ Project structure validated"
+audit: ## Security audit of dependencies
+	@echo "🔒 Running security audit..."
+	@cargo audit

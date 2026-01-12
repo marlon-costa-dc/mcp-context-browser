@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Added
+
+#### v0.2.0 Planning - 2026-01-12
+- **ADR-009**: Persistent Session Memory architecture decision record
+  - Cross-session observation storage with git context
+  - Session summaries and tracking
+  - Hybrid search (BM25 + vector embeddings)
+  - Progressive disclosure (3-layer workflow for 10x token savings)
+  - Context injection for SessionStart hooks
+  - Integration with git-aware features from ADR-008
+
+#### Documentation Enhancements - 2026-01-12
+- **ROADMAP.md**: Expanded v0.2.0 scope to include both git integration and session memory (20 phases total)
+- **VERSION_HISTORY.md**: Updated v0.2.0 architectural evolution diagram with dual features
+- **ARCHITECTURE.md**: Updated milestones and technical roadmap
+- **README.md**: Enhanced v0.2.0 preview with complete feature list
+- **CLAUDE.md**: Updated development guide with v0.2.0 dual-feature scope
+
+### Technical Details
+- **New ADR**: docs/adr/009-persistent-session-memory-v0.2.0.md (1,329 lines)
+- **Dependencies Planned**: sqlx (SQLite support)
+- **Implementation Phases**: 10 phases for session memory (on top of 10 for git)
+- **Estimated LOC**: ~3,000 for memory subsystem
+- **New MCP Tools**: 5 tools (search, timeline, get_observations, store_observation, inject_context)
+
+---
+
 ## [0.1.0] - 2026-01-11
 
 ### What This Release Is
@@ -16,7 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 #### Language Processor Refactoring
-- **14 Programming Languages**: Complete modular language processor implementation
+- **12 Programming Languages**: Complete modular language processor implementation with AST parsing
   - Rust (`src/chunking/languages/rust.rs`)
   - Python (`src/chunking/languages/python.rs`)
   - JavaScript/TypeScript (`src/chunking/languages/javascript.rs`)
@@ -29,8 +58,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - PHP (`src/chunking/languages/php.rs`)
   - Swift (`src/chunking/languages/swift.rs`)
   - Kotlin (`src/chunking/languages/kotlin.rs`)
-  - Scala (AST-based parsing)
-  - Haskell (AST-based parsing)
 
 #### HTTP Transport Foundation
 - Transport layer abstraction (`src/server/transport/mod.rs`)
@@ -58,17 +85,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - **Clean Architecture**: Complete refactoring with trait-based dependency injection
-- **Test Suite**: Expanded from 150+ to 564 comprehensive tests
+- **Test Suite**: Expanded to 493 comprehensive tests across 15 test suites
 - **Configuration**: Modular configuration with cache and limits separated
 - **Server Operations**: Extracted operations to dedicated module (`src/server/operations.rs`)
 - **Metrics**: Dedicated metrics module (`src/server/metrics.rs`)
 
 ### Technical Metrics
-- **Total Tests**: 564 (100% pass rate)
-- **Language Processors**: 14 (from 13)
+- **Total Tests**: 493 (100% pass rate, 2 ignored)
+- **Language Processors**: 12 with full AST parsing support
+- **Embedding Providers**: 6 (OpenAI, VoyageAI, Ollama, Gemini, FastEmbed, Null)
+- **Vector Stores**: 6 (Milvus, EdgeVec, In-Memory, Filesystem, Encrypted, Null)
 - **Source Files**: 100+ enterprise-grade files
 - **Lines of Code**: ~25,000 lines of production code
-- **Test Coverage**: 95%+ with comprehensive scenario coverage
+- **Test Coverage**: Comprehensive scenario coverage across all components
 
 ### Migration from claude-context
 - **Environment Variables**: Same configuration, no changes needed
@@ -81,7 +110,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Startup Time**: Instant (from npm/npx overhead)
 - **Memory Usage**: Native efficiency (reduced by ~60% vs Node.js)
 - **Provider Support**: 6 embedding providers, 6 vector stores
-- **Language Support**: 14 languages with AST parsing (from 13)
+- **Language Support**: 12 languages with AST parsing (from 13)
 - **Test Coverage**: 564 tests (from 150+)
 
 ---

@@ -152,7 +152,7 @@ check_outdated_references() {
 check_adr_consistency() {
     log_info "Checking ADR consistency..."
 
-    local adr_dir="$PROJECT_ROOT/docs/architecture/adr"
+    local adr_dir="$PROJECT_ROOT/docs/adr"
 
     if [ -d "$adr_dir" ]; then
         # Check ADR numbering

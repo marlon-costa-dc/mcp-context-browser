@@ -85,7 +85,14 @@ impl ProviderFactory for DefaultProviderFactory {
                 )) as Arc<dyn EmbeddingProvider>)
             }
             "fastembed" => Ok(Arc::new(FastEmbedProvider::new()?) as Arc<dyn EmbeddingProvider>),
-            "mock" => Ok(Arc::new(NullEmbeddingProvider::new()) as Arc<dyn EmbeddingProvider>),
+            // "null" provider returns empty embeddings - use for testing/development only
+            "null" | "mock" => {
+                tracing::warn!(
+                    "Using NullEmbeddingProvider: returns empty embeddings. \
+                     Not suitable for production semantic search."
+                );
+                Ok(Arc::new(NullEmbeddingProvider::new()) as Arc<dyn EmbeddingProvider>)
+            }
             _ => Err(Error::config(format!(
                 "Unsupported embedding provider: {}",
                 config.provider
@@ -164,7 +171,7 @@ impl ProviderFactory for DefaultProviderFactory {
             "voyageai".to_string(),
             "gemini".to_string(),
             "fastembed".to_string(),
-            "mock".to_string(),
+            "null".to_string(), // Returns empty embeddings (testing/development)
         ]
     }
 

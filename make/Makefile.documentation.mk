@@ -1,83 +1,130 @@
 # =============================================================================
-# DOCUMENTATION - Automation using existing tools
+# DOCUMENTATION - Streamlined documentation automation
+# =============================================================================
+# Core scripts use shared library: scripts/docs/lib/common.sh
+# Single source of truth: scripts/docs/extract-metrics.sh
 # =============================================================================
 
-.PHONY: docs docs-generate docs-validate docs-quality docs-check-adr docs-setup rust-docs adr-new adr-list adr-generate adr-status
+.PHONY: docs docs-build docs-serve docs-check docs-fix docs-setup docs-sync docs-metrics
+.PHONY: adr-new adr-list adr-check
+.PHONY: lint-md fix-md validate-all pre-commit
+.PHONY: rust-docs module-docs diagrams info
 
-# Main documentation targets
-docs: docs-generate docs-validate ## Generate and validate all documentation
-	@echo "🤖 Documentation automation completed"
+# Path to mdbook (uses cargo-installed binary)
+MDBOOK := $(HOME)/.cargo/bin/mdbook
 
-# Generate automated documentation using existing tools
-docs-generate: ## Generate automated documentation from source code
-	@echo "📊 Generating automated documentation..."
-	@./scripts/docs/automation.sh generate
+# -----------------------------------------------------------------------------
+# Main Documentation Commands
+# -----------------------------------------------------------------------------
 
-# Validate documentation and ADR compliance
-docs-validate: ## Validate documentation quality and ADR compliance
-	@echo "🔍 Running documentation validation..."
-	@./scripts/docs/automation.sh validate
+docs: docs-metrics docs-sync docs-build docs-check ## Build and validate all documentation
+	@echo "✅ Documentation complete"
 
-# Quality checks using existing tools
-docs-quality: ## Run quality checks on documentation
-	@echo "✨ Running documentation quality checks..."
-	@./scripts/docs/automation.sh quality
+docs-metrics: ## Update all docs with metrics from codebase (single source of truth)
+	@echo "📊 Injecting metrics into documentation..."
+	@./scripts/docs/inject-metrics.sh 2>/dev/null || echo "⚠️  inject-metrics.sh not available"
+	@echo "✅ Metrics updated"
 
-# ADR compliance checking
-docs-check-adr: ## Check ADR compliance and validation
-	@echo "📋 Checking ADR compliance..."
-	@./scripts/docs/automation.sh adr-check
+docs-sync: ## Sync docs/ to book/src/ for mdbook
+	@echo "🔄 Syncing documentation..."
+	@./scripts/docs/mdbook-sync.sh 2>/dev/null || echo "⚠️  mdbook-sync.sh not found"
+	@echo "✅ Documentation synced"
 
-# Setup documentation tools
-docs-setup: ## Install and configure all documentation tools
+docs-build: ## Build mdbook documentation
+	@echo "📚 Building documentation..."
+	@if [ -x "$(MDBOOK)" ]; then \
+		$(MDBOOK) build book/; \
+		echo "📖 Documentation at: book/book/index.html"; \
+	else \
+		echo "⚠️  mdbook not installed. Run: make docs-setup"; \
+	fi
+
+docs-serve: docs-sync ## Serve interactive docs at http://localhost:3000
+	@echo "🌐 Starting documentation server..."
+	@if [ -x "$(MDBOOK)" ]; then \
+		$(MDBOOK) serve book/ --open; \
+	else \
+		echo "⚠️  mdbook not installed. Run: make docs-setup"; \
+	fi
+
+docs-check: ## Validate documentation (unified validation)
+	@echo "🔍 Validating documentation..."
+	@./scripts/docs/validate.sh all
+	@echo "✅ Documentation validation complete"
+
+docs-fix: ## Auto-fix markdown formatting issues
+	@echo "🔧 Fixing markdown issues..."
+	@./scripts/docs/markdown.sh fix
+	@echo "✅ Markdown fixed"
+
+docs-setup: ## Install documentation tools (mdbook + plugins)
 	@echo "🔧 Setting up documentation tools..."
-	@./scripts/docs/automation.sh setup
+	@cargo install mdbook 2>/dev/null || echo "mdbook already installed"
+	@cargo install mdbook-linkcheck 2>/dev/null || echo "mdbook-linkcheck already installed"
+	@cargo install mdbook-toc 2>/dev/null || echo "mdbook-toc already installed"
+	@npm install -g markdownlint-cli 2>/dev/null || echo "⚠️  markdownlint-cli requires npm"
+	@echo "✅ Documentation tools ready"
 
-# Interactive documentation with mdbook
-docs-book: ## Build interactive documentation with mdbook
-	@echo "📖 Building interactive documentation..."
-	@./scripts/docs/generate-mdbook.sh build
+# -----------------------------------------------------------------------------
+# ADR (Architecture Decision Records)
+# -----------------------------------------------------------------------------
 
-docs-serve: ## Serve interactive documentation with live reload
-	@echo "🌐 Serving interactive documentation..."
-	@./scripts/docs/generate-mdbook.sh serve
+adr-new: ## Create new ADR interactively
+	@./scripts/docs/create-adr.sh
 
-# Legacy aliases for backward compatibility
-docs-auto: docs-generate ## Legacy alias for docs-generate
+adr-list: ## List all ADRs with numbers and titles
+	@echo "📋 Architecture Decision Records:"
+	@ls -1 docs/adr/[0-9]*.md 2>/dev/null | while read f; do \
+		num=$$(basename "$$f" .md | cut -d- -f1); \
+		title=$$(head -1 "$$f" | sed 's/^# ADR [0-9]*: //'); \
+		printf "  %s: %s\n" "$$num" "$$title"; \
+	done
 
-# Documentation synchronization
-sync-docs: docs-validate ## Check documentation synchronization
-sync-docs-update: docs-generate ## Update auto-generated docs
+adr-check: ## Validate ADR compliance (format, numbering, references)
+	@echo "📋 Checking ADR compliance..."
+	@./scripts/docs/validate.sh adrs
 
-# Rust documentation
+# -----------------------------------------------------------------------------
+# Markdown Operations (unified script)
+# -----------------------------------------------------------------------------
+
+lint-md: ## Lint markdown files
+	@./scripts/docs/markdown.sh lint
+
+fix-md: ## Fix markdown issues (auto-fix)
+	@./scripts/docs/markdown.sh fix
+
+# -----------------------------------------------------------------------------
+# Unified Validation
+# -----------------------------------------------------------------------------
+
+validate-all: ## Run all documentation validations
+	@./scripts/docs/validate.sh all
+
+pre-commit: lint-md validate-all ## Run all pre-commit documentation checks
+	@echo "✅ Pre-commit documentation checks passed"
+
+# -----------------------------------------------------------------------------
+# Specialized Documentation
+# -----------------------------------------------------------------------------
+
 rust-docs: ## Generate Rust API documentation
 	@echo "🦀 Generating Rust docs..."
 	@cargo doc --no-deps --document-private-items
+	@echo "📖 Docs at: target/doc/mcp_context_browser/index.html"
 
-# ADR management using adrs tool
-ADRS_CMD ?= $(HOME)/.cargo/bin/adrs
+module-docs: ## Generate module documentation from source analysis
+	@echo "📄 Generating module documentation..."
+	@./scripts/docs/generate-module-docs.sh
+	@echo "✅ Module docs generated in docs/modules/"
 
-adr-new: ## Create new ADR using adrs tool
-	@echo "📝 Creating new ADR..."
-	@$(ADRS_CMD) new
+diagrams: ## Generate architecture diagrams (PlantUML)
+	@echo "📊 Generating diagrams..."
+	@./scripts/docs/generate-diagrams.sh all 2>/dev/null || echo "⚠️  Diagram generation requires PlantUML"
 
-adr-list: ## List ADRs using adrs tool
-	@echo "📋 ADRs:"
-	@$(ADRS_CMD) list
+# -----------------------------------------------------------------------------
+# Project Info (quick reference)
+# -----------------------------------------------------------------------------
 
-adr-generate: ## Generate ADR summary documentation
-	@echo "📊 Generating ADR summary..."
-	@$(ADRS_CMD) generate toc > docs/adr/README.md
-	@$(ADRS_CMD) generate graph > docs/adr/adr-graph.md || true
-
-adr-status: ## Show ADR status and lifecycle
-	@echo "📈 ADR Status:"
-	@$(ADRS_CMD) list --status || echo "Status tracking not available in this version of adrs"
-
-# Legacy diagram generation (if scripts exist)
-diagrams: ## Generate diagrams (if available)
-	@if [ -f scripts/docs/generate-diagrams.sh ]; then \
-		bash scripts/docs/generate-diagrams.sh all; \
-	else \
-		echo "⚠️  Diagram generation script not found"; \
-	fi
+info: ## Display current project metrics and stats
+	@./scripts/docs/extract-metrics.sh --markdown

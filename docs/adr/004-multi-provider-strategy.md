@@ -2,7 +2,15 @@
 
 ## Status
 
-Accepted
+**Implemented** (v0.1.0)
+
+> Full multi-provider routing implemented in `src/adapters/providers/routing/`:
+> - Circuit breaker with state transitions (circuit_breaker.rs)
+> - Health monitoring (health.rs)
+> - Cost tracking (cost_tracker.rs)
+> - Automatic failover (failover.rs)
+> - Metrics collection (metrics.rs)
+> - Provider router with selection strategies (router.rs)
 
 ## Context
 

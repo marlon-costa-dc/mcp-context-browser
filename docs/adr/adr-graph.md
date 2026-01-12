@@ -13,5 +13,18 @@ digraph {
 	_4 -> _5 [style="dotted", weight=1];
 	_6 [label="ADR 006: Code Audit and Architecture Improvements v0.1.0"; URL="006-code-audit-and-improvements-v0.1.0.html"];
 	_5 -> _6 [style="dotted", weight=1];
+	_7 [label="ADR 007: Integrated Web Administration Interface"; URL="007-integrated-web-administration-interface.html"];
+	_6 -> _7 [style="dotted", weight=1];
+	_8 [label="ADR 008: Git-Aware Semantic Indexing v0.2.0"; URL="008-git-aware-semantic-indexing-v0.2.0.html"];
+	_7 -> _8 [style="dotted", weight=1];
+	_9 [label="ADR 009: Persistent Session Memory v0.2.0"; URL="009-persistent-session-memory-v0.2.0.html"];
+	_8 -> _9 [style="dotted", weight=1];
+	_1 -> _9 [label="extends", style="dashed"];
+	_4 -> _9 [label="extends", style="dashed"];
+	_10 [label="ADR 010: Hooks Subsystem v0.2.0"; URL="010-hooks-subsystem-agent-backed.html"];
+	_9 -> _10 [style="dotted", weight=1];
+	_1 -> _10 [label="extends", style="dashed"];
+	_9 -> _10 [label="uses", style="dashed"];
+	_8 -> _10 [label="integrates", style="dashed"];
   }
 }

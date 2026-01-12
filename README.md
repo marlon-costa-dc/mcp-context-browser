@@ -109,23 +109,30 @@ Built on production-grade foundations:
 
 ## Testing
 
-564 automated tests covering all critical functionality:
+493 automated tests covering all critical functionality:
 
 ```bash
-make test           # Run full test suite
+make test           # Run full test suite (493 tests)
 make quality        # Complete quality check (fmt + lint + test + audit)
 make validate       # Documentation and configuration validation
 ```
 
 Test coverage:
 
--   Core types: 18 tests (data structures, serialization)
--   Services: 16 tests (context, indexing, search logic)
--   MCP protocol: 15 tests (protocol compliance)
--   Integration: 13 tests (end-to-end workflows)
--   Providers: 34 tests (embedding and vector stores)
--   Routing: 25+ tests (circuit breakers, failover)
--   Security: 19 tests (auth, rate limiting)
+-   Library: 34 tests (lib.rs inline tests)
+-   Adapters: 35 tests (repository, hybrid search)
+-   Core: 36 tests (data structures, serialization, validation)
+-   Domain: 17 tests (domain types and logic)
+-   Handlers: 16 tests (MCP tool handlers)
+-   Integration: 49 tests (end-to-end workflows, 2 ignored)
+-   Providers: 73 tests (embedding and vector stores)
+-   Server: 70 tests (protocol, transport, security)
+-   Services: 16 tests (search, indexing, context)
+-   Snapshot: 16 tests (state management)
+-   Sync: 14 tests (synchronization)
+-   Unit: 88 tests (component-level testing)
+-   Validation: 14 tests (input validation)
+-   Doc-tests: 15 tests (documentation examples, 3 ignored)
 
 ## Performance
 
@@ -170,11 +177,11 @@ Test coverage:
 First stable release - drop-in replacement for claude-context:
 
 -   ✅ Full MCP protocol implementation (4 tools)
--   ✅ 14 languages with AST parsing (Rust, Python, JS/TS, Go, Java, C, C++, C#, Ruby, PHP, Swift, Kotlin, Scala, Haskell)
--   ✅ 6 embedding providers (OpenAI, VoyageAI, Ollama, Gemini, FastEmbed, Mock)
+-   ✅ 12 languages with AST parsing (Rust, Python, JS/TS, Go, Java, C, C++, C#, Ruby, PHP, Swift, Kotlin)
+-   ✅ 6 embedding providers (OpenAI, VoyageAI, Ollama, Gemini, FastEmbed, Null)
 -   ✅ 6 vector stores (Milvus, EdgeVec, In-Memory, Filesystem, Encrypted, Null)
 -   ✅ claude-context environment variable compatibility
--   ✅ 564 tests with comprehensive coverage
+-   ✅ 493 tests with comprehensive coverage
 -   ✅ JWT authentication and rate limiting
 -   ✅ Clean architecture with trait-based DI
 -   ✅ HTTP transport foundation
@@ -182,16 +189,25 @@ First stable release - drop-in replacement for claude-context:
 
 **Migrating from claude-context?** See [Migration Guide](docs/migration/FROM_CLAUDE_CONTEXT.md)
 
-## Coming in v0.2.0: Git-Aware Semantic Indexing
+## Coming in v0.2.0: Git-Aware Indexing + Persistent Session Memory
 
-Planning complete ([ADR-008](docs/adr/008-git-aware-semantic-indexing-v0.2.0.md)):
+Planning complete ([ADR-008](docs/adr/008-git-aware-semantic-indexing-v0.2.0.md), [ADR-009](docs/adr/009-persistent-session-memory-v0.2.0.md)):
 
+**Git Integration:**
 -   🚧 **Project-relative indexing**: Indexes remain valid if directory moves
 -   🚧 **Multi-branch support**: Search specific branches or across all branches
 -   🚧 **Commit history**: Index last 50 commits (configurable)
 -   🚧 **Submodule support**: Recursive indexing as separate projects
 -   🚧 **Monorepo detection**: Auto-detect Cargo, npm, Python, Go projects
 -   🚧 **Impact analysis**: Understand change impact between commits/branches
+
+**Session Memory:**
+-   🚧 **Cross-session memory**: Persistent storage of tool observations and decisions
+-   🚧 **Session summaries**: Comprehensive tracking of work completed per session
+-   🚧 **Semantic search**: Search past work and decisions using natural language
+-   🚧 **Progressive disclosure**: 3-layer workflow for 10x token savings
+-   🚧 **Context injection**: Automatic context generation for session continuity
+-   🚧 **Git-tagged memory**: Observations linked to branches and commits
 
 ## Contributing
 

@@ -668,7 +668,8 @@ impl VectorStoreProvider for FilesystemVectorStore {
         }
 
         let mut results = Vec::new();
-        let entries: Vec<_> = self.index_cache
+        let entries: Vec<_> = self
+            .index_cache
             .iter()
             .filter(|r| r.key().0 == collection)
             .take(limit)

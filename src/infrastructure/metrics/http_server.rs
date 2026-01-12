@@ -17,7 +17,7 @@ use crate::infrastructure::rate_limit::RateLimiter;
 use crate::infrastructure::metrics::{
     system::SystemMetricsCollectorInterface, CacheMetrics, CpuMetrics, MemoryMetrics,
 };
-use crate::server::mcp_server::PerformanceMetricsInterface;
+use crate::server::metrics::PerformanceMetricsInterface;
 
 /// Comprehensive metrics response
 #[derive(Debug, Serialize, Deserialize)]
@@ -54,6 +54,8 @@ pub struct MetricsApiServer {
     resource_limits: Option<Arc<ResourceLimits>>,
     cache_manager: Option<Arc<CacheManager>>,
     external_router: Option<Router>,
+    /// MCP protocol router (merged under /mcp/* path)
+    mcp_router: Option<Router>,
 }
 
 impl MetricsApiServer {
@@ -91,12 +93,22 @@ impl MetricsApiServer {
             resource_limits,
             cache_manager,
             external_router: None,
+            mcp_router: None,
         }
     }
 
-    /// Add an external router to be merged with the metrics router
+    /// Add an external router to be merged with the metrics router (typically admin routes)
     pub fn with_external_router(mut self, router: Router) -> Self {
         self.external_router = Some(router);
+        self
+    }
+
+    /// Add MCP protocol router to be merged under /mcp path
+    ///
+    /// This enables unified port architecture where MCP, Admin, and Metrics
+    /// all serve from the same port (default 3001).
+    pub fn with_mcp_router(mut self, router: Router) -> Self {
+        self.mcp_router = Some(router);
         self
     }
 
@@ -148,8 +160,14 @@ impl MetricsApiServer {
             .layer(tower_http::cors::CorsLayer::permissive())
             .with_state(state);
 
+        // Merge external router (typically admin routes under /admin/*)
         if let Some(external) = self.external_router.clone() {
             router = router.merge(external);
+        }
+
+        // Merge MCP router (MCP protocol under /mcp/*)
+        if let Some(mcp) = self.mcp_router.clone() {
+            router = router.merge(mcp);
         }
 
         router

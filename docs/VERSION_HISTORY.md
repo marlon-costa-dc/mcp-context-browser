@@ -17,10 +17,10 @@ MCP Context Browser v0.1.0 is the first stable release, delivering a complete dr
 ### Major Achievements
 
 - **Full claude-context Compatibility**: Same environment variables, same MCP tools
-- **14 Programming Languages**: Comprehensive AST-based parsing with tree-sitter
-- **6 Embedding Providers**: OpenAI, VoyageAI, Ollama, Gemini, FastEmbed, Mock
+- **12 Programming Languages**: Complete AST-based parsing with tree-sitter (Rust, Python, JS/TS, Go, Java, C, C++, C#, Ruby, PHP, Swift, Kotlin)
+- **6 Embedding Providers**: OpenAI, VoyageAI, Ollama, Gemini, FastEmbed, Null
 - **6 Vector Stores**: Milvus, EdgeVec, In-Memory, Filesystem, Encrypted, Null
-- **564 Tests**: Comprehensive test suite with high coverage
+- **493 Tests**: Comprehensive test suite across 15 test modules (100% pass rate, 2 ignored)
 - **Clean Architecture**: Complete refactoring with trait-based dependency injection
 
 ### New Features
@@ -77,8 +77,8 @@ Infrastructure for future HTTP/SSE transport support:
 
 | Metric | Value |
 |--------|-------|
-| Total Tests | 564 |
-| Language Processors | 14 |
+| Total Tests | 493 |
+| Language Processors | 12 |
 | Embedding Providers | 6 |
 | Vector Stores | 6 |
 | Source Files | 100+ |
@@ -319,24 +319,32 @@ Self-documenting, ADR-driven development
 
 ```text
 Complete drop-in claude-context replacement
-├── 14 language processors (modular)
+├── 12 languages processors (modular)
 ├── HTTP transport foundation
 ├── Binary auto-respawn
 ├── Systemd integration
-├── 564 tests
+├── 493 tests
 └── Clean architecture refactoring
 ```
 
-### v0.2.0: Git-Aware Indexing (Planned)
+### v0.2.0: Git-Aware Indexing + Persistent Session Memory (Planned)
 
 ```text
-Git-aware semantic search platform
-├── Repository ID (portable indexing)
-├── Multi-branch indexing
-├── Commit history search
-├── Submodule support
-├── Monorepo project detection
-└── Change impact analysis
+Comprehensive development platform
+├── Git-Aware Indexing (ADR-008)
+│   ├── Repository ID (portable indexing)
+│   ├── Multi-branch indexing
+│   ├── Commit history search
+│   ├── Submodule support
+│   ├── Monorepo project detection
+│   └── Change impact analysis
+└── Persistent Session Memory (ADR-009)
+    ├── Observation storage with metadata
+    ├── Session summaries and tracking
+    ├── Hybrid search (BM25 + vector)
+    ├── Progressive disclosure (3-layer workflow)
+    ├── Context injection for SessionStart
+    └── Git-tagged memory entries
 ```
 
 ---
@@ -375,8 +383,8 @@ Git-aware semantic search platform
 ### v0.1.0: First Stable Release
 
 -   claude-context compatibility: 100%
--   Language processors: 14 languages
--   Test coverage: 564 tests
+-   Language processors: 12 languages
+-   Test coverage: 493 tests
 -   HTTP transport foundation: Complete
 -   Systemd integration: Complete
 -   Clean architecture: Complete
@@ -393,7 +401,7 @@ Git-aware semantic search platform
 | Architecture | Simple | Modular | Enterprise | Automated | Clean DI |
 | Deployment | Manual | Docker | Kubernetes | Cloud-native | Systemd |
 | Monitoring | None | Basic | Enterprise | Intelligent | Complete |
-| Languages | 0 | 4 | 8 | 13 | 14 |
+| Languages | 0 | 4 | 8 | 13 | 12 |
 
 ---
 
@@ -426,10 +434,16 @@ Git-aware semantic search platform
 
 ### From v0.1.0 to v0.2.0 (Planned)
 
--   **Breaking Changes**: TBD - likely metadata schema changes
--   **Migration Required**: Re-indexing with git metadata
--   **Benefits**: Git awareness, multi-branch search, impact analysis
--   **ADR**: [008-git-aware-semantic-indexing-v0.2.0](adr/008-git-aware-semantic-indexing-v0.2.0.md)
+-   **Breaking Changes**: TBD - likely metadata schema changes for git integration
+-   **Migration Required**:
+    - Re-indexing with git metadata for existing repositories
+    - New SQLite database for session memory (no migration needed)
+-   **Benefits**:
+    - Git awareness: multi-branch search, commit history, impact analysis
+    - Session memory: cross-session context, persistent decisions, token efficiency
+-   **ADRs**:
+    - [008-git-aware-semantic-indexing-v0.2.0](adr/008-git-aware-semantic-indexing-v0.2.0.md)
+    - [009-persistent-session-memory-v0.2.0](adr/009-persistent-session-memory-v0.2.0.md)
 
 ---
 

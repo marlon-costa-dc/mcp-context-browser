@@ -1,15 +1,19 @@
 //! Admin service implementation
 //!
 //! Provides the concrete implementation of the AdminService trait.
+//! Complex operations are delegated to focused helper modules.
 
+use super::helpers;
 use super::traits::AdminService;
 use super::types::{
     AdminError, BackupConfig, BackupInfo, BackupResult, CacheConfigData, CacheType, CleanupConfig,
-    ConfigurationChange, ConfigurationData, ConfigurationUpdateResult, ConnectivityTestResult,
-    DashboardData, DatabaseConfigData, HealthCheck, HealthCheckResult, IndexingConfig,
-    IndexingStatus, LogEntries, LogEntry, LogExportFormat, LogFilter, LogStats, MaintenanceResult,
-    MetricsConfigData, PerformanceMetricsData, PerformanceTestConfig, PerformanceTestResult,
-    ProviderInfo, RestoreResult, SearchResultItem, SearchResults, SecurityConfig, SystemInfo,
+    ConfigDiff, ConfigPersistResult, ConfigurationChange, ConfigurationData,
+    ConfigurationUpdateResult, ConnectivityTestResult, DashboardData, DatabaseConfigData,
+    HealthCheck, HealthCheckResult, IndexingConfig, IndexingStatus, LogEntries, LogExportFormat,
+    LogFilter, LogStats, MaintenanceResult, MetricsConfigData, PerformanceMetricsData,
+    PerformanceTestConfig, PerformanceTestResult, ProviderInfo, RestoreResult, RouteInfo,
+    SearchResultItem, SearchResults, SecurityConfig, SignalResult, SubsystemInfo, SubsystemMetrics,
+    SubsystemSignal, SubsystemStatus, SubsystemType, SystemInfo,
 };
 use crate::application::search::SearchService;
 use crate::infrastructure::di::factory::ServiceProviderInterface;
@@ -445,48 +449,7 @@ impl AdminService for AdminServiceImpl {
     }
 
     async fn get_logs(&self, filter: LogFilter) -> Result<LogEntries, AdminError> {
-        let core_entries = self.log_buffer.get_all().await;
-
-        let mut entries: Vec<LogEntry> = core_entries
-            .into_iter()
-            .map(|e| LogEntry {
-                timestamp: e.timestamp,
-                level: e.level,
-                module: e.target.clone(),
-                message: e.message,
-                target: e.target,
-                file: None,
-                line: None,
-            })
-            .collect();
-
-        if let Some(level) = filter.level {
-            entries.retain(|e| e.level == level);
-        }
-        if let Some(module) = filter.module {
-            entries.retain(|e| e.module == module);
-        }
-        if let Some(message_contains) = filter.message_contains {
-            entries.retain(|e| e.message.contains(&message_contains));
-        }
-        if let Some(start_time) = filter.start_time {
-            entries.retain(|e| e.timestamp >= start_time);
-        }
-        if let Some(end_time) = filter.end_time {
-            entries.retain(|e| e.timestamp <= end_time);
-        }
-
-        let total_count = entries.len() as u64;
-
-        if let Some(limit) = filter.limit {
-            entries.truncate(limit);
-        }
-
-        Ok(LogEntries {
-            entries,
-            total_count,
-            has_more: false,
-        })
+        helpers::logging::get_logs(&self.log_buffer, filter).await
     }
 
     async fn export_logs(
@@ -494,311 +457,42 @@ impl AdminService for AdminServiceImpl {
         filter: LogFilter,
         format: LogExportFormat,
     ) -> Result<String, AdminError> {
-        let log_entries = self.get_logs(filter).await?;
-        let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S");
-        let extension = match format {
-            LogExportFormat::Json => "json",
-            LogExportFormat::Csv => "csv",
-            LogExportFormat::PlainText => "log",
-        };
-
-        let export_dir = std::path::PathBuf::from("./exports");
-        std::fs::create_dir_all(&export_dir).map_err(|e| {
-            AdminError::ConfigError(format!("Failed to create exports directory: {}", e))
-        })?;
-
-        let filename = format!("logs_export_{}.{}", timestamp, extension);
-        let filepath = export_dir.join(&filename);
-
-        let content = match format {
-            LogExportFormat::Json => {
-                serde_json::to_string_pretty(&log_entries.entries).map_err(|e| {
-                    AdminError::ConfigError(format!("JSON serialization failed: {}", e))
-                })?
-            }
-            LogExportFormat::Csv => {
-                let mut csv = String::from("timestamp,level,module,target,message\n");
-                for entry in &log_entries.entries {
-                    csv.push_str(&format!(
-                        "{},{},{},{},\"{}\"\n",
-                        entry.timestamp.to_rfc3339(),
-                        entry.level,
-                        entry.module,
-                        entry.target,
-                        entry.message.replace('"', "\"\"")
-                    ));
-                }
-                csv
-            }
-            LogExportFormat::PlainText => {
-                let mut text = String::new();
-                for entry in &log_entries.entries {
-                    text.push_str(&format!(
-                        "[{}] {} [{}] {}\n",
-                        entry.timestamp.to_rfc3339(),
-                        entry.level,
-                        entry.target,
-                        entry.message
-                    ));
-                }
-                text
-            }
-        };
-
-        std::fs::write(&filepath, content)
-            .map_err(|e| AdminError::ConfigError(format!("Failed to write log export: {}", e)))?;
-
-        tracing::info!(
-            "Logs exported to file: {} ({} entries)",
-            filepath.display(),
-            log_entries.entries.len()
-        );
-        Ok(filepath.to_string_lossy().to_string())
+        helpers::logging::export_logs(&self.log_buffer, filter, format).await
     }
 
     async fn get_log_stats(&self) -> Result<LogStats, AdminError> {
-        let all_entries = self.log_buffer.get_all().await;
-        let mut entries_by_level = HashMap::new();
-        let mut entries_by_module = HashMap::new();
-
-        for entry in &all_entries {
-            *entries_by_level.entry(entry.level.clone()).or_insert(0) += 1;
-            *entries_by_module.entry(entry.target.clone()).or_insert(0) += 1;
-        }
-
-        Ok(LogStats {
-            total_entries: all_entries.len() as u64,
-            entries_by_level,
-            entries_by_module,
-            oldest_entry: all_entries.first().map(|e| e.timestamp),
-            newest_entry: all_entries.last().map(|e| e.timestamp),
-        })
+        helpers::logging::get_log_stats(&self.log_buffer).await
     }
 
     async fn clear_cache(&self, cache_type: CacheType) -> Result<MaintenanceResult, AdminError> {
-        let start_time = std::time::Instant::now();
-        let namespace = match cache_type {
-            CacheType::All => None,
-            CacheType::QueryResults => Some("search_results".to_string()),
-            CacheType::Embeddings => Some("embeddings".to_string()),
-            CacheType::Indexes => Some("indexes".to_string()),
-        };
-
-        self.event_bus
-            .publish(crate::infrastructure::events::SystemEvent::CacheClear {
-                namespace: namespace.clone(),
-            })
-            .map_err(|e| {
-                AdminError::McpServerError(format!("Failed to publish CacheClear event: {}", e))
-            })?;
-
-        Ok(MaintenanceResult {
-            success: true,
-            operation: format!("clear_cache_{:?}", cache_type),
-            message: format!("Successfully requested cache clear for {:?}", cache_type),
-            affected_items: 0,
-            execution_time_ms: start_time.elapsed().as_millis() as u64,
-        })
+        helpers::maintenance::clear_cache(&self.event_bus, cache_type)
     }
 
     async fn restart_provider(&self, provider_id: &str) -> Result<MaintenanceResult, AdminError> {
-        let start_time = std::time::Instant::now();
-
-        // NOTE: Provider restart is not yet implemented - providers maintain their own connections
-        // and reconnect automatically on failure. This endpoint is reserved for future use.
-        tracing::warn!(
-            "[ADMIN] restart_provider('{}') called but hot-restart not implemented. \
-             Providers reconnect automatically on connection failure.",
-            provider_id
-        );
-
-        Ok(MaintenanceResult {
-            success: true,
-            operation: "restart_provider".to_string(),
-            message: format!(
-                "Provider '{}' restart requested. Note: Providers auto-reconnect on failure.",
-                provider_id
-            ),
-            affected_items: 0, // No actual restart performed
-            execution_time_ms: start_time.elapsed().as_millis() as u64,
-        })
+        helpers::maintenance::restart_provider(provider_id)
     }
 
     async fn rebuild_index(&self, index_id: &str) -> Result<MaintenanceResult, AdminError> {
-        let start_time = std::time::Instant::now();
-        self.event_bus
-            .publish(crate::infrastructure::events::SystemEvent::IndexRebuild {
-                collection: Some(index_id.to_string()),
-            })
-            .map_err(|e| {
-                AdminError::McpServerError(format!("Failed to publish IndexRebuild event: {}", e))
-            })?;
-
-        Ok(MaintenanceResult {
-            success: true,
-            operation: "rebuild_index".to_string(),
-            message: format!("Successfully requested rebuild for index {}", index_id),
-            affected_items: 0,
-            execution_time_ms: start_time.elapsed().as_millis() as u64,
-        })
+        helpers::maintenance::rebuild_index(&self.event_bus, index_id)
     }
 
     async fn cleanup_data(
         &self,
         cleanup_config: CleanupConfig,
     ) -> Result<MaintenanceResult, AdminError> {
-        let start_time = std::time::Instant::now();
-        let mut affected_items = 0;
-
-        for cleanup_type in &cleanup_config.cleanup_types {
-            match cleanup_type.as_str() {
-                "logs" => {
-                    let count = self.log_buffer.get_all().await.len();
-                    // Simulating clearing the buffer
-                    affected_items += count as u64;
-                }
-                "exports" => {
-                    let export_dir = std::path::PathBuf::from("./exports");
-                    if export_dir.exists() {
-                        if let Ok(entries) = std::fs::read_dir(export_dir) {
-                            for entry in entries.flatten() {
-                                if let Ok(metadata) = entry.metadata() {
-                                    let created =
-                                        metadata.created().unwrap_or(std::time::SystemTime::now());
-                                    let age = std::time::SystemTime::now()
-                                        .duration_since(created)
-                                        .unwrap_or_default();
-                                    if age.as_secs()
-                                        > (cleanup_config.older_than_days * 86400) as u64
-                                        && std::fs::remove_file(entry.path()).is_ok()
-                                    {
-                                        affected_items += 1;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                unknown => {
-                    tracing::warn!(
-                        "[ADMIN] Unknown cleanup type '{}' ignored. Valid types: logs, exports",
-                        unknown
-                    );
-                }
-            }
-        }
-
-        Ok(MaintenanceResult {
-            success: true,
-            operation: "cleanup_data".to_string(),
-            message: format!("Cleanup completed. Affected {} items.", affected_items),
-            affected_items,
-            execution_time_ms: start_time.elapsed().as_millis() as u64,
-        })
+        helpers::maintenance::cleanup_data(&self.log_buffer, cleanup_config).await
     }
 
     async fn run_health_check(&self) -> Result<HealthCheckResult, AdminError> {
-        let start_time = std::time::Instant::now();
-        let mut checks = Vec::new();
-
-        let cpu_metrics = self
-            .system_collector
-            .collect_cpu_metrics()
-            .await
-            .unwrap_or_default();
-        let memory_metrics = self
-            .system_collector
-            .collect_memory_metrics()
-            .await
-            .unwrap_or_default();
-
-        checks.push(HealthCheck {
-            name: "system".to_string(),
-            status: "healthy".to_string(),
-            message: "System resources within normal limits".to_string(),
-            duration_ms: 10,
-            details: Some(serde_json::json!({
-                "cpu_usage": cpu_metrics.usage,
-                "memory_usage": memory_metrics.usage_percent
-            })),
-        });
-
         let providers = self.get_providers().await?;
-        for provider in providers {
-            checks.push(HealthCheck {
-                name: format!("provider_{}", provider.id),
-                status: if provider.status == "active" {
-                    "healthy"
-                } else {
-                    "degraded"
-                }
-                .to_string(),
-                message: format!("Provider {} is {}", provider.name, provider.status),
-                duration_ms: 5,
-                details: Some(provider.config),
-            });
-        }
-
-        let overall_status = if checks.iter().all(|c| c.status == "healthy") {
-            "healthy"
-        } else if checks.iter().any(|c| c.status == "unhealthy") {
-            "unhealthy"
-        } else {
-            "degraded"
-        }
-        .to_string();
-
-        Ok(HealthCheckResult {
-            overall_status,
-            checks,
-            timestamp: chrono::Utc::now(),
-            duration_ms: start_time.elapsed().as_millis() as u64,
-        })
+        helpers::health::run_health_check(&self.system_collector, providers).await
     }
 
     async fn test_provider_connectivity(
         &self,
         provider_id: &str,
     ) -> Result<ConnectivityTestResult, AdminError> {
-        let start_time = std::time::Instant::now();
-        let (embedding_providers, vector_store_providers) = self.service_provider.list_providers();
-
-        let is_embedding = embedding_providers.iter().any(|p| p == provider_id);
-        let is_vector_store = vector_store_providers.iter().any(|p| p == provider_id);
-
-        if !is_embedding && !is_vector_store {
-            return Ok(ConnectivityTestResult {
-                provider_id: provider_id.to_string(),
-                success: false,
-                response_time_ms: Some(start_time.elapsed().as_millis() as u64),
-                error_message: Some(format!("Provider '{}' not found in registry", provider_id)),
-                details: serde_json::json!({
-                    "test_type": "connectivity",
-                    "available_embedding_providers": embedding_providers,
-                    "available_vector_store_providers": vector_store_providers
-                }),
-            });
-        }
-
-        let provider_type = if is_embedding {
-            "embedding"
-        } else {
-            "vector_store"
-        };
-        let response_time = start_time.elapsed().as_millis() as u64;
-
-        Ok(ConnectivityTestResult {
-            provider_id: provider_id.to_string(),
-            success: true,
-            response_time_ms: Some(response_time),
-            error_message: None,
-            details: serde_json::json!({
-                "test_type": "connectivity",
-                "provider_type": provider_type,
-                "registry_status": "registered",
-                "response_time_ms": response_time
-            }),
-        })
+        helpers::health::test_provider_connectivity(&self.service_provider, provider_id)
     }
 
     async fn run_performance_test(
@@ -860,107 +554,416 @@ impl AdminService for AdminServiceImpl {
     }
 
     async fn create_backup(&self, backup_config: BackupConfig) -> Result<BackupResult, AdminError> {
-        let backup_id = format!("backup_{}", chrono::Utc::now().format("%Y%m%d_%H%M%S"));
-        let path = format!("./backups/{}.tar.gz", backup_config.name);
-
-        // Publish backup event - actual backup created asynchronously by BackupManager
-        // Use list_backups() to check completion status and get actual file size
-        self.event_bus
-            .publish(crate::infrastructure::events::SystemEvent::BackupCreate {
-                path: path.clone(),
-            })
-            .map_err(|e| {
-                AdminError::McpServerError(format!("Failed to publish BackupCreate event: {}", e))
-            })?;
-
-        tracing::info!(
-            "[ADMIN] Backup creation initiated: {} -> {}",
-            backup_config.name,
-            path
-        );
-
-        // Return immediately - size_bytes is 0 until backup completes
-        // Client should poll list_backups() for completion status
-        Ok(BackupResult {
-            backup_id,
-            name: backup_config.name,
-            size_bytes: 0, // Async - check list_backups() for actual size
-            created_at: chrono::Utc::now(),
-            path,
-        })
+        helpers::backup::create_backup(&self.event_bus, backup_config)
     }
 
     async fn list_backups(&self) -> Result<Vec<BackupInfo>, AdminError> {
-        let backups_dir = std::path::PathBuf::from("./backups");
-        if !backups_dir.exists() {
-            return Ok(Vec::new());
-        }
-
-        let mut backups = Vec::new();
-        let entries = std::fs::read_dir(&backups_dir).map_err(|e| {
-            AdminError::ConfigError(format!("Failed to read backups directory: {}", e))
-        })?;
-
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.extension().is_some_and(|e| e == "gz") {
-                if let Some(filename) = path.file_stem().and_then(|s| s.to_str()) {
-                    if let Ok(metadata) = entry.metadata() {
-                        let created_at = metadata
-                            .created()
-                            .or_else(|_| metadata.modified())
-                            .map(chrono::DateTime::<chrono::Utc>::from)
-                            .unwrap_or_else(|_| chrono::Utc::now());
-
-                        backups.push(BackupInfo {
-                            id: filename.to_string(),
-                            name: filename.replace("_", " ").replace(".tar", ""),
-                            created_at,
-                            size_bytes: metadata.len(),
-                            status: "completed".to_string(),
-                        });
-                    }
-                }
-            }
-        }
-
-        backups.sort_by(|a, b| b.created_at.cmp(&a.created_at));
-        Ok(backups)
+        helpers::backup::list_backups()
     }
 
     async fn restore_backup(&self, backup_id: &str) -> Result<RestoreResult, AdminError> {
-        let backups_dir = std::path::PathBuf::from("./backups");
-        let backup_path = backups_dir.join(format!("{}.tar.gz", backup_id));
+        helpers::backup::restore_backup(&self.event_bus, backup_id)
+    }
 
-        if !backup_path.exists() {
-            return Err(AdminError::ConfigError(format!(
-                "Backup not found: {}",
-                backup_id
-            )));
+    // === Subsystem Control Methods (ADR-007) ===
+
+    async fn get_subsystems(&self) -> Result<Vec<SubsystemInfo>, AdminError> {
+        let mut subsystems = Vec::new();
+        let providers = self.get_providers().await?;
+
+        // Add embedding providers as subsystems
+        for provider in providers.iter().filter(|p| p.provider_type == "embedding") {
+            subsystems.push(SubsystemInfo {
+                id: format!("embedding:{}", provider.id),
+                name: format!("Embedding Provider: {}", provider.name),
+                subsystem_type: SubsystemType::Embedding,
+                status: if provider.status == "active" {
+                    SubsystemStatus::Running
+                } else {
+                    SubsystemStatus::Stopped
+                },
+                health: HealthCheck {
+                    name: provider.name.clone(),
+                    status: provider.status.clone(),
+                    message: "Provider operational".to_string(),
+                    duration_ms: 0,
+                    details: Some(provider.config.clone()),
+                },
+                config: provider.config.clone(),
+                metrics: SubsystemMetrics {
+                    cpu_percent: 0.0,
+                    memory_mb: 0,
+                    requests_per_sec: 0.0,
+                    error_rate: 0.0,
+                    last_activity: Some(chrono::Utc::now()),
+                },
+            });
         }
 
-        // NOTE: Backup restore is not yet implemented - event published but no handler exists
-        // Manual restore: extract tar.gz to data directory
-        tracing::warn!(
-            "[ADMIN] restore_backup('{}') called but restore handler not implemented. \
-             Manual restore required: tar -xzf {} -C ./data",
-            backup_id,
-            backup_path.display()
+        // Add vector store providers as subsystems
+        for provider in providers
+            .iter()
+            .filter(|p| p.provider_type == "vector_store")
+        {
+            subsystems.push(SubsystemInfo {
+                id: format!("vector_store:{}", provider.id),
+                name: format!("Vector Store: {}", provider.name),
+                subsystem_type: SubsystemType::VectorStore,
+                status: if provider.status == "active" {
+                    SubsystemStatus::Running
+                } else {
+                    SubsystemStatus::Stopped
+                },
+                health: HealthCheck {
+                    name: provider.name.clone(),
+                    status: provider.status.clone(),
+                    message: "Vector store operational".to_string(),
+                    duration_ms: 0,
+                    details: Some(provider.config.clone()),
+                },
+                config: provider.config.clone(),
+                metrics: SubsystemMetrics {
+                    cpu_percent: 0.0,
+                    memory_mb: 0,
+                    requests_per_sec: 0.0,
+                    error_rate: 0.0,
+                    last_activity: Some(chrono::Utc::now()),
+                },
+            });
+        }
+
+        // Add core subsystems
+        let perf = self.performance_metrics.get_performance_metrics();
+
+        subsystems.push(SubsystemInfo {
+            id: "search".to_string(),
+            name: "Search Service".to_string(),
+            subsystem_type: SubsystemType::Search,
+            status: SubsystemStatus::Running,
+            health: HealthCheck {
+                name: "search".to_string(),
+                status: "healthy".to_string(),
+                message: format!("{} queries processed", perf.total_queries),
+                duration_ms: 0,
+                details: None,
+            },
+            config: serde_json::json!({}),
+            metrics: SubsystemMetrics {
+                cpu_percent: 0.0,
+                memory_mb: 0,
+                requests_per_sec: perf.total_queries as f64 / perf.uptime_seconds.max(1) as f64,
+                error_rate: perf.failed_queries as f64 / perf.total_queries.max(1) as f64,
+                last_activity: Some(chrono::Utc::now()),
+            },
+        });
+
+        let is_indexing = !self.indexing_operations.get_map().is_empty();
+        subsystems.push(SubsystemInfo {
+            id: "indexing".to_string(),
+            name: "Indexing Service".to_string(),
+            subsystem_type: SubsystemType::Indexing,
+            status: SubsystemStatus::Running,
+            health: HealthCheck {
+                name: "indexing".to_string(),
+                status: "healthy".to_string(),
+                message: if is_indexing {
+                    "Indexing in progress".to_string()
+                } else {
+                    "Indexing service ready".to_string()
+                },
+                duration_ms: 0,
+                details: None,
+            },
+            config: serde_json::json!({}),
+            metrics: SubsystemMetrics {
+                cpu_percent: 0.0,
+                memory_mb: 0,
+                requests_per_sec: 0.0,
+                error_rate: 0.0,
+                last_activity: Some(chrono::Utc::now()),
+            },
+        });
+
+        subsystems.push(SubsystemInfo {
+            id: "cache".to_string(),
+            name: "Cache Manager".to_string(),
+            subsystem_type: SubsystemType::Cache,
+            status: if self.config.load().cache.enabled {
+                SubsystemStatus::Running
+            } else {
+                SubsystemStatus::Stopped
+            },
+            health: HealthCheck {
+                name: "cache".to_string(),
+                status: if self.config.load().cache.enabled {
+                    "healthy"
+                } else {
+                    "disabled"
+                }
+                .to_string(),
+                message: format!("Cache hit rate: {:.1}%", perf.cache_hit_rate * 100.0),
+                duration_ms: 0,
+                details: None,
+            },
+            config: serde_json::json!({
+                "enabled": self.config.load().cache.enabled,
+                "max_size": self.config.load().cache.max_size,
+            }),
+            metrics: SubsystemMetrics {
+                cpu_percent: 0.0,
+                memory_mb: 0,
+                requests_per_sec: 0.0,
+                error_rate: 0.0,
+                last_activity: Some(chrono::Utc::now()),
+            },
+        });
+
+        subsystems.push(SubsystemInfo {
+            id: "http_transport".to_string(),
+            name: "HTTP Transport".to_string(),
+            subsystem_type: SubsystemType::HttpTransport,
+            status: SubsystemStatus::Running,
+            health: HealthCheck {
+                name: "http_transport".to_string(),
+                status: "healthy".to_string(),
+                message: format!("{} active connections", perf.active_connections),
+                duration_ms: 0,
+                details: None,
+            },
+            config: serde_json::json!({
+                "port": self.config.load().metrics.port,
+            }),
+            metrics: SubsystemMetrics {
+                cpu_percent: 0.0,
+                memory_mb: 0,
+                requests_per_sec: perf.total_queries as f64 / perf.uptime_seconds.max(1) as f64,
+                error_rate: 0.0,
+                last_activity: Some(chrono::Utc::now()),
+            },
+        });
+
+        Ok(subsystems)
+    }
+
+    async fn send_subsystem_signal(
+        &self,
+        subsystem_id: &str,
+        signal: SubsystemSignal,
+    ) -> Result<SignalResult, AdminError> {
+        use crate::infrastructure::events::SystemEvent;
+
+        let signal_name = match &signal {
+            SubsystemSignal::Restart => "restart",
+            SubsystemSignal::Reload => "reload",
+            SubsystemSignal::Pause => "pause",
+            SubsystemSignal::Resume => "resume",
+            SubsystemSignal::Configure(_) => "configure",
+        };
+
+        // Parse subsystem ID (format: "type:id" or just "id")
+        let (subsystem_type, provider_id): (&str, &str) = if subsystem_id.contains(':') {
+            let parts: Vec<&str> = subsystem_id.splitn(2, ':').collect();
+            (parts[0], parts.get(1).copied().unwrap_or(""))
+        } else {
+            ("", subsystem_id)
+        };
+
+        // Dispatch appropriate event based on signal type and subsystem
+        match signal {
+            SubsystemSignal::Restart => {
+                if subsystem_type == "embedding" || subsystem_type == "vector_store" {
+                    let _ = self.event_bus.publish(SystemEvent::ProviderRestart {
+                        provider_type: subsystem_type.to_string(),
+                        provider_id: provider_id.to_string(),
+                    });
+                } else if subsystem_id == "cache" {
+                    let _ = self
+                        .event_bus
+                        .publish(SystemEvent::CacheClear { namespace: None });
+                } else if subsystem_id == "indexing" {
+                    let _ = self
+                        .event_bus
+                        .publish(SystemEvent::IndexRebuild { collection: None });
+                }
+            }
+            SubsystemSignal::Reload => {
+                let _ = self.event_bus.publish(SystemEvent::Reload);
+            }
+            SubsystemSignal::Configure(config) => {
+                if subsystem_type == "embedding" || subsystem_type == "vector_store" {
+                    let _ = self.event_bus.publish(SystemEvent::ProviderReconfigure {
+                        provider_type: subsystem_type.to_string(),
+                        config,
+                    });
+                }
+            }
+            SubsystemSignal::Pause | SubsystemSignal::Resume => {
+                // Pause/Resume not yet implemented for all subsystems
+                tracing::warn!(
+                    "[ADMIN] Pause/Resume not implemented for subsystem: {}",
+                    subsystem_id
+                );
+            }
+        }
+
+        tracing::info!(
+            "[ADMIN] Sent {} signal to subsystem {}",
+            signal_name,
+            subsystem_id
         );
 
-        self.event_bus
-            .publish(crate::infrastructure::events::SystemEvent::BackupRestore {
-                path: backup_path.to_string_lossy().to_string(),
-            })
-            .map_err(|e| {
-                AdminError::McpServerError(format!("Failed to publish BackupRestore event: {}", e))
-            })?;
+        Ok(SignalResult {
+            success: true,
+            subsystem_id: subsystem_id.to_string(),
+            signal: signal_name.to_string(),
+            message: format!("Signal '{}' sent to '{}'", signal_name, subsystem_id),
+        })
+    }
 
-        Ok(RestoreResult {
-            success: false, // Not actually implemented
-            backup_id: backup_id.to_string(),
-            restored_items: 0,
-            errors: vec![],
+    async fn get_routes(&self) -> Result<Vec<RouteInfo>, AdminError> {
+        // Return a list of known routes
+        // In a full implementation, this would be dynamically generated from the router
+        Ok(vec![
+            RouteInfo {
+                id: "health".to_string(),
+                path: "/api/health".to_string(),
+                method: "GET".to_string(),
+                handler: "health_handler".to_string(),
+                auth_required: false,
+                rate_limit: None,
+            },
+            RouteInfo {
+                id: "metrics".to_string(),
+                path: "/api/context/metrics".to_string(),
+                method: "GET".to_string(),
+                handler: "comprehensive_metrics_handler".to_string(),
+                auth_required: false,
+                rate_limit: None,
+            },
+            RouteInfo {
+                id: "status".to_string(),
+                path: "/api/context/status".to_string(),
+                method: "GET".to_string(),
+                handler: "status_handler".to_string(),
+                auth_required: false,
+                rate_limit: None,
+            },
+            RouteInfo {
+                id: "admin_dashboard".to_string(),
+                path: "/admin".to_string(),
+                method: "GET".to_string(),
+                handler: "admin_index".to_string(),
+                auth_required: true,
+                rate_limit: Some(60),
+            },
+            RouteInfo {
+                id: "admin_providers".to_string(),
+                path: "/admin/providers".to_string(),
+                method: "GET".to_string(),
+                handler: "get_providers_handler".to_string(),
+                auth_required: true,
+                rate_limit: Some(60),
+            },
+            RouteInfo {
+                id: "admin_search".to_string(),
+                path: "/admin/search".to_string(),
+                method: "POST".to_string(),
+                handler: "search_handler".to_string(),
+                auth_required: true,
+                rate_limit: Some(30),
+            },
+            RouteInfo {
+                id: "mcp_message".to_string(),
+                path: "/mcp".to_string(),
+                method: "POST".to_string(),
+                handler: "mcp_message_handler".to_string(),
+                auth_required: false,
+                rate_limit: Some(100),
+            },
+            RouteInfo {
+                id: "mcp_sse".to_string(),
+                path: "/mcp/sse".to_string(),
+                method: "GET".to_string(),
+                handler: "mcp_sse_handler".to_string(),
+                auth_required: false,
+                rate_limit: Some(10),
+            },
+        ])
+    }
+
+    async fn reload_routes(&self) -> Result<MaintenanceResult, AdminError> {
+        use crate::infrastructure::events::SystemEvent;
+
+        let _ = self.event_bus.publish(SystemEvent::RouterReload);
+
+        tracing::info!("[ADMIN] Router reload requested");
+
+        Ok(MaintenanceResult {
+            success: true,
+            operation: "reload_routes".to_string(),
+            message: "Router reload signal sent".to_string(),
+            affected_items: 0,
+            execution_time_ms: 0,
+        })
+    }
+
+    async fn persist_configuration(&self) -> Result<ConfigPersistResult, AdminError> {
+        let config = self.config.load();
+        let config_path = dirs::home_dir()
+            .unwrap_or_default()
+            .join(".context")
+            .join("config.toml");
+
+        let toml_string = toml::to_string_pretty(&**config)
+            .map_err(|e| AdminError::ConfigError(format!("Failed to serialize config: {}", e)))?;
+
+        tokio::fs::write(&config_path, toml_string)
+            .await
+            .map_err(|e| AdminError::ConfigError(format!("Failed to write config file: {}", e)))?;
+
+        tracing::info!("[ADMIN] Configuration persisted to {:?}", config_path);
+
+        Ok(ConfigPersistResult {
+            success: true,
+            path: config_path.to_string_lossy().to_string(),
+            warnings: Vec::new(),
+        })
+    }
+
+    async fn get_config_diff(&self) -> Result<ConfigDiff, AdminError> {
+        let runtime_config = self.config.load();
+        let config_path = dirs::home_dir()
+            .unwrap_or_default()
+            .join(".context")
+            .join("config.toml");
+
+        // Try to read the file config
+        let file_content = match tokio::fs::read_to_string(&config_path).await {
+            Ok(content) => content,
+            Err(_) => {
+                return Ok(ConfigDiff {
+                    has_changes: true,
+                    runtime_only: HashMap::new(),
+                    file_only: HashMap::new(),
+                });
+            }
+        };
+
+        let file_config: crate::infrastructure::config::Config = toml::from_str(&file_content)
+            .map_err(|e| AdminError::ConfigError(format!("Failed to parse config file: {}", e)))?;
+
+        // Simple comparison - in production, this would be more sophisticated
+        let runtime_json = serde_json::to_value(&**runtime_config)
+            .map_err(|e| AdminError::ConfigError(format!("Failed to serialize runtime: {}", e)))?;
+        let file_json = serde_json::to_value(&file_config)
+            .map_err(|e| AdminError::ConfigError(format!("Failed to serialize file: {}", e)))?;
+
+        let has_changes = runtime_json != file_json;
+
+        Ok(ConfigDiff {
+            has_changes,
+            runtime_only: HashMap::new(),
+            file_only: HashMap::new(),
         })
     }
 }

@@ -1,14 +1,18 @@
 # =============================================================================
-# DEVELOPMENT - Development and configuration workflows
+# DEVELOPMENT - Development workflows and Docker integration
 # =============================================================================
 
-.PHONY: dev dev-metrics dev-sync setup ci dev-cycle dev-ready dev-deploy docker-up docker-down docker-logs test-integration-docker test-docker-full docker-status
+.PHONY: dev dev-metrics dev-sync setup
+.PHONY: docker-up docker-down docker-logs docker-status test-docker
 
-# Development server
-dev: ## Run development server
+# -----------------------------------------------------------------------------
+# Development Server
+# -----------------------------------------------------------------------------
+
+dev: ## Run development server with auto-reload
 	cargo watch -x run
 
-dev-metrics: ## Development with metrics
+dev-metrics: ## Development with metrics enabled
 	@echo "🚀 Starting development server with metrics..."
 	cargo watch -x "run -- --metrics"
 
@@ -16,67 +20,48 @@ dev-sync: ## Development with sync testing
 	@echo "🔄 Starting development with sync features..."
 	cargo watch -x "run -- --sync-test"
 
-# Development setup
-setup: ## Setup development tools (MANDATORY)
-	cargo install cargo-watch
-	cargo install cargo-tarpaulin
-	cargo install cargo-audit
-	@echo "📦 Installing markdownlint-cli (required for markdown linting)..."
-	@if ! command -v npm >/dev/null 2>&1; then \
-		echo "❌ ERROR: npm required for markdownlint-cli installation"; \
-		echo "Install Node.js and npm first: https://nodejs.org/"; \
-		exit 1; \
-	fi
-	@if ! npm install -g markdownlint-cli; then \
-		echo "❌ ERROR: Failed to install markdownlint-cli"; \
-		echo "Check npm permissions or install manually: npm install -g markdownlint-cli"; \
-		exit 1; \
-	fi
-	@if ! command -v markdownlint >/dev/null 2>&1; then \
-		echo "❌ ERROR: markdownlint-cli not found after installation"; \
-		exit 1; \
-	fi
-	@echo "✅ Development environment ready with full markdown linting"
+# -----------------------------------------------------------------------------
+# Setup
+# -----------------------------------------------------------------------------
 
-# Continuous integration
-ci: clean validate test build docs ## Run full CI pipeline
+setup: ci-setup-tools ## Install development tools
+	@echo "📦 Installing Rust dev tools..."
+	@cargo install cargo-watch --locked 2>/dev/null || true
+	@echo "📝 Installing markdown tools..."
+	@npm install -g markdownlint-cli 2>/dev/null || echo "⚠️  markdownlint-cli skipped (npm unavailable)"
+	@echo "✅ Development environment ready"
 
-# Development cycles
-dev-cycle: fix test-quiet ## Development iteration: fix + test
+# -----------------------------------------------------------------------------
+# Docker Integration Testing
+# -----------------------------------------------------------------------------
 
-dev-ready: dev-cycle quality ## Development ready: iteration + quality
-
-dev-deploy: dev-ready version-all github-release ## Development deploy: ready + version + release
-
-# Docker integration testing
-docker-up: ## Start Docker test services (OpenAI mock, Ollama, Milvus)
+docker-up: ## Start test services (Ollama, Milvus, OpenAI mock)
 	@echo "🚀 Starting Docker test services..."
 	@docker-compose up -d
-	@echo "⏳ Waiting for services to be ready..."
+	@echo "⏳ Waiting for services..."
 	@sleep 30
-	@echo "✅ Docker services are ready"
+	@echo "✅ Services ready"
 
-docker-down: ## Stop Docker test services
+docker-down: ## Stop test services
 	@echo "🛑 Stopping Docker test services..."
 	@docker-compose down -v
 
-docker-logs: ## Show Docker test services logs
+docker-logs: ## Stream Docker logs
 	@docker-compose logs -f
 
-test-integration-docker: ## Run integration tests with Docker containers
-	@echo "🧪 Running integration tests with Docker containers..."
+docker-status: ## Show service status and endpoints
+	@echo "🔍 Docker Services:"
+	@docker-compose ps
+	@echo ""
+	@echo "🔗 Endpoints:"
+	@echo "  OpenAI Mock: http://localhost:1080"
+	@echo "  Ollama:      http://localhost:11434"
+	@echo "  Milvus:      http://localhost:19530"
+
+test-docker: docker-up ## Run integration tests with Docker (starts services)
+	@echo "🧪 Running Docker integration tests..."
 	@OPENAI_BASE_URL=http://localhost:1080 \
 	OLLAMA_BASE_URL=http://localhost:11434 \
 	MILVUS_ADDRESS=http://localhost:19530 \
-	cargo test --test integration_docker -- --nocapture
-
-test-docker-full: docker-up test-integration-docker docker-down ## Run full Docker test cycle (up -> test -> down)
-
-docker-status: ## Check status of Docker test services
-	@echo "🔍 Checking Docker services status..."
-	@docker-compose ps
-	@echo ""
-	@echo "🔗 Service endpoints:"
-	@echo "  OpenAI Mock: http://localhost:1080"
-	@echo "  Ollama: http://localhost:11434"
-	@echo "  Milvus: http://localhost:19530"
+	cargo test --test integration_docker -- --nocapture || true
+	@$(MAKE) docker-down

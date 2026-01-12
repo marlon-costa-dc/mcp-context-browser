@@ -111,8 +111,8 @@ check_provider_docs() {
     log_header "🤖 Checking provider documentation"
 
     # Get implemented providers
-    local embedding_providers=$(ls "$PROJECT_ROOT/src/providers/embedding/" 2>/dev/null | grep '\.rs$' | grep -v mod | sed 's/\.rs$//' | sort)
-    local vector_providers=$(ls "$PROJECT_ROOT/src/providers/vector_store/" 2>/dev/null | grep '\.rs$' | grep -v mod | sed 's/\.rs$//' | sort)
+    local embedding_providers=$(ls "$PROJECT_ROOT/src/adapters/providers/embedding/" 2>/dev/null | grep '\.rs$' | grep -v mod | sed 's/\.rs$//' | sort)
+    local vector_providers=$(ls "$PROJECT_ROOT/src/adapters/providers/vector_store/" 2>/dev/null | grep '\.rs$' | grep -v mod | sed 's/\.rs$//' | sort)
 
     # Check if all are documented in ARCHITECTURE.md
     for provider in $embedding_providers; do
@@ -134,8 +134,8 @@ check_provider_docs() {
 check_routing_docs() {
     log_header "🔀 Checking routing system documentation"
 
-    if [ -d "$PROJECT_ROOT/src/providers/routing" ]; then
-        local routing_modules=$(ls "$PROJECT_ROOT/src/providers/routing/" 2>/dev/null | wc -l)
+    if [ -d "$PROJECT_ROOT/src/adapters/providers/routing" ]; then
+        local routing_modules=$(ls "$PROJECT_ROOT/src/adapters/providers/routing/" 2>/dev/null | wc -l)
 
         if [ "$routing_modules" -gt 5 ] && ! grep -qi "routing\|Routing\|circuit" "$PROJECT_ROOT/docs/architecture/ARCHITECTURE.md" 2>/dev/null; then
             log_warning "Routing system not documented in architecture"

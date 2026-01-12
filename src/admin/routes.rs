@@ -11,12 +11,14 @@ use crate::admin::{
     auth::{auth_middleware, login_handler},
     handlers::{
         add_provider_handler, cleanup_data_handler, clear_cache_handler, create_backup_handler,
-        export_logs_handler, get_config_handler, get_configuration_handler,
-        get_configuration_history_handler, get_dashboard_metrics_handler, get_log_stats_handler,
-        get_logs_handler, get_status_handler, health_check_handler, index_operation_handler,
+        export_logs_handler, get_config_diff_handler, get_config_handler,
+        get_configuration_handler, get_configuration_history_handler,
+        get_dashboard_metrics_handler, get_log_stats_handler, get_logs_handler, get_routes_handler,
+        get_status_handler, get_subsystems_handler, health_check_handler, index_operation_handler,
         list_backups_handler, list_indexes_handler, list_providers_handler,
-        performance_test_handler, rebuild_index_handler, remove_provider_handler,
-        restart_provider_handler, restore_backup_handler, search_handler,
+        performance_test_handler, persist_configuration_handler, rebuild_index_handler,
+        reload_routes_handler, remove_provider_handler, restart_provider_handler,
+        restore_backup_handler, search_handler, send_subsystem_signal_handler,
         test_connectivity_handler, update_config_handler, update_configuration_handler,
         validate_configuration_handler,
     },
@@ -28,7 +30,10 @@ pub fn create_admin_router(state: AdminState) -> Router {
     Router::new()
         // Public routes (no auth required)
         .route("/admin/auth/login", post(login_handler))
-        .route("/admin/auth/logout", post(crate::admin::auth::logout_handler))
+        .route(
+            "/admin/auth/logout",
+            post(crate::admin::auth::logout_handler),
+        )
         .route("/admin/status", get(get_status_handler))
         .route(
             "/admin/dashboard/metrics",
@@ -48,6 +53,20 @@ pub fn create_admin_router(state: AdminState) -> Router {
             "/admin/configuration/history",
             get(get_configuration_history_handler),
         )
+        .route(
+            "/admin/configuration/save",
+            post(persist_configuration_handler),
+        )
+        .route("/admin/configuration/diff", get(get_config_diff_handler))
+        // Subsystem Control (ADR-007)
+        .route("/admin/subsystems", get(get_subsystems_handler))
+        .route(
+            "/admin/subsystems/:subsystem_id/signal",
+            post(send_subsystem_signal_handler),
+        )
+        // Router Management (ADR-007)
+        .route("/admin/routes", get(get_routes_handler))
+        .route("/admin/routes/reload", post(reload_routes_handler))
         // Logging System
         .route("/admin/logs", get(get_logs_handler))
         .route("/admin/logs/export", get(export_logs_handler))

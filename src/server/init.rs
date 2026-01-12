@@ -18,7 +18,6 @@ use crate::server::McpServer;
 use rmcp::transport::stdio;
 use rmcp::ServerHandler;
 use rmcp::ServiceExt;
-use std::net::SocketAddr;
 use std::sync::Arc;
 use tracing_subscriber::{self, EnvFilter};
 
@@ -54,6 +53,13 @@ fn init_tracing(
 }
 
 /// Initialize all server components and services
+///
+/// Returns a tuple containing:
+/// - McpServer instance
+/// - Metrics/Admin/MCP unified HTTP server handle
+/// - Resource limits
+/// - HTTP client provider
+/// - Connection tracker for graceful shutdown
 async fn initialize_server_components(
     cache_manager: Option<Arc<CacheManager>>,
     log_buffer: crate::infrastructure::logging::SharedLogBuffer,
@@ -63,6 +69,7 @@ async fn initialize_server_components(
         Option<tokio::task::JoinHandle<()>>,
         Arc<ResourceLimits>,
         Arc<dyn crate::adapters::http_client::HttpClientProvider>,
+        Arc<ConnectionTracker>,
     ),
     Box<dyn std::error::Error>,
 > {
@@ -175,10 +182,16 @@ async fn initialize_server_components(
         capabilities.resources.is_some()
     );
 
-    // Initialize metrics server if enabled
+    // Initialize HTTP transport components for unified port architecture
+    let transport_config = TransportConfig::default();
+    let session_manager = Arc::new(SessionManager::with_defaults());
+    let version_checker = Arc::new(VersionChecker::with_defaults());
+    let connection_tracker = Arc::new(ConnectionTracker::new(ConnectionTrackerConfig::default()));
+
+    // Initialize unified HTTP server (Metrics + Admin + MCP on single port)
     let metrics_handle = if config.metrics.enabled {
         tracing::info!(
-            "📊 Starting metrics and admin HTTP server on port {}",
+            "📊 Starting unified HTTP server on port {} (Metrics + Admin + MCP)",
             config.metrics.port
         );
 
@@ -205,17 +218,42 @@ async fn initialize_server_components(
             }
         }
 
+        // Create and merge MCP router for unified port architecture
+        // MCP HTTP transport is now served from the same port as metrics/admin
+        if matches!(
+            transport_config.mode,
+            TransportMode::Http | TransportMode::Hybrid
+        ) {
+            let http_state = HttpTransportState {
+                server: Arc::clone(&server),
+                session_manager: Arc::clone(&session_manager),
+                version_checker: Arc::clone(&version_checker),
+                connection_tracker: Arc::clone(&connection_tracker),
+                config: transport_config.clone(),
+            };
+
+            let mcp_router = create_mcp_router(http_state);
+            metrics_server = metrics_server.with_mcp_router(mcp_router);
+            tracing::info!("🔗 MCP HTTP transport merged into unified server");
+        }
+
         Some(tokio::spawn(async move {
             if let Err(e) = metrics_server.start().await {
-                tracing::error!("💥 Metrics/Admin server failed: {}", e);
+                tracing::error!("💥 Unified HTTP server failed: {}", e);
             }
         }))
     } else {
-        tracing::info!("ℹ️  Metrics server disabled");
+        tracing::info!("ℹ️  HTTP server disabled");
         None
     };
 
-    Ok((server, metrics_handle, resource_limits, http_client))
+    Ok((
+        server,
+        metrics_handle,
+        resource_limits,
+        http_client,
+        connection_tracker,
+    ))
 }
 
 /// Run the MCP Context Browser server
@@ -258,57 +296,13 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         std::env::consts::ARCH
     );
 
-    // Initialize all server components
-    let (server, metrics_handle, _resource_limits, _http_client) =
+    // Initialize all server components (unified HTTP server with MCP + Admin + Metrics)
+    let (server, http_handle, _resource_limits, _http_client, connection_tracker) =
         initialize_server_components(None, log_buffer).await?;
 
-    // Initialize transport configuration
+    // Get transport mode for stdio handling
     let transport_config = TransportConfig::default();
     tracing::info!("🔧 Transport mode: {:?}", transport_config.mode);
-
-    // Initialize HTTP transport components
-    let session_manager = Arc::new(SessionManager::with_defaults());
-    let version_checker = Arc::new(VersionChecker::with_defaults());
-    let connection_tracker = Arc::new(ConnectionTracker::new(ConnectionTrackerConfig::default()));
-
-    // Start HTTP transport if enabled
-    let http_handle = match transport_config.mode {
-        TransportMode::Http | TransportMode::Hybrid => {
-            let http_state = HttpTransportState {
-                server: Arc::clone(&server),
-                session_manager: Arc::clone(&session_manager),
-                version_checker: Arc::clone(&version_checker),
-                connection_tracker: Arc::clone(&connection_tracker),
-                config: transport_config.clone(),
-            };
-
-            let mcp_router = create_mcp_router(http_state);
-            let addr: SocketAddr = format!(
-                "{}:{}",
-                transport_config.http.bind_address, transport_config.http.port
-            )
-            .parse()
-            .map_err(|e| format!("Invalid HTTP bind address: {}", e))?;
-
-            tracing::info!(
-                "🌐 Starting MCP HTTP transport on {}:{}",
-                transport_config.http.bind_address,
-                transport_config.http.port
-            );
-
-            let listener = tokio::net::TcpListener::bind(addr).await?;
-
-            Some(tokio::spawn(async move {
-                if let Err(e) = axum::serve(listener, mcp_router).await {
-                    tracing::error!("💥 HTTP transport server failed: {}", e);
-                }
-            }))
-        }
-        TransportMode::Stdio => {
-            tracing::info!("ℹ️  HTTP transport disabled (stdio-only mode)");
-            None
-        }
-    };
 
     // Handle graceful shutdown signals
     let connection_tracker_shutdown = Arc::clone(&connection_tracker);
@@ -358,23 +352,18 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         }
         TransportMode::Http => {
             tracing::info!("📡 Running in HTTP-only mode (no stdio)");
-            tracing::info!("🎯 Ready to accept MCP HTTP connections");
+            tracing::info!("🎯 Ready to accept MCP HTTP connections on unified port");
 
             // In HTTP-only mode, just wait for shutdown
             shutdown_signal.await;
         }
     }
 
-    // Wait for HTTP server to finish if it was started
+    // Wait for unified HTTP server to finish if it was started
     if let Some(handle) = http_handle {
-        tracing::info!("⏳ Waiting for HTTP transport to shutdown...");
+        tracing::info!("⏳ Waiting for unified HTTP server to shutdown...");
         let _ = handle.await;
-        tracing::info!("✅ HTTP transport shutdown complete");
-    }
-
-    // Wait for metrics server to finish if it was started
-    if let Some(handle) = metrics_handle {
-        let _ = handle.await;
+        tracing::info!("✅ Unified HTTP server shutdown complete");
     }
 
     Ok(())

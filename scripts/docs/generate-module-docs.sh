@@ -325,9 +325,9 @@ generate_implementation_status() {
     local output_file="$PROJECT_ROOT/docs/implementation-status.md"
 
     # Count implementations
-    local embedding_providers=$(ls "$PROJECT_ROOT/src/providers/embedding/" 2>/dev/null | grep -v mod.rs | wc -l)
-    local vector_providers=$(ls "$PROJECT_ROOT/src/providers/vector_store/" 2>/dev/null | grep -v mod.rs | wc -l)
-    local routing_modules=$(ls "$PROJECT_ROOT/src/providers/routing/" 2>/dev/null | wc -l)
+    local embedding_providers=$(ls "$PROJECT_ROOT/src/adapters/providers/embedding/" 2>/dev/null | grep -v mod.rs | wc -l)
+    local vector_providers=$(ls "$PROJECT_ROOT/src/adapters/providers/vector_store/" 2>/dev/null | grep -v mod.rs | wc -l)
+    local routing_modules=$(ls "$PROJECT_ROOT/src/adapters/providers/routing/" 2>/dev/null | wc -l)
     local core_modules=$(ls "$PROJECT_ROOT/src/core/" 2>/dev/null | wc -l)
 
     cat > "$output_file" << EOF

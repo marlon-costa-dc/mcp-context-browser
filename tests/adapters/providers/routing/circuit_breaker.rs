@@ -98,3 +98,280 @@ async fn test_circuit_breaker_reset() -> std::result::Result<(), Box<dyn std::er
     assert_eq!(cb.state().await, CircuitBreakerState::Closed);
     Ok(())
 }
+
+// ===== State Transition Tests =====
+
+#[tokio::test]
+async fn test_state_transition_half_open_to_open_on_failure() {
+    let id = format!("test_halfopen_fail_{}", uuid::Uuid::new_v4());
+    let config = CircuitBreakerConfig {
+        failure_threshold: 1,
+        recovery_timeout: Duration::from_millis(100),
+        success_threshold: 3, // Need 3 successes to close
+        persistence_enabled: false,
+        ..Default::default()
+    };
+    let cb = CircuitBreaker::with_config(id, config).await;
+
+    // Trip circuit to Open
+    let _: Result<()> = cb.call(|| async { Err(Error::generic("fail")) }).await;
+    tokio::time::sleep(Duration::from_millis(50)).await;
+    assert!(matches!(cb.state().await, CircuitBreakerState::Open { .. }));
+
+    // Wait for recovery timeout to transition to HalfOpen
+    tokio::time::sleep(Duration::from_millis(150)).await;
+    assert_eq!(cb.state().await, CircuitBreakerState::HalfOpen);
+
+    // Failure in HalfOpen should go back to Open
+    let _: Result<()> = cb
+        .call(|| async { Err(Error::generic("fail in half-open")) })
+        .await;
+    tokio::time::sleep(Duration::from_millis(50)).await;
+    assert!(matches!(cb.state().await, CircuitBreakerState::Open { .. }));
+
+    // Verify circuit_opened_count incremented twice
+    let metrics = cb.metrics().await;
+    assert_eq!(metrics.circuit_opened_count, 2);
+}
+
+#[tokio::test]
+async fn test_state_transition_open_blocks_calls() {
+    let id = format!("test_open_blocks_{}", uuid::Uuid::new_v4());
+    let config = CircuitBreakerConfig {
+        failure_threshold: 1,
+        recovery_timeout: Duration::from_secs(60), // Long timeout so it stays Open
+        persistence_enabled: false,
+        ..Default::default()
+    };
+    let cb = CircuitBreaker::with_config(id, config).await;
+
+    // Trip circuit to Open
+    let _: Result<()> = cb.call(|| async { Err(Error::generic("fail")) }).await;
+    tokio::time::sleep(Duration::from_millis(50)).await;
+    assert!(matches!(cb.state().await, CircuitBreakerState::Open { .. }));
+
+    // Attempt calls - they should be rejected
+    for _ in 0..5 {
+        let result: Result<i32> = cb.call(|| async { Ok(42) }).await;
+        assert!(result.is_err());
+    }
+
+    // Verify rejected_requests counter
+    tokio::time::sleep(Duration::from_millis(50)).await;
+    let metrics = cb.metrics().await;
+    assert_eq!(metrics.rejected_requests, 5);
+}
+
+#[tokio::test]
+async fn test_state_transition_half_open_limits_requests() {
+    let id = format!("test_halfopen_limit_{}", uuid::Uuid::new_v4());
+    let config = CircuitBreakerConfig {
+        failure_threshold: 1,
+        recovery_timeout: Duration::from_millis(100),
+        success_threshold: 10,     // High threshold so circuit stays HalfOpen
+        half_open_max_requests: 3, // Only allow 3 requests in HalfOpen
+        persistence_enabled: false,
+    };
+    let cb = CircuitBreaker::with_config(id, config).await;
+
+    // Trip circuit to Open
+    let _: Result<()> = cb.call(|| async { Err(Error::generic("fail")) }).await;
+    tokio::time::sleep(Duration::from_millis(50)).await;
+
+    // Wait for transition to HalfOpen
+    tokio::time::sleep(Duration::from_millis(150)).await;
+    assert_eq!(cb.state().await, CircuitBreakerState::HalfOpen);
+
+    // First 3 calls should succeed (within limit)
+    for i in 0..3 {
+        let result: Result<i32> = cb.call(|| async { Ok(i) }).await;
+        assert!(result.is_ok(), "Call {} should be allowed in HalfOpen", i);
+    }
+
+    // Subsequent calls should be rejected
+    let result: Result<i32> = cb.call(|| async { Ok(999) }).await;
+    assert!(result.is_err(), "Call beyond limit should be rejected");
+
+    // Verify rejected_requests includes the blocked call
+    tokio::time::sleep(Duration::from_millis(50)).await;
+    let metrics = cb.metrics().await;
+    assert!(metrics.rejected_requests >= 1);
+}
+
+#[tokio::test]
+async fn test_state_transition_multiple_successes_to_close() {
+    let id = format!("test_multi_success_{}", uuid::Uuid::new_v4());
+    let config = CircuitBreakerConfig {
+        failure_threshold: 1,
+        recovery_timeout: Duration::from_millis(100),
+        success_threshold: 3, // Need 3 successes to close
+        half_open_max_requests: 10,
+        persistence_enabled: false,
+    };
+    let cb = CircuitBreaker::with_config(id, config).await;
+
+    // Trip circuit to Open
+    let _: Result<()> = cb.call(|| async { Err(Error::generic("fail")) }).await;
+    tokio::time::sleep(Duration::from_millis(50)).await;
+
+    // Wait for transition to HalfOpen
+    tokio::time::sleep(Duration::from_millis(150)).await;
+    assert_eq!(cb.state().await, CircuitBreakerState::HalfOpen);
+
+    // First success - still HalfOpen
+    let _: Result<i32> = cb.call(|| async { Ok(1) }).await;
+    tokio::time::sleep(Duration::from_millis(10)).await;
+    assert_eq!(cb.state().await, CircuitBreakerState::HalfOpen);
+
+    // Second success - still HalfOpen
+    let _: Result<i32> = cb.call(|| async { Ok(2) }).await;
+    tokio::time::sleep(Duration::from_millis(10)).await;
+    assert_eq!(cb.state().await, CircuitBreakerState::HalfOpen);
+
+    // Third success - should transition to Closed
+    let _: Result<i32> = cb.call(|| async { Ok(3) }).await;
+    tokio::time::sleep(Duration::from_millis(50)).await;
+    assert_eq!(cb.state().await, CircuitBreakerState::Closed);
+
+    // Verify circuit_closed_count
+    let metrics = cb.metrics().await;
+    assert_eq!(metrics.circuit_closed_count, 1);
+}
+
+#[tokio::test]
+async fn test_consecutive_failures_reset_on_success() {
+    let id = format!("test_reset_failures_{}", uuid::Uuid::new_v4());
+    let config = CircuitBreakerConfig {
+        failure_threshold: 3,
+        persistence_enabled: false,
+        ..Default::default()
+    };
+    let cb = CircuitBreaker::with_config(id, config).await;
+
+    // Two failures - just below threshold
+    let _: Result<()> = cb.call(|| async { Err(Error::generic("fail 1")) }).await;
+    let _: Result<()> = cb.call(|| async { Err(Error::generic("fail 2")) }).await;
+    tokio::time::sleep(Duration::from_millis(50)).await;
+
+    let metrics = cb.metrics().await;
+    assert_eq!(metrics.consecutive_failures, 2);
+    assert_eq!(cb.state().await, CircuitBreakerState::Closed);
+
+    // Success resets the counter
+    let _: Result<i32> = cb.call(|| async { Ok(42) }).await;
+    tokio::time::sleep(Duration::from_millis(50)).await;
+
+    let metrics = cb.metrics().await;
+    assert_eq!(metrics.consecutive_failures, 0);
+    assert_eq!(cb.state().await, CircuitBreakerState::Closed);
+
+    // Can now have 2 more failures without tripping
+    let _: Result<()> = cb.call(|| async { Err(Error::generic("fail 3")) }).await;
+    let _: Result<()> = cb.call(|| async { Err(Error::generic("fail 4")) }).await;
+    tokio::time::sleep(Duration::from_millis(50)).await;
+
+    assert_eq!(cb.state().await, CircuitBreakerState::Closed);
+    assert_eq!(cb.metrics().await.consecutive_failures, 2);
+}
+
+#[tokio::test]
+async fn test_metrics_tracking_complete() {
+    let id = format!("test_metrics_{}", uuid::Uuid::new_v4());
+    let config = CircuitBreakerConfig {
+        failure_threshold: 2,
+        recovery_timeout: Duration::from_millis(100),
+        success_threshold: 1,
+        persistence_enabled: false,
+        ..Default::default()
+    };
+    let cb = CircuitBreaker::with_config(id, config).await;
+
+    // Initial metrics
+    let metrics = cb.metrics().await;
+    assert_eq!(metrics.total_requests, 0);
+    assert_eq!(metrics.successful_requests, 0);
+    assert_eq!(metrics.failed_requests, 0);
+    assert_eq!(metrics.circuit_opened_count, 0);
+
+    // 3 successes
+    for _ in 0..3 {
+        let _: Result<i32> = cb.call(|| async { Ok(42) }).await;
+    }
+    tokio::time::sleep(Duration::from_millis(20)).await;
+
+    let metrics = cb.metrics().await;
+    assert_eq!(metrics.total_requests, 3);
+    assert_eq!(metrics.successful_requests, 3);
+    assert_eq!(metrics.failed_requests, 0);
+
+    // 2 failures to trip circuit
+    let _: Result<()> = cb.call(|| async { Err(Error::generic("fail")) }).await;
+    let _: Result<()> = cb.call(|| async { Err(Error::generic("fail")) }).await;
+    tokio::time::sleep(Duration::from_millis(50)).await;
+
+    let metrics = cb.metrics().await;
+    assert_eq!(metrics.total_requests, 5);
+    assert_eq!(metrics.successful_requests, 3);
+    assert_eq!(metrics.failed_requests, 2);
+    assert_eq!(metrics.circuit_opened_count, 1);
+
+    // 2 rejected calls in Open state
+    let _: Result<i32> = cb.call(|| async { Ok(1) }).await;
+    let _: Result<i32> = cb.call(|| async { Ok(2) }).await;
+    tokio::time::sleep(Duration::from_millis(20)).await;
+
+    let metrics = cb.metrics().await;
+    assert_eq!(metrics.rejected_requests, 2);
+    // total_requests doesn't include rejected
+    assert_eq!(metrics.total_requests, 5);
+
+    // Wait for HalfOpen, then success to close
+    tokio::time::sleep(Duration::from_millis(150)).await;
+    let _: Result<i32> = cb.call(|| async { Ok(42) }).await;
+    tokio::time::sleep(Duration::from_millis(50)).await;
+
+    let metrics = cb.metrics().await;
+    assert_eq!(metrics.circuit_closed_count, 1);
+    assert_eq!(metrics.total_requests, 6);
+    assert_eq!(metrics.successful_requests, 4);
+}
+
+#[tokio::test]
+async fn test_state_display_formatting() {
+    // Test Display trait implementation for CircuitBreakerState
+    let closed = CircuitBreakerState::Closed;
+    assert_eq!(format!("{}", closed), "closed");
+
+    let open = CircuitBreakerState::Open {
+        opened_at: std::time::Instant::now(),
+    };
+    assert_eq!(format!("{}", open), "open");
+
+    let half_open = CircuitBreakerState::HalfOpen;
+    assert_eq!(format!("{}", half_open), "half-open");
+}
+
+#[tokio::test]
+async fn test_default_config_values() {
+    let config = CircuitBreakerConfig::default();
+    assert_eq!(config.failure_threshold, 5);
+    assert_eq!(config.recovery_timeout, Duration::from_secs(60));
+    assert_eq!(config.success_threshold, 3);
+    assert_eq!(config.half_open_max_requests, 10);
+    assert!(config.persistence_enabled);
+}
+
+#[tokio::test]
+async fn test_circuit_breaker_with_custom_id() {
+    let custom_id = "my-custom-service-breaker";
+    let config = CircuitBreakerConfig {
+        persistence_enabled: false,
+        ..Default::default()
+    };
+    let cb = CircuitBreaker::with_config(custom_id, config).await;
+
+    // Verify it works with custom ID
+    let result: Result<i32> = cb.call(|| async { Ok(123) }).await;
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap(), 123);
+}

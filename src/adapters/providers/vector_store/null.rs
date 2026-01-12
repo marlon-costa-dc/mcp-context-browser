@@ -90,7 +90,6 @@ impl VectorStoreProvider for NullVectorStoreProvider {
         Ok(Vec::new())
     }
 
-
     async fn get_stats(
         &self,
         collection: &str,

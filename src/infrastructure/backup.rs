@@ -102,14 +102,9 @@ impl BackupManager {
         });
     }
 
-    /// Internal backup creation logic shared between sync and async paths
+    /// Internal backup creation logic (synchronous)
     fn create_backup_internal(&self, target_path: &str) -> Result<BackupInfo> {
         BackupActor::perform_backup(target_path, &self.backup_dir, &self.data_dir)
-    }
-
-    /// Create a backup synchronously (DEPRECATED - use create_backup)
-    pub fn create_backup_sync(&self, target_path: &str) -> Result<BackupInfo> {
-        self.create_backup_internal(target_path)
     }
 
     /// Create a backup asynchronously via actor

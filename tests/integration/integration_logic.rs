@@ -518,12 +518,25 @@ mod tests {
             })
             .await;
 
-        // The tool call may succeed or fail depending on implementation
-        // We just verify it returns some result
-        assert!(
-            tool_result.is_ok() || tool_result.is_err(),
-            "Tool call should return some result"
-        );
+        // The tool call should complete (succeed or fail gracefully)
+        // Verify the result is handled properly
+        match &tool_result {
+            Ok(response) => {
+                // Success path - response should have content
+                assert!(
+                    !response.content.is_empty(),
+                    "Successful tool call should return content"
+                );
+            }
+            Err(e) => {
+                // Error path - should be a meaningful error, not a panic
+                let error_msg = format!("{:?}", e);
+                assert!(
+                    !error_msg.is_empty(),
+                    "Error should have a descriptive message"
+                );
+            }
+        }
 
         // Test calling get_indexing_status (should work even without prior indexing)
         let status_result = client

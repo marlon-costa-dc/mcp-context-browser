@@ -557,7 +557,8 @@ impl EdgeVecActor {
                                     .get("start_line")
                                     .or_else(|| meta.get("line_number"))
                                     .and_then(|v: &serde_json::Value| v.as_u64())
-                                    .unwrap_or(0) as u32,
+                                    .unwrap_or(0)
+                                    as u32,
                                 content: meta
                                     .get("content")
                                     .and_then(|v: &serde_json::Value| v.as_str())
@@ -591,7 +592,8 @@ impl EdgeVecActor {
                                         .get("start_line")
                                         .or_else(|| meta.get("line_number"))
                                         .and_then(|v: &serde_json::Value| v.as_u64())
-                                        .unwrap_or(0) as u32,
+                                        .unwrap_or(0)
+                                        as u32,
                                     content: meta
                                         .get("content")
                                         .and_then(|v: &serde_json::Value| v.as_str())

@@ -1,0 +1,258 @@
+#!/bin/bash
+# =============================================================================
+# EXTRACT-METRICS.SH - Single Source of Truth for Project Metrics
+# =============================================================================
+# Extracts all project metrics from actual codebase for documentation
+# Usage: ./extract-metrics.sh [--json|--env|--markdown]
+# =============================================================================
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+# -----------------------------------------------------------------------------
+# Extract Version from Cargo.toml
+# -----------------------------------------------------------------------------
+get_version() {
+    grep '^version' "$PROJECT_ROOT/Cargo.toml" | head -1 | sed 's/.*"\([^"]*\)".*/\1/'
+}
+
+# -----------------------------------------------------------------------------
+# Count Language Processors
+# -----------------------------------------------------------------------------
+get_language_count() {
+    ls -1 "$PROJECT_ROOT/src/chunking/languages/"*.rs 2>/dev/null | grep -v mod.rs | wc -l | tr -d ' '
+}
+
+get_language_list() {
+    ls -1 "$PROJECT_ROOT/src/chunking/languages/"*.rs 2>/dev/null | \
+        grep -v mod.rs | \
+        xargs -I {} basename {} .rs | \
+        sed 's/^javascript$/JavaScript\/TypeScript/' | \
+        sed 's/^cpp$/C++/' | \
+        sed 's/^csharp$/C#/' | \
+        sed 's/^rust$/Rust/' | \
+        sed 's/^python$/Python/' | \
+        sed 's/^go$/Go/' | \
+        sed 's/^java$/Java/' | \
+        sed 's/^kotlin$/Kotlin/' | \
+        sed 's/^ruby$/Ruby/' | \
+        sed 's/^php$/PHP/' | \
+        sed 's/^swift$/Swift/' | \
+        sed 's/^c$/C/' | \
+        tr '\n' ',' | \
+        sed 's/,$//' | \
+        sed 's/,/, /g'
+}
+
+# -----------------------------------------------------------------------------
+# Count Embedding Providers
+# -----------------------------------------------------------------------------
+get_embedding_count() {
+    ls -1 "$PROJECT_ROOT/src/adapters/providers/embedding/"*.rs 2>/dev/null | grep -v mod.rs | wc -l | tr -d ' '
+}
+
+get_embedding_list() {
+    ls -1 "$PROJECT_ROOT/src/adapters/providers/embedding/"*.rs 2>/dev/null | \
+        grep -v mod.rs | \
+        xargs -I {} basename {} .rs | \
+        sed 's/openai/OpenAI/' | \
+        sed 's/voyageai/VoyageAI/' | \
+        sed 's/ollama/Ollama/' | \
+        sed 's/gemini/Gemini/' | \
+        sed 's/fastembed/FastEmbed/' | \
+        sed 's/null/Null/' | \
+        tr '\n' ',' | \
+        sed 's/,$//' | \
+        sed 's/,/, /g'
+}
+
+# -----------------------------------------------------------------------------
+# Count Vector Stores
+# -----------------------------------------------------------------------------
+get_vector_store_count() {
+    ls -1 "$PROJECT_ROOT/src/adapters/providers/vector_store/"*.rs 2>/dev/null | grep -v mod.rs | wc -l | tr -d ' '
+}
+
+get_vector_store_list() {
+    ls -1 "$PROJECT_ROOT/src/adapters/providers/vector_store/"*.rs 2>/dev/null | \
+        grep -v mod.rs | \
+        xargs -I {} basename {} .rs | \
+        sed 's/^milvus$/Milvus/' | \
+        sed 's/^edgevec$/EdgeVec/' | \
+        sed 's/^in_memory$/In-Memory/' | \
+        sed 's/^filesystem$/Filesystem/' | \
+        sed 's/^encrypted$/Encrypted/' | \
+        sed 's/^null$/Null/' | \
+        tr '\n' ',' | \
+        sed 's/,$//' | \
+        sed 's/,/, /g'
+}
+
+# -----------------------------------------------------------------------------
+# Count ADRs
+# -----------------------------------------------------------------------------
+get_adr_count() {
+    ls -1 "$PROJECT_ROOT/docs/adr/"[0-9]*.md 2>/dev/null | wc -l | tr -d ' '
+}
+
+# -----------------------------------------------------------------------------
+# Count Tests (from last test run or estimate from test files)
+# -----------------------------------------------------------------------------
+get_test_count() {
+    # Try to get from cached test output first
+    local cache_file="$PROJECT_ROOT/.cache/test-count.txt"
+    if [[ -f "$cache_file" ]] && [[ $(find "$cache_file" -mmin -60 2>/dev/null) ]]; then
+        cat "$cache_file"
+        return
+    fi
+
+    # Count test functions in test files
+    local count=$(grep -r "#\[test\]" "$PROJECT_ROOT/tests/" "$PROJECT_ROOT/src/" 2>/dev/null | wc -l | tr -d ' ')
+
+    # Add tokio::test annotations
+    local async_count=$(grep -r "#\[tokio::test\]" "$PROJECT_ROOT/tests/" "$PROJECT_ROOT/src/" 2>/dev/null | wc -l | tr -d ' ')
+
+    echo $((count + async_count))
+}
+
+# Run actual tests and cache the count
+update_test_count() {
+    mkdir -p "$PROJECT_ROOT/.cache"
+    local output=$(cargo test --no-run 2>&1 | grep -oP '\d+ test' | head -1 | grep -oP '\d+' || echo "0")
+    if [[ -n "$output" ]] && [[ "$output" != "0" ]]; then
+        echo "$output" > "$PROJECT_ROOT/.cache/test-count.txt"
+        echo "$output"
+    else
+        get_test_count
+    fi
+}
+
+# -----------------------------------------------------------------------------
+# Count Source Files and Lines
+# -----------------------------------------------------------------------------
+get_source_file_count() {
+    find "$PROJECT_ROOT/src" -name "*.rs" -type f | wc -l | tr -d ' '
+}
+
+get_source_lines() {
+    find "$PROJECT_ROOT/src" -name "*.rs" -type f -exec cat {} + 2>/dev/null | wc -l | tr -d ' '
+}
+
+get_test_file_count() {
+    find "$PROJECT_ROOT/tests" -name "*.rs" -type f 2>/dev/null | wc -l | tr -d ' '
+}
+
+# -----------------------------------------------------------------------------
+# Count Modules (documented in docs/modules/)
+# -----------------------------------------------------------------------------
+get_module_doc_count() {
+    ls -1 "$PROJECT_ROOT/docs/modules/"*.md 2>/dev/null | wc -l | tr -d ' '
+}
+
+# -----------------------------------------------------------------------------
+# Output Formats
+# -----------------------------------------------------------------------------
+
+output_json() {
+    cat <<EOF
+{
+  "version": "$(get_version)",
+  "languages": {
+    "count": $(get_language_count),
+    "list": "$(get_language_list)"
+  },
+  "embedding_providers": {
+    "count": $(get_embedding_count),
+    "list": "$(get_embedding_list)"
+  },
+  "vector_stores": {
+    "count": $(get_vector_store_count),
+    "list": "$(get_vector_store_list)"
+  },
+  "adrs": $(get_adr_count),
+  "tests": $(get_test_count),
+  "source_files": $(get_source_file_count),
+  "source_lines": $(get_source_lines),
+  "test_files": $(get_test_file_count),
+  "module_docs": $(get_module_doc_count),
+  "extracted_at": "$(date -Iseconds)"
+}
+EOF
+}
+
+output_env() {
+    cat <<EOF
+# MCP Context Browser Metrics - Generated $(date -Iseconds)
+# Source: scripts/docs/extract-metrics.sh
+
+export MCP_VERSION="$(get_version)"
+export MCP_LANGUAGE_COUNT=$(get_language_count)
+export MCP_LANGUAGE_LIST="$(get_language_list)"
+export MCP_EMBEDDING_COUNT=$(get_embedding_count)
+export MCP_EMBEDDING_LIST="$(get_embedding_list)"
+export MCP_VECTOR_STORE_COUNT=$(get_vector_store_count)
+export MCP_VECTOR_STORE_LIST="$(get_vector_store_list)"
+export MCP_ADR_COUNT=$(get_adr_count)
+export MCP_TEST_COUNT=$(get_test_count)
+export MCP_SOURCE_FILES=$(get_source_file_count)
+export MCP_SOURCE_LINES=$(get_source_lines)
+export MCP_TEST_FILES=$(get_test_file_count)
+export MCP_MODULE_DOCS=$(get_module_doc_count)
+EOF
+}
+
+output_markdown() {
+    cat <<EOF
+## Project Metrics (v$(get_version))
+
+| Metric | Value |
+|--------|-------|
+| Version | $(get_version) |
+| Languages | $(get_language_count) ($(get_language_list)) |
+| Embedding Providers | $(get_embedding_count) ($(get_embedding_list)) |
+| Vector Stores | $(get_vector_store_count) ($(get_vector_store_list)) |
+| ADRs | $(get_adr_count) |
+| Tests | $(get_test_count)+ |
+| Source Files | $(get_source_file_count) |
+| Source Lines | $(get_source_lines) |
+| Test Files | $(get_test_file_count) |
+
+*Generated: $(date '+%Y-%m-%d %H:%M')*
+EOF
+}
+
+# -----------------------------------------------------------------------------
+# Main
+# -----------------------------------------------------------------------------
+
+case "${1:-}" in
+    --json)
+        output_json
+        ;;
+    --env)
+        output_env
+        ;;
+    --markdown)
+        output_markdown
+        ;;
+    --update-tests)
+        update_test_count
+        ;;
+    --help|-h)
+        echo "Usage: $0 [--json|--env|--markdown|--update-tests]"
+        echo ""
+        echo "Extracts project metrics from codebase as single source of truth."
+        echo ""
+        echo "Options:"
+        echo "  --json          Output as JSON"
+        echo "  --env           Output as shell environment variables"
+        echo "  --markdown      Output as markdown table"
+        echo "  --update-tests  Run tests and update cached test count"
+        echo "  (no args)       Output as shell environment variables"
+        ;;
+    *)
+        output_env
+        ;;
+esac

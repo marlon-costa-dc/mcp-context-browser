@@ -5,12 +5,12 @@
 
 pub mod api;
 pub mod auth;
+pub mod config;
 pub mod handlers;
 pub mod models;
 pub mod routes;
 pub mod service;
 pub mod web;
-pub mod config;
 
-pub use routes::create_admin_router;
 pub use config::{AdminApi, AdminConfig};
+pub use routes::create_admin_router;

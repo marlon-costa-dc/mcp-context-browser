@@ -4,7 +4,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-pub use crate::admin::models::{ProviderInfo, IndexingConfig, SecurityConfig};
+pub use crate::admin::models::{IndexingConfig, ProviderInfo, SecurityConfig};
 
 /// Configuration data structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -292,6 +292,150 @@ pub struct SearchResultItem {
     pub score: f64,
 }
 
+// === Subsystem Control Types (ADR-007) ===
+
+/// Type of subsystem in the MCP server
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum SubsystemType {
+    /// Embedding provider (OpenAI, Ollama, etc.)
+    Embedding,
+    /// Vector database provider (Milvus, EdgeVec, etc.)
+    VectorStore,
+    /// Search service
+    Search,
+    /// Indexing service
+    Indexing,
+    /// Cache manager
+    Cache,
+    /// Metrics collector
+    Metrics,
+    /// Background daemon
+    Daemon,
+    /// HTTP transport
+    HttpTransport,
+}
+
+/// Current status of a subsystem
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum SubsystemStatus {
+    /// Subsystem is running normally
+    Running,
+    /// Subsystem is stopped
+    Stopped,
+    /// Subsystem encountered an error
+    Error,
+    /// Subsystem is starting up
+    Starting,
+    /// Subsystem is paused
+    Paused,
+    /// Subsystem status is unknown
+    Unknown,
+}
+
+/// Runtime metrics for a subsystem
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubsystemMetrics {
+    /// CPU usage percentage
+    pub cpu_percent: f64,
+    /// Memory usage in megabytes
+    pub memory_mb: u64,
+    /// Requests processed per second
+    pub requests_per_sec: f64,
+    /// Error rate (0.0 - 1.0)
+    pub error_rate: f64,
+    /// Last activity timestamp
+    pub last_activity: Option<DateTime<Utc>>,
+}
+
+/// Comprehensive information about a subsystem
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubsystemInfo {
+    /// Unique identifier for this subsystem instance
+    pub id: String,
+    /// Human-readable name
+    pub name: String,
+    /// Type of subsystem
+    pub subsystem_type: SubsystemType,
+    /// Current operational status
+    pub status: SubsystemStatus,
+    /// Health status from last check
+    pub health: HealthCheck,
+    /// Current configuration
+    pub config: serde_json::Value,
+    /// Runtime metrics
+    pub metrics: SubsystemMetrics,
+}
+
+/// Signal types that can be sent to subsystems
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SubsystemSignal {
+    /// Restart the subsystem
+    Restart,
+    /// Reload configuration without restart
+    Reload,
+    /// Pause the subsystem
+    Pause,
+    /// Resume a paused subsystem
+    Resume,
+    /// Apply new configuration
+    Configure(serde_json::Value),
+}
+
+/// Result of sending a signal to a subsystem
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SignalResult {
+    /// Whether the signal was successfully sent
+    pub success: bool,
+    /// ID of the subsystem that received the signal
+    pub subsystem_id: String,
+    /// The signal that was sent
+    pub signal: String,
+    /// Human-readable message about the result
+    pub message: String,
+}
+
+/// Information about a registered HTTP route
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RouteInfo {
+    /// Unique identifier for this route
+    pub id: String,
+    /// URL path pattern (e.g., "/api/health")
+    pub path: String,
+    /// HTTP method (GET, POST, etc.)
+    pub method: String,
+    /// Handler name or description
+    pub handler: String,
+    /// Whether authentication is required
+    pub auth_required: bool,
+    /// Rate limit in requests per minute (None = no limit)
+    pub rate_limit: Option<u32>,
+}
+
+/// Result of configuration persistence
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConfigPersistResult {
+    /// Whether the save was successful
+    pub success: bool,
+    /// Path where config was saved
+    pub path: String,
+    /// Any warnings during save
+    pub warnings: Vec<String>,
+}
+
+/// Difference between runtime and file configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConfigDiff {
+    /// Whether there are any differences
+    pub has_changes: bool,
+    /// Changes in runtime but not in file
+    pub runtime_only: HashMap<String, serde_json::Value>,
+    /// Changes in file but not in runtime
+    pub file_only: HashMap<String, serde_json::Value>,
+}
+
 /// Admin service errors
 #[derive(Debug, thiserror::Error)]
 pub enum AdminError {
@@ -309,6 +453,9 @@ pub enum AdminError {
 
     #[error("Internal error: {0}")]
     InternalError(String),
+
+    #[error("Not implemented: {0}")]
+    NotImplemented(String),
 }
 
 impl From<crate::domain::error::Error> for AdminError {

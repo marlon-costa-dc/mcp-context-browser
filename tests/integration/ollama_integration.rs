@@ -121,11 +121,13 @@ mod test_utils {
 mod ollama_in_memory_tests {
     use super::*;
 
+    /// Integration test requiring Ollama running locally.
+    /// Run with: `cargo test --test integration -- --ignored test_ollama_with_in_memory`
     #[tokio::test]
+    #[ignore = "Requires Ollama running locally with nomic-embed-text model"]
     async fn test_ollama_with_in_memory_store() -> Result<(), Box<dyn std::error::Error>> {
         let Some(ollama_provider) = test_utils::create_ollama_provider().await else {
-            // Skip test gracefully when Ollama is not available
-            return Ok(());
+            return Err("Ollama provider not available".into());
         };
 
         let in_memory_store =
@@ -174,11 +176,13 @@ mod ollama_filesystem_tests {
     use super::*;
     use tempfile::tempdir;
 
+    /// Integration test requiring Ollama running locally.
+    /// Run with: `cargo test --test integration -- --ignored test_ollama_with_filesystem`
     #[tokio::test]
+    #[ignore = "Requires Ollama running locally with nomic-embed-text model"]
     async fn test_ollama_with_filesystem_store() -> Result<(), Box<dyn std::error::Error>> {
         let Some(ollama_provider) = test_utils::create_ollama_provider().await else {
-            // Skip test gracefully when Ollama is not available
-            return Ok(());
+            return Err("Ollama provider not available".into());
         };
 
         // Create temporary directory for filesystem store

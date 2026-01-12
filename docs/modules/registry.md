@@ -2,7 +2,7 @@
 
 **Source**: `src/registry/`
 **Files**: 0
-**Lines of Code**: 
+**Lines of Code**:
 **Traits**: 0
 **Structs**: 0
 **Enums**: 0

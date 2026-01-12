@@ -2,7 +2,13 @@
 
 ## Status
 
-Accepted
+**Implemented** (v0.1.0)
+
+> Documentation automation implemented in `scripts/docs/`:
+> - ADR validation via automation.sh (100% compliance verification)
+> - mdbook integration for documentation publishing
+> - make docs commands for build/serve/check
+> - Structured ADR directory with README and graph
 
 ## Context
 

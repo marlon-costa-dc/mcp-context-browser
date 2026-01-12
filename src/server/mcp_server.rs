@@ -28,11 +28,8 @@ use crate::server::auth::AuthHandler;
 use crate::server::handlers::{
     ClearIndexHandler, GetIndexingStatusHandler, IndexCodebaseHandler, SearchCodeHandler,
 };
-// Re-export for backwards compatibility
-pub use crate::server::metrics::{McpPerformanceMetrics, PerformanceMetricsInterface};
-pub use crate::server::operations::{
-    IndexingOperation, IndexingOperationsInterface, McpIndexingOperations,
-};
+use crate::server::metrics::PerformanceMetricsInterface;
+use crate::server::operations::{IndexingOperation, IndexingOperationsInterface};
 
 /// Type alias for provider tuple to reduce complexity
 type ProviderTuple = (
@@ -135,13 +132,17 @@ impl McpServer {
             Self::create_providers(&service_provider, config, http_client).await?;
 
         // Create repositories
-        let chunk_repository = Arc::new(crate::adapters::repository::VectorStoreChunkRepository::new(
-            Arc::clone(&embedding_provider),
-            Arc::clone(&vector_store_provider),
-        ));
-        let search_repository = Arc::new(crate::adapters::repository::VectorStoreSearchRepository::new(
-            Arc::clone(&vector_store_provider),
-        ));
+        let chunk_repository = Arc::new(
+            crate::adapters::repository::VectorStoreChunkRepository::new(
+                Arc::clone(&embedding_provider),
+                Arc::clone(&vector_store_provider),
+            ),
+        );
+        let search_repository = Arc::new(
+            crate::adapters::repository::VectorStoreSearchRepository::new(Arc::clone(
+                &vector_store_provider,
+            )),
+        );
 
         let context_service = Arc::new(crate::application::ContextService::new(
             chunk_repository,

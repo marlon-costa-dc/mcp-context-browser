@@ -1,10 +1,10 @@
 # snapshot Module
 
 **Source**: `src/snapshot/`
-**Files**: 1
-**Lines of Code**: 402
+**Files**: 2
+**Lines of Code**: 325
 **Traits**: 0
-**Structs**: 4
+**Structs**: 1
 **Enums**: 0
 **Functions**: 0
 
@@ -17,14 +17,15 @@ Avoids reprocessing unchanged files during codebase indexing.
 
 ## Key Exports
 
-``
+`manager::SnapshotManager,crate::domain::types::{CodebaseSnapshot, FileSnapshot, SnapshotChanges},`
 
 ## File Structure
 
 ```text
+manager.rs
 mod.rs
 ```
 
 ---
 
-*Auto-generated from source code on qua 07 jan 2026 18:27:27 -03*
+*Auto-generated from source code on seg 12 jan 2026 11:25:13 -03*

@@ -71,29 +71,31 @@ docs/
 scripts/docs/create-adr.sh batch "Decision Title"
 
 # Validate ADRs
-scripts/docs/validate-adrs.sh
+scripts/docs/validate.sh adrs
 ```
 
 #### Documentation Generation
 ```bash
-# Generate all docs
-scripts/docs/automation.sh
-
-# Generate module graphs
+# Generate module documentation
 scripts/docs/generate-module-docs.sh
 
-# Generate mdBook
-scripts/docs/generate-mdbook.sh
+# Sync to mdBook
+scripts/docs/mdbook-sync.sh
 ```
 
 #### Quality Assurance
 ```bash
-# Validate documentation
-scripts/docs/validate-structure.sh
-scripts/docs/validate-links.sh
+# Validate all documentation (ADRs, structure, links)
+scripts/docs/validate.sh all
+
+# Validate specific aspects
+scripts/docs/validate.sh adrs      # ADR format and numbering
+scripts/docs/validate.sh structure # Directory structure
+scripts/docs/validate.sh links     # Internal/external links
+scripts/docs/validate.sh markdown  # Markdown linting
 
 # Fix markdown issues
-scripts/docs/fix-markdown.sh
+scripts/docs/markdown.sh fix
 ```
 
 ### CI/CD Integration
@@ -101,9 +103,7 @@ scripts/docs/fix-markdown.sh
 #### Documentation Pipeline
 ```yaml
 documentation:
-  - scripts/docs/automation.sh
-  - scripts/docs/validate-adrs.sh
-  - scripts/docs/validate-links.sh
+  - scripts/docs/validate.sh all
   - scripts/docs/generate-diagrams.sh
 ```
 

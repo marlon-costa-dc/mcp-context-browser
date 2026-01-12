@@ -42,14 +42,6 @@ impl IndexingService {
         })
     }
 
-    /// Create indexing service with sync coordination (DEPRECATED - use new)
-    pub fn with_sync_manager(
-        context_service: Arc<ContextService>,
-        sync_manager: Arc<SyncManager>,
-    ) -> Result<Self> {
-        Self::new(context_service, Some(sync_manager))
-    }
-
     /// Start listening for system events
     pub fn start_event_listener(&self, event_bus: SharedEventBus) {
         let mut receiver = event_bus.subscribe();
@@ -177,11 +169,8 @@ impl IndexingService {
 
     /// Detect programming language from file extension
     fn detect_language(&self, path: &Path) -> Result<crate::domain::types::Language> {
-        let ext = path
-            .extension()
-            .and_then(|e| e.to_str())
-            .unwrap_or("");
-            
+        let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
+
         Ok(crate::domain::types::Language::from_extension(ext))
     }
 

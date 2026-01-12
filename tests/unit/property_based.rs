@@ -291,6 +291,213 @@ mod integration_property_tests {
     }
 }
 
+/// Property-based tests for domain validators
+#[cfg(test)]
+mod validator_property_tests {
+    use mcp_context_browser::domain::validation::{
+        NumberValidator, NumberValidatorTrait, StringValidator, StringValidatorTrait,
+        ValidationError,
+    };
+    use proptest::prelude::*;
+
+    // Property: not_empty validator accepts any non-empty string
+    proptest! {
+        #[test]
+        fn test_not_empty_accepts_non_empty(s in "\\PC+") {
+            let validator = StringValidator::not_empty();
+            let result = validator.validate(&s);
+            prop_assert!(result.is_ok(), "Non-empty string should be valid");
+        }
+    }
+
+    // Property: not_empty validator rejects empty string
+    #[test]
+    fn test_not_empty_rejects_empty() {
+        let validator = StringValidator::not_empty();
+        let result = validator.validate("");
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            ValidationError::Required { .. }
+        ));
+    }
+
+    // Property: min_length accepts strings >= min
+    proptest! {
+        #[test]
+        fn test_min_length_accepts_valid(min in 1..100usize, extra in 0..100usize) {
+            let len = min + extra;
+            let s: String = (0..len).map(|_| 'a').collect();
+            let validator = StringValidator::min_length(min);
+            let result = validator.validate(&s);
+            prop_assert!(result.is_ok(), "String of length {} should pass min_length({})", len, min);
+        }
+    }
+
+    // Property: min_length rejects strings < min
+    proptest! {
+        #[test]
+        fn test_min_length_rejects_short(min in 2..100usize) {
+            let len = min - 1;
+            let s: String = (0..len).map(|_| 'a').collect();
+            let validator = StringValidator::min_length(min);
+            let result = validator.validate(&s);
+            prop_assert!(result.is_err(), "String of length {} should fail min_length({})", len, min);
+        }
+    }
+
+    // Property: max_length accepts strings <= max
+    proptest! {
+        #[test]
+        fn test_max_length_accepts_valid(max in 1..100usize, offset in 0..100usize) {
+            let len = max.saturating_sub(offset).max(0);
+            let s: String = (0..len).map(|_| 'a').collect();
+            let validator = StringValidator::max_length(max);
+            let result = validator.validate(&s);
+            prop_assert!(result.is_ok(), "String of length {} should pass max_length({})", len, max);
+        }
+    }
+
+    // Property: max_length rejects strings > max
+    proptest! {
+        #[test]
+        fn test_max_length_rejects_long(max in 1..50usize, extra in 1..50usize) {
+            let len = max + extra;
+            let s: String = (0..len).map(|_| 'a').collect();
+            let validator = StringValidator::max_length(max);
+            let result = validator.validate(&s);
+            prop_assert!(result.is_err(), "String of length {} should fail max_length({})", len, max);
+        }
+    }
+
+    // Property: contains accepts strings with substring
+    proptest! {
+        #[test]
+        fn test_contains_accepts_valid(
+            prefix in "\\PC{0,20}",
+            needle in "\\PC{1,10}",
+            suffix in "\\PC{0,20}"
+        ) {
+            let haystack = format!("{}{}{}", prefix, needle, suffix);
+            let validator = StringValidator::contains(&needle);
+            let result = validator.validate(&haystack);
+            prop_assert!(result.is_ok(), "String containing '{}' should be valid", needle);
+        }
+    }
+
+    // Property: range accepts numbers within bounds
+    proptest! {
+        #[test]
+        fn test_range_accepts_valid(min in -1000i64..0i64, max in 0i64..1000i64) {
+            let value = (min + max) / 2; // Middle value
+            let validator = NumberValidator::range(min, max);
+            let result = validator.validate(&value);
+            prop_assert!(result.is_ok(), "Value {} should be in range [{}, {}]", value, min, max);
+        }
+    }
+
+    // Property: range rejects numbers outside bounds
+    proptest! {
+        #[test]
+        fn test_range_rejects_invalid(min in 10i64..100i64, max in 100i64..200i64, offset in 1i64..50i64) {
+            let below = min - offset;
+            let above = max + offset;
+            let validator = NumberValidator::range(min, max);
+
+            let result_below = validator.validate(&below);
+            let result_above = validator.validate(&above);
+
+            prop_assert!(result_below.is_err(), "Value {} below range [{}, {}] should fail", below, min, max);
+            prop_assert!(result_above.is_err(), "Value {} above range [{}, {}] should fail", above, min, max);
+        }
+    }
+
+    // Property: positive accepts only positive numbers
+    proptest! {
+        #[test]
+        fn test_positive_accepts_valid(n in 1i64..i64::MAX) {
+            let validator = NumberValidator::positive();
+            let result = validator.validate(&n);
+            prop_assert!(result.is_ok(), "Positive number {} should be valid", n);
+        }
+    }
+
+    // Property: positive rejects zero and negative
+    proptest! {
+        #[test]
+        fn test_positive_rejects_invalid(n in i64::MIN..=0i64) {
+            let validator = NumberValidator::positive();
+            let result = validator.validate(&n);
+            prop_assert!(result.is_err(), "Non-positive number {} should be invalid", n);
+        }
+    }
+
+    // Property: non_negative accepts zero and positive
+    proptest! {
+        #[test]
+        fn test_non_negative_accepts_valid(n in 0i64..i64::MAX) {
+            let validator = NumberValidator::non_negative();
+            let result = validator.validate(&n);
+            prop_assert!(result.is_ok(), "Non-negative number {} should be valid", n);
+        }
+    }
+
+    // Property: non_negative rejects negative
+    proptest! {
+        #[test]
+        fn test_non_negative_rejects_invalid(n in i64::MIN..-1i64) {
+            let validator = NumberValidator::non_negative();
+            let result = validator.validate(&n);
+            prop_assert!(result.is_err(), "Negative number {} should be invalid", n);
+        }
+    }
+
+    // Property: negative accepts only negative numbers
+    proptest! {
+        #[test]
+        fn test_negative_accepts_valid(n in i64::MIN..-1i64) {
+            let validator = NumberValidator::negative();
+            let result = validator.validate(&n);
+            prop_assert!(result.is_ok(), "Negative number {} should be valid", n);
+        }
+    }
+
+    // Property: negative rejects zero and positive
+    proptest! {
+        #[test]
+        fn test_negative_rejects_invalid(n in 0i64..i64::MAX) {
+            let validator = NumberValidator::negative();
+            let result = validator.validate(&n);
+            prop_assert!(result.is_err(), "Non-negative number {} should be invalid", n);
+        }
+    }
+
+    // Property: combined validators enforce all constraints
+    proptest! {
+        #[test]
+        fn test_combined_validators(s in "[a-z]{5,15}") {
+            let validator = StringValidator::not_empty()
+                .combine_with(StringValidator::min_length(3))
+                .combine_with(StringValidator::max_length(20));
+            let result = validator.validate(&s);
+            prop_assert!(result.is_ok(), "String '{}' should pass combined validation", s);
+        }
+    }
+
+    // Property: combined validators fail if any constraint fails
+    proptest! {
+        #[test]
+        fn test_combined_validators_fail_on_constraint(s in "[a-z]{1,2}") {
+            // String is 1-2 chars, min_length is 3
+            let validator = StringValidator::not_empty()
+                .combine_with(StringValidator::min_length(3))
+                .combine_with(StringValidator::max_length(20));
+            let result = validator.validate(&s);
+            prop_assert!(result.is_err(), "Short string '{}' should fail min_length constraint", s);
+        }
+    }
+}
+
 /// Stress tests for edge cases
 #[cfg(test)]
 mod stress_tests {

@@ -1,12 +1,12 @@
 //! Hybrid search adapter implementation
 
+use super::actor::HybridSearchMessage;
 use crate::domain::error::Result;
 use crate::domain::ports::HybridSearchProvider;
 use crate::domain::types::{CodeChunk, SearchResult};
 use async_trait::async_trait;
 use std::collections::HashMap;
 use tokio::sync::{mpsc, oneshot};
-use super::actor::HybridSearchMessage;
 
 /// Hybrid search adapter that implements the port
 pub struct HybridSearchAdapter {

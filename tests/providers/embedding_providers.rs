@@ -244,6 +244,79 @@ mod voyageai_tests {
         );
         Ok(())
     }
+
+    #[test]
+    fn test_voyageai_embed_with_mock_server() -> Result<(), Box<dyn std::error::Error>> {
+        use mockito::Server;
+        use serde_json::json;
+
+        let mut server = Server::new();
+        let embedding_vec = vec![0.0_f32; 1024];
+        let response_body = json!({
+            "data": [
+                {
+                    "embedding": embedding_vec
+                }
+            ],
+            "model": "voyage-code-3",
+            "usage": {
+                "total_tokens": 5
+            }
+        })
+        .to_string();
+
+        let _mock = server
+            .mock("POST", "/embeddings")
+            .match_header("authorization", "Bearer test-key")
+            .match_header("content-type", "application/json")
+            .with_status(200)
+            .with_body(response_body)
+            .create();
+
+        let provider = VoyageAIEmbeddingProvider::new(
+            "test-key".to_string(),
+            Some(server.url()),
+            "voyage-code-3".to_string(),
+        )?;
+
+        let result = tokio::runtime::Runtime::new()?.block_on(provider.embed("Hello, world!"))?;
+
+        assert_eq!(result.model, "voyage-code-3");
+        assert_eq!(result.dimensions, 1024);
+        assert_eq!(result.vector.len(), 1024);
+        Ok(())
+    }
+
+    #[test]
+    fn test_voyageai_handles_api_error() -> Result<(), Box<dyn std::error::Error>> {
+        use mockito::Server;
+        use serde_json::json;
+
+        let mut server = Server::new();
+        let error_response = json!({
+            "error": {
+                "message": "Invalid API key",
+                "type": "authentication_error"
+            }
+        })
+        .to_string();
+
+        let _mock = server
+            .mock("POST", "/embeddings")
+            .with_status(401)
+            .with_body(error_response)
+            .create();
+
+        let provider = VoyageAIEmbeddingProvider::new(
+            "invalid-key".to_string(),
+            Some(server.url()),
+            "voyage-code-3".to_string(),
+        )?;
+
+        let result = tokio::runtime::Runtime::new()?.block_on(provider.embed("test"));
+        assert!(result.is_err(), "Should fail with invalid API key");
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -320,6 +393,124 @@ mod gemini_tests {
             "gemini-embedding-001".to_string(),
         )?;
         assert_eq!(provider_with_url.base_url(), "https://custom.gemini.com");
+        Ok(())
+    }
+
+    #[test]
+    fn test_gemini_embed_with_mock_server() -> Result<(), Box<dyn std::error::Error>> {
+        use mockito::Server;
+        use serde_json::json;
+
+        let mut server = Server::new();
+        let embedding_vec = vec![0.0_f32; 768];
+
+        // Gemini uses a different API structure
+        let response_body = json!({
+            "embedding": {
+                "values": embedding_vec
+            }
+        })
+        .to_string();
+
+        // Gemini API path format: /v1beta/models/{model}:embedContent?key={api_key}
+        let _mock = server
+            .mock(
+                "POST",
+                mockito::Matcher::Regex(r"^/v1beta/models/.*:embedContent.*".to_string()),
+            )
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(response_body)
+            .create();
+
+        let provider = GeminiEmbeddingProvider::new(
+            "test-key".to_string(),
+            Some(server.url()),
+            "gemini-embedding-001".to_string(),
+        )?;
+
+        let result = tokio::runtime::Runtime::new()?.block_on(provider.embed("Hello, world!"))?;
+
+        assert_eq!(result.model, "gemini-embedding-001");
+        assert_eq!(result.dimensions, 768);
+        assert_eq!(result.vector.len(), 768);
+        Ok(())
+    }
+
+    #[test]
+    fn test_gemini_handles_api_error() -> Result<(), Box<dyn std::error::Error>> {
+        use mockito::Server;
+        use serde_json::json;
+
+        let mut server = Server::new();
+        let error_response = json!({
+            "error": {
+                "code": 403,
+                "message": "API key not valid",
+                "status": "PERMISSION_DENIED"
+            }
+        })
+        .to_string();
+
+        let _mock = server
+            .mock("POST", mockito::Matcher::Any)
+            .with_status(403)
+            .with_body(error_response)
+            .create();
+
+        let provider = GeminiEmbeddingProvider::new(
+            "invalid-key".to_string(),
+            Some(server.url()),
+            "gemini-embedding-001".to_string(),
+        )?;
+
+        let result = tokio::runtime::Runtime::new()?.block_on(provider.embed("test"));
+        assert!(result.is_err(), "Should fail with invalid API key");
+        Ok(())
+    }
+
+    #[test]
+    fn test_gemini_batch_embed() -> Result<(), Box<dyn std::error::Error>> {
+        use mockito::Server;
+        use serde_json::json;
+
+        let mut server = Server::new();
+        let embedding_vec = vec![0.0_f32; 768];
+
+        let response_body = json!({
+            "embedding": {
+                "values": embedding_vec
+            }
+        })
+        .to_string();
+
+        let mock = server
+            .mock(
+                "POST",
+                mockito::Matcher::Regex(r"^/v1beta/models/.*:embedContent.*".to_string()),
+            )
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(response_body)
+            .expect(2) // Expect 2 calls for 2 texts
+            .create();
+
+        let provider = GeminiEmbeddingProvider::new(
+            "test-key".to_string(),
+            Some(server.url()),
+            "gemini-embedding-001".to_string(),
+        )?;
+
+        let texts = vec!["text1".to_string(), "text2".to_string()];
+        let result = tokio::runtime::Runtime::new()?.block_on(provider.embed_batch(&texts))?;
+
+        assert_eq!(result.len(), 2);
+        for embedding in &result {
+            assert_eq!(embedding.dimensions, 768);
+            assert_eq!(embedding.vector.len(), 768);
+        }
+
+        mock.assert();
         Ok(())
     }
 }
@@ -984,7 +1175,7 @@ mod factory_tests {
         assert!(providers.contains(&"ollama".to_string()));
         assert!(providers.contains(&"voyageai".to_string()));
         assert!(providers.contains(&"gemini".to_string()));
-        assert!(providers.contains(&"mock".to_string()));
+        assert!(providers.contains(&"null".to_string()));
     }
 
     #[test]

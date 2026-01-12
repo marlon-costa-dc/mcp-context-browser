@@ -2,7 +2,15 @@
 
 ## Status
 
-Accepted
+**Partially Implemented** (v0.1.0)
+
+> Major improvements completed:
+> - Provider pattern with trait-based DI across all providers
+> - Async-first architecture with 480+ async functions
+> - thiserror-based error handling throughout
+> - File sizes reduced (most < 500 lines)
+> - 3 files in src/infrastructure/auth/ retain RwLock unwraps (acceptable for lock poisoning)
+> - Test coverage improved to 493+ tests (100% pass rate)
 
 ## Context
 

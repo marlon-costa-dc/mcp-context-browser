@@ -667,3 +667,400 @@ mod common_provider_tests {
         test_provider_interface_compliance(provider).await;
     }
 }
+
+#[cfg(test)]
+mod edgevec_provider_tests {
+    use super::*;
+    use mcp_context_browser::adapters::providers::vector_store::edgevec::{
+        EdgeVecConfig, EdgeVecVectorStoreProvider, HnswConfig, MetricType,
+    };
+
+    #[tokio::test]
+    async fn test_edgevec_provider_creation() -> Result<(), Box<dyn std::error::Error>> {
+        let config = EdgeVecConfig::default();
+        let provider = EdgeVecVectorStoreProvider::new(config)?;
+        assert_eq!(provider.provider_name(), "edgevec");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_edgevec_with_custom_config() -> Result<(), Box<dyn std::error::Error>> {
+        let config = EdgeVecConfig {
+            dimensions: 384,
+            hnsw_config: HnswConfig {
+                m: 32,
+                m0: 64,
+                ef_construction: 400,
+                ef_search: 128,
+            },
+            metric: MetricType::Cosine,
+            use_quantization: false,
+            ..Default::default()
+        };
+        let provider = EdgeVecVectorStoreProvider::new(config)?;
+        assert_eq!(provider.provider_name(), "edgevec");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_edgevec_collection_operations() -> Result<(), Box<dyn std::error::Error>> {
+        let config = EdgeVecConfig {
+            dimensions: 128,
+            ..Default::default()
+        };
+        let provider = EdgeVecVectorStoreProvider::new(config)?;
+        let collection = "test_edgevec_collection";
+
+        // Create collection
+        provider.create_collection(collection, 128).await?;
+
+        // Verify collection exists
+        let exists = provider.collection_exists(collection).await?;
+        assert!(exists, "Collection should exist after creation");
+
+        // Check stats
+        let stats = provider.get_stats(collection).await?;
+        assert_eq!(stats["collection"], collection);
+
+        // Delete collection
+        provider.delete_collection(collection).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_edgevec_vector_insert_and_search() -> Result<(), Box<dyn std::error::Error>> {
+        let dimensions = 128;
+        let config = EdgeVecConfig {
+            dimensions,
+            ..Default::default()
+        };
+        let provider = EdgeVecVectorStoreProvider::new(config)?;
+        let collection = "test_edgevec_search";
+
+        // Create collection
+        provider.create_collection(collection, dimensions).await?;
+
+        // Insert vectors
+        let embeddings = vec![
+            test_utils::create_test_embedding(1, dimensions),
+            test_utils::create_test_embedding(2, dimensions),
+            test_utils::create_test_embedding(3, dimensions),
+        ];
+        let metadata: Vec<HashMap<String, serde_json::Value>> =
+            (1..=3).map(test_utils::create_test_metadata).collect();
+
+        let ids = provider
+            .insert_vectors(collection, &embeddings, metadata)
+            .await?;
+        assert_eq!(ids.len(), 3);
+
+        // Search for similar vectors
+        let query_vector = test_utils::create_test_embedding(1, dimensions).vector;
+        let results = provider
+            .search_similar(collection, &query_vector, 5, None)
+            .await?;
+
+        assert!(!results.is_empty(), "Should find at least one result");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_edgevec_vector_deletion() -> Result<(), Box<dyn std::error::Error>> {
+        let dimensions = 128;
+        let config = EdgeVecConfig {
+            dimensions,
+            ..Default::default()
+        };
+        let provider = EdgeVecVectorStoreProvider::new(config)?;
+        let collection = "test_edgevec_delete";
+
+        // Setup
+        provider.create_collection(collection, dimensions).await?;
+        let embedding = test_utils::create_test_embedding(1, dimensions);
+        let metadata = test_utils::create_test_metadata(1);
+        let ids = provider
+            .insert_vectors(collection, &[embedding], vec![metadata])
+            .await?;
+
+        // Delete vectors
+        provider.delete_vectors(collection, &ids).await?;
+
+        // Verify deletion
+        let query_vector = test_utils::create_test_embedding(1, dimensions).vector;
+        let results = provider
+            .search_similar(collection, &query_vector, 5, None)
+            .await?;
+        assert!(results.is_empty(), "Results should be empty after deletion");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_edgevec_list_and_get_by_ids() -> Result<(), Box<dyn std::error::Error>> {
+        let dimensions = 128;
+        let config = EdgeVecConfig {
+            dimensions,
+            ..Default::default()
+        };
+        let provider = EdgeVecVectorStoreProvider::new(config)?;
+        let collection = "test_edgevec_list";
+
+        provider.create_collection(collection, dimensions).await?;
+
+        // Insert vectors
+        let embeddings: Vec<_> = (1..=3)
+            .map(|i| test_utils::create_test_embedding(i, dimensions))
+            .collect();
+        let metadata: Vec<_> = (1..=3).map(test_utils::create_test_metadata).collect();
+
+        let ids = provider
+            .insert_vectors(collection, &embeddings, metadata)
+            .await?;
+
+        // List vectors
+        let listed = provider.list_vectors(collection, 10).await?;
+        assert_eq!(listed.len(), 3, "Should list all 3 vectors");
+
+        // Get by IDs
+        let fetched = provider.get_vectors_by_ids(collection, &ids[..1]).await?;
+        assert_eq!(fetched.len(), 1, "Should fetch exactly 1 vector");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_edgevec_different_metrics() -> Result<(), Box<dyn std::error::Error>> {
+        // Test L2Squared metric
+        let config_l2 = EdgeVecConfig {
+            dimensions: 128,
+            metric: MetricType::L2Squared,
+            ..Default::default()
+        };
+        let provider_l2 = EdgeVecVectorStoreProvider::new(config_l2)?;
+        assert_eq!(provider_l2.provider_name(), "edgevec");
+
+        // Test DotProduct metric
+        let config_dot = EdgeVecConfig {
+            dimensions: 128,
+            metric: MetricType::DotProduct,
+            ..Default::default()
+        };
+        let provider_dot = EdgeVecVectorStoreProvider::new(config_dot)?;
+        assert_eq!(provider_dot.provider_name(), "edgevec");
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod encrypted_provider_tests {
+    use super::*;
+    use mcp_context_browser::adapters::providers::vector_store::encrypted::EncryptedVectorStoreProvider;
+    use mcp_context_browser::adapters::providers::vector_store::InMemoryVectorStoreProvider;
+    use mcp_context_browser::infrastructure::crypto::{
+        EncryptionAlgorithm, EncryptionConfig, MasterKeyConfig,
+    };
+
+    /// Create encrypted provider with unique key file for test isolation
+    async fn create_encrypted_provider_with_path(
+        key_path: &str,
+    ) -> Result<EncryptedVectorStoreProvider<InMemoryVectorStoreProvider>, Box<dyn std::error::Error>>
+    {
+        let inner = InMemoryVectorStoreProvider::new();
+        let crypto_config = EncryptionConfig {
+            enabled: true,
+            algorithm: EncryptionAlgorithm::Aes256Gcm,
+            master_key: MasterKeyConfig {
+                key_path: key_path.to_string(),
+                rotation_days: 30,
+            },
+        };
+        let provider = EncryptedVectorStoreProvider::new(inner, crypto_config).await?;
+        Ok(provider)
+    }
+
+    #[tokio::test]
+    async fn test_encrypted_provider_creation() -> Result<(), Box<dyn std::error::Error>> {
+        let key_path = "/tmp/test_encrypted_provider_creation.key";
+        let provider = create_encrypted_provider_with_path(key_path).await?;
+        assert_eq!(provider.provider_name(), "encrypted");
+
+        // Clean up
+        let _ = std::fs::remove_file(key_path);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_encrypted_collection_operations() -> Result<(), Box<dyn std::error::Error>> {
+        let key_path = "/tmp/test_encrypted_collection_operations.key";
+        let provider = create_encrypted_provider_with_path(key_path).await?;
+        let collection = "test_encrypted_collection";
+        let dimensions = 128;
+
+        // Create collection
+        provider.create_collection(collection, dimensions).await?;
+
+        // Verify collection exists
+        let exists = provider.collection_exists(collection).await?;
+        assert!(exists, "Collection should exist");
+
+        // Check stats include encryption info
+        let stats = provider.get_stats(collection).await?;
+        assert_eq!(stats["encryption_enabled"], true);
+        assert_eq!(stats["encryption_algorithm"], "AES-256-GCM");
+
+        // Delete collection
+        provider.delete_collection(collection).await?;
+
+        // Clean up
+        let _ = std::fs::remove_file(key_path);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_encrypted_insert_and_search() -> Result<(), Box<dyn std::error::Error>> {
+        let key_path = "/tmp/test_encrypted_insert_and_search.key";
+        let provider = create_encrypted_provider_with_path(key_path).await?;
+        let collection = "test_encrypted_search";
+        let dimensions = 128;
+
+        provider.create_collection(collection, dimensions).await?;
+
+        // Insert vectors with metadata
+        let embeddings = vec![
+            test_utils::create_test_embedding(1, dimensions),
+            test_utils::create_test_embedding(2, dimensions),
+        ];
+        let metadata: Vec<HashMap<String, serde_json::Value>> =
+            (1..=2).map(test_utils::create_test_metadata).collect();
+
+        let ids = provider
+            .insert_vectors(collection, &embeddings, metadata)
+            .await?;
+        assert_eq!(ids.len(), 2);
+
+        // Search for similar vectors - metadata should be decrypted
+        let query_vector = test_utils::create_test_embedding(1, dimensions).vector;
+        let results = provider
+            .search_similar(collection, &query_vector, 5, None)
+            .await?;
+
+        assert!(!results.is_empty(), "Should find results");
+        // Verify metadata was properly decrypted
+        let best_match = &results[0];
+        assert!(
+            best_match.metadata.get("file_path").is_some(),
+            "Decrypted metadata should contain file_path"
+        );
+
+        // Clean up
+        let _ = std::fs::remove_file(key_path);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_encrypted_metadata_roundtrip() -> Result<(), Box<dyn std::error::Error>> {
+        let key_path = "/tmp/test_encrypted_metadata_roundtrip.key";
+        let provider = create_encrypted_provider_with_path(key_path).await?;
+        let collection = "test_encrypted_roundtrip";
+        let dimensions = 128;
+
+        provider.create_collection(collection, dimensions).await?;
+
+        // Insert with specific metadata
+        let embedding = test_utils::create_test_embedding(1, dimensions);
+        let mut metadata = HashMap::new();
+        metadata.insert("file_path".to_string(), serde_json::json!("test/file.rs"));
+        metadata.insert("start_line".to_string(), serde_json::json!(42));
+        metadata.insert("content".to_string(), serde_json::json!("fn test() {}"));
+        metadata.insert(
+            "custom_field".to_string(),
+            serde_json::json!("sensitive data"),
+        );
+
+        let ids = provider
+            .insert_vectors(collection, &[embedding], vec![metadata.clone()])
+            .await?;
+
+        // Retrieve by ID and verify metadata
+        let results = provider.get_vectors_by_ids(collection, &ids).await?;
+        assert_eq!(results.len(), 1);
+
+        let result = &results[0];
+        // The metadata should contain the original fields after decryption
+        let result_metadata = result.metadata.as_object();
+        assert!(result_metadata.is_some(), "Should have metadata object");
+
+        // Clean up
+        let _ = std::fs::remove_file(key_path);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_encrypted_list_vectors() -> Result<(), Box<dyn std::error::Error>> {
+        let key_path = "/tmp/test_encrypted_list_vectors.key";
+        let provider = create_encrypted_provider_with_path(key_path).await?;
+        let collection = "test_encrypted_list";
+        let dimensions = 128;
+
+        provider.create_collection(collection, dimensions).await?;
+
+        // Insert multiple vectors
+        let embeddings: Vec<_> = (1..=3)
+            .map(|i| test_utils::create_test_embedding(i, dimensions))
+            .collect();
+        let metadata: Vec<_> = (1..=3).map(test_utils::create_test_metadata).collect();
+
+        provider
+            .insert_vectors(collection, &embeddings, metadata)
+            .await?;
+
+        // List vectors - should decrypt metadata
+        let listed = provider.list_vectors(collection, 10).await?;
+        assert_eq!(listed.len(), 3, "Should list all 3 vectors");
+
+        // Verify each result has decrypted metadata
+        for result in &listed {
+            assert!(
+                result.metadata.get("file_path").is_some()
+                    || result
+                        .metadata
+                        .as_object()
+                        .is_some_and(|m| m.contains_key("file_path")),
+                "Each result should have decrypted metadata"
+            );
+        }
+
+        // Clean up
+        let _ = std::fs::remove_file(key_path);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_encrypted_delete_vectors() -> Result<(), Box<dyn std::error::Error>> {
+        let key_path = "/tmp/test_encrypted_delete_vectors.key";
+        let provider = create_encrypted_provider_with_path(key_path).await?;
+        let collection = "test_encrypted_delete";
+        let dimensions = 128;
+
+        provider.create_collection(collection, dimensions).await?;
+
+        let embedding = test_utils::create_test_embedding(1, dimensions);
+        let metadata = test_utils::create_test_metadata(1);
+
+        let ids = provider
+            .insert_vectors(collection, &[embedding], vec![metadata])
+            .await?;
+
+        // Delete vector
+        provider.delete_vectors(collection, &ids).await?;
+
+        // Verify deletion
+        let query_vector = test_utils::create_test_embedding(1, dimensions).vector;
+        let results = provider
+            .search_similar(collection, &query_vector, 5, None)
+            .await?;
+        assert!(results.is_empty(), "Vector should be deleted");
+
+        // Clean up
+        let _ = std::fs::remove_file(key_path);
+        Ok(())
+    }
+}

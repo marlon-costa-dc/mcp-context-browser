@@ -1,5 +1,5 @@
 use crate::domain::error::Result;
-use crate::domain::types::{CodeChunk, SearchResult, RepositoryStats, SearchStats};
+use crate::domain::types::{CodeChunk, RepositoryStats, SearchResult, SearchStats};
 use async_trait::async_trait;
 
 /// Repository for managing code chunks

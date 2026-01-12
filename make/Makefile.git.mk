@@ -1,44 +1,41 @@
 # =============================================================================
-# GIT - Forced commit operations and git management
+# GIT - Streamlined git operations
+# =============================================================================
+# Naming: short action verbs
 # =============================================================================
 
-.PHONY: git-status git-add-all git-commit-force git-push-force git-tag git-force-all sync force-commit
+.PHONY: status commit push tag sync
 
-# Git status and basic operations
-git-status: ## Show git repository status
-	@echo "Git repository status:"
-	@git status --short
+# -----------------------------------------------------------------------------
+# Essential Git Commands
+# -----------------------------------------------------------------------------
 
-git-add-all: ## Add all changes to git
-	@echo "Adding all changes to git..."
+status: ## Show git status
+	@echo "📊 Git Status:"
+	@git status --short --branch
+
+commit: ## Commit all changes (interactive message)
 	@git add -A
-	@echo "All changes added"
+	@git commit || echo "Nothing to commit"
 
-# Force commit operations
-git-commit-force: ## Force commit all changes
-	@echo "Committing all changes with force..."
-	@git commit --allow-empty -m "Force commit: $(shell date '+%Y-%m-%d %H:%M:%S') - Automated update" || echo "No changes to commit"
+push: ## Push to remote
+	@git push origin $$(git branch --show-current)
+	@echo "✅ Pushed to origin"
 
-git-push-force: ## Force push to remote repository
-	@echo "Pushing changes with force..."
-	@git push --force-with-lease origin main || git push --force origin main
-	@echo "Changes pushed successfully"
+tag: ## Create and push version tag from Cargo.toml
+	@VERSION=$$(grep '^version' Cargo.toml | head -1 | sed 's/.*"\([^"]*\)".*/\1/'); \
+	echo "🏷️  Tagging v$$VERSION..."; \
+	git tag -a "v$$VERSION" -m "Release v$$VERSION" 2>/dev/null || echo "Tag v$$VERSION already exists"; \
+	git push origin "v$$VERSION" 2>/dev/null || echo "Tag already pushed"
 
-# Tagging operations
-git-tag: ## Create and push git tag
-	@echo "Creating and pushing tag v$(shell grep '^version' Cargo.toml | cut -d'"' -f2)..."
-	@git tag v$(shell grep '^version' Cargo.toml | cut -d'"' -f2)
-	@git push origin v$(shell grep '^version' Cargo.toml | cut -d'"' -f2)
-	@echo "Tag v$(shell grep '^version' Cargo.toml | cut -d'"' -f2) created and pushed!"
+# -----------------------------------------------------------------------------
+# Combined Operations
+# -----------------------------------------------------------------------------
 
-# Combined operations
-git-force-all: git-add-all git-commit-force git-push-force ## Add, commit and push all changes with force
-	@echo "Force commit and push completed!"
+sync: ## Add, commit (auto-message), and push all changes
+	@echo "🔄 Syncing changes..."
+	@git add -A
+	@git commit -m "chore: sync changes $$(date '+%Y-%m-%d %H:%M')" --allow-empty 2>/dev/null || true
+	@git push origin $$(git branch --show-current) || git push --set-upstream origin $$(git branch --show-current)
+	@echo "✅ Synced to remote"
 
-# Alternative force commit method
-force-commit: ## Run force commit script (alternative method)
-	@echo "Running force commit script..."
-	@bash scripts/force-commit.sh
-
-# Sync alias
-sync: git-force-all ## Sync all changes to remote

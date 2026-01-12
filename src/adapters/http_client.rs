@@ -66,7 +66,8 @@ impl Default for HttpClientConfig {
 #[derive(Clone, shaku::Component)]
 #[shaku(interface = HttpClientProvider)]
 pub struct HttpClientPool {
-    #[shaku(default = Client::new())] // This is just for shaku, will be overwritten in new() or used defaults
+    #[shaku(default = Client::new())]
+    // This is just for shaku, will be overwritten in new() or used defaults
     client: Client,
     #[shaku(default = HttpClientConfig::default())]
     config: HttpClientConfig,

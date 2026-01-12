@@ -14,6 +14,3 @@ pub use null::NullEmbeddingProvider;
 pub use ollama::OllamaEmbeddingProvider;
 pub use openai::OpenAIEmbeddingProvider;
 pub use voyageai::VoyageAIEmbeddingProvider;
-
-// Re-export MockEmbeddingProvider from the old location for backward compatibility
-pub use null::NullEmbeddingProvider as MockEmbeddingProvider;

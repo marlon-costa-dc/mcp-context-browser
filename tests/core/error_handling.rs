@@ -2,76 +2,93 @@
 //!
 //! This test suite validates that all core modules properly handle errors
 //! without using unwrap/expect, ensuring robust error propagation.
-//!
-//! NOTE: Tests are currently disabled due to API changes that broke compatibility.
-//! TODO: Update tests to match current API implementations.
 
-use mcp_context_browser::infrastructure::auth::{AuthConfig, AuthService, Permission, UserRole};
+use mcp_context_browser::infrastructure::auth::{AuthConfig, AuthService};
 use mcp_context_browser::infrastructure::cache::{CacheConfig, CacheManager};
-use mcp_context_browser::domain::error::{Error, Result};
-use std::time::Duration;
 
 #[cfg(test)]
-#[ignore = "Tests need updating to match current API"]
 mod auth_error_handling_tests {
     use super::*;
 
-    #[tokio::test]
-    async fn test_auth_service_handles_disabled_auth_errors() {
+    #[test]
+    fn test_auth_service_handles_disabled_auth_errors() {
         let config = AuthConfig {
             enabled: false,
             ..Default::default()
         };
         let auth = AuthService::new(config);
 
-        // Should return proper error instead of panicking
-        let result = auth.authenticate("user", "pass").await;
-        assert!(matches!(result, Err(Error::Generic(_))));
+        // authenticate() is sync, should return proper error for disabled auth
+        let result = auth.authenticate("user", "pass");
+        assert!(result.is_err());
         let err = result.expect_err("Expected error for disabled auth");
-        assert!(err.to_string().contains("disabled"));
+        assert!(
+            err.to_string().to_lowercase().contains("disabled"),
+            "Error should mention 'disabled', got: {}",
+            err
+        );
     }
 
-    #[tokio::test]
-    async fn test_auth_service_handles_invalid_credentials_errors() {
-        let auth = AuthService::default();
+    #[test]
+    fn test_auth_service_handles_invalid_credentials_errors() {
+        // Create auth with authentication enabled
+        let config = AuthConfig {
+            enabled: true,
+            ..Default::default()
+        };
+        let auth = AuthService::new(config);
 
         // Should return proper error instead of panicking
-        let result = auth.authenticate("invalid@email.com", "wrongpass").await;
-        assert!(matches!(result, Err(Error::Generic(_))));
+        let result = auth.authenticate("invalid@email.com", "wrongpass");
+        assert!(result.is_err());
         let err = result.expect_err("Expected error for invalid credentials");
-        assert!(err.to_string().contains("Invalid credentials"));
+        // Error should be about invalid credentials
+        assert!(
+            err.to_string().to_lowercase().contains("invalid")
+                || err.to_string().to_lowercase().contains("credentials"),
+            "Error should mention invalid credentials, got: {}",
+            err
+        );
     }
 
-    #[tokio::test]
-    async fn test_auth_service_handles_token_validation_errors() {
-        let auth = AuthService::default();
+    #[test]
+    fn test_auth_service_handles_token_validation_errors() {
+        // Need enabled auth for token validation
+        let config = AuthConfig {
+            enabled: true,
+            ..Default::default()
+        };
+        let auth = AuthService::new(config);
 
         // Should return proper error for invalid tokens instead of panicking
         let result = auth.validate_token("invalid.jwt.token");
-        assert!(matches!(result, Err(Error::Generic(_))));
+        assert!(result.is_err());
         let err = result.expect_err("Expected error for invalid token");
-        assert!(err.to_string().contains("Invalid token"));
-
-        // Should return proper error for expired tokens instead of panicking
-        let result = auth.validate_token("expired.token.here");
-        assert!(matches!(result, Err(Error::Generic(_))));
+        assert!(
+            err.to_string().to_lowercase().contains("invalid")
+                || err.to_string().to_lowercase().contains("token"),
+            "Error should mention token issue, got: {}",
+            err
+        );
     }
 
-    #[tokio::test]
-    async fn test_auth_service_handles_token_generation_errors() {
-        let auth = AuthService::default();
+    #[test]
+    fn test_auth_service_disabled_token_validation_errors() {
+        // Disabled auth should fail validation
+        let auth = AuthService::default(); // disabled by default
 
-        // This should work in normal cases, but we test the error handling path
-        let result = auth.authenticate("admin@context.browser", "admin").await;
+        let result = auth.validate_token("any.token.here");
+        assert!(result.is_err());
+        let err = result.expect_err("Expected error for disabled auth");
         assert!(
-            result.is_ok(),
-            "Authentication should succeed with valid credentials"
+            err.to_string().to_lowercase().contains("disabled"),
+            "Error should mention disabled, got: {}",
+            err
         );
     }
 }
 
 #[cfg(test)]
-#[ignore = "Tests need updating to match current API"]
 mod cache_error_handling_tests {
     use super::*;
     use mcp_context_browser::infrastructure::cache::CacheResult;
@@ -87,116 +104,215 @@ mod cache_error_handling_tests {
             namespaces: Default::default(),
         };
 
-        // In Exclusive mode, this should FAIL on creation
+        // In Remote mode with invalid Redis, this should FAIL on creation
         let result = CacheManager::new(config, None).await;
-        assert!(result.is_err());
-        let err = result.expect_err("Expected connection failure error");
-        assert!(matches!(
-            err,
-            Error::Redis { .. } | Error::Generic(_)
-        ));
+        assert!(
+            result.is_err(),
+            "Expected connection failure for invalid Redis URL"
+        );
+        // Use match instead of expect_err to avoid Debug requirement
+        match result {
+            Err(err) => {
+                let err_msg = err.to_string().to_lowercase();
+                assert!(
+                    err_msg.contains("redis")
+                        || err_msg.contains("connection")
+                        || err_msg.contains("failed"),
+                    "Error should mention redis/connection issue, got: {}",
+                    err
+                );
+            }
+            Ok(_) => panic!("Expected error, got Ok"),
+        }
     }
 
     #[tokio::test]
-    async fn test_cache_manager_handles_disabled_cache_operations() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_cache_manager_handles_disabled_cache_operations() {
         let config = CacheConfig {
             redis_url: "".to_string(),
             default_ttl_seconds: 300,
-            max_size: 0, // Disabled
+            max_size: 100,
             enabled: false,
             namespaces: Default::default(),
         };
 
-        let manager = CacheManager::new(config).await?;
+        // Disabled cache should create successfully
+        let manager = CacheManager::new(config, None)
+            .await
+            .expect("Disabled cache should create successfully");
 
-        // Operations on disabled cache should not panic
+        // Operations on disabled cache should not panic, just no-op
         let set_result = manager.set("test", "key", "value".to_string()).await;
-        assert!(set_result.is_ok()); // Should succeed (no-op)
+        assert!(
+            set_result.is_ok(),
+            "Set on disabled cache should succeed (no-op)"
+        );
 
         let get_result: CacheResult<String> = manager.get("test", "key").await;
-        assert!(get_result.is_miss());
-        Ok(())
+        assert!(get_result.is_miss(), "Get on disabled cache should be miss");
     }
 
     #[tokio::test]
-    async fn test_cache_manager_handles_namespace_operations() -> Result<(), Box<dyn std::error::Error>> {
-        let config = CacheConfig::default();
-        let manager = CacheManager::new(config).await?;
+    async fn test_cache_manager_handles_namespace_operations() {
+        let config = CacheConfig {
+            redis_url: "".to_string(), // Local mode
+            enabled: true,
+            ..Default::default()
+        };
+        let manager = CacheManager::new(config, None)
+            .await
+            .expect("Local cache should create successfully");
 
         // These operations should not panic
         let clear_result = manager.clear_namespace("test_ns").await;
-        assert!(clear_result.is_ok());
+        assert!(clear_result.is_ok(), "Clear namespace should succeed");
 
         let delete_result = manager.delete("test_ns", "key").await;
-        assert!(delete_result.is_ok());
+        assert!(delete_result.is_ok(), "Delete should succeed");
 
         let stats = manager.get_stats().await;
-        assert_eq!(stats.total_entries, 0);
-        Ok(())
+        // Stats should be valid (may have entries from other tests)
+        assert!(stats.hit_ratio >= 0.0 && stats.hit_ratio <= 1.0);
     }
 
     #[tokio::test]
-    async fn test_cache_manager_handles_large_data_operations() -> Result<(), Box<dyn std::error::Error>> {
-        let config = CacheConfig::default();
-        let manager = CacheManager::new(config).await?;
+    async fn test_cache_manager_handles_large_data_operations() {
+        let config = CacheConfig {
+            redis_url: "".to_string(), // Local mode
+            enabled: true,
+            ..Default::default()
+        };
+        let manager = CacheManager::new(config, None)
+            .await
+            .expect("Local cache should create successfully");
 
-        // Test with large data that might cause issues
-        let large_data = "x".repeat(1024 * 1024); // 1MB string
+        // Test with moderately large data (100KB to avoid memory issues in tests)
+        let large_data = "x".repeat(100 * 1024);
 
         let set_result = manager.set("test", "large_key", large_data.clone()).await;
-        assert!(set_result.is_ok());
+        assert!(set_result.is_ok(), "Set with large data should succeed");
 
         let get_result: CacheResult<String> = manager.get("test", "large_key").await;
-        assert!(get_result.is_hit());
-        let data = get_result.data().ok_or("Expected data in cache hit")?;
-        assert_eq!(data, large_data);
-        Ok(())
+        assert!(get_result.is_hit(), "Get should return hit");
+        let data = get_result.data().expect("Expected data in cache hit");
+        assert_eq!(data, large_data, "Data should match");
     }
 }
 
 #[cfg(test)]
-#[ignore = "Tests need updating to match current API"]
 mod crypto_error_handling_tests {
-    use super::*;
-    use mcp_context_browser::infrastructure::crypto::{CryptoService, EncryptionConfig};
+    use mcp_context_browser::infrastructure::crypto::{
+        CryptoService, EncryptionAlgorithm, EncryptionConfig, MasterKeyConfig,
+    };
 
     #[tokio::test]
-    async fn test_crypto_service_handles_disabled_crypto_operations() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_crypto_service_handles_disabled_crypto_operations() {
         let config = EncryptionConfig {
             enabled: false,
-            master_key_path: None,
-            key_rotation_days: 30,
-            algorithm: mcp_context_browser::infrastructure::crypto::EncryptionAlgorithm::Aes256Gcm,
+            algorithm: EncryptionAlgorithm::Aes256Gcm,
+            master_key: MasterKeyConfig::default(),
         };
 
-        let crypto = CryptoService::new(config).await?;
+        let crypto = CryptoService::new(config)
+            .await
+            .expect("Disabled crypto service should create successfully");
 
-        // Operations on disabled crypto should not panic
-        let encrypt_result = crypto.encrypt("test data".as_bytes()).await;
-        assert!(encrypt_result.is_ok()); // Should succeed (no-op) or return proper error
+        // encrypt() is sync and should return error for disabled crypto
+        let encrypt_result = crypto.encrypt("test data".as_bytes());
+        assert!(encrypt_result.is_err(), "Encrypt should fail when disabled");
+        let err = encrypt_result.expect_err("Expected error");
+        assert!(
+            err.to_string().to_lowercase().contains("disabled"),
+            "Error should mention disabled, got: {}",
+            err
+        );
 
-        let decrypt_result = crypto.decrypt(&[1, 2, 3]).await;
-        assert!(decrypt_result.is_ok()); // Should succeed (no-op) or return proper error
-        Ok(())
+        // decrypt() also needs an EncryptedEnvelope, but we can test with a dummy
+        // Since crypto is disabled, it should fail before checking the envelope
+        let dummy_envelope = mcp_context_browser::infrastructure::crypto::EncryptedEnvelope {
+            algorithm: EncryptionAlgorithm::Aes256Gcm,
+            ciphertext: vec![1, 2, 3],
+            nonce: vec![0u8; 12],
+            key_id: "test".to_string(),
+            encrypted_at: 0,
+        };
+        let decrypt_result = crypto.decrypt(&dummy_envelope);
+        assert!(decrypt_result.is_err(), "Decrypt should fail when disabled");
     }
 
     #[tokio::test]
-    async fn test_crypto_service_handles_key_generation_errors() -> Result<(), Box<dyn std::error::Error>> {
-        let config = EncryptionConfig::default();
-        let crypto = CryptoService::new(config).await?;
+    async fn test_crypto_service_handles_key_generation() {
+        // Enabled config - will create/load master key
+        let config = EncryptionConfig {
+            enabled: true,
+            algorithm: EncryptionAlgorithm::Aes256Gcm,
+            master_key: MasterKeyConfig {
+                key_path: "/tmp/test_master_key_error_handling.key".to_string(),
+                rotation_days: 30,
+            },
+        };
 
-        // Key generation should not panic
-        let key_result = crypto.generate_data_key().await;
-        assert!(key_result.is_ok());
-        Ok(())
+        let crypto = CryptoService::new(config)
+            .await
+            .expect("Crypto service should create successfully");
+
+        // generate_data_key() is sync and should work
+        let key_result = crypto.generate_data_key();
+        assert!(key_result.is_ok(), "Key generation should succeed");
+        let key = key_result.expect("Key should be valid");
+        assert_eq!(key.key.len(), 32, "Key should be 256 bits");
+        assert!(!key.id.is_empty(), "Key should have an ID");
+
+        // Clean up test key file
+        let _ = std::fs::remove_file("/tmp/test_master_key_error_handling.key");
+    }
+
+    #[tokio::test]
+    async fn test_crypto_service_encrypt_decrypt_roundtrip() {
+        let config = EncryptionConfig {
+            enabled: true,
+            algorithm: EncryptionAlgorithm::Aes256Gcm,
+            master_key: MasterKeyConfig {
+                key_path: "/tmp/test_master_key_roundtrip.key".to_string(),
+                rotation_days: 30,
+            },
+        };
+
+        let crypto = CryptoService::new(config)
+            .await
+            .expect("Crypto service should create successfully");
+
+        let original_data = b"Hello, World! This is test data.";
+
+        // Encrypt (sync)
+        let envelope = crypto
+            .encrypt(original_data)
+            .expect("Encryption should succeed");
+        assert!(
+            !envelope.ciphertext.is_empty(),
+            "Ciphertext should not be empty"
+        );
+        assert_eq!(envelope.nonce.len(), 12, "Nonce should be 96 bits");
+
+        // Decrypt (sync)
+        let decrypted = crypto
+            .decrypt(&envelope)
+            .expect("Decryption should succeed");
+        assert_eq!(
+            decrypted.as_slice(),
+            original_data,
+            "Decrypted data should match"
+        );
+
+        // Clean up
+        let _ = std::fs::remove_file("/tmp/test_master_key_roundtrip.key");
     }
 }
 
 #[cfg(test)]
-#[ignore = "Tests need updating to match current API"]
 mod database_error_handling_tests {
-    use super::*;
     use mcp_context_browser::adapters::database::{DatabaseConfig, DatabasePool};
+    use std::time::Duration;
 
     #[test]
     fn test_database_pool_handles_disabled_database_operations() {
@@ -204,52 +320,176 @@ mod database_error_handling_tests {
             enabled: false,
             url: String::new(),
             max_connections: 10,
-            min_idle: None,
-            connection_timeout: std::time::Duration::from_secs(30),
-            acquire_timeout: std::time::Duration::from_secs(30),
+            min_idle: 5,
+            max_lifetime: Duration::from_secs(1800),
+            idle_timeout: Duration::from_secs(600),
+            connection_timeout: Duration::from_secs(30),
         };
 
-        let db_result = DatabasePool::new(config);
-        assert!(db_result.is_err()); // Should fail for disabled database
+        // Disabled database should create successfully (but be non-functional)
+        let db = DatabasePool::new(config).expect("Disabled pool should create");
+        assert!(!db.is_enabled(), "Pool should be disabled");
+
+        // Operations on disabled pool should return proper errors
+        let conn_result = db.get_connection();
+        assert!(
+            conn_result.is_err(),
+            "Get connection should fail when disabled"
+        );
+        // Use match instead of expect_err to avoid Debug requirement on pooled connection
+        match conn_result {
+            Err(err) => {
+                assert!(
+                    err.to_string().to_lowercase().contains("disabled"),
+                    "Error should mention disabled, got: {}",
+                    err
+                );
+            }
+            Ok(_) => panic!("Expected error, got Ok"),
+        }
+    }
+
+    #[test]
+    fn test_database_pool_handles_invalid_url() {
+        let config = DatabaseConfig {
+            enabled: true,
+            url: "invalid://not-a-valid-url".to_string(),
+            max_connections: 10,
+            min_idle: 5,
+            max_lifetime: Duration::from_secs(1800),
+            idle_timeout: Duration::from_secs(600),
+            connection_timeout: Duration::from_secs(30),
+        };
+
+        // Invalid URL should fail on creation
+        let result = DatabasePool::new(config);
+        assert!(result.is_err(), "Invalid URL should fail");
+    }
+
+    #[test]
+    fn test_database_pool_stats_when_disabled() {
+        let config = DatabaseConfig {
+            enabled: false,
+            ..Default::default()
+        };
+
+        let db = DatabasePool::new(config).expect("Disabled pool should create");
+        let stats = db.stats();
+
+        // Stats should show zeros for disabled pool
+        assert_eq!(stats.connections, 0);
+        assert_eq!(stats.idle_connections, 0);
+    }
+
+    #[tokio::test]
+    async fn test_database_pool_health_check_when_disabled() {
+        let config = DatabaseConfig {
+            enabled: false,
+            ..Default::default()
+        };
+
+        let db = DatabasePool::new(config).expect("Disabled pool should create");
+        let health_result = db.health_check().await;
+
+        assert!(
+            health_result.is_err(),
+            "Health check should fail when disabled"
+        );
     }
 }
 
 #[cfg(test)]
-#[ignore = "Tests need updating to match current API"]
 mod integration_error_handling_tests {
     use super::*;
 
     #[tokio::test]
-    async fn test_core_services_handle_cascading_errors() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_core_services_handle_cascading_errors() {
         // Test that errors propagate correctly through service layers
         // This ensures no unwrap/expect calls break the error chain
 
-        let auth = AuthService::default();
-        let cache_config = CacheConfig::default();
-        let cache = CacheManager::new(cache_config).await?;
+        // Auth with enabled=true for testing
+        let auth_config = AuthConfig {
+            enabled: true,
+            ..Default::default()
+        };
+        let auth = AuthService::new(auth_config);
 
-        // Test auth failure doesn't crash the system
-        let auth_result = auth.authenticate("nonexistent", "wrong").await;
-        assert!(auth_result.is_err());
+        // Cache in local mode
+        let cache_config = CacheConfig {
+            redis_url: "".to_string(),
+            enabled: true,
+            ..Default::default()
+        };
+        let cache = CacheManager::new(cache_config, None)
+            .await
+            .expect("Local cache should create");
+
+        // Test auth failure doesn't crash the system (sync call)
+        let auth_result = auth.authenticate("nonexistent", "wrong");
+        assert!(auth_result.is_err(), "Auth should fail for invalid user");
 
         // Test cache operations still work after auth failure
         let cache_result = cache.set("test", "key", "value".to_string()).await;
-        assert!(cache_result.is_ok());
-        Ok(())
+        assert!(cache_result.is_ok(), "Cache should still work");
     }
 
-    #[tokio::test]
-    async fn test_error_context_preservation() {
+    #[test]
+    fn test_error_context_preservation() {
         // Test that error context is preserved through multiple layers
+        // Auth is disabled by default
         let auth = AuthService::default();
 
-        let result = auth.authenticate("", "").await;
+        // authenticate() is sync
+        let result = auth.authenticate("", "");
         assert!(result.is_err());
 
         let error = result.expect_err("Expected auth error for empty credentials");
         // Error should contain useful context, not just "Generic error"
         let error_msg = error.to_string();
-        assert!(!error_msg.is_empty());
-        assert!(!error_msg.contains("called `Result::unwrap()`"));
+        assert!(!error_msg.is_empty(), "Error message should not be empty");
+        // Should NOT contain unwrap panic messages
+        assert!(
+            !error_msg.contains("called `Result::unwrap()`"),
+            "Error should not be from unwrap panic"
+        );
+        // Should NOT contain expect panic messages
+        assert!(
+            !error_msg.contains("called `Option::expect()`"),
+            "Error should not be from expect panic"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_service_isolation() {
+        // Test that failures in one service don't affect others
+        let cache_config = CacheConfig {
+            redis_url: "".to_string(),
+            enabled: true,
+            ..Default::default()
+        };
+        let cache = CacheManager::new(cache_config, None)
+            .await
+            .expect("Local cache should create");
+
+        // Multiple operations should be isolated
+        cache
+            .set("ns1", "key1", "value1".to_string())
+            .await
+            .expect("Set 1");
+        cache
+            .set("ns2", "key2", "value2".to_string())
+            .await
+            .expect("Set 2");
+
+        // Clearing one namespace shouldn't affect the other
+        cache.clear_namespace("ns1").await.expect("Clear ns1");
+
+        let result1: mcp_context_browser::infrastructure::cache::CacheResult<String> =
+            cache.get("ns1", "key1").await;
+        assert!(result1.is_miss(), "ns1:key1 should be cleared");
+
+        let result2: mcp_context_browser::infrastructure::cache::CacheResult<String> =
+            cache.get("ns2", "key2").await;
+        assert!(result2.is_hit(), "ns2:key2 should still exist");
     }
 }

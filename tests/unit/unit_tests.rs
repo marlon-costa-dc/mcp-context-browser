@@ -262,13 +262,13 @@ mod repository_unit_tests {
 /// Test EmbeddingProvider implementations
 #[cfg(test)]
 mod provider_unit_tests {
-    use mcp_context_browser::adapters::providers::MockEmbeddingProvider;
+    use mcp_context_browser::adapters::providers::NullEmbeddingProvider;
     use mcp_context_browser::domain::ports::EmbeddingProvider;
     use std::sync::Arc;
 
     #[test]
     fn test_mock_embedding_provider_creation() {
-        let provider = MockEmbeddingProvider::new();
+        let provider = NullEmbeddingProvider::new();
         assert_eq!(provider.provider_name(), "null");
         // NullEmbeddingProvider returns dimension=1 for minimal test vectors
         assert_eq!(provider.dimensions(), 1);
@@ -276,7 +276,7 @@ mod provider_unit_tests {
 
     #[tokio::test]
     async fn test_mock_embedding_provider_embed() -> Result<(), Box<dyn std::error::Error>> {
-        let provider = MockEmbeddingProvider::new();
+        let provider = NullEmbeddingProvider::new();
         let embedding = provider.embed("test text").await?;
         // NullEmbeddingProvider returns dimension=1 for minimal test vectors
         assert_eq!(embedding.dimensions, 1);
@@ -286,7 +286,7 @@ mod provider_unit_tests {
 
     #[tokio::test]
     async fn test_mock_embedding_provider_batch_embed() -> Result<(), Box<dyn std::error::Error>> {
-        let provider = MockEmbeddingProvider::new();
+        let provider = NullEmbeddingProvider::new();
         let texts = vec![
             "text1".to_string(),
             "text2".to_string(),
@@ -304,7 +304,7 @@ mod provider_unit_tests {
     #[test]
     fn test_provider_trait_object_compatibility() {
         // Test that providers can be used as trait objects
-        let provider: Arc<dyn EmbeddingProvider> = Arc::new(MockEmbeddingProvider::new());
+        let provider: Arc<dyn EmbeddingProvider> = Arc::new(NullEmbeddingProvider::new());
         // NullEmbeddingProvider returns dimension=1 for minimal test vectors
         assert_eq!(provider.dimensions(), 1);
     }
@@ -314,14 +314,14 @@ mod provider_unit_tests {
 #[cfg(test)]
 mod service_unit_tests {
     use mcp_context_browser::adapters::providers::{
-        InMemoryVectorStoreProvider, MockEmbeddingProvider,
+        InMemoryVectorStoreProvider, NullEmbeddingProvider,
     };
     use mcp_context_browser::application::ContextService;
     use std::sync::Arc;
 
     #[tokio::test]
     async fn test_context_service_creation() {
-        let embedding_provider = Arc::new(MockEmbeddingProvider::new());
+        let embedding_provider = Arc::new(NullEmbeddingProvider::new());
         let vector_store = Arc::new(InMemoryVectorStoreProvider::new());
         let (sender, receiver) = tokio::sync::mpsc::channel(100);
         tokio::spawn(async move {
@@ -342,7 +342,8 @@ mod service_unit_tests {
         let hybrid_search = Arc::new(mcp_context_browser::adapters::HybridSearchAdapter::new(
             sender,
         ));
-        let service = ContextService::new_with_providers(embedding_provider, vector_store, hybrid_search);
+        let service =
+            ContextService::new_with_providers(embedding_provider, vector_store, hybrid_search);
 
         // NullEmbeddingProvider returns dimension=1 for minimal test vectors
         assert_eq!(service.embedding_dimensions(), 1);
@@ -350,7 +351,7 @@ mod service_unit_tests {
 
     #[tokio::test]
     async fn test_context_service_embed_text() -> Result<(), Box<dyn std::error::Error>> {
-        let embedding_provider = Arc::new(MockEmbeddingProvider::new());
+        let embedding_provider = Arc::new(NullEmbeddingProvider::new());
         let vector_store = Arc::new(InMemoryVectorStoreProvider::new());
         let (sender, receiver) = tokio::sync::mpsc::channel(100);
         tokio::spawn(async move {
@@ -371,7 +372,8 @@ mod service_unit_tests {
         let hybrid_search = Arc::new(mcp_context_browser::adapters::HybridSearchAdapter::new(
             sender,
         ));
-        let service = ContextService::new_with_providers(embedding_provider, vector_store, hybrid_search);
+        let service =
+            ContextService::new_with_providers(embedding_provider, vector_store, hybrid_search);
 
         let embedding = service.embed_text("test query").await?;
         // NullEmbeddingProvider returns dimension=1 for minimal test vectors
@@ -455,13 +457,13 @@ mod utility_unit_tests {
 /// Performance tests with timing assertions
 #[cfg(test)]
 mod performance_unit_tests {
-    use mcp_context_browser::adapters::providers::MockEmbeddingProvider;
+    use mcp_context_browser::adapters::providers::NullEmbeddingProvider;
     use mcp_context_browser::domain::ports::EmbeddingProvider;
     use std::time::Instant;
 
     #[tokio::test]
     async fn test_embedding_completes_within_timeout() {
-        let provider = MockEmbeddingProvider::new();
+        let provider = NullEmbeddingProvider::new();
         let start = Instant::now();
 
         let result = provider.embed("test text").await;
@@ -478,7 +480,7 @@ mod performance_unit_tests {
 
     #[tokio::test]
     async fn test_batch_embedding_scales_linearly() {
-        let provider = MockEmbeddingProvider::new();
+        let provider = NullEmbeddingProvider::new();
 
         // Time single embedding
         let start = Instant::now();

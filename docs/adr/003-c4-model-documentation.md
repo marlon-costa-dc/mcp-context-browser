@@ -2,7 +2,11 @@
 
 ## Status
 
-Accepted
+**Implemented** (v0.1.0)
+
+> C4 model documentation structure in place with 3 PlantUML diagrams in `docs/diagrams/`:
+> system-context.puml, container-architecture.puml, c4-template.puml.
+> Structured Markdown documentation with ADR-driven architecture decisions.
 
 ## Context
 

@@ -13,7 +13,7 @@ documentation = "https://docs.rs/mcp-context-browser"
 homepage = "https://github.com/marlonsc/mcp-context-browser"
 
 [features]
-default = ["fastembed", "filesystem-store", "milvus"]
+default = ["fastembed", "filesystem-store", "milvus", "argon2"]
 
 # NOTE: Feature flags currently serve as capability markers for documentation/selection.
 # Dependencies are always compiled; conditional compilation (#[cfg(feature)]) not yet implemented.
@@ -30,8 +30,11 @@ edgevec = []  # EdgeVec in-memory store (always compiled)
 # Optional infrastructure
 redis-cache = []  # Redis distributed caching (always compiled)
 
+# Authentication
+argon2 = []  # Argon2id password hashing (NIST recommended, default)
+
 # Full feature set for development/testing
-full = ["fastembed", "filesystem-store", "milvus", "edgevec", "redis-cache"]
+full = ["fastembed", "filesystem-store", "milvus", "edgevec", "redis-cache", "argon2"]
 
 [dependencies]
 # Core async runtime
@@ -96,6 +99,7 @@ shellexpand = "3.1"
 # Authentication
 jsonwebtoken = { version = "10.2", features = ["rust_crypto"] }
 bcrypt = "0.18"
+argon2 = "0.5"
 base64 = "0.22"
 flate2 = "1.0"
 tar = "0.4"

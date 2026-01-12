@@ -441,10 +441,18 @@ pub async fn get_dashboard_metrics_handler(
     let active_providers = providers.iter().filter(|p| p.status == "available").count();
 
     // Get real system metrics
-    let cpu = state.mcp_server.system_collector.collect_cpu_metrics().await
+    let cpu = state
+        .mcp_server
+        .system_collector
+        .collect_cpu_metrics()
+        .await
         .map(|m| m.usage)
         .unwrap_or(0.0);
-    let memory = state.mcp_server.system_collector.collect_memory_metrics().await
+    let memory = state
+        .mcp_server
+        .system_collector
+        .collect_memory_metrics()
+        .await
         .map(|m| m.usage_percent)
         .unwrap_or(0.0);
 
@@ -758,4 +766,92 @@ pub async fn search_handler(
         Ok(results) => Ok(Json(ApiResponse::success(results))),
         Err(e) => Ok(Json(ApiResponse::error(format!("Search failed: {}", e)))),
     }
+}
+
+// === Subsystem Control Handlers (ADR-007) ===
+
+/// Get all subsystems and their status
+pub async fn get_subsystems_handler(
+    State(state): State<AdminState>,
+) -> Result<Json<ApiResponse<Vec<crate::admin::service::SubsystemInfo>>>, StatusCode> {
+    let subsystems = state
+        .admin_service
+        .get_subsystems()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(ApiResponse::success(subsystems)))
+}
+
+/// Request body for sending signals to subsystems
+#[derive(Deserialize)]
+pub struct SubsystemSignalRequest {
+    pub signal: crate::admin::service::SubsystemSignal,
+}
+
+/// Send a control signal to a subsystem
+pub async fn send_subsystem_signal_handler(
+    State(state): State<AdminState>,
+    Path(subsystem_id): Path<String>,
+    Json(request): Json<SubsystemSignalRequest>,
+) -> Result<Json<ApiResponse<crate::admin::service::SignalResult>>, StatusCode> {
+    let result = state
+        .admin_service
+        .send_subsystem_signal(&subsystem_id, request.signal)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(ApiResponse::success(result)))
+}
+
+/// Get all registered HTTP routes
+pub async fn get_routes_handler(
+    State(state): State<AdminState>,
+) -> Result<Json<ApiResponse<Vec<crate::admin::service::RouteInfo>>>, StatusCode> {
+    let routes = state
+        .admin_service
+        .get_routes()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(ApiResponse::success(routes)))
+}
+
+/// Reload router configuration
+pub async fn reload_routes_handler(
+    State(state): State<AdminState>,
+) -> Result<Json<ApiResponse<crate::admin::service::MaintenanceResult>>, StatusCode> {
+    let result = state
+        .admin_service
+        .reload_routes()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(ApiResponse::success(result)))
+}
+
+/// Persist current runtime configuration to file
+pub async fn persist_configuration_handler(
+    State(state): State<AdminState>,
+) -> Result<Json<ApiResponse<crate::admin::service::ConfigPersistResult>>, StatusCode> {
+    let result = state
+        .admin_service
+        .persist_configuration()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(ApiResponse::success(result)))
+}
+
+/// Get difference between runtime and file configuration
+pub async fn get_config_diff_handler(
+    State(state): State<AdminState>,
+) -> Result<Json<ApiResponse<crate::admin::service::ConfigDiff>>, StatusCode> {
+    let diff = state
+        .admin_service
+        .get_config_diff()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(ApiResponse::success(diff)))
 }

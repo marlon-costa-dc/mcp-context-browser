@@ -32,24 +32,24 @@ This document provides an overview of the public API surface of the MCP Context 
 
 ### Data Structures
 
-- NodeExtractionRule 
-- LanguageConfig 
-- NodeExtractionRuleBuilder 
+- NodeExtractionRule
+- LanguageConfig
+- NodeExtractionRuleBuilder
 - IntelligentChunker;
-- GenericFallbackChunker<'a> 
-- RustProcessor 
+- GenericFallbackChunker<'a>
+- RustProcessor
 - ".to_string(),
-- PythonProcessor 
-- JavaScriptProcessor 
-- JavaProcessor 
+- PythonProcessor
+- JavaScriptProcessor
+- JavaProcessor
 
 ### Enums
 
-- McpError 
-- CompatibilityResult 
-- SessionState 
-- SessionError 
-- TransportMode 
+- McpError
+- CompatibilityResult
+- SessionState
+- SessionError
+- TransportMode
 
 ## API Stability
 

@@ -7,13 +7,13 @@ MCP server for semantic code search using vector embeddings. **v0.1.0 production
 ```bash
 # Development
 make build          # Compile
-make test           # Run 549+ tests
+make test           # Run 830+ tests
 make lint           # Clippy
 make fmt            # Format
 make quality        # Full check (fmt + lint + test + audit)
 
 # Git (ALWAYS use make, never raw git)
-make git-force-all  # Add + commit + push
+make sync           # Add + commit + push
 
 # Release
 make release        # test + build-release + package
@@ -30,7 +30,7 @@ Use `make` commands, never raw Cargo/git:
 | `cargo test` | `make test` |
 | `cargo build` | `make build` |
 | `cargo clippy` | `make lint` |
-| `git commit` | `make git-force-all` |
+| `git commit` | `make sync` or `make commit` |
 
 ### Code Standards
 
@@ -64,7 +64,7 @@ src/
 ├── adapters/       # Infrastructure implementations (providers, db, repositories)
 ├── infrastructure/ # Shared systems (cache, auth, config, metrics, events)
 ├── server/         # MCP protocol implementation
-├── chunking/       # Code chunking logic (14 language processors)
+├── chunking/       # Code chunking logic (12 languages processors)
 ├── daemon/         # Background processes
 ├── snapshot/       # Snapshot management
 └── sync/           # Codebase synchronization
@@ -108,23 +108,32 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 **First stable release** - Drop-in replacement for claude-context:
 
-- 14 programming languages with AST parsing
-- 6 embedding providers
-- 6 vector stores
-- 549+ tests
+- 12 languages with AST parsing (Rust, Python, JS/TS, Go, Java, C, C++, C#, Ruby, PHP, Swift, Kotlin)
+- 6 embedding providers (OpenAI, VoyageAI, Ollama, Gemini, FastEmbed, Null)
+- 6 vector stores (Milvus, EdgeVec, In-Memory, Filesystem, Encrypted, Null)
+- 493 tests (100% pass rate, 2 ignored)
 - HTTP transport foundation
 - Systemd integration
 
 ## Next Version: v0.2.0 (Planned)
 
-**Git-Aware Semantic Indexing** - See [ADR-008](docs/adr/008-git-aware-semantic-indexing-v0.2.0.md):
+**Git-Aware Indexing + Persistent Session Memory**:
 
+**Git Integration** - See [ADR-008](docs/adr/008-git-aware-semantic-indexing-v0.2.0.md):
 - Project-relative indexing (portable)
 - Multi-branch indexing
 - Commit history search
 - Submodule support
 - Monorepo detection
 - Impact analysis
+
+**Session Memory** - See [ADR-009](docs/adr/009-persistent-session-memory-v0.2.0.md):
+- Cross-session observation storage
+- Session summaries and tracking
+- Hybrid search (BM25 + vector)
+- Progressive disclosure (3-layer workflow)
+- Context injection for SessionStart hooks
+- Git-tagged memory entries
 
 ## Troubleshooting
 

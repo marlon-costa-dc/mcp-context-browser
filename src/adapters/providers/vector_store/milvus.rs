@@ -32,13 +32,12 @@ impl MilvusVectorStoreProvider {
         _token: Option<String>,
         timeout_secs: Option<u64>,
     ) -> Result<Self> {
-        // Extract host and port from URL for Milvus client
-        let endpoint = if let Some(stripped) = address.strip_prefix("http://") {
-            stripped.to_string()
-        } else if let Some(stripped) = address.strip_prefix("https://") {
-            stripped.to_string()
-        } else {
+        // Ensure the address has a scheme (required by tonic transport)
+        // The Milvus SDK expects a full URI like "http://localhost:19530"
+        let endpoint = if address.starts_with("http://") || address.starts_with("https://") {
             address
+        } else {
+            format!("http://{}", address)
         };
 
         let timeout = timeout_secs.unwrap_or(DEFAULT_TIMEOUT_SECS);
@@ -406,11 +405,11 @@ impl VectorStoreProvider for MilvusVectorStoreProvider {
         use milvus::query::QueryOptions;
         let mut query_options = QueryOptions::new();
         query_options = query_options.output_fields(vec![
-                "id".to_string(),
-                "file_path".to_string(),
-                "start_line".to_string(),
-                "content".to_string(),
-            ]);
+            "id".to_string(),
+            "file_path".to_string(),
+            "start_line".to_string(),
+            "content".to_string(),
+        ]);
 
         let query_results = self
             .client
@@ -420,7 +419,7 @@ impl VectorStoreProvider for MilvusVectorStoreProvider {
 
         // Convert results to our format
         let mut results = Vec::new();
-        
+
         // Map columns by name
         let mut columns_map = HashMap::new();
         for column in &query_results {
@@ -504,13 +503,12 @@ impl VectorStoreProvider for MilvusVectorStoreProvider {
         let expr = "id >= 0".to_string();
         use milvus::query::QueryOptions;
         let mut query_options = QueryOptions::new();
-        query_options = query_options.limit(limit as i64)
-            .output_fields(vec![
-                "id".to_string(),
-                "file_path".to_string(),
-                "start_line".to_string(),
-                "content".to_string(),
-            ]);
+        query_options = query_options.limit(limit as i64).output_fields(vec![
+            "id".to_string(),
+            "file_path".to_string(),
+            "start_line".to_string(),
+            "content".to_string(),
+        ]);
 
         let query_results = self
             .client
@@ -520,7 +518,7 @@ impl VectorStoreProvider for MilvusVectorStoreProvider {
 
         // Convert results to our format
         let mut results = Vec::new();
-        
+
         // Map columns by name
         let mut columns_map = HashMap::new();
         for column in &query_results {

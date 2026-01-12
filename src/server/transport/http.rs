@@ -16,14 +16,16 @@ use serde::Serialize;
 use std::sync::Arc;
 use tracing::{debug, info};
 
-use super::config::TransportConfig;
 use super::super::McpServer;
+use super::config::TransportConfig;
 use super::session::{SessionManager, SessionState};
 use super::versioning::{headers, CompatibilityResult, VersionChecker};
 use crate::infrastructure::connection_tracker::ConnectionTracker;
-use rmcp::ServerHandler;
-use crate::server::args::{IndexCodebaseArgs, SearchCodeArgs, GetIndexingStatusArgs, ClearIndexArgs};
+use crate::server::args::{
+    ClearIndexArgs, GetIndexingStatusArgs, IndexCodebaseArgs, SearchCodeArgs,
+};
 use rmcp::handler::server::wrapper::Parameters;
+use rmcp::ServerHandler;
 
 /// HTTP transport state shared across handlers
 #[derive(Clone)]
@@ -131,8 +133,13 @@ async fn handle_mcp_get(
         return Err(McpError::SessionTerminated);
     }
 
-    // Return current buffered messages as a stream (SSE)
-    Ok((StatusCode::OK, "SSE streaming not fully implemented").into_response())
+    // SSE streaming for server-to-client messages
+    // TODO: Implement proper Server-Sent Events streaming
+    // For now, return 501 Not Implemented instead of misleading 200 OK
+    Err(McpError::NotImplemented(
+        "SSE streaming not yet implemented. Use POST for request-response communication."
+            .to_string(),
+    ))
 }
 
 /// Handle DELETE requests (session termination)
@@ -188,14 +195,19 @@ fn check_version_compatibility(
     state: &HttpTransportState,
     headers: &HeaderMap,
 ) -> Result<(), McpError> {
-    if let Some(expected) = headers.get(headers::EXPECTED_SERVER_VERSION).and_then(|v| v.to_str().ok()) {
+    if let Some(expected) = headers
+        .get(headers::EXPECTED_SERVER_VERSION)
+        .and_then(|v| v.to_str().ok())
+    {
         match state.version_checker.check_compatibility(expected) {
             CompatibilityResult::Compatible => Ok(()),
             CompatibilityResult::Warning { message } => {
                 debug!("Version warning: {}", message);
                 Ok(())
             }
-            CompatibilityResult::Incompatible { message } => Err(McpError::VersionIncompatible(message)),
+            CompatibilityResult::Incompatible { message } => {
+                Err(McpError::VersionIncompatible(message))
+            }
         }
     } else {
         Ok(())
@@ -274,69 +286,87 @@ async fn process_mcp_request(
                 }
             }))
         }
-        "tools/list" => {
-            Ok(serde_json::json!({
-                "jsonrpc": "2.0",
-                "id": id,
-                "result": {
-                    "tools": [
-                        {
-                            "name": "index_codebase",
-                            "description": "Index a codebase for semantic search",
-                            "inputSchema": {}
-                        },
-                        {
-                            "name": "search_code",
-                            "description": "Search for code using natural language",
-                            "inputSchema": {}
-                        },
-                        {
-                            "name": "get_indexing_status",
-                            "description": "Get current indexing status",
-                            "inputSchema": {}
-                        },
-                        {
-                            "name": "clear_index",
-                            "description": "Clear the search index",
-                            "inputSchema": {}
-                        }
-                    ]
-                }
-            }))
-        }
+        "tools/list" => Ok(serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": id,
+            "result": {
+                "tools": [
+                    {
+                        "name": "index_codebase",
+                        "description": "Index a codebase for semantic search",
+                        "inputSchema": {}
+                    },
+                    {
+                        "name": "search_code",
+                        "description": "Search for code using natural language",
+                        "inputSchema": {}
+                    },
+                    {
+                        "name": "get_indexing_status",
+                        "description": "Get current indexing status",
+                        "inputSchema": {}
+                    },
+                    {
+                        "name": "clear_index",
+                        "description": "Clear the search index",
+                        "inputSchema": {}
+                    }
+                ]
+            }
+        })),
         "tools/call" => {
             let params_val = request
                 .get("params")
                 .ok_or_else(|| McpError::InvalidRequest("Missing params".to_string()))?;
 
-            let tool_name = params_val.get("name").and_then(|v| v.as_str())
+            let tool_name = params_val
+                .get("name")
+                .and_then(|v| v.as_str())
                 .ok_or_else(|| McpError::InvalidRequest("Missing tool name".to_string()))?;
 
-            let arguments = params_val.get("arguments").cloned().unwrap_or(serde_json::Value::Object(Default::default()));
+            let arguments = params_val
+                .get("arguments")
+                .cloned()
+                .unwrap_or(serde_json::Value::Object(Default::default()));
 
             let result = match tool_name {
                 "index_codebase" => {
-                    let args: IndexCodebaseArgs = serde_json::from_value(arguments)
-                        .map_err(|e| McpError::InvalidRequest(format!("Invalid arguments: {}", e)))?;
+                    let args: IndexCodebaseArgs =
+                        serde_json::from_value(arguments).map_err(|e| {
+                            McpError::InvalidRequest(format!("Invalid arguments: {}", e))
+                        })?;
                     state.server.index_codebase(Parameters(args)).await
                 }
                 "search_code" => {
-                    let args: SearchCodeArgs = serde_json::from_value(arguments)
-                        .map_err(|e| McpError::InvalidRequest(format!("Invalid arguments: {}", e)))?;
+                    let args: SearchCodeArgs = serde_json::from_value(arguments).map_err(|e| {
+                        McpError::InvalidRequest(format!("Invalid arguments: {}", e))
+                    })?;
                     state.server.search_code(Parameters(args)).await
                 }
                 "get_indexing_status" => {
-                    let args: GetIndexingStatusArgs = serde_json::from_value(arguments)
-                        .map_err(|e| McpError::InvalidRequest(format!("Invalid arguments: {}", e)))?;
-                    state.server.get_indexing_status_tool(Parameters(args)).await
+                    let args: GetIndexingStatusArgs =
+                        serde_json::from_value(arguments).map_err(|e| {
+                            McpError::InvalidRequest(format!("Invalid arguments: {}", e))
+                        })?;
+                    state
+                        .server
+                        .get_indexing_status_tool(Parameters(args))
+                        .await
                 }
                 "clear_index" => {
-                    let args: ClearIndexArgs = serde_json::from_value(arguments)
-                        .map_err(|e| McpError::InvalidRequest(format!("Invalid arguments: {}", e)))?;
+                    let args: ClearIndexArgs = serde_json::from_value(arguments).map_err(|e| {
+                        McpError::InvalidRequest(format!("Invalid arguments: {}", e))
+                    })?;
                     state.server.clear_index(Parameters(args)).await
                 }
-                _ => return Err(McpError::InvalidRequest(format!("Unknown tool: {}", tool_name))),
-            }.map_err(|e| McpError::InternalError(e.to_string()))?;
+                _ => {
+                    return Err(McpError::InvalidRequest(format!(
+                        "Unknown tool: {}",
+                        tool_name
+                    )))
+                }
+            }
+            .map_err(|e| McpError::InternalError(e.to_string()))?;
 
             Ok(serde_json::json!({
                 "jsonrpc": "2.0",
@@ -344,16 +374,14 @@ async fn process_mcp_request(
                 "result": result
             }))
         }
-        _ => {
-            Ok(serde_json::json!({
-                "jsonrpc": "2.0",
-                "id": id,
-                "error": {
-                    "code": -32601,
-                    "message": format!("Method not found: {}", method)
-                }
-            }))
-        }
+        _ => Ok(serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": id,
+            "error": {
+                "code": -32601,
+                "message": format!("Method not found: {}", method)
+            }
+        })),
     }
 }
 
@@ -389,20 +417,33 @@ pub enum McpError {
     ProcessingError(String),
     InvalidRequest(String),
     InternalError(String),
+    NotImplemented(String),
 }
 
 impl IntoResponse for McpError {
     fn into_response(self) -> Response {
         let (status, message): (StatusCode, String) = match &self {
-            McpError::MissingSessionId => (StatusCode::BAD_REQUEST, "Missing Mcp-Session-Id header".to_string()),
-            McpError::SessionNotFound => (StatusCode::NOT_FOUND, "Session not found or expired".to_string()),
-            McpError::SessionTerminated => (StatusCode::GONE, "Session has been terminated".to_string()),
+            McpError::MissingSessionId => (
+                StatusCode::BAD_REQUEST,
+                "Missing Mcp-Session-Id header".to_string(),
+            ),
+            McpError::SessionNotFound => (
+                StatusCode::NOT_FOUND,
+                "Session not found or expired".to_string(),
+            ),
+            McpError::SessionTerminated => {
+                (StatusCode::GONE, "Session has been terminated".to_string())
+            }
             McpError::SessionError(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg.clone()),
-            McpError::ServerDraining => (StatusCode::SERVICE_UNAVAILABLE, "Server is shutting down".to_string()),
+            McpError::ServerDraining => (
+                StatusCode::SERVICE_UNAVAILABLE,
+                "Server is shutting down".to_string(),
+            ),
             McpError::VersionIncompatible(msg) => (StatusCode::BAD_REQUEST, msg.clone()),
             McpError::ProcessingError(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg.clone()),
             McpError::InvalidRequest(msg) => (StatusCode::BAD_REQUEST, msg.clone()),
             McpError::InternalError(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg.clone()),
+            McpError::NotImplemented(msg) => (StatusCode::NOT_IMPLEMENTED, msg.clone()),
         };
 
         let body = serde_json::json!({

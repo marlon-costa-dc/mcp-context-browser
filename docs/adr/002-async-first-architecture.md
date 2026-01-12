@@ -2,7 +2,10 @@
 
 ## Status
 
-Accepted
+**Implemented** (v0.1.0)
+
+> Fully implemented with Tokio async runtime. 480+ async functions across the codebase.
+> All provider interfaces use async traits. Structured concurrency with tokio::spawn and channels.
 
 ## Context
 

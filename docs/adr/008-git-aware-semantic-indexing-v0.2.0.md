@@ -2,7 +2,13 @@
 
 ## Status
 
-Proposed
+**Proposed** (Planned for v0.2.0)
+
+> Not yet implemented. Key dependencies:
+> - git2 crate not in Cargo.toml
+> - No src/domain/git.rs or src/adapters/providers/git/
+> - No GitProvider trait or implementation
+> - Blocking: Requires git2 dependency and new module structure
 
 ## Context
 

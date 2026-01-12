@@ -71,8 +71,8 @@ validate_adr() {
     local adr_file="$1"
     local filename=$(basename "$adr_file")
 
-    # Skip if not an ADR file
-    if [[ ! "$filename" =~ ^[0-9]+\.md$ ]]; then
+    # Skip if not an ADR file (format: NNN-title.md)
+    if [[ ! "$filename" =~ ^[0-9]{3}-.*\.md$ ]]; then
         return 0
     fi
 
@@ -89,10 +89,9 @@ validate_adr() {
         fi
     done
 
-    # Check status values
-    local status_line=$(grep "^## Status" "$adr_file" | head -1)
-    if [[ -n "$status_line" ]]; then
-        local status_value=$(echo "$status_line" | sed 's/## Status//' | tr -d '\n\r' | sed 's/^[[:space:]]*//')
+    # Check status values (status is on the line after "## Status")
+    local status_value=$(grep -A1 "^## Status" "$adr_file" | tail -1 | tr -d '\n\r' | sed 's/^[[:space:]]*//')
+    if [[ -n "$status_value" ]]; then
         local valid_statuses=("Proposed" "Accepted" "Rejected" "Deprecated" "Superseded by ADR-")
 
         local is_valid=false
@@ -145,7 +144,7 @@ validate_structure() {
     # Validate ADR files
     if [ -d "$PROJECT_ROOT/docs/adr" ]; then
         for adr_file in "$PROJECT_ROOT/docs/adr"/*.md; do
-            if [ -f "$adr_file" ]; then
+            if [ -f "$adr_file" ] && [[ "$(basename "$adr_file")" != "README.md" ]] && [[ "$(basename "$adr_file")" != "adr-graph.md" ]]; then
                 validate_adr "$adr_file"
             fi
         done
@@ -166,7 +165,7 @@ validate_permissions() {
     log_info "Validating file permissions..."
 
     # Check script permissions
-    local scripts=("generate-diagrams.sh" "validate-structure.sh" "validate-links.sh" "check-sync.sh" "validate-adrs.sh" "create-adr.sh" "generate-index.sh")
+    local scripts=("generate-diagrams.sh" "validate-structure.sh" "validate-links.sh" "validate-adrs.sh" "create-adr.sh" "mdbook-sync.sh" "markdown.sh")
 
     for script in "${scripts[@]}"; do
         local script_path="$SCRIPT_DIR/$script"

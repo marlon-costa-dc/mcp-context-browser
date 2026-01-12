@@ -10,6 +10,6 @@ pub mod search_repository;
 pub use chunk_repository::VectorStoreChunkRepository;
 pub use search_repository::VectorStoreSearchRepository;
 
-// Re-export domain types for backward compatibility and convenience
-pub use crate::domain::types::{RepositoryStats, SearchStats};
+// Re-export domain types for convenience
 pub use crate::domain::ports::repository::{ChunkRepository, SearchRepository};
+pub use crate::domain::types::{RepositoryStats, SearchStats};

@@ -14,7 +14,7 @@ use std::sync::Arc;
 mod generic_context_service_tests {
     use super::*;
     use mcp_context_browser::adapters::providers::{
-        InMemoryVectorStoreProvider, MockEmbeddingProvider,
+        InMemoryVectorStoreProvider, NullEmbeddingProvider,
     };
 
     use mcp_context_browser::domain::ports::HybridSearchProvider;
@@ -29,7 +29,7 @@ mod generic_context_service_tests {
     #[test]
     fn test_generic_context_service_creation() {
         // Create concrete provider instances
-        let embedding_provider = Arc::new(MockEmbeddingProvider::new());
+        let embedding_provider = Arc::new(NullEmbeddingProvider::new());
         let vector_store_provider = Arc::new(InMemoryVectorStoreProvider::new());
 
         // Create generic context service with compile-time strategy types
@@ -44,7 +44,7 @@ mod generic_context_service_tests {
 
     #[test]
     fn test_generic_context_service_operations() -> Result<(), Box<dyn std::error::Error>> {
-        let embedding_provider = Arc::new(MockEmbeddingProvider::new());
+        let embedding_provider = Arc::new(NullEmbeddingProvider::new());
         let vector_store_provider = Arc::new(InMemoryVectorStoreProvider::new());
 
         let context_service = ContextService::new_with_providers(
@@ -69,7 +69,7 @@ mod generic_context_service_tests {
         // This test would verify that the same generic service can work with different provider types
         // For now, we just test with the same providers but the structure allows for different concrete types
 
-        let embedding_provider = Arc::new(MockEmbeddingProvider::new());
+        let embedding_provider = Arc::new(NullEmbeddingProvider::new());
         let vector_store_provider = Arc::new(InMemoryVectorStoreProvider::new());
 
         let context_service = ContextService::new_with_providers(
@@ -94,7 +94,7 @@ mod strategy_pattern_tests {
         fn accepts_embedding_provider<E: EmbeddingProvider>(_provider: Arc<E>) {}
         fn accepts_vector_store_provider<V: VectorStoreProvider>(_provider: Arc<V>) {}
 
-        let embedding_provider = Arc::new(MockEmbeddingProvider::new());
+        let embedding_provider = Arc::new(NullEmbeddingProvider::new());
         let vector_store_provider = Arc::new(InMemoryVectorStoreProvider::new());
 
         // These should compile without trait bound errors
@@ -105,7 +105,7 @@ mod strategy_pattern_tests {
     #[test]
     fn test_provider_strategy_composition() {
         // Test that we can compose different strategies at compile time
-        let embedding_provider = Arc::new(MockEmbeddingProvider::new());
+        let embedding_provider = Arc::new(NullEmbeddingProvider::new());
         let vector_store_provider = Arc::new(InMemoryVectorStoreProvider::new());
 
         // Create a service that composes these strategies
@@ -126,7 +126,7 @@ mod strategy_pattern_tests {
         // 2. No dynamic dispatch overhead for core operations
         // 3. Better optimization opportunities
 
-        let embedding_provider = Arc::new(MockEmbeddingProvider::new());
+        let embedding_provider = Arc::new(NullEmbeddingProvider::new());
         let vector_store_provider = Arc::new(InMemoryVectorStoreProvider::new());
 
         let service = ContextService::new_with_providers(
@@ -180,7 +180,7 @@ mod integration_tests {
         // 3. Use the service for operations
         // 4. Verify results
 
-        let embedding_provider = Arc::new(MockEmbeddingProvider::new());
+        let embedding_provider = Arc::new(NullEmbeddingProvider::new());
         let vector_store_provider = Arc::new(InMemoryVectorStoreProvider::new());
 
         let context_service = ContextService::new_with_providers(
@@ -205,7 +205,7 @@ mod integration_tests {
         // Test that strategy pattern provides expected performance characteristics
         // (compile-time resolution, no dynamic dispatch for core paths)
 
-        let embedding_provider = Arc::new(MockEmbeddingProvider::new());
+        let embedding_provider = Arc::new(NullEmbeddingProvider::new());
         let vector_store_provider = Arc::new(InMemoryVectorStoreProvider::new());
 
         let service = ContextService::new_with_providers(

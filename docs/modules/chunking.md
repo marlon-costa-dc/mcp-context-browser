@@ -1,8 +1,8 @@
 # chunking Module
 
 **Source**: `src/chunking/`
-**Files**: 7
-**Lines of Code**: 1242
+**Files**: 18
+**Lines of Code**: 1518
 **Traits**: 1
 **Structs**: 7
 **Enums**: 0
@@ -10,14 +10,11 @@
 
 ## Overview
 
-Intelligent code chunking using tree-sitter for structural parsing
-//!
-Provides language-aware chunking that respects code structure rather than
-naive line-based or character-based splitting.
+
 
 ## Key Exports
 
-`config::{LanguageConfig, NodeExtractionRule, NodeExtractionRuleBuilder},engine::IntelligentChunker,processor::LanguageProcessor,languages::*,`
+``
 
 ## File Structure
 
@@ -25,12 +22,23 @@ naive line-based or character-based splitting.
 config.rs
 engine.rs
 fallback.rs
-languages/mod.rs
-mod.rs
+languages/rust.rs
+languages/python.rs
+languages/javascript.rs
+languages/java.rs
+languages/go.rs
+languages/c.rs
+languages/cpp.rs
+languages/csharp.rs
+languages/ruby.rs
+languages/php.rs
+languages/swift.rs
+languages/kotlin.rs
 processor.rs
 traverser.rs
+languages.rs
 ```
 
 ---
 
-*Auto-generated from source code on qua 07 jan 2026 18:27:27 -03*
+*Auto-generated from source code on seg 12 jan 2026 11:25:13 -03*

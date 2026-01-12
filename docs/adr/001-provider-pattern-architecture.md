@@ -2,7 +2,11 @@
 
 ## Status
 
-Accepted
+**Implemented** (v0.1.0)
+
+> Fully implemented with EmbeddingProvider and VectorStoreProvider traits in `src/domain/ports/`,
+> ProviderRegistry in `src/infrastructure/di/registry.rs`, and ServiceProvider factory pattern.
+> 6 embedding providers and 6 vector store providers implemented.
 
 ## Context
 

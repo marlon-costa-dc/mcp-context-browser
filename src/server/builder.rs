@@ -5,9 +5,9 @@ use crate::infrastructure::events::SharedEventBus;
 use crate::infrastructure::limits::ResourceLimits;
 use crate::infrastructure::logging::SharedLogBuffer;
 use crate::infrastructure::metrics::system::SystemMetricsCollectorInterface;
-use crate::server::mcp_server::{
-    IndexingOperationsInterface, McpServer, PerformanceMetricsInterface,
-};
+use crate::server::mcp_server::McpServer;
+use crate::server::metrics::{McpPerformanceMetrics, PerformanceMetricsInterface};
+use crate::server::operations::{IndexingOperationsInterface, McpIndexingOperations};
 use arc_swap::ArcSwap;
 use std::sync::Arc;
 
@@ -109,13 +109,13 @@ impl McpServerBuilder {
             .log_buffer
             .unwrap_or_else(|| crate::infrastructure::logging::create_shared_log_buffer(1000));
 
-        let performance_metrics = self.performance_metrics.unwrap_or_else(|| {
-            Arc::new(crate::server::mcp_server::McpPerformanceMetrics::default())
-        });
+        let performance_metrics = self
+            .performance_metrics
+            .unwrap_or_else(|| Arc::new(McpPerformanceMetrics::default()));
 
-        let indexing_operations = self.indexing_operations.unwrap_or_else(|| {
-            Arc::new(crate::server::mcp_server::McpIndexingOperations::default())
-        });
+        let indexing_operations = self
+            .indexing_operations
+            .unwrap_or_else(|| Arc::new(McpIndexingOperations::default()));
 
         let service_provider = self.service_provider.unwrap_or_else(|| {
             Arc::new(crate::infrastructure::di::factory::ServiceProvider::new())

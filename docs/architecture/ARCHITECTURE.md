@@ -1904,9 +1904,16 @@ impl BackupManager {
 
 **Upcoming Milestones**:
 
--   **v0.1.0**: Functional MCP tools with basic providers
--   **v0.2.0**: Enhanced providers and storage backends
--   **v0.3.0**: Advanced file processing and incremental indexing
+-   ✅ **v0.1.0**: First stable release - drop-in replacement for claude-context
+-   🚧 **v0.2.0**: Git-aware indexing + persistent session memory ([ADR-008](../adr/008-git-aware-semantic-indexing-v0.2.0.md), [ADR-009](../adr/009-persistent-session-memory-v0.2.0.md))
+    - Repository-aware indexing with git2
+    - Multi-branch and commit history search
+    - Cross-session memory with SQLite storage
+    - Hybrid search for observations and decisions
+-   📋 **v0.3.0**: Advanced code intelligence
+    - Symbol extraction and cross-referencing
+    - Call graph analysis
+    - Dependency impact mapping
 
 ### Phase 3: Enterprise Features (Planned 📋)
 
