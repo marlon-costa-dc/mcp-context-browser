@@ -26,7 +26,7 @@ use rmcp::ServiceExt;
 use std::sync::Arc;
 use tracing_subscriber::{self, EnvFilter};
 
-use crate::infrastructure::events::create_shared_event_bus;
+use crate::infrastructure::events::{create_event_bus, EventBusConfig};
 use crate::infrastructure::logging::{create_shared_log_buffer, RingBufferLayer};
 use crate::server::McpServerBuilder;
 use tracing_subscriber::prelude::*;
@@ -87,7 +87,10 @@ async fn initialize_server_components(
         .await
         .map_err(|e| format!("Failed to load configuration: {}", e))?;
 
-    let event_bus = create_shared_event_bus();
+    let event_bus_config = EventBusConfig::from_env();
+    let event_bus = create_event_bus(&event_bus_config)
+        .await
+        .map_err(|e| format!("Failed to create event bus: {}", e))?;
 
     // Initialize resource limits
     let resource_limits = Arc::new(crate::infrastructure::limits::ResourceLimits::new(
