@@ -75,8 +75,8 @@ mod tests {
         );
 
         // Verify service is properly initialized with expected embedding dimensions
-        // NullEmbeddingProvider returns dimension=1
-        assert_eq!(service.embedding_dimensions(), 1);
+        // NullEmbeddingProvider returns 384-dimensional vectors
+        assert_eq!(service.embedding_dimensions(), 384);
     }
 
     #[tokio::test]
@@ -93,11 +93,19 @@ mod tests {
         let text = "fn main() { println!(\"Hello!\"); }";
         let result = service.embed_text(text).await;
 
-        assert!(result.is_ok());
+        assert!(result.is_ok(), "embed_text should succeed");
         let embedding = result?;
-        assert!(!embedding.vector.is_empty());
-        assert_eq!(embedding.model, "null");
-        assert_eq!(embedding.dimensions, embedding.vector.len());
+        assert!(
+            !embedding.vector.is_empty(),
+            "Embedding vector should not be empty"
+        );
+        assert_eq!(embedding.model, "null-test", "Model should be null-test");
+        assert_eq!(embedding.dimensions, 384, "Should return 384 dimensions");
+        assert_eq!(
+            embedding.vector.len(),
+            384,
+            "Vector length should match dimensions"
+        );
         Ok(())
     }
 

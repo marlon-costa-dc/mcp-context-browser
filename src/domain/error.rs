@@ -148,3 +148,11 @@ impl From<tera::Error> for Error {
         Self::Generic(Box::new(err))
     }
 }
+
+impl From<tokio::sync::broadcast::error::RecvError> for Error {
+    fn from(err: tokio::sync::broadcast::error::RecvError) -> Self {
+        Self::Internal {
+            message: format!("Event bus error: {}", err),
+        }
+    }
+}

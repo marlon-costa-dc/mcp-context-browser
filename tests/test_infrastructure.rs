@@ -3,25 +3,27 @@
 //! This module provides utilities to create real service instances
 //! with test-appropriate configurations instead of mocks.
 
-use std::sync::Arc;
 use arc_swap::ArcSwap;
+use std::sync::Arc;
 
-use mcp_context_browser::admin::service::{AdminServiceImpl, AdminService};
-use mcp_context_browser::application::search::SearchService;
-use mcp_context_browser::infrastructure::di::factory::{ServiceProvider, ServiceProviderInterface};
-use mcp_context_browser::infrastructure::config::Config;
-use mcp_context_browser::infrastructure::events::{EventBus, SharedEventBus};
-use mcp_context_browser::infrastructure::logging::SharedLogBuffer;
-use mcp_context_browser::infrastructure::metrics::system::{SystemMetricsCollector, SystemMetricsCollectorInterface};
-use mcp_context_browser::server::metrics::{McpPerformanceMetrics, PerformanceMetricsInterface};
-use mcp_context_browser::server::operations::{McpIndexingOperations, IndexingOperationsInterface};
 use mcp_context_browser::adapters::http_client::{HttpClientPool, HttpClientProvider};
+use mcp_context_browser::admin::service::{AdminService, AdminServiceImpl};
+use mcp_context_browser::application::search::SearchService;
+use mcp_context_browser::infrastructure::config::Config;
+use mcp_context_browser::infrastructure::di::factory::{ServiceProvider, ServiceProviderInterface};
+use mcp_context_browser::infrastructure::events::{EventBus, SharedEventBusProvider};
+use mcp_context_browser::infrastructure::logging::SharedLogBuffer;
+use mcp_context_browser::infrastructure::metrics::system::{
+    SystemMetricsCollector, SystemMetricsCollectorInterface,
+};
+use mcp_context_browser::server::metrics::{McpPerformanceMetrics, PerformanceMetricsInterface};
+use mcp_context_browser::server::operations::{IndexingOperationsInterface, McpIndexingOperations};
 
 /// Test infrastructure for setting up real services
 pub struct TestInfrastructure {
     pub admin_service: Arc<dyn AdminService>,
     pub config: Arc<ArcSwap<Config>>,
-    pub event_bus: SharedEventBus,
+    pub event_bus: SharedEventBusProvider,
     pub log_buffer: SharedLogBuffer,
     pub performance_metrics: Arc<dyn PerformanceMetricsInterface>,
     pub indexing_operations: Arc<dyn IndexingOperationsInterface>,
@@ -39,19 +41,24 @@ impl TestInfrastructure {
         let config_arc = Arc::new(ArcSwap::from_pointee(config));
 
         // Create shared components
-        let event_bus: SharedEventBus = Arc::new(EventBus::with_default_capacity());
-        let log_buffer = mcp_context_browser::infrastructure::logging::create_shared_log_buffer(1000);
+        let event_bus: SharedEventBusProvider = Arc::new(EventBus::with_default_capacity());
+        let log_buffer =
+            mcp_context_browser::infrastructure::logging::create_shared_log_buffer(1000);
 
         // Create service components
-        let performance_metrics: Arc<dyn PerformanceMetricsInterface> = Arc::new(McpPerformanceMetrics::default());
-        let indexing_operations: Arc<dyn IndexingOperationsInterface> = Arc::new(McpIndexingOperations::default());
+        let performance_metrics: Arc<dyn PerformanceMetricsInterface> =
+            Arc::new(McpPerformanceMetrics::default());
+        let indexing_operations: Arc<dyn IndexingOperationsInterface> =
+            Arc::new(McpIndexingOperations::default());
         let service_provider: Arc<dyn ServiceProviderInterface> = Arc::new(ServiceProvider::new());
-        let system_collector: Arc<dyn SystemMetricsCollectorInterface> = Arc::new(SystemMetricsCollector::new());
+        let system_collector: Arc<dyn SystemMetricsCollectorInterface> =
+            Arc::new(SystemMetricsCollector::new());
 
         // Create HTTP client
-        let http_client: Arc<dyn HttpClientProvider> = Arc::new(HttpClientPool::new().map_err(|e| {
-            Box::new(std::io::Error::new(std::io::ErrorKind::Other, e)) as Box<dyn std::error::Error>
-        })?);
+        let http_client: Arc<dyn HttpClientProvider> = Arc::new(
+            HttpClientPool::new()
+                .map_err(|e| Box::new(std::io::Error::other(e)) as Box<dyn std::error::Error>)?,
+        );
 
         // Create admin service with all dependencies
         let admin_service = Arc::new(AdminServiceImpl::new(
@@ -81,8 +88,8 @@ impl TestInfrastructure {
 
     /// Create a test configuration
     fn create_test_config() -> Config {
-        use mcp_context_browser::infrastructure::config::ProviderConfig;
         use mcp_context_browser::domain::types::{EmbeddingConfig, VectorStoreConfig};
+        use mcp_context_browser::infrastructure::config::ProviderConfig;
 
         Config {
             name: "Test MCP Context Browser".to_string(),
@@ -133,7 +140,8 @@ impl TestInfrastructure {
             max_tokens: Some(512),
         };
 
-        let embedding_provider = self.service_provider
+        let embedding_provider = self
+            .service_provider
             .get_embedding_provider(&embedding_config, Arc::clone(&self.http_client))
             .await?;
 
@@ -146,7 +154,8 @@ impl TestInfrastructure {
             timeout_secs: Some(10),
         };
 
-        let vector_store_provider = self.service_provider
+        let vector_store_provider = self
+            .service_provider
             .get_vector_store_provider(&vector_store_config)
             .await?;
 
@@ -154,7 +163,11 @@ impl TestInfrastructure {
         struct MockHybridSearchProvider;
         #[async_trait::async_trait]
         impl mcp_context_browser::domain::ports::HybridSearchProvider for MockHybridSearchProvider {
-            async fn index_chunks(&self, _collection: &str, _chunks: &[mcp_context_browser::domain::types::CodeChunk]) -> mcp_context_browser::domain::error::Result<()> {
+            async fn index_chunks(
+                &self,
+                _collection: &str,
+                _chunks: &[mcp_context_browser::domain::types::CodeChunk],
+            ) -> mcp_context_browser::domain::error::Result<()> {
                 Ok(())
             }
 
@@ -164,11 +177,16 @@ impl TestInfrastructure {
                 _query: &str,
                 _semantic_results: Vec<mcp_context_browser::domain::types::SearchResult>,
                 _limit: usize,
-            ) -> mcp_context_browser::domain::error::Result<Vec<mcp_context_browser::domain::types::SearchResult>> {
+            ) -> mcp_context_browser::domain::error::Result<
+                Vec<mcp_context_browser::domain::types::SearchResult>,
+            > {
                 Ok(vec![])
             }
 
-            async fn clear_collection(&self, _collection: &str) -> mcp_context_browser::domain::error::Result<()> {
+            async fn clear_collection(
+                &self,
+                _collection: &str,
+            ) -> mcp_context_browser::domain::error::Result<()> {
                 Ok(())
             }
 

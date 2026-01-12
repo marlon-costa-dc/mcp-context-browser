@@ -31,6 +31,6 @@ include make/Makefile.aliases.mk
 .PHONY: status commit push tag sync
 .PHONY: dev dev-metrics dev-sync setup
 .PHONY: docker-up docker-down docker-logs docker-status test-docker
-.PHONY: release package github-release
+.PHONY: release package github-release install install-debug uninstall
 .PHONY: update health maintain
 .PHONY: b t c f l q r d s y p D S u a

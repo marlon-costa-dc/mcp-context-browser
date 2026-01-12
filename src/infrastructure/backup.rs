@@ -4,12 +4,12 @@
 //! Listens to BackupCreate events from the Event Bus.
 
 use crate::domain::error::{Error, Result};
-use crate::infrastructure::events::{SharedEventBus, SystemEvent};
+use crate::infrastructure::events::{SharedEventBusProvider, SystemEvent};
+use std::sync::Arc;
 use flate2::write::GzEncoder;
 use flate2::Compression;
 use std::fs::{self, File};
 use std::path::Path;
-use std::sync::Arc;
 use tar::Builder;
 use tokio::sync::mpsc;
 
@@ -42,7 +42,7 @@ pub struct BackupManager {
 
 impl BackupManager {
     /// Create a new backup manager
-    pub fn new(backup_dir: &str, data_dir: &str, event_bus: Option<SharedEventBus>) -> Self {
+    pub fn new(backup_dir: &str, data_dir: &str, event_bus: Option<SharedEventBusProvider>) -> Self {
         let (tx, rx) = mpsc::channel(100);
         let backup_dir_owned = backup_dir.to_string();
         let data_dir_owned = data_dir.to_string();
@@ -68,33 +68,34 @@ impl BackupManager {
     }
 
     /// Start listening for backup events
-    fn start_event_listener(&self, event_bus: SharedEventBus) {
-        let mut receiver = event_bus.subscribe();
+    fn start_event_listener(&self, event_bus: SharedEventBusProvider) {
         let manager = self.clone();
 
         tokio::spawn(async move {
-            while let Ok(event) = receiver.recv().await {
-                if let SystemEvent::BackupCreate { path } = event {
-                    tracing::info!("[BACKUP] Creating backup at: {}", path);
-                    let m = manager.clone();
-                    let p = path.clone();
-                    // Run backup in a blocking task to avoid stalling the async runtime
-                    let result =
-                        tokio::task::spawn_blocking(move || m.create_backup_internal(&p)).await;
+            if let Ok(mut receiver) = event_bus.subscribe().await {
+                while let Ok(event) = receiver.recv().await {
+                    if let SystemEvent::BackupCreate { path } = event {
+                        tracing::info!("[BACKUP] Creating backup at: {}", path);
+                        let m = manager.clone();
+                        let p = path.clone();
+                        // Run backup in a blocking task to avoid stalling the async runtime
+                        let result =
+                            tokio::task::spawn_blocking(move || m.create_backup_internal(&p)).await;
 
-                    match result {
-                        Ok(Ok(info)) => {
-                            tracing::info!(
-                                "[BACKUP] Created backup: {} ({} bytes)",
-                                info.path,
-                                info.size_bytes
-                            );
-                        }
-                        Ok(Err(e)) => {
-                            tracing::error!("[BACKUP] Failed to create backup at {}: {}", path, e);
-                        }
-                        Err(e) => {
-                            tracing::error!("[BACKUP] Backup task panicked: {}", e);
+                        match result {
+                            Ok(Ok(info)) => {
+                                tracing::info!(
+                                    "[BACKUP] Created backup: {} ({} bytes)",
+                                    info.path,
+                                    info.size_bytes
+                                );
+                            }
+                            Ok(Err(e)) => {
+                                tracing::error!("[BACKUP] Failed to create backup at {}: {}", path, e);
+                            }
+                            Err(e) => {
+                                tracing::error!("[BACKUP] Backup task panicked: {}", e);
+                            }
                         }
                     }
                 }
@@ -277,7 +278,7 @@ pub type SharedBackupManager = Arc<BackupManager>;
 pub fn create_shared_backup_manager(
     backup_dir: &str,
     data_dir: &str,
-    event_bus: Option<SharedEventBus>,
+    event_bus: Option<SharedEventBusProvider>,
 ) -> SharedBackupManager {
     Arc::new(BackupManager::new(backup_dir, data_dir, event_bus))
 }

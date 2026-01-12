@@ -2,7 +2,7 @@
 
 use super::config::CacheConfig;
 use crate::domain::error::{Error, Result};
-use crate::infrastructure::events::{SharedEventBus, SystemEvent};
+use crate::infrastructure::events::{SharedEventBusProvider, SystemEvent};
 use moka::future::Cache;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
@@ -29,7 +29,7 @@ pub struct CacheManager {
 
 impl CacheManager {
     /// Create a new cache manager
-    pub async fn new(config: CacheConfig, event_bus: Option<SharedEventBus>) -> Result<Self> {
+    pub async fn new(config: CacheConfig, event_bus: Option<SharedEventBusProvider>) -> Result<Self> {
         tracing::debug!("CacheManager::new started");
 
         let mut redis_client = None;
@@ -154,17 +154,17 @@ impl CacheManager {
     }
 
     /// Start listening for system events
-    pub fn start_event_listener(&self, event_bus: SharedEventBus) {
-        let mut receiver = event_bus.subscribe();
+    pub fn start_event_listener(&self, event_bus: SharedEventBusProvider) {
         let manager = self.clone();
 
         tokio::spawn(async move {
-            while let Ok(event) = receiver.recv().await {
+            if let Ok(mut receiver) = event_bus.subscribe().await {
+                while let Ok(event) = receiver.recv().await {
                 if let SystemEvent::CacheClear { namespace } = event {
                     if let Some(ns) = namespace {
-                        tracing::info!("[CACHE] Clearing namespace: {}", ns);
+                        tracing::info!("[CACHE] Clearing namespace: {}", &ns);
                         if let Err(e) = manager.clear_namespace(&ns).await {
-                            tracing::error!("[CACHE] Failed to clear namespace {}: {}", ns, e);
+                            tracing::error!("[CACHE] Failed to clear namespace {}: {}", &ns, e);
                         }
                     } else {
                         tracing::info!("[CACHE] Clearing all namespaces");
@@ -181,6 +181,7 @@ impl CacheManager {
                             }
                         }
                     }
+                }
                 }
             }
         });

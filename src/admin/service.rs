@@ -9,10 +9,10 @@
 //! - `helpers::health` - Health checks and performance tests
 //! - `helpers::backup` - Backup management
 
-mod helpers;
+pub mod helpers;
 mod implementation;
 mod traits;
-mod types;
+pub mod types;
 
 pub use implementation::AdminServiceImpl;
 pub use traits::*;

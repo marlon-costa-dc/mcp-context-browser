@@ -246,7 +246,6 @@ async fn test_expired_token_rejected() {
 
 #[tokio::test]
 async fn test_token_expiration_time() {
-
     let jwt_expiration: u64 = 3600;
     let auth_service = AuthService::new(
         "test-secret".to_string(),
@@ -299,11 +298,17 @@ async fn test_bcrypt_password_not_stored_plaintext() {
     .expect("Failed to create auth service");
 
     // Should authenticate with correct password
-    assert!(auth_service.authenticate("admin", "secure_password_123").is_ok());
+    assert!(auth_service
+        .authenticate("admin", "secure_password_123")
+        .is_ok());
 
     // Should reject similar but different passwords
-    assert!(auth_service.authenticate("admin", "secure_password_124").is_err());
-    assert!(auth_service.authenticate("admin", "Secure_password_123").is_err());
+    assert!(auth_service
+        .authenticate("admin", "secure_password_124")
+        .is_err());
+    assert!(auth_service
+        .authenticate("admin", "Secure_password_123")
+        .is_err());
 }
 
 // ============================================================================

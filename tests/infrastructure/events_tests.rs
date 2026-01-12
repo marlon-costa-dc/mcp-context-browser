@@ -9,7 +9,7 @@ use tokio::time::{timeout, Duration};
 #[tokio::test]
 async fn test_event_bus_publish_subscribe() -> Result<(), Box<dyn std::error::Error>> {
     let bus = EventBus::new(10);
-    let mut receiver = bus.subscribe();
+    let mut receiver = bus.subscribe_sync();
 
     // Publish an event
     let result = bus.publish(SystemEvent::CacheClear { namespace: None });
@@ -27,8 +27,8 @@ async fn test_event_bus_publish_subscribe() -> Result<(), Box<dyn std::error::Er
 #[tokio::test]
 async fn test_event_bus_multiple_subscribers() -> Result<(), Box<dyn std::error::Error>> {
     let bus = EventBus::new(10);
-    let mut receiver1 = bus.subscribe();
-    let mut receiver2 = bus.subscribe();
+    let mut receiver1 = bus.subscribe_sync();
+    let mut receiver2 = bus.subscribe_sync();
 
     assert_eq!(bus.subscriber_count(), 2);
 
@@ -47,10 +47,10 @@ async fn test_shared_event_bus() -> Result<(), Box<dyn std::error::Error>> {
     let bus = create_shared_event_bus();
     let bus_clone = Arc::clone(&bus);
 
-    let mut receiver = bus.subscribe();
+    let mut receiver = bus.subscribe().await?;
 
     // Publish from clone
-    bus_clone.publish(SystemEvent::Shutdown)?;
+    bus_clone.publish(SystemEvent::Shutdown).await?;
 
     let event = receiver.recv().await?;
     assert!(matches!(event, SystemEvent::Shutdown));

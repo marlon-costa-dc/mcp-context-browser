@@ -3,7 +3,7 @@
 //! Monitors the server's executable file for updates and triggers
 //! respawn events when a new version is detected.
 
-use crate::infrastructure::events::{SharedEventBus, SystemEvent};
+use crate::infrastructure::events::{SystemEvent, SharedEventBusProvider};
 use anyhow::{Context, Result};
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use std::path::PathBuf;
@@ -37,14 +37,14 @@ impl Default for BinaryWatcherConfig {
 /// Watches the server binary for updates and triggers respawn events
 pub struct BinaryWatcher {
     config: BinaryWatcherConfig,
-    event_bus: SharedEventBus,
+    event_bus: SharedEventBusProvider,
     running: Arc<AtomicBool>,
     binary_path: PathBuf,
 }
 
 impl BinaryWatcher {
     /// Create a new binary watcher
-    pub fn new(event_bus: SharedEventBus, config: BinaryWatcherConfig) -> Result<Self> {
+    pub fn new(event_bus: SharedEventBusProvider, config: BinaryWatcherConfig) -> Result<Self> {
         let binary_path = match &config.binary_path {
             Some(p) => p.clone(),
             None => {
@@ -63,7 +63,7 @@ impl BinaryWatcher {
     }
 
     /// Create with default configuration
-    pub fn with_defaults(event_bus: SharedEventBus) -> Result<Self> {
+    pub fn with_defaults(event_bus: SharedEventBusProvider) -> Result<Self> {
         Self::new(event_bus, BinaryWatcherConfig::default())
     }
 
@@ -115,7 +115,7 @@ impl BinaryWatcher {
 /// Internal watcher loop
 async fn run_watcher_loop(
     binary_path: PathBuf,
-    event_bus: SharedEventBus,
+    event_bus: SharedEventBusProvider,
     running: Arc<AtomicBool>,
     debounce: Duration,
     auto_respawn: bool,
@@ -170,13 +170,13 @@ async fn run_watcher_loop(
                                 let path_str = binary_path.to_string_lossy().to_string();
                                 if let Err(e) = event_bus.publish(SystemEvent::BinaryUpdated {
                                     path: path_str
-                                }) {
+                                }).await {
                                     warn!("Failed to publish BinaryUpdated event: {}", e);
                                 }
 
                                 // Trigger respawn if auto_respawn is enabled
                                 if auto_respawn {
-                                    if let Err(e) = event_bus.publish(SystemEvent::Respawn) {
+                                    if let Err(e) = event_bus.publish(SystemEvent::Respawn).await {
                                         warn!("Failed to publish Respawn event: {}", e);
                                     }
                                 }

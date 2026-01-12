@@ -3,12 +3,12 @@
 //! Provides functions for cache management, provider restart, index rebuilding, and data cleanup.
 
 use crate::admin::service::types::{AdminError, CacheType, CleanupConfig, MaintenanceResult};
-use crate::infrastructure::events::SharedEventBus;
+use crate::infrastructure::events::SharedEventBusProvider;
 use crate::infrastructure::logging::SharedLogBuffer;
 
 /// Clear cache by type
-pub fn clear_cache(
-    event_bus: &SharedEventBus,
+pub async fn clear_cache(
+    event_bus: &SharedEventBusProvider,
     cache_type: CacheType,
 ) -> Result<MaintenanceResult, AdminError> {
     let start_time = std::time::Instant::now();
@@ -23,6 +23,7 @@ pub fn clear_cache(
         .publish(crate::infrastructure::events::SystemEvent::CacheClear {
             namespace: namespace.clone(),
         })
+        .await
         .map_err(|e| {
             AdminError::McpServerError(format!("Failed to publish CacheClear event: {}", e))
         })?;
@@ -43,8 +44,8 @@ pub fn clear_cache(
 ///
 /// The actual restart is handled asynchronously by the RecoveryManager which listens
 /// for ProviderRestart events.
-pub fn restart_provider(
-    event_bus: &SharedEventBus,
+pub async fn restart_provider(
+    event_bus: &SharedEventBusProvider,
     provider_id: &str,
 ) -> Result<MaintenanceResult, AdminError> {
     let start_time = std::time::Instant::now();
@@ -80,10 +81,13 @@ pub fn restart_provider(
 
     // Publish restart event
     event_bus
-        .publish(crate::infrastructure::events::SystemEvent::ProviderRestart {
-            provider_type: provider_type.clone(),
-            provider_id: actual_id.clone(),
-        })
+        .publish(
+            crate::infrastructure::events::SystemEvent::ProviderRestart {
+                provider_type: provider_type.clone(),
+                provider_id: actual_id.clone(),
+            },
+        )
+        .await
         .map_err(|e| {
             AdminError::McpServerError(format!("Failed to publish ProviderRestart event: {}", e))
         })?;
@@ -101,10 +105,124 @@ pub fn restart_provider(
     })
 }
 
+/// Reconfigure a provider without a full restart
+///
+/// This allows hot-updating provider configuration (e.g., API keys, endpoints)
+/// without requiring a full provider restart or server restart.
+///
+/// The provider_id should be in the format "type:id" (e.g., "embedding:ollama").
+pub async fn reconfigure_provider(
+    event_bus: &SharedEventBusProvider,
+    provider_id: &str,
+    config: serde_json::Value,
+) -> Result<MaintenanceResult, AdminError> {
+    let start_time = std::time::Instant::now();
+
+    // Parse provider_id to extract type
+    let provider_type: String = if provider_id.contains(':') {
+        let parts: Vec<&str> = provider_id.splitn(2, ':').collect();
+        parts[0].to_string()
+    } else {
+        // Try to determine type from common provider names
+        match provider_id.to_lowercase().as_str() {
+            "ollama" | "openai" | "voyageai" | "gemini" | "fastembed" | "null_embedding" => {
+                "embedding".to_string()
+            }
+            "milvus" | "edgevec" | "filesystem" | "encrypted" | "in_memory" | "null_vector" => {
+                "vector_store".to_string()
+            }
+            _ => "unknown".to_string(),
+        }
+    };
+
+    tracing::info!(
+        "[ADMIN] Reconfiguring provider: {} (type: {}) with new config",
+        provider_id,
+        provider_type
+    );
+
+    // Publish reconfiguration event
+    event_bus
+        .publish(
+            crate::infrastructure::events::SystemEvent::ProviderReconfigure {
+                provider_type: provider_type.clone(),
+                config: config.clone(),
+            },
+        )
+        .await
+        .map_err(|e| {
+            AdminError::McpServerError(format!(
+                "Failed to publish ProviderReconfigure event: {}",
+                e
+            ))
+        })?;
+
+    // Log the configuration change for audit trail
+    tracing::info!(
+        "[ADMIN] Provider '{}' reconfiguration event published successfully",
+        provider_id
+    );
+
+    Ok(MaintenanceResult {
+        success: true,
+        operation: "reconfigure_provider".to_string(),
+        message: format!(
+            "Reconfiguration signal sent for provider '{}' (type: {}). \
+             Configuration will be applied without requiring a restart.",
+            provider_id, provider_type
+        ),
+        affected_items: 1,
+        execution_time_ms: start_time.elapsed().as_millis() as u64,
+    })
+}
+
+/// Restart all providers in the given list
+///
+/// Each provider is specified as a tuple of (provider_type, provider_id).
+/// This function publishes a ProviderRestart event for each provider.
+pub async fn restart_all_providers(
+    event_bus: &SharedEventBusProvider,
+    providers: &[(String, String)],
+) -> Result<MaintenanceResult, AdminError> {
+    let start_time = std::time::Instant::now();
+    let mut successful = 0;
+    let mut errors = Vec::new();
+
+    for (provider_type, provider_id) in providers {
+        let full_id = format!("{}:{}", provider_type, provider_id);
+        match restart_provider(event_bus, &full_id).await {
+            Ok(_) => successful += 1,
+            Err(e) => errors.push(format!("{}: {}", full_id, e)),
+        }
+    }
+
+    let message = if errors.is_empty() {
+        format!(
+            "Successfully requested restart for {} provider(s). \
+             The RecoveryManager will handle restarts asynchronously.",
+            successful
+        )
+    } else {
+        format!(
+            "Restarted {} provider(s) with {} error(s): {}",
+            successful,
+            errors.len(),
+            errors.join(", ")
+        )
+    };
+
+    Ok(MaintenanceResult {
+        success: errors.is_empty(),
+        operation: "restart_all_providers".to_string(),
+        message,
+        affected_items: successful as u64,
+        execution_time_ms: start_time.elapsed().as_millis() as u64,
+    })
+}
 
 /// Request index rebuild
-pub fn rebuild_index(
-    event_bus: &SharedEventBus,
+pub async fn rebuild_index(
+    event_bus: &SharedEventBusProvider,
     index_id: &str,
 ) -> Result<MaintenanceResult, AdminError> {
     let start_time = std::time::Instant::now();
@@ -112,6 +230,7 @@ pub fn rebuild_index(
         .publish(crate::infrastructure::events::SystemEvent::IndexRebuild {
             collection: Some(index_id.to_string()),
         })
+        .await
         .map_err(|e| {
             AdminError::McpServerError(format!("Failed to publish IndexRebuild event: {}", e))
         })?;

@@ -7,7 +7,7 @@
 
 use crate::domain::error::Result;
 use crate::domain::types::SyncBatch;
-use crate::infrastructure::events::{SharedEventBus, SystemEvent};
+use crate::infrastructure::events::{SharedEventBusProvider, SystemEvent};
 use dashmap::DashMap;
 use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -104,7 +104,7 @@ pub struct SyncManager {
     last_sync_times: DashMap<String, Instant>,
     file_mod_times: DashMap<String, u64>,
     stats: AtomicSyncStats,
-    event_bus: Option<SharedEventBus>,
+    event_bus: Option<SharedEventBusProvider>,
 }
 
 impl Default for SyncManager {
@@ -137,7 +137,7 @@ impl SyncManager {
     /// Create a new sync manager with event bus for publishing sync events
     pub fn with_event_bus(
         config: SyncConfig,
-        event_bus: SharedEventBus,
+        event_bus: SharedEventBusProvider,
         cache_manager: Option<Arc<crate::infrastructure::cache::CacheManager>>,
     ) -> Self {
         Self {
@@ -251,7 +251,7 @@ impl SyncManager {
             if let Err(e) = event_bus.publish(SystemEvent::SyncCompleted {
                 path,
                 files_changed,
-            }) {
+            }).await {
                 tracing::warn!("[SYNC] Failed to publish SyncCompleted event: {}", e);
             }
         }

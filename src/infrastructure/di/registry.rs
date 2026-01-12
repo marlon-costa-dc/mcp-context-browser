@@ -2,7 +2,7 @@
 
 use crate::domain::error::{Error, Result};
 use crate::domain::ports::{EmbeddingProvider, VectorStoreProvider};
-use crate::infrastructure::events::{SharedEventBus, SystemEvent};
+use crate::infrastructure::events::{SharedEventBusProvider, SystemEvent};
 use dashmap::DashMap;
 use std::sync::Arc;
 
@@ -46,20 +46,20 @@ impl ProviderRegistry {
     }
 
     /// Create a new provider registry with event bus subscription
-    pub fn with_event_bus(event_bus: SharedEventBus) -> Self {
+    pub fn with_event_bus(event_bus: SharedEventBusProvider) -> Self {
         let registry = Self::new();
         registry.start_event_listener(event_bus);
         registry
     }
 
     /// Start listening for system events (ADR-007: Subsystem Control)
-    pub fn start_event_listener(&self, event_bus: SharedEventBus) {
-        let mut receiver = event_bus.subscribe();
+    pub fn start_event_listener(&self, event_bus: SharedEventBusProvider) {
         let registry = self.clone();
 
         tokio::spawn(async move {
-            tracing::info!("[REGISTRY] Event listener started");
-            while let Ok(event) = receiver.recv().await {
+            if let Ok(mut receiver) = event_bus.subscribe().await {
+                tracing::info!("[REGISTRY] Event listener started");
+                while let Ok(event) = receiver.recv().await {
                 match event {
                     SystemEvent::ProviderRestart {
                         provider_type,
@@ -216,7 +216,8 @@ impl ProviderRegistry {
                     }
                 }
             }
-            tracing::warn!("[REGISTRY] Event listener stopped");
+                tracing::warn!("[REGISTRY] Event listener stopped");
+            }
         });
     }
 }

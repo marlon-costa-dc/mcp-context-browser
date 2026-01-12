@@ -10,17 +10,17 @@ use mcp_context_browser::admin::service::AdminService;
 
 // Test service creation function (copied from admin tests)
 async fn create_test_admin_service() -> std::sync::Arc<dyn AdminService> {
-    use std::sync::Arc;
     use arc_swap::ArcSwap;
-    use mcp_context_browser::server::metrics::McpPerformanceMetrics;
-    use mcp_context_browser::server::operations::McpIndexingOperations;
-    use mcp_context_browser::infrastructure::di::factory::ServiceProvider;
-    use mcp_context_browser::infrastructure::metrics::system::SystemMetricsCollector;
     use mcp_context_browser::adapters::http_client::NullHttpClientPool;
+    use mcp_context_browser::admin::service::AdminServiceImpl;
+    use mcp_context_browser::infrastructure::config::Config;
+    use mcp_context_browser::infrastructure::di::factory::ServiceProvider;
     use mcp_context_browser::infrastructure::events::EventBus;
     use mcp_context_browser::infrastructure::logging;
-    use mcp_context_browser::infrastructure::config::Config;
-    use mcp_context_browser::admin::service::AdminServiceImpl;
+    use mcp_context_browser::infrastructure::metrics::system::SystemMetricsCollector;
+    use mcp_context_browser::server::metrics::McpPerformanceMetrics;
+    use mcp_context_browser::server::operations::McpIndexingOperations;
+    use std::sync::Arc;
 
     // Create minimal test dependencies
     let performance_metrics = Arc::new(McpPerformanceMetrics::default());
@@ -30,9 +30,9 @@ async fn create_test_admin_service() -> std::sync::Arc<dyn AdminService> {
     let http_client = Arc::new(NullHttpClientPool::new());
 
     // Create event bus with a dummy subscriber to prevent channel closure
-    let event_bus = Arc::new(EventBus::with_default_capacity());
+    let event_bus: std::sync::Arc<dyn mcp_context_browser::infrastructure::events::EventBusProvider> = Arc::new(EventBus::with_default_capacity());
     // Keep a receiver alive to prevent the channel from being considered closed
-    let _receiver = event_bus.subscribe();
+    let _receiver = event_bus.subscribe().await;
     let log_buffer = logging::create_shared_log_buffer(1000);
 
     // Create minimal test config
@@ -201,7 +201,9 @@ mod get_indexing_status_tests {
 
         // With real services, indexing status depends on actual state
         // The response should contain status information
-        assert!(text.contains("System Status") || text.contains("Ready") || text.contains("collection"));
+        assert!(
+            text.contains("System Status") || text.contains("Ready") || text.contains("collection")
+        );
     }
 
     #[tokio::test]

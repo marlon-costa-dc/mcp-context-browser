@@ -84,6 +84,13 @@ pub trait AdminService: Interface + Send + Sync {
     /// Restart provider connection
     async fn restart_provider(&self, provider_id: &str) -> Result<MaintenanceResult, AdminError>;
 
+    /// Reconfigure a provider without restart (hot-update configuration)
+    async fn reconfigure_provider(
+        &self,
+        provider_id: &str,
+        config: serde_json::Value,
+    ) -> Result<MaintenanceResult, AdminError>;
+
     /// Rebuild search index
     async fn rebuild_index(&self, index_id: &str) -> Result<MaintenanceResult, AdminError>;
 

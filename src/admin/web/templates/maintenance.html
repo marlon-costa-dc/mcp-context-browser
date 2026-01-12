@@ -14,6 +14,28 @@
         </div>
     </div>
 
+    <!-- Recovery Status (Live) -->
+    <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white">Recovery Status</h3>
+                <span class="text-xs text-gray-500 dark:text-gray-400">Auto-updates every 5s</span>
+            </div>
+        </div>
+        <div id="recovery-status"
+             hx-get="/admin/htmx/recovery-status"
+             hx-trigger="load, every 5s"
+             hx-swap="innerHTML">
+            <div class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                <svg class="animate-spin h-5 w-5 mx-auto text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <p class="mt-2">Loading recovery status...</p>
+            </div>
+        </div>
+    </div>
+
     <!-- Maintenance Operations -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <!-- Cache Management -->
@@ -22,15 +44,35 @@
                 <h3 class="text-lg font-medium text-gray-900 dark:text-white">Cache Management</h3>
             </div>
             <div class="px-6 py-4 space-y-4">
-                <button class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                <button hx-post="/admin/api/cache/all/clear"
+                        hx-target="#cache-result"
+                        hx-swap="innerHTML"
+                        hx-confirm="Clear all caches? This may temporarily impact performance."
+                        hx-indicator="#cache-loading"
+                        class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50">
+                    <span class="htmx-indicator mr-2" id="cache-loading">
+                        <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                    </span>
                     Clear All Cache
                 </button>
-                <button class="w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+                <button hx-post="/admin/api/cache/query/clear"
+                        hx-target="#cache-result"
+                        hx-swap="innerHTML"
+                        hx-confirm="Clear query cache?"
+                        class="w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
                     Clear Query Cache
                 </button>
-                <button class="w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+                <button hx-post="/admin/api/cache/embeddings/clear"
+                        hx-target="#cache-result"
+                        hx-swap="innerHTML"
+                        hx-confirm="Clear embeddings cache?"
+                        class="w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
                     Clear Embeddings Cache
                 </button>
+                <div id="cache-result" class="text-sm"></div>
             </div>
         </div>
 
@@ -40,15 +82,35 @@
                 <h3 class="text-lg font-medium text-gray-900 dark:text-white">Provider Management</h3>
             </div>
             <div class="px-6 py-4 space-y-4">
-                <button class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700">
+                <button hx-post="/admin/api/providers/restart-all"
+                        hx-target="#provider-result"
+                        hx-swap="innerHTML"
+                        hx-confirm="Restart all providers? This may briefly interrupt service."
+                        hx-indicator="#provider-loading"
+                        class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 disabled:opacity-50">
+                    <span class="htmx-indicator mr-2" id="provider-loading">
+                        <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                    </span>
                     Restart All Providers
                 </button>
-                <button class="w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+                <button hx-post="/admin/api/providers/embedding/restart"
+                        hx-target="#provider-result"
+                        hx-swap="innerHTML"
+                        hx-confirm="Restart embedding providers?"
+                        class="w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
                     Restart Embedding Provider
                 </button>
-                <button class="w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+                <button hx-post="/admin/api/providers/vector_store/restart"
+                        hx-target="#provider-result"
+                        hx-swap="innerHTML"
+                        hx-confirm="Restart vector store providers?"
+                        class="w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
                     Restart Vector Store
                 </button>
+                <div id="provider-result" class="text-sm"></div>
             </div>
         </div>
 
@@ -58,15 +120,34 @@
                 <h3 class="text-lg font-medium text-gray-900 dark:text-white">Index Management</h3>
             </div>
             <div class="px-6 py-4 space-y-4">
-                <button class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700">
+                <button hx-post="/admin/api/indexes/rebuild"
+                        hx-target="#index-result"
+                        hx-swap="innerHTML"
+                        hx-confirm="Rebuild search index? This may take a while."
+                        hx-indicator="#index-loading"
+                        class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700 disabled:opacity-50">
+                    <span class="htmx-indicator mr-2" id="index-loading">
+                        <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                    </span>
                     Rebuild Search Index
                 </button>
-                <button class="w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+                <button hx-post="/admin/api/indexes/optimize"
+                        hx-target="#index-result"
+                        hx-swap="innerHTML"
+                        class="w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
                     Optimize Index
                 </button>
-                <button class="w-full inline-flex justify-center items-center px-4 py-2 border border-red-300 dark:border-red-600 text-red-700 dark:text-red-300 bg-white dark:bg-gray-700 hover:bg-red-50 dark:hover:bg-gray-600">
+                <button hx-post="/admin/api/indexes/clear"
+                        hx-target="#index-result"
+                        hx-swap="innerHTML"
+                        hx-confirm="Clear the entire index? This will require re-indexing all content."
+                        class="w-full inline-flex justify-center items-center px-4 py-2 border border-red-300 dark:border-red-600 text-red-700 dark:text-red-300 bg-white dark:bg-gray-700 hover:bg-red-50 dark:hover:bg-gray-600">
                     Clear Index
                 </button>
+                <div id="index-result" class="text-sm"></div>
             </div>
         </div>
 
@@ -78,11 +159,25 @@
             <div class="px-6 py-4 space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Older than (days)</label>
-                    <input type="number" value="30" class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    <input type="number" id="cleanup-days" name="older_than_days" value="30" min="1" max="365"
+                           class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                 </div>
-                <button class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700">
+                <button hx-post="/admin/api/cleanup"
+                        hx-target="#cleanup-result"
+                        hx-swap="innerHTML"
+                        hx-include="#cleanup-days"
+                        hx-confirm="Clean up old data? This action cannot be undone."
+                        hx-indicator="#cleanup-loading"
+                        class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-50">
+                    <span class="htmx-indicator mr-2" id="cleanup-loading">
+                        <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                    </span>
                     Clean Old Data
                 </button>
+                <div id="cleanup-result" class="text-sm"></div>
             </div>
         </div>
     </div>
@@ -90,13 +185,36 @@
     <!-- Maintenance History -->
     <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700">
         <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Maintenance History</h3>
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white">Maintenance History</h3>
+                <button hx-get="/admin/htmx/maintenance-history"
+                        hx-target="#maintenance-history"
+                        hx-swap="innerHTML"
+                        class="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">
+                    Refresh
+                </button>
+            </div>
         </div>
-        <div class="px-6 py-4">
-            <div class="text-center text-gray-500 dark:text-gray-400 py-8">
-                Maintenance operations will be logged here
+        <div id="maintenance-history"
+             hx-get="/admin/htmx/maintenance-history"
+             hx-trigger="load"
+             hx-swap="innerHTML">
+            <div class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                Loading maintenance history...
             </div>
         </div>
     </div>
 </div>
+
+<style>
+    .htmx-indicator {
+        display: none;
+    }
+    .htmx-request .htmx-indicator {
+        display: inline-block;
+    }
+    .htmx-request.htmx-indicator {
+        display: inline-block;
+    }
+</style>
 {% endblock %}

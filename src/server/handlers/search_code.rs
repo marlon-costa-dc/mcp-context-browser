@@ -189,5 +189,4 @@ impl SearchCodeHandler {
             Err(_) => Ok(ResponseFormatter::format_search_timeout(&query)),
         }
     }
-
 }

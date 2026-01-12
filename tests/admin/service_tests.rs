@@ -6,16 +6,18 @@ use mcp_context_browser::admin::service::AdminService;
 
 // Import dependencies for real service creation
 use arc_swap::ArcSwap;
+use mcp_context_browser::adapters::http_client::{HttpClientPool, HttpClientProvider};
 use mcp_context_browser::admin::service::AdminServiceImpl;
 use mcp_context_browser::application::search::SearchService;
-use mcp_context_browser::infrastructure::di::factory::{ServiceProvider, ServiceProviderInterface};
 use mcp_context_browser::infrastructure::config::Config;
-use mcp_context_browser::infrastructure::events::{EventBus, SharedEventBus};
+use mcp_context_browser::infrastructure::di::factory::{ServiceProvider, ServiceProviderInterface};
+use mcp_context_browser::infrastructure::events::{EventBus, SharedEventBusProvider};
 use mcp_context_browser::infrastructure::logging::SharedLogBuffer;
-use mcp_context_browser::infrastructure::metrics::system::{SystemMetricsCollector, SystemMetricsCollectorInterface};
+use mcp_context_browser::infrastructure::metrics::system::{
+    SystemMetricsCollector, SystemMetricsCollectorInterface,
+};
 use mcp_context_browser::server::metrics::{McpPerformanceMetrics, PerformanceMetricsInterface};
-use mcp_context_browser::server::operations::{McpIndexingOperations, IndexingOperationsInterface};
-use mcp_context_browser::adapters::http_client::{NullHttpClientPool, HttpClientProvider};
+use mcp_context_browser::server::operations::{IndexingOperationsInterface, McpIndexingOperations};
 use std::sync::Arc;
 
 /// Test infrastructure for setting up real services
@@ -23,7 +25,7 @@ use std::sync::Arc;
 pub struct TestInfrastructure {
     pub admin_service: Arc<dyn AdminService>,
     pub config: Arc<ArcSwap<Config>>,
-    pub event_bus: SharedEventBus,
+    pub event_bus: SharedEventBusProvider,
     pub log_buffer: SharedLogBuffer,
     pub performance_metrics: Arc<dyn PerformanceMetricsInterface>,
     pub indexing_operations: Arc<dyn IndexingOperationsInterface>,
@@ -41,19 +43,24 @@ impl TestInfrastructure {
         let config_arc = Arc::new(ArcSwap::from_pointee(config));
 
         // Create shared components
-        let event_bus: SharedEventBus = Arc::new(EventBus::with_default_capacity());
+        let event_bus: SharedEventBusProvider = Arc::new(EventBus::with_default_capacity());
         // Keep a receiver alive to prevent the channel from being considered closed
-        let _receiver = event_bus.subscribe();
-        let log_buffer = mcp_context_browser::infrastructure::logging::create_shared_log_buffer(1000);
+        let _receiver = event_bus.subscribe().await?;
+        let log_buffer =
+            mcp_context_browser::infrastructure::logging::create_shared_log_buffer(1000);
 
         // Create service components
-        let performance_metrics: Arc<dyn PerformanceMetricsInterface> = Arc::new(McpPerformanceMetrics::default());
-        let indexing_operations: Arc<dyn IndexingOperationsInterface> = Arc::new(McpIndexingOperations::default());
+        let performance_metrics: Arc<dyn PerformanceMetricsInterface> =
+            Arc::new(McpPerformanceMetrics::default());
+        let indexing_operations: Arc<dyn IndexingOperationsInterface> =
+            Arc::new(McpIndexingOperations::default());
         let service_provider: Arc<dyn ServiceProviderInterface> = Arc::new(ServiceProvider::new());
-        let system_collector: Arc<dyn SystemMetricsCollectorInterface> = Arc::new(SystemMetricsCollector::new());
+        let system_collector: Arc<dyn SystemMetricsCollectorInterface> =
+            Arc::new(SystemMetricsCollector::new());
 
         // Create HTTP client
-        let http_client: Arc<dyn HttpClientProvider> = Arc::new(NullHttpClientPool::new());
+        let http_client: Arc<dyn HttpClientProvider> =
+            Arc::new(HttpClientPool::new().expect("Failed to create HTTP client"));
 
         // Create admin service with all dependencies
         let admin_service = Arc::new(AdminServiceImpl::new(
@@ -88,7 +95,8 @@ impl TestInfrastructure {
 
 // Test service creation function
 async fn create_test_admin_service() -> Arc<dyn AdminService> {
-    let test_infra = TestInfrastructure::new().await
+    let test_infra = TestInfrastructure::new()
+        .await
         .expect("Failed to create test infrastructure");
     test_infra.admin_service
 }

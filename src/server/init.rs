@@ -4,12 +4,14 @@
 //! server implementation to improve code organization and testability.
 
 use crate::adapters::http_client::{HttpClientConfig, HttpClientPool};
+use crate::daemon::types::RecoveryConfig;
 use crate::infrastructure::cache::CacheManager;
 use crate::infrastructure::config::ConfigLoader;
 use crate::infrastructure::connection_tracker::{ConnectionTracker, ConnectionTrackerConfig};
 use crate::infrastructure::limits::ResourceLimits;
 use crate::infrastructure::metrics::MetricsApiServer;
 use crate::infrastructure::rate_limit::RateLimiter;
+use crate::infrastructure::recovery::{RecoveryManager, SharedRecoveryManager};
 use crate::server::transport::{
     create_mcp_router, HttpTransportState, SessionManager, TransportConfig, TransportMode,
     VersionChecker,
@@ -60,6 +62,7 @@ fn init_tracing(
 /// - Resource limits
 /// - HTTP client provider
 /// - Connection tracker for graceful shutdown
+/// - Recovery manager for automatic component restart
 async fn initialize_server_components(
     cache_manager: Option<Arc<CacheManager>>,
     log_buffer: crate::infrastructure::logging::SharedLogBuffer,
@@ -70,6 +73,7 @@ async fn initialize_server_components(
         Arc<ResourceLimits>,
         Arc<dyn crate::adapters::http_client::HttpClientProvider>,
         Arc<ConnectionTracker>,
+        SharedRecoveryManager,
     ),
     Box<dyn std::error::Error>,
 > {
@@ -151,6 +155,9 @@ async fn initialize_server_components(
         cache_manager
     };
 
+    // Clone event_bus for recovery manager before passing to builder
+    let event_bus_for_recovery = event_bus.clone();
+
     // Create server instance using builder
     let mut builder = McpServerBuilder::new()
         .with_log_buffer(log_buffer)
@@ -181,6 +188,24 @@ async fn initialize_server_components(
         capabilities.prompts.is_some(),
         capabilities.resources.is_some()
     );
+
+    // Initialize Recovery Manager for automatic component restart
+    tracing::info!("🔄 Initializing Recovery Manager...");
+    let recovery_config = RecoveryConfig::default();
+    let recovery_manager: SharedRecoveryManager = Arc::new(RecoveryManager::new(
+        recovery_config,
+        event_bus_for_recovery,
+    ));
+
+    // Start the recovery manager background task
+    if let Err(e) = recovery_manager.start().await {
+        tracing::warn!(
+            "⚠️  Failed to start Recovery Manager: {}. Automatic recovery disabled.",
+            e
+        );
+    } else {
+        tracing::info!("✅ Recovery Manager started successfully");
+    }
 
     // Initialize HTTP transport components for unified port architecture
     let transport_config = TransportConfig::default();
@@ -253,6 +278,7 @@ async fn initialize_server_components(
         resource_limits,
         http_client,
         connection_tracker,
+        recovery_manager,
     ))
 }
 
@@ -297,8 +323,14 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     // Initialize all server components (unified HTTP server with MCP + Admin + Metrics)
-    let (server, http_handle, _resource_limits, _http_client, connection_tracker) =
-        initialize_server_components(None, log_buffer).await?;
+    let (
+        server,
+        http_handle,
+        _resource_limits,
+        _http_client,
+        connection_tracker,
+        _recovery_manager,
+    ) = initialize_server_components(None, log_buffer).await?;
 
     // Get transport mode from environment variable or default
     let transport_config = {
@@ -311,7 +343,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 _ => None,
             })
             .unwrap_or_default();
-        TransportConfig { mode, ..Default::default() }
+        TransportConfig {
+            mode,
+            ..Default::default()
+        }
     };
     tracing::info!("🔧 Transport mode: {:?}", transport_config.mode);
 
@@ -347,12 +382,12 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                     match result {
                         Ok(service) => {
                             tracing::info!("🎉 MCP server started successfully, waiting for connections...");
-                            service.waiting().await?;
+                            let _ = service.waiting().await;
                             tracing::info!("👋 MCP server shutdown complete");
                         }
                         Err(e) => {
                             tracing::error!("💥 Failed to start MCP service: {:?}", e);
-                            return Err(e.into());
+                            return Err(Box::new(std::io::Error::other(format!("{:?}", e))));
                         }
                     }
                 }
@@ -363,7 +398,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         }
         TransportMode::Hybrid => {
             tracing::info!("📡 Starting MCP protocol server on stdio + HTTP transport");
-            tracing::info!("🎯 Ready to accept MCP client connections (stdio) and HTTP admin on port 3001");
+            tracing::info!(
+                "🎯 Ready to accept MCP client connections (stdio) and HTTP admin on port 3001"
+            );
 
             // Start the MCP service with stdio transport in a separate task
             let server_clone = (*server).clone();
@@ -372,10 +409,15 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                     Ok(service) => {
                         tracing::info!("🎉 MCP stdio server started successfully");
                         let _ = service.waiting().await;
-                        tracing::info!("📡 MCP stdio connection closed (HTTP server continues running)");
+                        tracing::info!(
+                            "📡 MCP stdio connection closed (HTTP server continues running)"
+                        );
                     }
                     Err(e) => {
-                        tracing::warn!("⚠️ MCP stdio service ended: {:?} (HTTP server continues running)", e);
+                        tracing::warn!(
+                            "⚠️ MCP stdio service ended: {:?} (HTTP server continues running)",
+                            e
+                        );
                     }
                 }
             });

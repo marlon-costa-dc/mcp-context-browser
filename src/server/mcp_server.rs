@@ -19,7 +19,7 @@ use crate::application::{IndexingService, SearchService};
 use crate::infrastructure::cache::CacheManager;
 use crate::infrastructure::di::factory::ServiceProviderInterface;
 use crate::infrastructure::di::registry::ProviderRegistryTrait;
-use crate::infrastructure::events::SharedEventBus;
+use crate::infrastructure::events::SharedEventBusProvider;
 use crate::infrastructure::limits::ResourceLimits;
 use crate::server::args::{
     ClearIndexArgs, GetIndexingStatusArgs, IndexCodebaseArgs, SearchCodeArgs,
@@ -61,7 +61,7 @@ pub struct McpServer {
     /// Configuration state
     pub config: Arc<ArcSwap<crate::infrastructure::config::Config>>,
     /// Event bus for decoupled communication
-    pub event_bus: SharedEventBus,
+    pub event_bus: SharedEventBusProvider,
     /// Shared log buffer for real-time monitoring
     pub log_buffer: crate::infrastructure::logging::SharedLogBuffer,
     /// System metrics collector
@@ -87,7 +87,7 @@ pub struct ServerComponents {
     pub service_provider: Arc<dyn ServiceProviderInterface>,
     pub resource_limits: Arc<ResourceLimits>,
     pub http_client: Arc<dyn crate::adapters::http_client::HttpClientProvider>,
-    pub event_bus: SharedEventBus,
+    pub event_bus: SharedEventBusProvider,
     pub log_buffer: crate::infrastructure::logging::SharedLogBuffer,
     pub system_collector:
         Arc<dyn crate::infrastructure::metrics::system::SystemMetricsCollectorInterface>,
@@ -118,7 +118,7 @@ impl McpServer {
         config: &crate::infrastructure::config::Config,
         http_client: Arc<dyn crate::adapters::http_client::HttpClientProvider>,
         cache_manager: Arc<CacheManager>,
-        event_bus: SharedEventBus,
+        event_bus: SharedEventBusProvider,
     ) -> Result<
         (Arc<AuthHandler>, Arc<IndexingService>, Arc<SearchService>),
         Box<dyn std::error::Error>,
@@ -392,7 +392,14 @@ impl McpServer {
                     history: std::collections::VecDeque::with_capacity(10),
                     trend: crate::adapters::providers::routing::health::HealthTrend::Unknown,
                     avg_response_time: std::time::Duration::ZERO,
-                    success_rate: if matches!(status, crate::adapters::providers::routing::health::ProviderHealthStatus::Healthy) { 1.0 } else { 0.0 },
+                    success_rate: if matches!(
+                        status,
+                        crate::adapters::providers::routing::health::ProviderHealthStatus::Healthy
+                    ) {
+                        1.0
+                    } else {
+                        0.0
+                    },
                 },
             );
         }
@@ -415,7 +422,14 @@ impl McpServer {
                     history: std::collections::VecDeque::with_capacity(10),
                     trend: crate::adapters::providers::routing::health::HealthTrend::Unknown,
                     avg_response_time: std::time::Duration::ZERO,
-                    success_rate: if matches!(status, crate::adapters::providers::routing::health::ProviderHealthStatus::Healthy) { 1.0 } else { 0.0 },
+                    success_rate: if matches!(
+                        status,
+                        crate::adapters::providers::routing::health::ProviderHealthStatus::Healthy
+                    ) {
+                        1.0
+                    } else {
+                        0.0
+                    },
                 },
             );
         }

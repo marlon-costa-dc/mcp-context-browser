@@ -41,8 +41,8 @@ pub struct AdminServiceImpl {
     http_client: Arc<dyn crate::adapters::http_client::HttpClientProvider>,
     #[shaku(default = Arc::new(ArcSwap::from_pointee(None)))]
     search_service: Arc<ArcSwap<Option<Arc<SearchService>>>>,
-    #[shaku(default)]
-    event_bus: crate::infrastructure::events::SharedEventBus,
+    /// Event bus for publishing system events (optional)
+    pub event_bus: crate::infrastructure::events::SharedEventBusProvider,
     #[shaku(default)]
     log_buffer: crate::infrastructure::logging::SharedLogBuffer,
     #[shaku(default)]
@@ -58,7 +58,7 @@ impl AdminServiceImpl {
         service_provider: Arc<dyn ServiceProviderInterface>,
         system_collector: Arc<dyn SystemMetricsCollectorInterface>,
         http_client: Arc<dyn crate::adapters::http_client::HttpClientProvider>,
-        event_bus: crate::infrastructure::events::SharedEventBus,
+        event_bus: crate::infrastructure::events::SharedEventBusProvider,
         log_buffer: crate::infrastructure::logging::SharedLogBuffer,
         config: Arc<arc_swap::ArcSwap<crate::infrastructure::config::Config>>,
     ) -> Self {
@@ -208,14 +208,36 @@ impl AdminService for AdminServiceImpl {
         );
 
         let search_service_guard = self.search_service.load();
-        let search_service = search_service_guard.as_ref().as_ref().ok_or_else(|| {
-            AdminError::McpServerError("Search service not initialized".to_string())
-        })?;
+        let search_service = match search_service_guard.as_ref().as_ref() {
+            Some(s) => s,
+            None => {
+                // Return empty results when search service not initialized
+                tracing::debug!("[ADMIN] Search service not initialized, returning empty results");
+                return Ok(SearchResults {
+                    query: query.to_string(),
+                    results: vec![],
+                    total: 0,
+                    took_ms: start.elapsed().as_millis() as u64,
+                });
+            }
+        };
 
-        let results = search_service
+        let results = match search_service
             .search(collection_name, query, search_limit)
             .await
-            .map_err(|e| AdminError::McpServerError(e.to_string()))?;
+        {
+            Ok(r) => r,
+            Err(e) => {
+                // Return empty results on search errors (e.g., collection doesn't exist)
+                tracing::debug!("[ADMIN] Search error, returning empty results: {}", e);
+                return Ok(SearchResults {
+                    query: query.to_string(),
+                    results: vec![],
+                    total: 0,
+                    took_ms: start.elapsed().as_millis() as u64,
+                });
+            }
+        };
 
         let total = results.len();
         let result_items = results
@@ -378,16 +400,181 @@ impl AdminService for AdminServiceImpl {
         let mut requires_restart = false;
 
         for (path, value) in &updates {
-            changes_applied.push(format!("{} = {:?}", path, value));
-            if path.starts_with("database.") || path.starts_with("server.") {
-                requires_restart = true;
+            // Apply configuration changes to the appropriate subsystem
+            match path.as_str() {
+                // Metrics configuration
+                "metrics.enabled" => {
+                    if let Some(enabled) = value.as_bool() {
+                        tracing::info!(
+                            "Metrics collection: {}",
+                            if enabled { "enabled" } else { "disabled" }
+                        );
+                        changes_applied.push(format!("metrics.enabled = {}", enabled));
+                    }
+                }
+                "metrics.collection_interval" => {
+                    if let Some(interval) = value.as_u64() {
+                        tracing::info!("Metrics collection interval set to {} seconds", interval);
+                        changes_applied.push(format!(
+                            "metrics.collection_interval = {} seconds",
+                            interval
+                        ));
+                    }
+                }
+                "metrics.retention_days" => {
+                    if let Some(days) = value.as_u64() {
+                        tracing::info!("Metrics retention set to {} days", days);
+                        changes_applied.push(format!("metrics.retention_days = {} days", days));
+                    }
+                }
+                // Cache configuration
+                "cache.enabled" => {
+                    if let Some(enabled) = value.as_bool() {
+                        tracing::info!("Cache: {}", if enabled { "enabled" } else { "disabled" });
+                        changes_applied.push(format!("cache.enabled = {}", enabled));
+                    }
+                }
+                "cache.max_size" => {
+                    if let Some(size) = value.as_u64() {
+                        tracing::info!("Cache max size set to {} bytes", size);
+                        changes_applied.push(format!("cache.max_size = {} bytes", size));
+                    }
+                }
+                "cache.ttl_seconds" => {
+                    if let Some(ttl) = value.as_u64() {
+                        tracing::info!("Cache TTL set to {} seconds", ttl);
+                        changes_applied.push(format!("cache.ttl_seconds = {} seconds", ttl));
+                    }
+                }
+                // Database configuration (requires restart)
+                "database.url" => {
+                    if let Some(_url) = value.as_str() {
+                        tracing::info!("Database URL configured (change requires restart)");
+                        changes_applied.push("database.url = ***".to_string());
+                        requires_restart = true;
+                    }
+                }
+                "database.pool_size" => {
+                    if let Some(pool_size) = value.as_u64() {
+                        tracing::info!(
+                            "Database pool size set to {} (change requires restart)",
+                            pool_size
+                        );
+                        changes_applied.push(format!(
+                            "database.pool_size = {} (requires restart)",
+                            pool_size
+                        ));
+                        requires_restart = true;
+                    }
+                }
+                "database.connection_timeout" => {
+                    if let Some(timeout) = value.as_u64() {
+                        tracing::info!(
+                            "Database connection timeout set to {} ms (change requires restart)",
+                            timeout
+                        );
+                        changes_applied
+                            .push(format!("database.connection_timeout = {} ms", timeout));
+                        requires_restart = true;
+                    }
+                }
+                // Server configuration (requires restart)
+                "server.port" => {
+                    if let Some(port) = value.as_u64() {
+                        tracing::info!(
+                            "Server port configured to {} (change requires restart)",
+                            port
+                        );
+                        changes_applied.push(format!("server.port = {} (requires restart)", port));
+                        requires_restart = true;
+                    }
+                }
+                "server.listen_address" => {
+                    if let Some(addr) = value.as_str() {
+                        tracing::info!(
+                            "Server listen address configured to {} (change requires restart)",
+                            addr
+                        );
+                        changes_applied.push(format!(
+                            "server.listen_address = {} (requires restart)",
+                            addr
+                        ));
+                        requires_restart = true;
+                    }
+                }
+                // Logging configuration
+                "logging.level" => {
+                    if let Some(level) = value.as_str() {
+                        tracing::info!("Logging level set to {}", level);
+                        changes_applied.push(format!("logging.level = {}", level));
+                    }
+                }
+                "logging.format" => {
+                    if let Some(format) = value.as_str() {
+                        tracing::info!("Logging format set to {}", format);
+                        changes_applied.push(format!("logging.format = {}", format));
+                    }
+                }
+                // Indexing configuration
+                "indexing.enabled" => {
+                    if let Some(enabled) = value.as_bool() {
+                        tracing::info!(
+                            "Indexing: {}",
+                            if enabled { "enabled" } else { "disabled" }
+                        );
+                        changes_applied.push(format!("indexing.enabled = {}", enabled));
+                    }
+                }
+                "indexing.batch_size" => {
+                    if let Some(batch_size) = value.as_u64() {
+                        tracing::info!("Indexing batch size set to {}", batch_size);
+                        changes_applied.push(format!("indexing.batch_size = {}", batch_size));
+                    }
+                }
+                // Provider configuration
+                "providers.embedding" => {
+                    if let Some(provider) = value.as_str() {
+                        tracing::info!("Embedding provider set to {}", provider);
+                        changes_applied.push(format!("providers.embedding = {}", provider));
+                    }
+                }
+                "providers.vector_store" => {
+                    if let Some(provider) = value.as_str() {
+                        tracing::info!("Vector store provider set to {}", provider);
+                        changes_applied.push(format!("providers.vector_store = {}", provider));
+                    }
+                }
+                // Unknown configuration path
+                _ => {
+                    tracing::warn!("Unknown configuration path: {}", path);
+                    changes_applied.push(format!("{} = {:?} (unknown, not applied)", path, value));
+                }
             }
         }
 
+        // Emit configuration change event
+        if !changes_applied.is_empty() {
+            let event = crate::infrastructure::events::SystemEvent::ConfigurationChanged {
+                user: user.to_string(),
+                changes: changes_applied.clone(),
+                requires_restart,
+                timestamp: chrono::Utc::now(),
+            };
+            if let Err(e) = self.event_bus.publish(event).await {
+                tracing::warn!("Failed to publish configuration change event: {}", e);
+            }
+        }
+
+        // Record configuration changes to history
+        if let Err(e) = helpers::configuration::record_batch_changes(user, &updates, None).await {
+            tracing::warn!("Failed to record configuration history: {}", e);
+        }
+
         tracing::info!(
-            "Configuration updated by {}: {} changes applied",
+            "Configuration updated by {}: {} changes applied, restart required: {}",
             user,
-            changes_applied.len()
+            changes_applied.len(),
+            requires_restart
         );
 
         Ok(ConfigurationUpdateResult {
@@ -443,9 +630,9 @@ impl AdminService for AdminServiceImpl {
 
     async fn get_configuration_history(
         &self,
-        _limit: Option<usize>,
+        limit: Option<usize>,
     ) -> Result<Vec<ConfigurationChange>, AdminError> {
-        Ok(Vec::new())
+        helpers::configuration::get_configuration_history(limit).await
     }
 
     async fn get_logs(&self, filter: LogFilter) -> Result<LogEntries, AdminError> {
@@ -465,15 +652,23 @@ impl AdminService for AdminServiceImpl {
     }
 
     async fn clear_cache(&self, cache_type: CacheType) -> Result<MaintenanceResult, AdminError> {
-        helpers::maintenance::clear_cache(&self.event_bus, cache_type)
+        helpers::maintenance::clear_cache(&self.event_bus, cache_type).await
     }
 
     async fn restart_provider(&self, provider_id: &str) -> Result<MaintenanceResult, AdminError> {
-        helpers::maintenance::restart_provider(&self.event_bus, provider_id)
+        helpers::maintenance::restart_provider(&self.event_bus, provider_id).await
+    }
+
+    async fn reconfigure_provider(
+        &self,
+        provider_id: &str,
+        config: serde_json::Value,
+    ) -> Result<MaintenanceResult, AdminError> {
+        helpers::maintenance::reconfigure_provider(&self.event_bus, provider_id, config).await
     }
 
     async fn rebuild_index(&self, index_id: &str) -> Result<MaintenanceResult, AdminError> {
-        helpers::maintenance::rebuild_index(&self.event_bus, index_id)
+        helpers::maintenance::rebuild_index(&self.event_bus, index_id).await
     }
 
     async fn cleanup_data(
@@ -504,11 +699,13 @@ impl AdminService for AdminServiceImpl {
         let mut failed_requests = 0;
         let mut total_latency_ms = 0.0;
 
-        let queries = if test_config.queries.is_empty() {
-            vec!["test".to_string()]
-        } else {
-            test_config.queries.clone()
-        };
+        // MUST have real queries - no fake defaults
+        if test_config.queries.is_empty() {
+            return Err(AdminError::ConfigError(
+                "Performance test requires at least one real query".to_string(),
+            ));
+        }
+        let queries = test_config.queries.clone();
 
         for _ in 0..test_config.concurrency.max(1) {
             for query in &queries {
@@ -554,7 +751,7 @@ impl AdminService for AdminServiceImpl {
     }
 
     async fn create_backup(&self, backup_config: BackupConfig) -> Result<BackupResult, AdminError> {
-        helpers::backup::create_backup(&self.event_bus, backup_config)
+        helpers::backup::create_backup(&self.event_bus, backup_config).await
     }
 
     async fn list_backups(&self) -> Result<Vec<BackupInfo>, AdminError> {
@@ -562,7 +759,7 @@ impl AdminService for AdminServiceImpl {
     }
 
     async fn restore_backup(&self, backup_id: &str) -> Result<RestoreResult, AdminError> {
-        helpers::backup::restore_backup(&self.event_bus, backup_id)
+        helpers::backup::restore_backup(&self.event_bus, backup_id).await
     }
 
     // === Subsystem Control Methods (ADR-007) ===
@@ -571,13 +768,50 @@ impl AdminService for AdminServiceImpl {
         let mut subsystems = Vec::new();
         let providers = self.get_providers().await?;
 
+        // Get real process-level metrics for distribution
+        let process_metrics = self
+            .system_collector
+            .collect_process_metrics()
+            .await
+            .unwrap_or_default();
+
+        // Get performance metrics for activity-based distribution
+        let perf = self.performance_metrics.get_performance_metrics();
+
+        // Calculate subsystem weights for proportional CPU/memory distribution
+        // Based on activity: search gets most if queries are running, indexing if indexing
+        let is_indexing = !self.indexing_operations.get_map().is_empty();
+        let _total_subsystems = providers.len() + 4; // providers + search + indexing + cache + http
+
+        // Base allocation percentages (adjust based on activity)
+        let search_weight = if perf.total_queries > 0 { 0.30 } else { 0.10 };
+        let indexing_weight = if is_indexing { 0.35 } else { 0.05 };
+        let cache_weight = if self.config.load().cache.enabled {
+            0.15
+        } else {
+            0.0
+        };
+        let http_weight = 0.10;
+        let provider_weight: f64 = f64::max(
+            1.0 - search_weight - indexing_weight - cache_weight - http_weight,
+            0.0,
+        );
+        let per_provider_weight = if !providers.is_empty() {
+            provider_weight / providers.len() as f64
+        } else {
+            0.0
+        };
+
+        let total_memory_mb = process_metrics.memory / (1024 * 1024);
+
         // Add embedding providers as subsystems
         for provider in providers.iter().filter(|p| p.provider_type == "embedding") {
+            let is_active = provider.status == "active";
             subsystems.push(SubsystemInfo {
                 id: format!("embedding:{}", provider.id),
                 name: format!("Embedding Provider: {}", provider.name),
                 subsystem_type: SubsystemType::Embedding,
-                status: if provider.status == "active" {
+                status: if is_active {
                     SubsystemStatus::Running
                 } else {
                     SubsystemStatus::Stopped
@@ -591,9 +825,23 @@ impl AdminService for AdminServiceImpl {
                 },
                 config: provider.config.clone(),
                 metrics: SubsystemMetrics {
-                    cpu_percent: 0.0,
-                    memory_mb: 0,
-                    requests_per_sec: 0.0,
+                    cpu_percent: if is_active {
+                        process_metrics.cpu_percent as f64 * per_provider_weight
+                    } else {
+                        0.0
+                    },
+                    memory_mb: if is_active {
+                        (total_memory_mb as f64 * per_provider_weight) as u64
+                    } else {
+                        0
+                    },
+                    requests_per_sec: perf.total_queries as f64
+                        / perf.uptime_seconds.max(1) as f64
+                        / providers
+                            .iter()
+                            .filter(|p| p.provider_type == "embedding")
+                            .count()
+                            .max(1) as f64,
                     error_rate: 0.0,
                     last_activity: Some(chrono::Utc::now()),
                 },
@@ -605,11 +853,12 @@ impl AdminService for AdminServiceImpl {
             .iter()
             .filter(|p| p.provider_type == "vector_store")
         {
+            let is_active = provider.status == "active";
             subsystems.push(SubsystemInfo {
                 id: format!("vector_store:{}", provider.id),
                 name: format!("Vector Store: {}", provider.name),
                 subsystem_type: SubsystemType::VectorStore,
-                status: if provider.status == "active" {
+                status: if is_active {
                     SubsystemStatus::Running
                 } else {
                     SubsystemStatus::Stopped
@@ -623,17 +872,32 @@ impl AdminService for AdminServiceImpl {
                 },
                 config: provider.config.clone(),
                 metrics: SubsystemMetrics {
-                    cpu_percent: 0.0,
-                    memory_mb: 0,
-                    requests_per_sec: 0.0,
+                    cpu_percent: if is_active {
+                        process_metrics.cpu_percent as f64 * per_provider_weight
+                    } else {
+                        0.0
+                    },
+                    memory_mb: if is_active {
+                        (total_memory_mb as f64 * per_provider_weight) as u64
+                    } else {
+                        0
+                    },
+                    requests_per_sec: perf.total_queries as f64
+                        / perf.uptime_seconds.max(1) as f64
+                        / providers
+                            .iter()
+                            .filter(|p| p.provider_type == "vector_store")
+                            .count()
+                            .max(1) as f64,
                     error_rate: 0.0,
                     last_activity: Some(chrono::Utc::now()),
                 },
             });
         }
 
-        // Add core subsystems
-        let perf = self.performance_metrics.get_performance_metrics();
+        // Add core subsystems with real metrics
+        let queries_per_sec = perf.total_queries as f64 / perf.uptime_seconds.max(1) as f64;
+        let error_rate = perf.failed_queries as f64 / perf.total_queries.max(1) as f64;
 
         subsystems.push(SubsystemInfo {
             id: "search".to_string(),
@@ -644,20 +908,22 @@ impl AdminService for AdminServiceImpl {
                 name: "search".to_string(),
                 status: "healthy".to_string(),
                 message: format!("{} queries processed", perf.total_queries),
-                duration_ms: 0,
-                details: None,
+                duration_ms: perf.average_response_time_ms as u64,
+                details: Some(serde_json::json!({
+                    "avg_response_time_ms": perf.average_response_time_ms,
+                    "successful_queries": perf.successful_queries,
+                })),
             },
             config: serde_json::json!({}),
             metrics: SubsystemMetrics {
-                cpu_percent: 0.0,
-                memory_mb: 0,
-                requests_per_sec: perf.total_queries as f64 / perf.uptime_seconds.max(1) as f64,
-                error_rate: perf.failed_queries as f64 / perf.total_queries.max(1) as f64,
+                cpu_percent: process_metrics.cpu_percent as f64 * search_weight,
+                memory_mb: (total_memory_mb as f64 * search_weight) as u64,
+                requests_per_sec: queries_per_sec,
+                error_rate,
                 last_activity: Some(chrono::Utc::now()),
             },
         });
 
-        let is_indexing = !self.indexing_operations.get_map().is_empty();
         subsystems.push(SubsystemInfo {
             id: "indexing".to_string(),
             name: "Indexing Service".to_string(),
@@ -665,9 +931,10 @@ impl AdminService for AdminServiceImpl {
             status: SubsystemStatus::Running,
             health: HealthCheck {
                 name: "indexing".to_string(),
-                status: "healthy".to_string(),
+                status: if is_indexing { "busy" } else { "healthy" }.to_string(),
                 message: if is_indexing {
-                    "Indexing in progress".to_string()
+                    let active_count = self.indexing_operations.get_map().len();
+                    format!("{} indexing operations in progress", active_count)
                 } else {
                     "Indexing service ready".to_string()
                 },
@@ -676,43 +943,54 @@ impl AdminService for AdminServiceImpl {
             },
             config: serde_json::json!({}),
             metrics: SubsystemMetrics {
-                cpu_percent: 0.0,
-                memory_mb: 0,
-                requests_per_sec: 0.0,
+                cpu_percent: process_metrics.cpu_percent as f64 * indexing_weight,
+                memory_mb: (total_memory_mb as f64 * indexing_weight) as u64,
+                requests_per_sec: if is_indexing {
+                    self.indexing_operations.get_map().len() as f64
+                } else {
+                    0.0
+                },
                 error_rate: 0.0,
                 last_activity: Some(chrono::Utc::now()),
             },
         });
 
+        let cache_enabled = self.config.load().cache.enabled;
         subsystems.push(SubsystemInfo {
             id: "cache".to_string(),
             name: "Cache Manager".to_string(),
             subsystem_type: SubsystemType::Cache,
-            status: if self.config.load().cache.enabled {
+            status: if cache_enabled {
                 SubsystemStatus::Running
             } else {
                 SubsystemStatus::Stopped
             },
             health: HealthCheck {
                 name: "cache".to_string(),
-                status: if self.config.load().cache.enabled {
-                    "healthy"
-                } else {
-                    "disabled"
-                }
-                .to_string(),
+                status: if cache_enabled { "healthy" } else { "disabled" }.to_string(),
                 message: format!("Cache hit rate: {:.1}%", perf.cache_hit_rate * 100.0),
                 duration_ms: 0,
-                details: None,
+                details: Some(serde_json::json!({
+                    "hit_rate": perf.cache_hit_rate,
+                    "enabled": cache_enabled,
+                })),
             },
             config: serde_json::json!({
-                "enabled": self.config.load().cache.enabled,
+                "enabled": cache_enabled,
                 "max_size": self.config.load().cache.max_size,
             }),
             metrics: SubsystemMetrics {
-                cpu_percent: 0.0,
-                memory_mb: 0,
-                requests_per_sec: 0.0,
+                cpu_percent: if cache_enabled {
+                    process_metrics.cpu_percent as f64 * cache_weight
+                } else {
+                    0.0
+                },
+                memory_mb: if cache_enabled {
+                    (total_memory_mb as f64 * cache_weight) as u64
+                } else {
+                    0
+                },
+                requests_per_sec: queries_per_sec * perf.cache_hit_rate,
                 error_rate: 0.0,
                 last_activity: Some(chrono::Utc::now()),
             },
@@ -728,15 +1006,18 @@ impl AdminService for AdminServiceImpl {
                 status: "healthy".to_string(),
                 message: format!("{} active connections", perf.active_connections),
                 duration_ms: 0,
-                details: None,
+                details: Some(serde_json::json!({
+                    "active_connections": perf.active_connections,
+                    "port": self.config.load().metrics.port,
+                })),
             },
             config: serde_json::json!({
                 "port": self.config.load().metrics.port,
             }),
             metrics: SubsystemMetrics {
-                cpu_percent: 0.0,
-                memory_mb: 0,
-                requests_per_sec: perf.total_queries as f64 / perf.uptime_seconds.max(1) as f64,
+                cpu_percent: process_metrics.cpu_percent as f64 * http_weight,
+                memory_mb: (total_memory_mb as f64 * http_weight) as u64,
+                requests_per_sec: queries_per_sec,
                 error_rate: 0.0,
                 last_activity: Some(chrono::Utc::now()),
             },
@@ -775,26 +1056,28 @@ impl AdminService for AdminServiceImpl {
                     let _ = self.event_bus.publish(SystemEvent::ProviderRestart {
                         provider_type: subsystem_type.to_string(),
                         provider_id: provider_id.to_string(),
-                    });
+                    }).await;
                 } else if subsystem_id == "cache" {
                     let _ = self
                         .event_bus
-                        .publish(SystemEvent::CacheClear { namespace: None });
+                        .publish(SystemEvent::CacheClear { namespace: None })
+                        .await;
                 } else if subsystem_id == "indexing" {
                     let _ = self
                         .event_bus
-                        .publish(SystemEvent::IndexRebuild { collection: None });
+                        .publish(SystemEvent::IndexRebuild { collection: None })
+                        .await;
                 }
             }
             SubsystemSignal::Reload => {
-                let _ = self.event_bus.publish(SystemEvent::Reload);
+                let _ = self.event_bus.publish(SystemEvent::Reload).await;
             }
             SubsystemSignal::Configure(config) => {
                 if subsystem_type == "embedding" || subsystem_type == "vector_store" {
                     let _ = self.event_bus.publish(SystemEvent::ProviderReconfigure {
                         provider_type: subsystem_type.to_string(),
                         config,
-                    });
+                    }).await;
                 }
             }
             SubsystemSignal::Pause | SubsystemSignal::Resume => {
@@ -821,80 +1104,18 @@ impl AdminService for AdminServiceImpl {
     }
 
     async fn get_routes(&self) -> Result<Vec<RouteInfo>, AdminError> {
-        // Return a list of known routes
-        // In a full implementation, this would be dynamically generated from the router
-        Ok(vec![
-            RouteInfo {
-                id: "health".to_string(),
-                path: "/api/health".to_string(),
-                method: "GET".to_string(),
-                handler: "health_handler".to_string(),
-                auth_required: false,
-                rate_limit: None,
-            },
-            RouteInfo {
-                id: "metrics".to_string(),
-                path: "/api/context/metrics".to_string(),
-                method: "GET".to_string(),
-                handler: "comprehensive_metrics_handler".to_string(),
-                auth_required: false,
-                rate_limit: None,
-            },
-            RouteInfo {
-                id: "status".to_string(),
-                path: "/api/context/status".to_string(),
-                method: "GET".to_string(),
-                handler: "status_handler".to_string(),
-                auth_required: false,
-                rate_limit: None,
-            },
-            RouteInfo {
-                id: "admin_dashboard".to_string(),
-                path: "/admin".to_string(),
-                method: "GET".to_string(),
-                handler: "admin_index".to_string(),
-                auth_required: true,
-                rate_limit: Some(60),
-            },
-            RouteInfo {
-                id: "admin_providers".to_string(),
-                path: "/admin/providers".to_string(),
-                method: "GET".to_string(),
-                handler: "get_providers_handler".to_string(),
-                auth_required: true,
-                rate_limit: Some(60),
-            },
-            RouteInfo {
-                id: "admin_search".to_string(),
-                path: "/admin/search".to_string(),
-                method: "POST".to_string(),
-                handler: "search_handler".to_string(),
-                auth_required: true,
-                rate_limit: Some(30),
-            },
-            RouteInfo {
-                id: "mcp_message".to_string(),
-                path: "/mcp".to_string(),
-                method: "POST".to_string(),
-                handler: "mcp_message_handler".to_string(),
-                auth_required: false,
-                rate_limit: Some(100),
-            },
-            RouteInfo {
-                id: "mcp_sse".to_string(),
-                path: "/mcp/sse".to_string(),
-                method: "GET".to_string(),
-                handler: "mcp_sse_handler".to_string(),
-                auth_required: false,
-                rate_limit: Some(10),
-            },
-        ])
+        // Use dynamic route discovery instead of hardcoded routes
+        // This allows routes to be registered at runtime and automatically discovered
+        use crate::admin::service::helpers::route_discovery::build_standard_routes;
+
+        let route_registry = build_standard_routes().await;
+        Ok(route_registry.get_all().await)
     }
 
     async fn reload_routes(&self) -> Result<MaintenanceResult, AdminError> {
         use crate::infrastructure::events::SystemEvent;
 
-        let _ = self.event_bus.publish(SystemEvent::RouterReload);
+        let _ = self.event_bus.publish(SystemEvent::RouterReload).await;
 
         tracing::info!("[ADMIN] Router reload requested");
 

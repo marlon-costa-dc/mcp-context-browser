@@ -6,7 +6,7 @@
 //! - SIGUSR1: Trigger binary respawn
 //! - SIGINT (Ctrl+C): Graceful shutdown
 
-use crate::infrastructure::events::{SharedEventBus, SystemEvent};
+use crate::infrastructure::events::{SharedEventBusProvider, SystemEvent};
 use anyhow::Result;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -36,14 +36,14 @@ impl Default for SignalConfig {
 
 /// Signal handler that publishes events to the event bus
 pub struct SignalHandler {
-    event_bus: SharedEventBus,
+    event_bus: SharedEventBusProvider,
     config: SignalConfig,
     running: Arc<AtomicBool>,
 }
 
 impl SignalHandler {
     /// Create a new signal handler
-    pub fn new(event_bus: SharedEventBus, config: SignalConfig) -> Self {
+    pub fn new(event_bus: SharedEventBusProvider, config: SignalConfig) -> Self {
         Self {
             event_bus,
             config,
@@ -52,7 +52,7 @@ impl SignalHandler {
     }
 
     /// Create with default configuration
-    pub fn with_defaults(event_bus: SharedEventBus) -> Self {
+    pub fn with_defaults(event_bus: SharedEventBusProvider) -> Self {
         Self::new(event_bus, SignalConfig::default())
     }
 
@@ -94,7 +94,7 @@ impl SignalHandler {
 
 /// Internal signal loop
 async fn run_signal_loop(
-    event_bus: SharedEventBus,
+    event_bus: SharedEventBusProvider,
     config: SignalConfig,
     running: Arc<AtomicBool>,
 ) -> Result<()> {
@@ -127,7 +127,7 @@ async fn run_signal_loop(
                 }
             } => {
                 info!("Received SIGHUP, triggering configuration reload");
-                if let Err(e) = event_bus.publish(SystemEvent::Reload) {
+                if let Err(e) = event_bus.publish(SystemEvent::Reload).await {
                     warn!("Failed to publish Reload event: {}", e);
                 }
             }
@@ -140,7 +140,7 @@ async fn run_signal_loop(
                 }
             } => {
                 info!("Received SIGTERM, initiating graceful shutdown");
-                if let Err(e) = event_bus.publish(SystemEvent::Shutdown) {
+                if let Err(e) = event_bus.publish(SystemEvent::Shutdown).await {
                     warn!("Failed to publish Shutdown event: {}", e);
                 }
                 break;
@@ -154,7 +154,7 @@ async fn run_signal_loop(
                 }
             } => {
                 info!("Received SIGUSR1, triggering binary respawn");
-                if let Err(e) = event_bus.publish(SystemEvent::Respawn) {
+                if let Err(e) = event_bus.publish(SystemEvent::Respawn).await {
                     warn!("Failed to publish Respawn event: {}", e);
                 }
             }
@@ -172,7 +172,7 @@ async fn run_signal_loop(
 }
 
 /// Convenience function to start signal handlers with event bus
-pub async fn start_signal_handlers(event_bus: SharedEventBus) -> Result<SignalHandler> {
+pub async fn start_signal_handlers(event_bus: SharedEventBusProvider) -> Result<SignalHandler> {
     let handler = SignalHandler::with_defaults(event_bus);
     handler.start().await?;
     Ok(handler)

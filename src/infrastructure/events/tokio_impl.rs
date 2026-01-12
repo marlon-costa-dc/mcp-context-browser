@@ -1,0 +1,130 @@
+//! Tokio-based EventBus implementation
+//!
+//! Provides in-process event publishing and subscription using tokio::sync::broadcast
+
+use super::{EventBusProvider, EventReceiver, SystemEvent};
+use crate::domain::error::Result;
+use std::sync::Arc;
+use tokio::sync::broadcast::{self, Receiver, Sender};
+
+/// Event Bus for publishing and subscribing to system events using tokio broadcast
+#[derive(Clone)]
+pub struct EventBus {
+    sender: Sender<SystemEvent>,
+}
+
+impl EventBus {
+    /// Create a new EventBus with specified channel capacity
+    pub fn new(capacity: usize) -> Self {
+        let (sender, _) = broadcast::channel(capacity);
+        Self { sender }
+    }
+
+    /// Create a new EventBus with default capacity (100)
+    pub fn with_default_capacity() -> Self {
+        Self::new(100)
+    }
+
+    /// Publish an event (synchronous version for sync contexts)
+    ///
+    /// This is thread-safe and can be called from non-async code.
+    /// Returns the number of receivers that got the event, or 0 if all channels are closed.
+    pub fn publish_sync(&self, event: SystemEvent) -> std::result::Result<usize, String> {
+        self.sender
+            .send(event)
+            .map_err(|_| "Event channel closed".to_string())
+    }
+
+    /// Subscribe to receive events (synchronous version for sync contexts)
+    ///
+    /// Returns a receiver that can be used in an async context.
+    /// Typically used in sync code that spawns an async task:
+    /// ```ignore
+    /// let receiver = event_bus.subscribe_sync();
+    /// tokio::spawn(async move {
+    ///     // use receiver here
+    /// });
+    /// ```
+    pub fn subscribe_sync(&self) -> Receiver<SystemEvent> {
+        self.sender.subscribe()
+    }
+
+    /// Get the number of active subscribers
+    pub fn subscriber_count(&self) -> usize {
+        self.sender.receiver_count()
+    }
+}
+
+impl Default for EventBus {
+    fn default() -> Self {
+        Self::with_default_capacity()
+    }
+}
+
+/// Create a shared EventBus that implements EventBusProvider
+///
+/// Returns a trait object so it can be used wherever Arc<dyn EventBusProvider> is expected.
+/// This enables DI patterns where different implementations (Tokio, NATS, Kafka) can be swapped.
+pub fn create_shared_event_bus() -> Arc<dyn super::EventBusProvider> {
+    Arc::new(EventBus::default())
+}
+
+/// EventBus implementation using tokio broadcast
+#[async_trait::async_trait]
+impl EventBusProvider for EventBus {
+    async fn publish(&self, event: SystemEvent) -> Result<usize> {
+        Ok(self.sender.send(event).unwrap_or(0))
+    }
+
+    async fn subscribe(&self) -> Result<Box<dyn EventReceiver>> {
+        Ok(Box::new(TokioEventReceiver {
+            receiver: self.sender.subscribe(),
+        }))
+    }
+
+    fn subscriber_count(&self) -> usize {
+        self.sender.receiver_count()
+    }
+}
+
+/// Event receiver using tokio broadcast channel
+pub struct TokioEventReceiver {
+    receiver: Receiver<SystemEvent>,
+}
+
+/// Tokio-based event receiver implementation
+#[async_trait::async_trait]
+impl EventReceiver for TokioEventReceiver {
+    async fn recv(&mut self) -> Result<SystemEvent> {
+        Ok(self.receiver.recv().await?)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_event_bus_publish_subscribe() {
+        let bus = EventBus::new(10);
+        let mut receiver = bus.sender.subscribe();
+
+        let event = SystemEvent::Reload;
+        let _ = bus.sender.send(event.clone());
+
+        let received = receiver.recv().await.unwrap();
+        assert!(matches!(received, SystemEvent::Reload));
+    }
+
+    #[tokio::test]
+    async fn test_event_bus_provider_trait() {
+        let bus: Arc<dyn EventBusProvider> = Arc::new(EventBus::new(10));
+
+        let event = SystemEvent::Shutdown;
+        let _ = bus.publish(event).await;
+
+        let mut receiver = bus.subscribe().await.unwrap();
+        let received = receiver.recv().await.unwrap();
+        assert!(matches!(received, SystemEvent::Shutdown));
+    }
+}

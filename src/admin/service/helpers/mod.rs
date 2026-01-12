@@ -5,8 +5,16 @@
 //! - `maintenance` - Cache clearing, provider restart, index rebuild, cleanup
 //! - `health` - Health checks, connectivity tests, performance tests
 //! - `backup` - Backup creation, listing, and restoration
+//! - `configuration` - Configuration history tracking and persistence
+//! - `activity` - Activity feed tracking from EventBus
+//! - `runtime_config` - Dynamic configuration values from running subsystems
+//! - `route_discovery` - Dynamic route registration and discovery
 
+pub mod activity;
 pub mod backup;
+pub mod configuration;
 pub mod health;
 pub mod logging;
 pub mod maintenance;
+pub mod runtime_config;
+pub mod route_discovery;

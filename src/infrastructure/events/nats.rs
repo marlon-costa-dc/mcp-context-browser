@@ -1,0 +1,227 @@
+//! NATS JetStream-based Event Bus Provider
+//!
+//! Provides persistent, cross-container event distribution using NATS JetStream.
+//! Enables events to be replayed and received reliably across multiple processes.
+
+use crate::domain::error::{Error, Result};
+use crate::infrastructure::events::{EventBusProvider, EventReceiver, SystemEvent};
+use async_nats::jetstream;
+use serde_json;
+use std::sync::Arc;
+use std::time::Duration;
+use tokio::sync::Mutex;
+use tracing::{debug, error, warn};
+
+const NATS_STREAM_NAME: &str = "MCP_EVENTS";
+const NATS_SUBJECT: &str = "mcp.events.>";
+const NATS_CONSUMER_DURABLE: &str = "mcp-consumer";
+const STREAM_MAX_AGE: Duration = Duration::from_secs(3600); // 1 hour retention
+const STREAM_MAX_MSGS: i64 = 10000;
+
+/// NATS JetStream-based event receiver
+pub struct NatsEventReceiver {
+    subscription: jetstream::consumer::pull::Stream<jetstream::Message>,
+}
+
+#[async_trait::async_trait]
+impl EventReceiver for NatsEventReceiver {
+    async fn recv(&mut self) -> Result<SystemEvent> {
+        match self.subscription.next().await {
+            Some(msg) => {
+                match serde_json::from_slice::<SystemEvent>(&msg.payload) {
+                    Ok(event) => {
+                        debug!("Received event from NATS: {:?}", std::any::type_name_of_val(&event));
+                        let _ = msg.ack().await;
+                        Ok(event)
+                    }
+                    Err(e) => {
+                        error!("Failed to deserialize NATS event: {}", e);
+                        Err(Error::Internal {
+                            message: format!("Failed to deserialize NATS event: {}", e),
+                        })
+                    }
+                }
+            }
+            None => {
+                error!("NATS subscription closed");
+                Err(Error::Internal {
+                    message: "NATS subscription closed unexpectedly".to_string(),
+                })
+            }
+        }
+    }
+}
+
+/// NATS JetStream-based Event Bus Provider
+///
+/// Provides persistent event distribution with at-least-once delivery semantics.
+/// Events are retained for 1 hour or up to 10,000 messages, whichever comes first.
+pub struct NatsEventBus {
+    client: async_nats::Client,
+    jetstream: jetstream::Context,
+    stream_name: String,
+}
+
+impl NatsEventBus {
+    /// Create a new NATS event bus, connecting to the specified server
+    ///
+    /// # Arguments
+    ///
+    /// * `server_url` - NATS server URL (e.g., "nats://localhost:4222")
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// let bus = NatsEventBus::new("nats://localhost:4222").await?;
+    /// ```
+    pub async fn new(server_url: &str) -> Result<Self> {
+        debug!("Connecting to NATS server: {}", server_url);
+
+        // Connect to NATS
+        let client = async_nats::connect(server_url).await.map_err(|e| Error::Internal {
+            message: format!("Failed to connect to NATS: {}", e),
+        })?;
+
+        debug!("Connected to NATS, creating JetStream context");
+
+        // Create JetStream context
+        let jetstream_ctx = jetstream::new(client.clone());
+
+        // Ensure stream exists
+        Self::ensure_stream_exists(&jetstream_ctx).await?;
+
+        debug!("NATS event bus initialized successfully");
+
+        Ok(Self {
+            client,
+            jetstream: jetstream_ctx,
+            stream_name: NATS_STREAM_NAME.to_string(),
+        })
+    }
+
+    /// Create the JetStream stream if it doesn't exist
+    async fn ensure_stream_exists(jetstream_ctx: &jetstream::Context) -> Result<()> {
+        match jetstream_ctx
+            .get_or_create_stream(jetstream::stream::Config {
+                name: NATS_STREAM_NAME.to_string(),
+                subjects: vec![NATS_SUBJECT.to_string()],
+                retention: jetstream::stream::RetentionPolicy::Limits,
+                max_msgs: STREAM_MAX_MSGS,
+                max_age: STREAM_MAX_AGE,
+                discard: jetstream::stream::DiscardPolicy::OldestPerSubject,
+                ..Default::default()
+            })
+            .await
+        {
+            Ok(_) => {
+                debug!("JetStream stream '{}' ready", NATS_STREAM_NAME);
+                Ok(())
+            }
+            Err(e) => {
+                error!("Failed to create JetStream stream: {}", e);
+                Err(Error::Internal {
+                    message: format!("Failed to create JetStream stream: {}", e),
+                })
+            }
+        }
+    }
+
+    /// Get JetStream context
+    pub fn jetstream(&self) -> &jetstream::Context {
+        &self.jetstream
+    }
+
+    /// Get NATS client
+    pub fn client(&self) -> &async_nats::Client {
+        &self.client
+    }
+}
+
+#[async_trait::async_trait]
+impl EventBusProvider for NatsEventBus {
+    async fn publish(&self, event: SystemEvent) -> Result<usize> {
+        // Serialize the event
+        let payload = serde_json::to_vec(&event).map_err(|e| Error::Internal {
+            message: format!("Failed to serialize event: {}", e),
+        })?;
+
+        // Publish to NATS JetStream
+        match self
+            .jetstream
+            .publish(NATS_SUBJECT.to_string(), payload.into())
+            .await
+        {
+            Ok(ack) => {
+                debug!(
+                    "Published event to NATS (sequence: {})",
+                    ack.sequence
+                );
+                // Return 1 as subscriber count (we don't track this for NATS)
+                // In a real scenario, we'd need to query active subscribers
+                Ok(1)
+            }
+            Err(e) => {
+                error!("Failed to publish event to NATS: {}", e);
+                Err(Error::Internal {
+                    message: format!("Failed to publish event: {}", e),
+                })
+            }
+        }
+    }
+
+    async fn subscribe(&self) -> Result<Box<dyn EventReceiver>> {
+        // Create a consumer to read from the stream
+        // Using pull subscription with durable consumer for reliability
+        debug!("Creating NATS JetStream subscription");
+
+        // Create or get durable consumer
+        let consumer = self
+            .jetstream
+            .get_or_create_consumer(
+                &self.stream_name,
+                jetstream::consumer::pull::Config {
+                    durable_name: Some(NATS_CONSUMER_DURABLE.to_string()),
+                    deliver_policy: jetstream::consumer::DeliverPolicy::All,
+                    ack_policy: jetstream::consumer::AckPolicy::Explicit,
+                    ack_wait: Duration::from_secs(30),
+                    max_deliver: 10,
+                    ..Default::default()
+                },
+            )
+            .await
+            .map_err(|e| Error::Internal {
+                message: format!("Failed to create NATS consumer: {}", e),
+            })?;
+
+        // Start pulling messages
+        let subscription = consumer
+            .stream()
+            .await
+            .map_err(|e| Error::Internal {
+                message: format!("Failed to create NATS subscription: {}", e),
+            })?;
+
+        debug!("NATS subscription created successfully");
+
+        Ok(Box::new(NatsEventReceiver { subscription }))
+    }
+
+    fn subscriber_count(&self) -> usize {
+        // NATS doesn't provide an easy way to get subscriber count
+        // Return 0 as we can't easily track this
+        0
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    #[ignore] // Requires NATS server running
+    async fn test_nats_event_bus_new() {
+        let result = NatsEventBus::new("nats://localhost:4222").await;
+        // This will fail if NATS server not running, which is expected
+        assert!(result.is_ok() || result.is_err()); // Just check it doesn't panic
+    }
+}

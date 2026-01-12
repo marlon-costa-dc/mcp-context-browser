@@ -225,8 +225,11 @@ pub struct BackupInfo {
 pub struct RestoreResult {
     pub success: bool,
     pub backup_id: String,
-    pub restored_items: u64,
-    pub errors: Vec<String>,
+    pub restored_at: DateTime<Utc>,
+    pub items_restored: u64,
+    pub rollback_id: Option<String>,
+    pub message: String,
+    pub execution_time_ms: u64,
 }
 
 /// System information

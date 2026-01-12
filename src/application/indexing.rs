@@ -12,7 +12,7 @@ use crate::chunking::IntelligentChunker;
 use crate::domain::error::{Error, Result};
 use crate::domain::types::CodeChunk;
 // Cross-cutting concern: Event bus for decoupled notifications
-use crate::infrastructure::events::{SharedEventBus, SystemEvent};
+use crate::infrastructure::events::{SharedEventBusProvider, SystemEvent};
 use crate::snapshot::SnapshotManager;
 use crate::sync::SyncManager;
 use futures::future::join_all;
@@ -43,16 +43,17 @@ impl IndexingService {
     }
 
     /// Start listening for system events
-    pub fn start_event_listener(&self, event_bus: SharedEventBus) {
-        let mut receiver = event_bus.subscribe();
+    pub fn start_event_listener(&self, event_bus: SharedEventBusProvider) {
         let _service = Arc::new(self.clone_service());
 
         tokio::spawn(async move {
-            while let Ok(event) = receiver.recv().await {
-                if let SystemEvent::IndexRebuild { collection } = event {
-                    let coll = collection.unwrap_or_else(|| "default".to_string());
-                    tracing::info!("[INDEX] Rebuild requested for collection: {}", coll);
-                    // In a real implementation, we might trigger a full re-index of known paths
+            if let Ok(mut receiver) = event_bus.subscribe().await {
+                while let Ok(event) = receiver.recv().await {
+                    if let SystemEvent::IndexRebuild { collection } = event {
+                        let coll = collection.unwrap_or_else(|| "default".to_string());
+                        tracing::info!("[INDEX] Rebuild requested for collection: {}", coll);
+                        // In a real implementation, we might trigger a full re-index of known paths
+                    }
                 }
             }
         });

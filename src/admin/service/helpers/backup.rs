@@ -5,11 +5,11 @@
 use crate::admin::service::types::{
     AdminError, BackupConfig, BackupInfo, BackupResult, RestoreResult,
 };
-use crate::infrastructure::events::SharedEventBus;
+use crate::infrastructure::events::SharedEventBusProvider;
 
 /// Create a new backup
-pub fn create_backup(
-    event_bus: &SharedEventBus,
+pub async fn create_backup(
+    event_bus: &SharedEventBusProvider,
     backup_config: BackupConfig,
 ) -> Result<BackupResult, AdminError> {
     let backup_id = format!("backup_{}", chrono::Utc::now().format("%Y%m%d_%H%M%S"));
@@ -19,6 +19,7 @@ pub fn create_backup(
     // Use list_backups() to check completion status and get actual file size
     event_bus
         .publish(crate::infrastructure::events::SystemEvent::BackupCreate { path: path.clone() })
+        .await
         .map_err(|e| {
             AdminError::McpServerError(format!("Failed to publish BackupCreate event: {}", e))
         })?;
@@ -78,14 +79,16 @@ pub fn list_backups() -> Result<Vec<BackupInfo>, AdminError> {
     Ok(backups)
 }
 
-/// Restore from a backup (not implemented - manual restore required)
-pub fn restore_backup(
-    _event_bus: &SharedEventBus,
+/// Restore from a backup with automated process
+pub async fn restore_backup(
+    event_bus: &SharedEventBusProvider,
     backup_id: &str,
 ) -> Result<RestoreResult, AdminError> {
+    let start_time = std::time::Instant::now();
     let backups_dir = std::path::PathBuf::from("./backups");
     let backup_path = backups_dir.join(format!("{}.tar.gz", backup_id));
 
+    // Validate backup exists
     if !backup_path.exists() {
         return Err(AdminError::ConfigError(format!(
             "Backup not found: {}",
@@ -93,19 +96,173 @@ pub fn restore_backup(
         )));
     }
 
-    // Backup restore requires manual intervention for safety
-    // Automated restore could cause data corruption if done incorrectly
+    // Validate backup file is readable and not empty
+    match std::fs::metadata(&backup_path) {
+        Ok(metadata) => {
+            if metadata.len() == 0 {
+                return Err(AdminError::ConfigError(format!(
+                    "Backup file is empty: {}",
+                    backup_id
+                )));
+            }
+        }
+        Err(e) => {
+            return Err(AdminError::ConfigError(format!(
+                "Cannot read backup file {}: {}",
+                backup_id, e
+            )));
+        }
+    }
+
+    // Create rollback backup before restore
+    let rollback_id = format!("rollback_{}", chrono::Utc::now().format("%Y%m%d_%H%M%S"));
+    let rollback_path = backups_dir.join(format!("{}.tar.gz", rollback_id));
+
     tracing::info!(
-        "[ADMIN] restore_backup('{}') called - returning not implemented. \
-         Manual restore: tar -xzf {} -C ./data",
-        backup_id,
-        backup_path.display()
+        "[ADMIN] Creating rollback backup before restore: {}",
+        rollback_id
     );
 
-    Err(AdminError::NotImplemented(format!(
-        "Automated backup restore not implemented for safety. \
-         To restore backup '{}', manually run: tar -xzf {} -C ./data",
-        backup_id,
-        backup_path.display()
-    )))
+    // Attempt to create a rollback backup of current data
+    if let Ok(data_dir) = std::fs::read_dir("./data") {
+        let mut found_files = false;
+        for entry in data_dir.flatten() {
+            if entry.path().is_file() {
+                found_files = true;
+                break;
+            }
+        }
+
+        if found_files {
+            match create_rollback_backup(&rollback_path) {
+                Ok(_) => {
+                    tracing::info!("[ADMIN] Rollback backup created: {}", rollback_id);
+                }
+                Err(e) => {
+                    tracing::warn!("[ADMIN] Failed to create rollback backup: {}", e);
+                    // Continue anyway, but log the failure
+                }
+            }
+        }
+    }
+
+    // Perform the restore
+    tracing::info!(
+        "[ADMIN] Starting restore from backup: {} -> ./data",
+        backup_id
+    );
+
+    match extract_backup(&backup_path, "./data") {
+        Ok(_) => {
+            // Publish restore event
+            let _ = event_bus.publish(crate::infrastructure::events::SystemEvent::BackupRestore {
+                path: backup_path.to_string_lossy().to_string(),
+            }).await;
+
+            tracing::info!("[ADMIN] Backup restore completed successfully: {}", backup_id);
+
+            Ok(RestoreResult {
+                success: true,
+                backup_id: backup_id.to_string(),
+                restored_at: chrono::Utc::now(),
+                items_restored: count_restored_files("./data"),
+                rollback_id: Some(rollback_id.clone()),
+                message: format!(
+                    "Backup '{}' restored successfully. \
+                     Rollback backup saved as '{}'",
+                    backup_id, rollback_id
+                ),
+                execution_time_ms: start_time.elapsed().as_millis() as u64,
+            })
+        }
+        Err(e) => {
+            tracing::error!(
+                "[ADMIN] Backup restore failed for {}: {}",
+                backup_id, e
+            );
+
+            // Attempt to restore from rollback if restore failed
+            if rollback_path.exists() {
+                tracing::warn!("[ADMIN] Attempting rollback restoration");
+                match extract_backup(&rollback_path, "./data") {
+                    Ok(_) => {
+                        tracing::info!("[ADMIN] Rollback restoration completed");
+                        return Ok(RestoreResult {
+                            success: false,
+                            backup_id: backup_id.to_string(),
+                            restored_at: chrono::Utc::now(),
+                            items_restored: 0,
+                            rollback_id: Some(rollback_id),
+                            message: format!(
+                                "Failed to restore backup '{}': {}. \
+                                 Rolled back to previous state.",
+                                backup_id, e
+                            ),
+                            execution_time_ms: start_time.elapsed().as_millis() as u64,
+                        });
+                    }
+                    Err(rollback_err) => {
+                        tracing::error!(
+                            "[ADMIN] Rollback restoration also failed: {}",
+                            rollback_err
+                        );
+                    }
+                }
+            }
+
+            Err(AdminError::ConfigError(format!(
+                "Failed to restore backup '{}': {}",
+                backup_id, e
+            )))
+        }
+    }
+}
+
+/// Helper function to extract backup archive
+fn extract_backup(backup_path: &std::path::Path, target_dir: &str) -> Result<(), String> {
+    // Ensure target directory exists
+    std::fs::create_dir_all(target_dir).map_err(|e| format!("Cannot create target directory: {}", e))?;
+
+    // Extract tar.gz file
+    let file = std::fs::File::open(backup_path)
+        .map_err(|e| format!("Cannot open backup file: {}", e))?;
+
+    let decoder = flate2::read::GzDecoder::new(file);
+    let mut archive = tar::Archive::new(decoder);
+
+    archive
+        .unpack(target_dir)
+        .map_err(|e| format!("Cannot extract archive: {}", e))?;
+
+    Ok(())
+}
+
+/// Helper function to create rollback backup
+fn create_rollback_backup(backup_path: &std::path::Path) -> Result<(), String> {
+    let file = std::fs::File::create(backup_path)
+        .map_err(|e| format!("Cannot create backup file: {}", e))?;
+
+    let encoder = flate2::write::GzEncoder::new(file, flate2::Compression::default());
+    let mut archive = tar::Builder::new(encoder);
+
+    archive
+        .append_dir_all("data", "./data")
+        .map_err(|e| format!("Cannot archive directory: {}", e))?;
+
+    archive
+        .finish()
+        .map_err(|e| format!("Cannot finalize archive: {}", e))?;
+
+    Ok(())
+}
+
+/// Helper function to count restored files
+fn count_restored_files(path: &str) -> u64 {
+    match std::fs::read_dir(path) {
+        Ok(entries) => entries
+            .flatten()
+            .filter(|entry| entry.path().is_file())
+            .count() as u64,
+        Err(_) => 0,
+    }
 }

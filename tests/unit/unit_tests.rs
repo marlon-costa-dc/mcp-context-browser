@@ -270,17 +270,22 @@ mod provider_unit_tests {
     fn test_mock_embedding_provider_creation() {
         let provider = NullEmbeddingProvider::new();
         assert_eq!(provider.provider_name(), "null");
-        // NullEmbeddingProvider returns dimension=1 for minimal test vectors
-        assert_eq!(provider.dimensions(), 1);
+        // NullEmbeddingProvider returns 384-dimensional vectors (similar to many real models)
+        assert_eq!(provider.dimensions(), 384);
     }
 
     #[tokio::test]
     async fn test_mock_embedding_provider_embed() -> Result<(), Box<dyn std::error::Error>> {
         let provider = NullEmbeddingProvider::new();
         let embedding = provider.embed("test text").await?;
-        // NullEmbeddingProvider returns dimension=1 for minimal test vectors
-        assert_eq!(embedding.dimensions, 1);
-        assert_eq!(embedding.vector.len(), 1);
+        // NullEmbeddingProvider returns 384-dimensional vectors
+        assert_eq!(embedding.dimensions, 384);
+        assert_eq!(embedding.vector.len(), 384);
+        // Verify vectors have varied values based on text hash
+        assert!(
+            embedding.vector.iter().any(|&v| v != 0.0),
+            "Should have non-zero values"
+        );
         Ok(())
     }
 
@@ -294,10 +299,16 @@ mod provider_unit_tests {
         ];
         let embeddings = provider.embed_batch(&texts).await?;
         assert_eq!(embeddings.len(), 3);
-        for emb in embeddings {
-            // NullEmbeddingProvider returns dimension=1 for minimal test vectors
-            assert_eq!(emb.dimensions, 1);
+        for emb in &embeddings {
+            // NullEmbeddingProvider returns 384-dimensional vectors
+            assert_eq!(emb.dimensions, 384);
+            assert_eq!(emb.vector.len(), 384);
         }
+        // Verify different texts produce different embeddings (text-hash based)
+        assert_ne!(
+            embeddings[0].vector, embeddings[1].vector,
+            "Different texts should produce different embeddings"
+        );
         Ok(())
     }
 
@@ -305,8 +316,8 @@ mod provider_unit_tests {
     fn test_provider_trait_object_compatibility() {
         // Test that providers can be used as trait objects
         let provider: Arc<dyn EmbeddingProvider> = Arc::new(NullEmbeddingProvider::new());
-        // NullEmbeddingProvider returns dimension=1 for minimal test vectors
-        assert_eq!(provider.dimensions(), 1);
+        // NullEmbeddingProvider returns 384-dimensional vectors
+        assert_eq!(provider.dimensions(), 384);
     }
 }
 
@@ -345,8 +356,8 @@ mod service_unit_tests {
         let service =
             ContextService::new_with_providers(embedding_provider, vector_store, hybrid_search);
 
-        // NullEmbeddingProvider returns dimension=1 for minimal test vectors
-        assert_eq!(service.embedding_dimensions(), 1);
+        // NullEmbeddingProvider returns 384-dimensional vectors
+        assert_eq!(service.embedding_dimensions(), 384);
     }
 
     #[tokio::test]
@@ -376,8 +387,9 @@ mod service_unit_tests {
             ContextService::new_with_providers(embedding_provider, vector_store, hybrid_search);
 
         let embedding = service.embed_text("test query").await?;
-        // NullEmbeddingProvider returns dimension=1 for minimal test vectors
-        assert_eq!(embedding.vector.len(), 1);
+        // NullEmbeddingProvider returns 384-dimensional vectors
+        assert_eq!(embedding.vector.len(), 384);
+        assert_eq!(embedding.dimensions, 384);
         Ok(())
     }
 }

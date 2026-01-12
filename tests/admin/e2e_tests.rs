@@ -2,14 +2,12 @@
 //!
 //! These tests verify complete admin workflows using real services.
 
-
 use std::collections::HashMap;
 
 // Import the real service creation function
 use crate::admin::handler_tests::test_helpers::create_test_admin_service;
 
 /// Test infrastructure for setting up real services
-
 
 #[tokio::test]
 async fn test_e2e_login_and_system_info() {
@@ -46,7 +44,6 @@ async fn test_e2e_login_and_system_info() {
     assert!(!info.version.is_empty());
 }
 
-
 #[tokio::test]
 async fn test_e2e_config_update_workflow() -> Result<(), Box<dyn std::error::Error>> {
     let service = create_test_admin_service().await;
@@ -64,7 +61,9 @@ async fn test_e2e_config_update_workflow() -> Result<(), Box<dyn std::error::Err
     assert!(warnings.is_ok());
 
     // 3. Update configuration
-    let result = service.update_configuration(updates.clone(), "test_user").await;
+    let result = service
+        .update_configuration(updates.clone(), "test_user")
+        .await;
     assert!(result.is_ok());
     assert!(result.unwrap().success);
 
@@ -76,4 +75,3 @@ async fn test_e2e_config_update_workflow() -> Result<(), Box<dyn std::error::Err
 }
 
 // Test service creation function
-

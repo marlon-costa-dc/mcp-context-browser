@@ -144,13 +144,13 @@ async fn test_sync_returns_changed_files() -> Result<(), Box<dyn std::error::Err
 
 #[tokio::test]
 async fn test_sync_with_event_bus_publishes_event() -> Result<(), Box<dyn std::error::Error>> {
-    use mcp_context_browser::infrastructure::events::{EventBus, SystemEvent};
+    use mcp_context_browser::infrastructure::events::{EventBus, EventBusProvider, SystemEvent};
     use std::sync::Arc;
 
     // Given: A sync manager with event bus
     let temp_dir = create_test_directory()?;
     let event_bus = Arc::new(EventBus::new(10));
-    let mut receiver = event_bus.subscribe();
+    let mut receiver = event_bus.subscribe().await?;
 
     let manager = SyncManager::with_event_bus(
         SyncConfig {
@@ -166,7 +166,7 @@ async fn test_sync_with_event_bus_publishes_event() -> Result<(), Box<dyn std::e
 
     // Then: An event should be published
     // Use timeout to avoid hanging if event not published
-    let event = tokio::time::timeout(std::time::Duration::from_millis(500), receiver.recv()).await;
+    let event: Result<Result<SystemEvent, _>, _> = tokio::time::timeout(std::time::Duration::from_millis(500), receiver.recv()).await;
 
     assert!(event.is_ok(), "Should receive event within timeout");
     match event? {

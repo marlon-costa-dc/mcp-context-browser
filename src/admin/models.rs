@@ -135,4 +135,10 @@ pub struct AdminState {
     pub admin_service: std::sync::Arc<dyn super::service::AdminService>,
     pub mcp_server: std::sync::Arc<crate::server::McpServer>,
     pub templates: std::sync::Arc<tera::Tera>,
+    /// Recovery manager for automatic component restart
+    pub recovery_manager: Option<crate::infrastructure::recovery::SharedRecoveryManager>,
+    /// Event bus for system-wide event coordination
+    pub event_bus: crate::infrastructure::events::SharedEventBusProvider,
+    /// Activity logger for tracking system events
+    pub activity_logger: std::sync::Arc<super::service::helpers::activity::ActivityLogger>,
 }

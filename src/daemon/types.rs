@@ -248,10 +248,11 @@ impl RecoveryConfig {
 }
 
 /// Current status of recovery for a subsystem
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum RecoveryStatus {
     /// Subsystem is healthy, no recovery needed
+    #[default]
     Healthy,
     /// Recovery is in progress
     Recovering,
@@ -259,12 +260,6 @@ pub enum RecoveryStatus {
     Exhausted,
     /// Manual intervention required (Alert strategy)
     Manual,
-}
-
-impl Default for RecoveryStatus {
-    fn default() -> Self {
-        Self::Healthy
-    }
 }
 
 impl std::fmt::Display for RecoveryStatus {

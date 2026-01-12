@@ -201,4 +201,275 @@
         </div>
     </div>
 </div>
+
+<script>
+// Get auth token from cookie
+function getAuthToken() {
+    const name = 'auth_token=';
+    const decodedCookie = decodeURIComponent(document.cookie);
+    const cookieArray = decodedCookie.split(';');
+    for (let i = 0; i < cookieArray.length; i++) {
+        let cookie = cookieArray[i].trim();
+        if (cookie.indexOf(name) === 0) {
+            return cookie.substring(name.length);
+        }
+    }
+    return null;
+}
+
+// Helper function for API requests with auth
+async function apiRequest(url, options = {}) {
+    const token = getAuthToken();
+    const headers = {
+        'Content-Type': 'application/json',
+        ...options.headers
+    };
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    return fetch(url, {
+        ...options,
+        headers,
+        credentials: 'include'
+    });
+}
+
+let currentFilter = {
+    level: '',
+    module: '',
+    search: '',
+    timeRange: '24h'
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Load initial stats
+    loadLogStats();
+    // Load initial log entries
+    loadLogs();
+
+    // Find and attach event listeners
+    const buttons = document.querySelectorAll('button');
+    for (const button of buttons) {
+        if (button.textContent.includes('Export Logs')) {
+            button.addEventListener('click', exportLogs);
+        } else if (button.textContent.includes('Refresh')) {
+            button.addEventListener('click', () => {
+                loadLogStats();
+                loadLogs();
+            });
+        } else if (button.textContent.includes('Apply Filters')) {
+            button.addEventListener('click', applyFilters);
+        }
+    }
+});
+
+async function loadLogStats() {
+    try {
+        const response = await apiRequest('/admin/logs/stats');
+        if (!response.ok) {
+            throw new Error(`API error: ${response.status} ${response.statusText}`);
+        }
+        const data = await response.json();
+
+        if (!data.success) {
+            throw new Error(data.error || 'Failed to load log statistics');
+        }
+
+        if (!data.data || typeof data.data !== 'object') {
+            throw new Error('Log statistics data is invalid');
+        }
+
+        const stats = data.data;
+        updateStatsCards(stats);
+    } catch (error) {
+        console.error('[ERROR] Failed to load log statistics:', error);
+        showError(`Log stats error: ${error.message}`);
+    }
+}
+
+function updateStatsCards(stats) {
+    // Update stat cards dynamically
+    const cards = document.querySelectorAll('[class*="bg-white dark:bg-gray-800 overflow-hidden shadow-sm"]');
+
+    if (cards.length >= 4) {
+        // Total entries
+        const totalDD = cards[0].querySelector('dd:first-of-type');
+        if (totalDD) totalDD.textContent = stats.total_entries || 0;
+
+        // Error count
+        const errorCount = stats.entries_by_level?.ERROR || 0;
+        const errorDD = cards[1].querySelector('dd:first-of-type');
+        if (errorDD) {
+            errorDD.textContent = errorCount;
+            const errorRate = cards[1].querySelectorAll('dd')[1];
+            const rate = stats.total_entries > 0 ? ((errorCount / stats.total_entries) * 100).toFixed(1) : 0;
+            if (errorRate) errorRate.textContent = `(${rate}% of total)`;
+        }
+
+        // Warning count
+        const warnCount = stats.entries_by_level?.WARN || 0;
+        const warnDD = cards[2].querySelector('dd:first-of-type');
+        if (warnDD) {
+            warnDD.textContent = warnCount;
+            const warnRate = cards[2].querySelectorAll('dd')[1];
+            const rate = stats.total_entries > 0 ? ((warnCount / stats.total_entries) * 100).toFixed(1) : 0;
+            if (warnRate) warnRate.textContent = `(${rate}% of total)`;
+        }
+
+        // Active modules
+        const modulesDD = cards[3].querySelector('dd:first-of-type');
+        if (modulesDD) modulesDD.textContent = Object.keys(stats.entries_by_module || {}).length;
+    }
+}
+
+async function loadLogs() {
+    try {
+        const params = new URLSearchParams();
+        if (currentFilter.level) params.append('level', currentFilter.level);
+        if (currentFilter.module) params.append('module', currentFilter.module);
+        if (currentFilter.search) params.append('search', currentFilter.search);
+        if (currentFilter.timeRange) params.append('time_range', currentFilter.timeRange);
+
+        const response = await apiRequest(`/admin/logs?${params.toString()}`);
+        if (!response.ok) {
+            throw new Error(`API error: ${response.status} ${response.statusText}`);
+        }
+        const data = await response.json();
+
+        if (!data.success) {
+            throw new Error(data.error || 'Failed to load logs');
+        }
+
+        if (!data.data) {
+            throw new Error('Log data is invalid or missing');
+        }
+
+        const entries = data.data.entries || [];
+        displayLogs(entries);
+    } catch (error) {
+        console.error('[ERROR] Failed to load logs:', error);
+        showError(`Logs error: ${error.message}`);
+        displayLogs([]); // Show error explicitly
+    }
+}
+
+function displayLogs(entries) {
+    const tbody = document.querySelector('table tbody');
+    if (!tbody) return;
+
+    if (entries.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                    No log entries found
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    tbody.innerHTML = entries.map(entry => `
+        <tr>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                ${new Date(entry.timestamp).toLocaleString()}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getLevelColor(entry.level)}">
+                    ${escapeHtml(entry.level)}
+                </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                ${escapeHtml(entry.module || '-')}
+            </td>
+            <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">
+                ${escapeHtml(entry.message || '-')}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                ${escapeHtml(entry.file || '-')}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                ${entry.line ? entry.line : '-'}
+            </td>
+        </tr>
+    `).join('');
+}
+
+function getLevelColor(level) {
+    switch(level?.toUpperCase()) {
+        case 'ERROR': return 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200';
+        case 'WARN': return 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200';
+        case 'INFO': return 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200';
+        case 'DEBUG': return 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200';
+        default: return 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200';
+    }
+}
+
+function applyFilters() {
+    // Get filter values from form
+    const filterContainer = document.querySelector('[class*="Log Filters"]').parentElement;
+    const selects = filterContainer.querySelectorAll('select');
+    const inputs = filterContainer.querySelectorAll('input');
+
+    currentFilter.level = selects[0]?.value || '';
+    currentFilter.timeRange = selects[1]?.value || '24h';
+    currentFilter.module = inputs[0]?.value || '';
+    currentFilter.search = inputs[1]?.value || '';
+
+    // Load logs with new filters
+    loadLogs();
+}
+
+async function exportLogs() {
+    try {
+        const params = new URLSearchParams();
+        params.append('format', 'json');
+        if (currentFilter.level) params.append('level', currentFilter.level);
+        if (currentFilter.module) params.append('module', currentFilter.module);
+        if (currentFilter.search) params.append('search', currentFilter.search);
+
+        const response = await apiRequest(`/admin/logs/export?${params.toString()}`, {
+            method: 'GET'
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            const element = document.createElement('a');
+            element.setAttribute('href', 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(data.data, null, 2)));
+            element.setAttribute('download', `logs-${new Date().toISOString()}.json`);
+            element.style.display = 'none';
+            document.body.appendChild(element);
+            element.click();
+            document.body.removeChild(element);
+            showSuccess('Logs exported successfully');
+        } else {
+            showError('Failed to export logs');
+        }
+    } catch (error) {
+        console.error('Failed to export logs:', error);
+        showError('Failed to export logs');
+    }
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function showSuccess(message) {
+    const toast = document.createElement('div');
+    toast.className = 'fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
+function showError(message) {
+    const toast = document.createElement('div');
+    toast.className = 'fixed bottom-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+</script>
 {% endblock %}

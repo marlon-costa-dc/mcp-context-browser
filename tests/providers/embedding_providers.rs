@@ -525,23 +525,40 @@ mod provider_trait_tests {
         let provider = NullEmbeddingProvider::new();
 
         assert_eq!(provider.provider_name(), "null");
-        assert_eq!(provider.dimensions(), 1);
+        assert_eq!(
+            provider.dimensions(),
+            384,
+            "Null provider returns 384-dimensional embeddings"
+        );
 
         // Test embed single
         let result = tokio::runtime::Runtime::new()?.block_on(provider.embed("test"))?;
-        assert_eq!(result.model, "null");
-        assert_eq!(result.dimensions, 1);
-        assert!(!result.vector.is_empty());
+        assert_eq!(result.model, "null-test");
+        assert_eq!(result.dimensions, 384);
+        assert_eq!(
+            result.vector.len(),
+            384,
+            "Vector length should match dimensions"
+        );
+        assert!(
+            result.vector.iter().any(|&v| v != 0.0),
+            "Should have non-zero values"
+        );
 
         // Test embed batch
         let result = tokio::runtime::Runtime::new()?
             .block_on(provider.embed_batch(&["test1".to_string(), "test2".to_string()]))?;
         assert_eq!(result.len(), 2);
-        for embedding in result {
-            assert_eq!(embedding.model, "null");
-            assert_eq!(embedding.dimensions, 1);
-            assert!(!embedding.vector.is_empty());
+        for embedding in &result {
+            assert_eq!(embedding.model, "null-test");
+            assert_eq!(embedding.dimensions, 384);
+            assert_eq!(embedding.vector.len(), 384);
         }
+        // Different texts should produce different embeddings (text-hash based)
+        assert_ne!(
+            result[0].vector, result[1].vector,
+            "Different texts should produce different embeddings"
+        );
 
         // Test empty batch
         let result = tokio::runtime::Runtime::new()?.block_on(provider.embed_batch(&[]))?;
@@ -595,7 +612,11 @@ mod provider_trait_tests {
         }
 
         // Test provider-specific validations
-        assert_eq!(null_provider.dimensions(), 1);
+        assert_eq!(
+            null_provider.dimensions(),
+            384,
+            "Null provider returns 384-dimensional embeddings"
+        );
         assert_eq!(openai_provider.dimensions(), 1536);
         assert_eq!(gemini_provider.dimensions(), 768);
         assert_eq!(voyageai_provider.dimensions(), 1024);
@@ -876,15 +897,15 @@ mod provider_trait_tests {
             "Should return embeddings for all items in large batch"
         );
 
-        // Test memory consistency
+        // Test memory consistency - NullEmbeddingProvider returns 384-dimensional vectors
         for embedding in &embeddings {
             assert_eq!(
                 embedding.vector.len(),
-                1,
+                384,
                 "All embeddings should have consistent vector size"
             );
             assert_eq!(
-                embedding.dimensions, 1,
+                embedding.dimensions, 384,
                 "All embeddings should have consistent dimensions"
             );
         }

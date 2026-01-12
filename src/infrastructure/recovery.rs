@@ -28,12 +28,11 @@
 //! ```
 
 use crate::daemon::types::{RecoveryConfig, RecoveryState, RecoveryStatus, RecoveryStrategy};
-use crate::infrastructure::events::{SharedEventBus, SystemEvent};
+use crate::infrastructure::events::{SystemEvent, SharedEventBusProvider};
 use dashmap::DashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::broadcast::Receiver;
 use tokio::task::JoinHandle;
 
 /// Recovery manager interface for dependency injection
@@ -73,7 +72,7 @@ pub struct RecoveryManager {
     config: RecoveryConfig,
 
     /// Event bus for publishing/subscribing to system events
-    event_bus: SharedEventBus,
+    event_bus: SharedEventBusProvider,
 
     /// Recovery state for each monitored subsystem
     recovery_states: Arc<DashMap<String, RecoveryState>>,
@@ -87,7 +86,7 @@ pub struct RecoveryManager {
 
 impl RecoveryManager {
     /// Create a new recovery manager
-    pub fn new(config: RecoveryConfig, event_bus: SharedEventBus) -> Self {
+    pub fn new(config: RecoveryConfig, event_bus: SharedEventBusProvider) -> Self {
         Self {
             config,
             event_bus,
@@ -120,12 +119,18 @@ impl RecoveryManager {
     /// Main recovery loop that runs periodic health checks
     async fn recovery_loop(
         config: RecoveryConfig,
-        event_bus: SharedEventBus,
+        event_bus: SharedEventBusProvider,
         recovery_states: Arc<DashMap<String, RecoveryState>>,
         running: Arc<AtomicBool>,
     ) {
         let interval = Duration::from_secs(config.health_check_interval_secs);
-        let mut event_receiver = event_bus.subscribe();
+        let mut event_receiver = match event_bus.subscribe().await {
+            Ok(receiver) => receiver,
+            Err(e) => {
+                tracing::error!("[RECOVERY] Failed to subscribe to event bus: {}", e);
+                return;
+            }
+        };
 
         tracing::info!(
             "[RECOVERY] Recovery manager started with {}s health check interval",
@@ -157,7 +162,7 @@ impl RecoveryManager {
     async fn handle_event(
         event: &SystemEvent,
         config: &RecoveryConfig,
-        event_bus: &SharedEventBus,
+        event_bus: &SharedEventBusProvider,
         recovery_states: &DashMap<String, RecoveryState>,
     ) {
         match event {
@@ -166,13 +171,8 @@ impl RecoveryManager {
                     "[RECOVERY] Health check requested for subsystem: {}",
                     subsystem_id
                 );
-                Self::check_and_recover_subsystem(
-                    subsystem_id,
-                    config,
-                    event_bus,
-                    recovery_states,
-                )
-                .await;
+                Self::check_and_recover_subsystem(subsystem_id, config, event_bus, recovery_states)
+                    .await;
             }
             SystemEvent::ProviderRestart {
                 provider_type,
@@ -195,7 +195,7 @@ impl RecoveryManager {
     /// Process one recovery cycle for all monitored subsystems
     async fn process_recovery_cycle(
         config: &RecoveryConfig,
-        event_bus: &SharedEventBus,
+        event_bus: &SharedEventBusProvider,
         recovery_states: &DashMap<String, RecoveryState>,
     ) {
         let subsystem_ids: Vec<String> = recovery_states
@@ -213,7 +213,7 @@ impl RecoveryManager {
     async fn check_and_recover_subsystem(
         subsystem_id: &str,
         config: &RecoveryConfig,
-        event_bus: &SharedEventBus,
+        event_bus: &SharedEventBusProvider,
         recovery_states: &DashMap<String, RecoveryState>,
     ) {
         let policy = config.get_policy(subsystem_id);
@@ -221,9 +221,7 @@ impl RecoveryManager {
         // Get or create recovery state
         let mut state = recovery_states
             .entry(subsystem_id.to_string())
-            .or_insert_with(|| {
-                RecoveryState::new(subsystem_id.to_string(), policy.max_retries)
-            });
+            .or_insert_with(|| RecoveryState::new(subsystem_id.to_string(), policy.max_retries));
 
         // Check if we should attempt recovery
         if state.should_attempt_recovery(policy) {
@@ -239,8 +237,7 @@ impl RecoveryManager {
             );
 
             // Execute recovery based on strategy
-            let result =
-                Self::execute_recovery(subsystem_id, &policy.strategy, event_bus).await;
+            let result = Self::execute_recovery(subsystem_id, &policy.strategy, event_bus).await;
 
             match result {
                 Ok(()) => {
@@ -253,11 +250,7 @@ impl RecoveryManager {
                 }
                 Err(e) => {
                     state.record_failure(Some(e.to_string()));
-                    tracing::error!(
-                        "[RECOVERY] Recovery failed for {}: {}",
-                        subsystem_id,
-                        e
-                    );
+                    tracing::error!("[RECOVERY] Recovery failed for {}: {}", subsystem_id, e);
                 }
             }
         }
@@ -267,7 +260,7 @@ impl RecoveryManager {
     async fn execute_recovery(
         subsystem_id: &str,
         strategy: &RecoveryStrategy,
-        event_bus: &SharedEventBus,
+        event_bus: &SharedEventBusProvider,
     ) -> crate::domain::error::Result<()> {
         match strategy {
             RecoveryStrategy::Restart => {
@@ -285,10 +278,9 @@ impl RecoveryManager {
                         provider_type,
                         provider_id,
                     })
-                    .map_err(|e| {
-                        crate::domain::error::Error::Internal {
-                            message: format!("Failed to publish restart event: {}", e),
-                        }
+                    .await
+                    .map_err(|e| crate::domain::error::Error::Internal {
+                        message: format!("Failed to publish restart event: {}", e),
                     })?;
 
                 Ok(())
@@ -312,7 +304,7 @@ impl RecoveryManager {
                     "[RECOVERY] Escalating to process respawn for {}",
                     subsystem_id
                 );
-                event_bus.publish(SystemEvent::Respawn).map_err(|e| {
+                event_bus.publish(SystemEvent::Respawn).await.map_err(|e| {
                     crate::domain::error::Error::Internal {
                         message: format!("Failed to publish respawn event: {}", e),
                     }
@@ -342,9 +334,7 @@ impl RecoveryManager {
         let mut state = self
             .recovery_states
             .entry(subsystem_id.to_string())
-            .or_insert_with(|| {
-                RecoveryState::new(subsystem_id.to_string(), policy.max_retries)
-            });
+            .or_insert_with(|| RecoveryState::new(subsystem_id.to_string(), policy.max_retries));
 
         state.record_failure(error.clone());
 
@@ -357,8 +347,8 @@ impl RecoveryManager {
     }
 
     /// Get event receiver for external health check integration
-    pub fn subscribe(&self) -> Receiver<SystemEvent> {
-        self.event_bus.subscribe()
+    pub async fn subscribe(&self) -> crate::domain::error::Result<Box<dyn crate::infrastructure::events::EventReceiver>> {
+        self.event_bus.subscribe().await
     }
 }
 
@@ -476,7 +466,7 @@ pub type SharedRecoveryManager = Arc<dyn RecoveryManagerInterface>;
 /// Create a shared recovery manager
 pub fn create_recovery_manager(
     config: RecoveryConfig,
-    event_bus: SharedEventBus,
+    event_bus: SharedEventBusProvider,
 ) -> SharedRecoveryManager {
     Arc::new(RecoveryManager::new(config, event_bus))
 }

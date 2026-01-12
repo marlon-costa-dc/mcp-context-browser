@@ -268,6 +268,53 @@
 </div>
 
 <script>
+// Get auth token from cookie
+function getAuthToken() {
+    const name = 'auth_token=';
+    const decodedCookie = decodeURIComponent(document.cookie);
+    const cookieArray = decodedCookie.split(';');
+    for (let i = 0; i < cookieArray.length; i++) {
+        let cookie = cookieArray[i].trim();
+        if (cookie.indexOf(name) === 0) {
+            return cookie.substring(name.length);
+        }
+    }
+    return null;
+}
+
+// Helper function for API requests with auth
+async function apiRequest(url, options = {}) {
+    const token = getAuthToken();
+    const headers = {
+        'Content-Type': 'application/json',
+        ...options.headers
+    };
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    return fetch(url, {
+        ...options,
+        headers,
+        credentials: 'include'
+    });
+}
+
+function showError(message) {
+    const toast = document.createElement('div');
+    toast.className = 'fixed bottom-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 4000);
+}
+
+function showSuccess(message) {
+    const toast = document.createElement('div');
+    toast.className = 'fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
 function dashboard() {
     return {
         active_providers: '0',
@@ -284,11 +331,7 @@ function dashboard() {
             uptime: 0,
             pid: 0
         },
-        activities: [
-            { id: 1, message: 'System initialized successfully', timestamp: '2 minutes ago', color: 'bg-green-400' },
-            { id: 2, message: 'Provider connection established', timestamp: '5 minutes ago', color: 'bg-blue-400' },
-            { id: 3, message: 'Index synchronization completed', timestamp: '10 minutes ago', color: 'bg-purple-400' }
-        ],
+        activities: [],  // Will be loaded from API
 
         async init() {
             await this.refresh();
@@ -306,23 +349,37 @@ function dashboard() {
             this.loading = true;
             try {
                 // Fetch real metrics from API
-                const response = await fetch('/admin/dashboard/metrics');
+                const response = await apiRequest('/admin/dashboard/metrics');
+                if (!response.ok) {
+                    throw new Error(`API error: ${response.status} ${response.statusText}`);
+                }
                 const data = await response.json();
 
-                if (data.success) {
-                    // Update reactive data with real values
-                    this.active_providers = data.data.active_providers.toString();
-                    this.total_providers = data.data.total_providers.toString();
-                    this.active_indexes = data.data.active_indexes.toString();
-                    this.total_documents = data.data.total_documents.toString();
-                    this.cpu_usage = data.data.cpu_usage.toFixed(1);
-                    this.memory_usage = data.data.memory_usage.toFixed(1);
-                    this.health = data.data.health;
-                    this.isOnline = true;
+                if (!data.success) {
+                    throw new Error(data.error || 'Failed to fetch metrics');
                 }
+
+                // Validate required fields exist
+                const required = ['active_providers', 'total_providers', 'cpu_usage', 'memory_usage', 'health'];
+                for (const field of required) {
+                    if (data.data[field] === undefined) {
+                        throw new Error(`Missing required field: ${field}`);
+                    }
+                }
+
+                // Update reactive data with REAL values
+                this.active_providers = data.data.active_providers.toString();
+                this.total_providers = data.data.total_providers.toString();
+                this.active_indexes = data.data.active_indexes.toString();
+                this.total_documents = data.data.total_documents.toString();
+                this.cpu_usage = data.data.cpu_usage.toFixed(1);
+                this.memory_usage = data.data.memory_usage.toFixed(1);
+                this.health = data.data.health;
+                this.isOnline = true;
             } catch (error) {
-                console.error('Failed to refresh dashboard:', error);
+                console.error('[ERROR] Failed to refresh dashboard:', error);
                 this.isOnline = false;
+                showError(`Dashboard error: ${error.message}`);
             } finally {
                 this.loading = false;
             }
@@ -341,80 +398,159 @@ function dashboard() {
         },
 
         async refreshActivity() {
-            // Fetch latest activities
-            this.activities.unshift({
-                id: Date.now(),
-                message: 'Dashboard refreshed',
-                timestamp: 'Just now',
-                color: 'bg-yellow-400'
-            });
+            try {
+                const response = await apiRequest('/admin/activities?limit=10');
+                if (!response.ok) {
+                    throw new Error(`API error: ${response.status} ${response.statusText}`);
+                }
+                const data = await response.json();
+
+                if (!data.success) {
+                    throw new Error(data.error || 'Failed to fetch activities');
+                }
+
+                if (!data.data || !Array.isArray(data.data)) {
+                    throw new Error('Activities data is invalid or empty');
+                }
+
+                this.activities = data.data.map((activity) => ({
+                    id: activity.id,
+                    message: activity.message,
+                    timestamp: this.formatActivityTime(activity.timestamp),
+                    color: this.getActivityColor(activity.level)
+                }));
+            } catch (error) {
+                console.error('[ERROR] Failed to fetch activities:', error);
+                showError(`Failed to load activity feed: ${error.message}`);
+                this.activities = []; // Explicitly empty, not silent
+            }
+        },
+
+        getActivityColor(level) {
+            switch(level?.toLowerCase()) {
+                case 'error': return 'bg-red-400';
+                case 'warning': return 'bg-yellow-400';
+                case 'success': return 'bg-green-400';
+                case 'info': default: return 'bg-blue-400';
+            }
+        },
+
+        formatActivityTime(timestamp) {
+            const now = new Date();
+            const then = new Date(timestamp);
+            const diff = Math.floor((now - then) / 1000); // seconds
+
+            if (diff < 60) return 'Just now';
+            if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+            if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+            return `${Math.floor(diff / 86400)}d ago`;
         },
 
         initCharts() {
-            // System Metrics Chart
+            // System Metrics Chart with real data
             const metricsCtx = document.getElementById('metrics-chart');
             if (metricsCtx) {
-                new Chart(metricsCtx, {
-                    type: 'line',
-                    data: {
-                        labels: ['1m', '2m', '3m', '4m', '5m', '6m'],
-                        datasets: [{
-                            label: 'CPU Usage (%)',
-                            data: [12, 19, 15, 25, 22, 30],
-                            borderColor: '#3b82f6',
-                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                            tension: 0.4,
-                            fill: true
-                        }, {
-                            label: 'Memory Usage (%)',
-                            data: [45, 52, 48, 61, 55, 67],
-                            borderColor: '#10b981',
-                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                            tension: 0.4,
-                            fill: true
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { display: false }
-                        },
-                        scales: {
-                            y: { beginAtZero: true, max: 100, display: false },
-                            x: { display: false }
+                // Fetch real metrics data from API
+                apiRequest('/admin/dashboard/metrics')
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success && data.data) {
+                            const metrics = data.data;
+                            // Use current CPU and Memory values
+                            const labels = ['now'];
+                            const cpuData = [metrics.cpu_usage || 0];
+                            const memoryData = [metrics.memory_usage || 0];
+
+                            new Chart(metricsCtx, {
+                                type: 'line',
+                                data: {
+                                    labels: labels,
+                                    datasets: [{
+                                        label: 'CPU Usage (%)',
+                                        data: cpuData,
+                                        borderColor: '#3b82f6',
+                                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                        tension: 0.4,
+                                        fill: true
+                                    }, {
+                                        label: 'Memory Usage (%)',
+                                        data: memoryData,
+                                        borderColor: '#10b981',
+                                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                                        tension: 0.4,
+                                        fill: true
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: {
+                                        legend: { display: false }
+                                    },
+                                    scales: {
+                                        y: { beginAtZero: true, max: 100, display: true },
+                                        x: { display: true }
+                                    }
+                                }
+                            });
                         }
-                    }
-                });
+                    })
+                    .catch(error => console.error('Failed to load metrics chart:', error));
             }
 
-            // Query Performance Chart
+            // Query Performance Chart - showing actual query stats
             const queryCtx = document.getElementById('query-chart');
             if (queryCtx) {
-                new Chart(queryCtx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['Search', 'Index', 'Status', 'Clear'],
-                        datasets: [{
-                            data: [45, 25, 20, 10],
-                            backgroundColor: [
-                                '#3b82f6', '#10b981', '#f59e0b', '#ef4444'
-                            ],
-                            borderWidth: 0
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                position: 'bottom',
-                                labels: { padding: 20, usePointStyle: true }
+                // Fetch real operation counts from metrics
+                apiRequest('/admin/dashboard/metrics')
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success && data.data) {
+                            // Update chart with real data from metrics
+                            const metrics = data.data;
+                            // Only show chart if we have real data
+                            if (metrics.search_count !== undefined &&
+                                metrics.index_count !== undefined &&
+                                metrics.status_count !== undefined &&
+                                metrics.clear_count !== undefined) {
+                                const chartData = {
+                                    labels: ['Search', 'Index', 'Status', 'Clear'],
+                                    datasets: [{
+                                        data: [
+                                            metrics.search_count,
+                                            metrics.index_count,
+                                            metrics.status_count,
+                                            metrics.clear_count
+                                        ],
+                                    backgroundColor: [
+                                        '#3b82f6', '#10b981', '#f59e0b', '#ef4444'
+                                    ],
+                                    borderWidth: 0
+                                }]
+                            };
+
+                            new Chart(queryCtx, {
+                                type: 'doughnut',
+                                data: chartData,
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: {
+                                        legend: {
+                                            position: 'bottom',
+                                            labels: { padding: 20, usePointStyle: true }
+                                        }
+                                    }
+                                }
+                            });
                             }
                         }
-                    }
-                });
+                    })
+                    .catch(error => console.error('Failed to load chart data:', error));
             }
+
+            // Load real activities
+            this.refreshActivity();
         }
     }
 }

@@ -1,7 +1,7 @@
 use crate::infrastructure::cache::CacheManager;
 use crate::infrastructure::config::Config;
 use crate::infrastructure::di::factory::ServiceProviderInterface;
-use crate::infrastructure::events::SharedEventBus;
+use crate::infrastructure::events::SharedEventBusProvider;
 use crate::infrastructure::limits::ResourceLimits;
 use crate::infrastructure::logging::SharedLogBuffer;
 use crate::infrastructure::metrics::system::SystemMetricsCollectorInterface;
@@ -16,7 +16,7 @@ use std::sync::Arc;
 pub struct McpServerBuilder {
     config: Option<Arc<ArcSwap<Config>>>,
     cache_manager: Option<Arc<CacheManager>>,
-    event_bus: Option<SharedEventBus>,
+    event_bus: Option<SharedEventBusProvider>,
     log_buffer: Option<SharedLogBuffer>,
     performance_metrics: Option<Arc<dyn PerformanceMetricsInterface>>,
     indexing_operations: Option<Arc<dyn IndexingOperationsInterface>>,
@@ -41,7 +41,7 @@ impl McpServerBuilder {
         self
     }
 
-    pub fn with_event_bus(mut self, event_bus: SharedEventBus) -> Self {
+    pub fn with_event_bus(mut self, event_bus: SharedEventBusProvider) -> Self {
         self.event_bus = Some(event_bus);
         self
     }
@@ -152,13 +152,15 @@ impl McpServerBuilder {
         };
 
         // Create admin service with all dependencies
+        // Cast concrete event bus to trait object for AdminService which uses async methods
+        let event_bus_trait: SharedEventBusProvider = event_bus.clone() as SharedEventBusProvider;
         let admin_service = Arc::new(crate::admin::service::AdminServiceImpl::new(
             Arc::clone(&performance_metrics),
             Arc::clone(&indexing_operations),
             Arc::clone(&service_provider),
             Arc::clone(&system_collector),
             Arc::clone(&http_client),
-            event_bus.clone(),
+            event_bus_trait,
             log_buffer.clone(),
             Arc::clone(&config_arc),
         )) as Arc<dyn crate::admin::service::AdminService>;

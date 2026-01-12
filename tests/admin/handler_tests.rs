@@ -2,35 +2,31 @@
 //!
 //! Tests for all HTTP handlers in src/admin/handlers.rs
 
+use mcp_context_browser::adapters::http_client::HttpClientPool;
 use mcp_context_browser::admin::service::AdminService;
-use mcp_context_browser::adapters::http_client::{HttpClientPool, HttpClientProvider};
-
 
 pub mod test_helpers {
     use super::*;
 
-
-
     /// Create a real AdminService for testing with minimal dependencies
     pub async fn create_test_admin_service() -> std::sync::Arc<dyn AdminService> {
-        use std::sync::Arc;
         use arc_swap::ArcSwap;
-        use mcp_context_browser::server::metrics::McpPerformanceMetrics;
-        use mcp_context_browser::server::operations::McpIndexingOperations;
+        use mcp_context_browser::admin::service::AdminServiceImpl;
+        use mcp_context_browser::infrastructure::config::Config;
         use mcp_context_browser::infrastructure::di::factory::ServiceProvider;
-        use mcp_context_browser::infrastructure::metrics::system::SystemMetricsCollector;
-        use mcp_context_browser::adapters::http_client::NullHttpClientPool;
         use mcp_context_browser::infrastructure::events::EventBus;
         use mcp_context_browser::infrastructure::logging;
-        use mcp_context_browser::infrastructure::config::Config;
-        use mcp_context_browser::admin::service::AdminServiceImpl;
+        use mcp_context_browser::infrastructure::metrics::system::SystemMetricsCollector;
+        use mcp_context_browser::server::metrics::McpPerformanceMetrics;
+        use mcp_context_browser::server::operations::McpIndexingOperations;
+        use std::sync::Arc;
 
         // Create minimal test dependencies
         let performance_metrics = Arc::new(McpPerformanceMetrics::default());
         let indexing_operations = Arc::new(McpIndexingOperations::default());
         let service_provider = Arc::new(ServiceProvider::new());
         let system_collector = Arc::new(SystemMetricsCollector::new());
-        let http_client = Arc::new(NullHttpClientPool::new());
+        let http_client = Arc::new(HttpClientPool::new().expect("Failed to create HTTP client"));
 
         // Create event bus and log buffer
         let event_bus = Arc::new(EventBus::with_default_capacity());
@@ -53,14 +49,7 @@ pub mod test_helpers {
 
         Arc::new(admin_service)
     }
-
-
-
-
-
-
 }
-
 
 // ============================================================================
 // Authentication Tests (using direct AuthService, not router)
@@ -72,94 +61,94 @@ mod auth_tests {
     use mcp_context_browser::admin::auth::AuthService;
 
     #[tokio::test]
-async fn test_auth_service_valid_credentials() {
-    let auth_service = AuthService::new(
-        "test-secret".to_string(),
-        3600,
-        "admin".to_string(),
-        "admin".to_string(),
-    )
-    .expect("Failed to create auth service");
+    async fn test_auth_service_valid_credentials() {
+        let auth_service = AuthService::new(
+            "test-secret".to_string(),
+            3600,
+            "admin".to_string(),
+            "admin".to_string(),
+        )
+        .expect("Failed to create auth service");
 
-    let result = auth_service.authenticate("admin", "admin");
-    assert!(result.is_ok());
+        let result = auth_service.authenticate("admin", "admin");
+        assert!(result.is_ok());
 
-    let user = result.unwrap();
-    assert_eq!(user.username, "admin");
-    assert_eq!(user.role, "admin");
-}
+        let user = result.unwrap();
+        assert_eq!(user.username, "admin");
+        assert_eq!(user.role, "admin");
+    }
 
-#[tokio::test]
-async fn test_auth_service_invalid_credentials() {
-    let auth_service = AuthService::new(
-        "test-secret".to_string(),
-        3600,
-        "admin".to_string(),
-        "admin".to_string(),
-    )
-    .expect("Failed to create auth service");
+    #[tokio::test]
+    async fn test_auth_service_invalid_credentials() {
+        let auth_service = AuthService::new(
+            "test-secret".to_string(),
+            3600,
+            "admin".to_string(),
+            "admin".to_string(),
+        )
+        .expect("Failed to create auth service");
 
-    let result = auth_service.authenticate("admin", "wrong_password");
-    assert!(result.is_err());
-}
+        let result = auth_service.authenticate("admin", "wrong_password");
+        assert!(result.is_err());
+    }
 
-#[tokio::test]
-async fn test_auth_service_token_generation() {
-    let auth_service = AuthService::new(
-        "test-secret".to_string(),
-        3600,
-        "admin".to_string(),
-        "admin".to_string(),
-    )
-    .expect("Failed to create auth service");
+    #[tokio::test]
+    async fn test_auth_service_token_generation() {
+        let auth_service = AuthService::new(
+            "test-secret".to_string(),
+            3600,
+            "admin".to_string(),
+            "admin".to_string(),
+        )
+        .expect("Failed to create auth service");
 
-    let user = mcp_context_browser::admin::models::UserInfo {
-        username: "admin".to_string(),
-        role: "admin".to_string(),
-    };
+        let user = mcp_context_browser::admin::models::UserInfo {
+            username: "admin".to_string(),
+            role: "admin".to_string(),
+        };
 
-    let token = auth_service.generate_token(&user);
-    assert!(token.is_ok());
+        let token = auth_service.generate_token(&user);
+        assert!(token.is_ok());
 
-    let token = token.unwrap();
-    assert!(!token.is_empty());
+        let token = token.unwrap();
+        assert!(!token.is_empty());
 
-    let claims = auth_service.validate_token(&token);
-    assert!(claims.is_ok());
+        let claims = auth_service.validate_token(&token);
+        assert!(claims.is_ok());
 
-    let claims = claims.unwrap();
-    assert_eq!(claims.sub, "admin");
-    assert_eq!(claims.role, "admin");
-}
+        let claims = claims.unwrap();
+        assert_eq!(claims.sub, "admin");
+        assert_eq!(claims.role, "admin");
+    }
 
-#[tokio::test]
-async fn test_auth_service_token_validation_wrong_secret() {
-    let auth_service1 = AuthService::new(
-        "secret-1".to_string(),
-        3600,
-        "admin".to_string(),
-        "admin".to_string(),
-    )
-    .expect("Failed to create auth service");
+    #[tokio::test]
+    async fn test_auth_service_token_validation_wrong_secret() {
+        let auth_service1 = AuthService::new(
+            "secret-1".to_string(),
+            3600,
+            "admin".to_string(),
+            "admin".to_string(),
+        )
+        .expect("Failed to create auth service");
 
-    let auth_service2 = AuthService::new(
-        "secret-2".to_string(),
-        3600,
-        "admin".to_string(),
-        "admin".to_string(),
-    )
-    .expect("Failed to create auth service");
+        let auth_service2 = AuthService::new(
+            "secret-2".to_string(),
+            3600,
+            "admin".to_string(),
+            "admin".to_string(),
+        )
+        .expect("Failed to create auth service");
 
-    let user = mcp_context_browser::admin::models::UserInfo {
-        username: "admin".to_string(),
-        role: "admin".to_string(),
-    };
+        let user = mcp_context_browser::admin::models::UserInfo {
+            username: "admin".to_string(),
+            role: "admin".to_string(),
+        };
 
-    let token = auth_service1.generate_token(&user).unwrap();
+        let token = auth_service1.generate_token(&user).unwrap();
 
-    let result = auth_service2.validate_token(&token);
-    assert!(result.is_err());
-}
+        let result = auth_service2.validate_token(&token);
+        assert!(result.is_err());
+    }
 
     #[tokio::test]
     async fn test_real_admin_service_system_info() {

@@ -185,6 +185,9 @@ async-trait = "0.1.89"
 downcast-rs = "2.0.2"
 futures-util = "0.3.31"
 
+# Event bus providers
+async-nats = "0.35"  # NATS client with JetStream support
+
 # Local embeddings without external services
 fastembed = { version = "5.8", default-features = false, features = ["default"] }
 criterion = "0.8.1"

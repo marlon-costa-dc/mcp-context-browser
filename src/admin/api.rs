@@ -26,11 +26,20 @@ impl AdminApiServer {
         let web_interface = crate::admin::web::WebInterface::new()?;
         let templates = web_interface.templates();
 
+        // Create activity logger for tracking system events
+        let activity_logger =
+            Arc::new(crate::admin::service::helpers::activity::ActivityLogger::new());
+        // Start listening to system events
+        activity_logger.start_listening(self.mcp_server.event_bus.clone());
+
         let state = AdminState {
             admin_api,
             admin_service,
             mcp_server: Arc::clone(&self.mcp_server),
             templates,
+            recovery_manager: None, // Will be set during Phase 8 integration
+            event_bus: self.mcp_server.event_bus.clone(),
+            activity_logger,
         };
 
         let api_router = create_admin_router(state.clone());

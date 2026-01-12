@@ -59,8 +59,16 @@ mod tests {
         let test_text = "This is a test text for embedding";
         let embedding = embedding_provider.embed(test_text).await?;
 
-        assert_eq!(embedding.model, "null");
-        assert_eq!(embedding.dimensions, 1);
+        assert_eq!(embedding.model, "null-test");
+        assert_eq!(
+            embedding.dimensions, 384,
+            "Null test provider returns 384-dimensional embeddings"
+        );
+        assert_eq!(
+            embedding.vector.len(),
+            384,
+            "Vector length should match dimensions"
+        );
         assert!(!embedding.vector.is_empty());
         Ok(())
     }
@@ -94,8 +102,16 @@ mod tests {
 
         assert_eq!(embeddings.len(), 3);
         for embedding in &embeddings {
-            assert_eq!(embedding.model, "null");
-            assert_eq!(embedding.dimensions, 1);
+            assert_eq!(embedding.model, "null-test");
+            assert_eq!(
+                embedding.dimensions, 384,
+                "Null test provider returns 384-dimensional embeddings"
+            );
+            assert_eq!(
+                embedding.vector.len(),
+                384,
+                "Vector length should match dimensions"
+            );
             assert!(!embedding.vector.is_empty());
         }
         Ok(())
