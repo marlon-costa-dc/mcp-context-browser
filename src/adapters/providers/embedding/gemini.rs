@@ -1,8 +1,10 @@
 //! Gemini (Google AI) embedding provider implementation
 
+use crate::adapters::providers::embedding::helpers::constructor;
 use crate::domain::error::{Error, Result};
 use crate::domain::ports::EmbeddingProvider;
 use crate::domain::types::Embedding;
+use crate::infrastructure::constants::HTTP_REQUEST_TIMEOUT;
 use async_trait::async_trait;
 use std::sync::Arc;
 use std::time::Duration;
@@ -19,7 +21,7 @@ pub struct GeminiEmbeddingProvider {
 impl GeminiEmbeddingProvider {
     /// Create a new Gemini embedding provider
     pub fn new(api_key: String, base_url: Option<String>, model: String) -> Result<Self> {
-        Self::with_timeout(api_key, base_url, model, Duration::from_secs(30))
+        Self::with_timeout(api_key, base_url, model, HTTP_REQUEST_TIMEOUT)
     }
 
     /// Create a new Gemini embedding provider with custom timeout
@@ -29,6 +31,8 @@ impl GeminiEmbeddingProvider {
         model: String,
         timeout: Duration,
     ) -> Result<Self> {
+        let api_key = constructor::validate_api_key(&api_key);
+        let base_url = constructor::validate_url(base_url);
         let http_client = Arc::new(crate::adapters::http_client::HttpClientPool::new()?);
         Ok(Self {
             api_key,
@@ -47,6 +51,8 @@ impl GeminiEmbeddingProvider {
         timeout: Duration,
         http_client: Arc<dyn crate::adapters::http_client::HttpClientProvider>,
     ) -> Self {
+        let api_key = constructor::validate_api_key(&api_key);
+        let base_url = constructor::validate_url(base_url);
         Self {
             api_key,
             base_url,
@@ -57,10 +63,8 @@ impl GeminiEmbeddingProvider {
     }
 
     /// Get the effective base URL
-    fn effective_base_url(&self) -> &str {
-        self.base_url
-            .as_deref()
-            .unwrap_or("https://generativelanguage.googleapis.com")
+    fn effective_base_url(&self) -> String {
+        constructor::get_effective_url(self.base_url.as_deref(), "https://generativelanguage.googleapis.com")
     }
 
     /// Get the model name for API calls (remove prefix if present)
@@ -108,9 +112,10 @@ impl EmbeddingProvider for GeminiEmbeddingProvider {
                 self.http_client.client().clone()
             };
 
+            let base_url = self.effective_base_url();
             let url = format!(
                 "{}/v1beta/models/{}:embedContent?key={}",
-                self.effective_base_url(),
+                base_url,
                 self.api_model_name(),
                 self.api_key
             );
@@ -200,9 +205,7 @@ impl GeminiEmbeddingProvider {
     }
 
     /// Get the base URL for this provider
-    pub fn base_url(&self) -> &str {
-        self.base_url
-            .as_deref()
-            .unwrap_or("https://generativelanguage.googleapis.com")
+    pub fn base_url(&self) -> String {
+        self.effective_base_url()
     }
 }

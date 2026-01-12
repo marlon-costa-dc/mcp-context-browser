@@ -54,6 +54,17 @@ pub mod constructor {
     pub fn default_timeout() -> Duration {
         Duration::from_secs(30)
     }
+
+    /// Get effective URL with fallback to default
+    ///
+    /// Standardized approach for handling optional base URLs across all providers.
+    /// Takes an optional URL string and returns the effective URL to use,
+    /// falling back to the provided default if not specified.
+    pub fn get_effective_url(provided_url: Option<&str>, default_url: &str) -> String {
+        provided_url
+            .map(|url| url.trim().to_string())
+            .unwrap_or_else(|| default_url.to_string())
+    }
 }
 
 #[cfg(test)]

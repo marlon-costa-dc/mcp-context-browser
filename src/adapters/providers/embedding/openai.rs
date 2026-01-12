@@ -1,5 +1,6 @@
 //! OpenAI embedding provider implementation
 
+use crate::adapters::providers::embedding::helpers::constructor;
 use crate::domain::error::{Error, Result};
 use crate::domain::ports::EmbeddingProvider;
 use crate::domain::types::Embedding;
@@ -32,8 +33,8 @@ impl OpenAIEmbeddingProvider {
         model: String,
         timeout: Duration,
     ) -> Result<Self> {
-        let api_key = api_key.trim().to_string();
-        let base_url = base_url.map(|url| url.trim().to_string());
+        let api_key = constructor::validate_api_key(&api_key);
+        let base_url = constructor::validate_url(base_url);
         let http_client = Arc::new(crate::adapters::http_client::HttpClientPool::new()?);
 
         Ok(Self {
@@ -54,8 +55,8 @@ impl OpenAIEmbeddingProvider {
         timeout: Duration,
         http_client: Arc<dyn crate::adapters::http_client::HttpClientProvider>,
     ) -> Self {
-        let api_key = api_key.trim().to_string();
-        let base_url = base_url.map(|url| url.trim().to_string());
+        let api_key = constructor::validate_api_key(&api_key);
+        let base_url = constructor::validate_url(base_url);
 
         Self {
             api_key,
@@ -74,6 +75,11 @@ impl OpenAIEmbeddingProvider {
     }
 
     /// Get the effective base URL
+    fn effective_base_url(&self) -> String {
+        constructor::get_effective_url(self.base_url.as_deref(), "https://api.openai.com/v1")
+    }
+
+    /// Get the base URL for this provider
     pub fn base_url(&self) -> &str {
         self.base_url
             .as_deref()

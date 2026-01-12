@@ -1,5 +1,6 @@
 //! VoyageAI embedding provider implementation
 
+use crate::adapters::providers::embedding::helpers::constructor;
 use crate::domain::error::{Error, Result};
 use crate::domain::ports::EmbeddingProvider;
 use crate::domain::types::Embedding;
@@ -17,6 +18,8 @@ pub struct VoyageAIEmbeddingProvider {
 impl VoyageAIEmbeddingProvider {
     /// Create a new VoyageAI embedding provider
     pub fn new(api_key: String, base_url: Option<String>, model: String) -> Result<Self> {
+        let api_key = constructor::validate_api_key(&api_key);
+        let base_url = constructor::validate_url(base_url);
         let http_client = Arc::new(crate::adapters::http_client::HttpClientPool::new()?);
         Ok(Self {
             api_key,
@@ -33,6 +36,8 @@ impl VoyageAIEmbeddingProvider {
         model: String,
         http_client: Arc<dyn crate::adapters::http_client::HttpClientProvider>,
     ) -> Self {
+        let api_key = constructor::validate_api_key(&api_key);
+        let base_url = constructor::validate_url(base_url);
         Self {
             api_key,
             base_url,
@@ -42,10 +47,8 @@ impl VoyageAIEmbeddingProvider {
     }
 
     /// Get the effective base URL
-    fn effective_base_url(&self) -> &str {
-        self.base_url
-            .as_deref()
-            .unwrap_or("https://api.voyageai.com/v1")
+    fn effective_base_url(&self) -> String {
+        constructor::get_effective_url(self.base_url.as_deref(), "https://api.voyageai.com/v1")
     }
 }
 
@@ -72,9 +75,10 @@ impl EmbeddingProvider for VoyageAIEmbeddingProvider {
 
         // Use pooled HTTP client for connection pooling and performance
         let client = self.http_client.client();
+        let base_url = self.effective_base_url();
 
         let response = client
-            .post(format!("{}/embeddings", self.effective_base_url()))
+            .post(format!("{}/embeddings", base_url))
             .header("Authorization", format!("Bearer {}", self.api_key))
             .header("Content-Type", "application/json")
             .json(&payload)
@@ -165,9 +169,7 @@ impl VoyageAIEmbeddingProvider {
     }
 
     /// Get the base URL for this provider
-    pub fn base_url(&self) -> &str {
-        self.base_url
-            .as_deref()
-            .unwrap_or("https://api.voyageai.com/v1")
+    pub fn base_url(&self) -> String {
+        self.effective_base_url()
     }
 }
