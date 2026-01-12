@@ -6,11 +6,10 @@
 use crate::domain::error::{Error, Result};
 use crate::infrastructure::events::{EventBusProvider, EventReceiver, SystemEvent};
 use async_nats::jetstream;
+use futures::StreamExt;
 use serde_json;
-use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::Mutex;
-use tracing::{debug, error, warn};
+use tracing::{debug, error};
 
 const NATS_STREAM_NAME: &str = "MCP_EVENTS";
 const NATS_SUBJECT: &str = "mcp.events.>";
@@ -20,17 +19,20 @@ const STREAM_MAX_MSGS: i64 = 10000;
 
 /// NATS JetStream-based event receiver
 pub struct NatsEventReceiver {
-    subscription: jetstream::consumer::pull::Stream<jetstream::Message>,
+    subscription: jetstream::consumer::pull::Stream,
 }
 
 #[async_trait::async_trait]
 impl EventReceiver for NatsEventReceiver {
     async fn recv(&mut self) -> Result<SystemEvent> {
         match self.subscription.next().await {
-            Some(msg) => {
-                match serde_json::from_slice::<SystemEvent>(&msg.payload) {
+            Some(msg_result) => match msg_result {
+                Ok(msg) => match serde_json::from_slice::<SystemEvent>(&msg.payload) {
                     Ok(event) => {
-                        debug!("Received event from NATS: {:?}", std::any::type_name_of_val(&event));
+                        debug!(
+                            "Received event from NATS: {:?}",
+                            std::any::type_name_of_val(&event)
+                        );
                         let _ = msg.ack().await;
                         Ok(event)
                     }
@@ -40,8 +42,14 @@ impl EventReceiver for NatsEventReceiver {
                             message: format!("Failed to deserialize NATS event: {}", e),
                         })
                     }
+                },
+                Err(e) => {
+                    error!("NATS message error: {}", e);
+                    Err(Error::Internal {
+                        message: format!("NATS message error: {}", e),
+                    })
                 }
-            }
+            },
             None => {
                 error!("NATS subscription closed");
                 Err(Error::Internal {
@@ -78,9 +86,11 @@ impl NatsEventBus {
         debug!("Connecting to NATS server: {}", server_url);
 
         // Connect to NATS
-        let client = async_nats::connect(server_url).await.map_err(|e| Error::Internal {
-            message: format!("Failed to connect to NATS: {}", e),
-        })?;
+        let client = async_nats::connect(server_url)
+            .await
+            .map_err(|e| Error::Internal {
+                message: format!("Failed to connect to NATS: {}", e),
+            })?;
 
         debug!("Connected to NATS, creating JetStream context");
 
@@ -106,9 +116,9 @@ impl NatsEventBus {
                 name: NATS_STREAM_NAME.to_string(),
                 subjects: vec![NATS_SUBJECT.to_string()],
                 retention: jetstream::stream::RetentionPolicy::Limits,
-                max_msgs: STREAM_MAX_MSGS,
+                max_messages: STREAM_MAX_MSGS,
                 max_age: STREAM_MAX_AGE,
-                discard: jetstream::stream::DiscardPolicy::OldestPerSubject,
+                discard: jetstream::stream::DiscardPolicy::Old,
                 ..Default::default()
             })
             .await
@@ -151,14 +161,21 @@ impl EventBusProvider for NatsEventBus {
             .publish(NATS_SUBJECT.to_string(), payload.into())
             .await
         {
-            Ok(ack) => {
-                debug!(
-                    "Published event to NATS (sequence: {})",
-                    ack.sequence
-                );
-                // Return 1 as subscriber count (we don't track this for NATS)
-                // In a real scenario, we'd need to query active subscribers
-                Ok(1)
+            Ok(ack_future) => {
+                match ack_future.await {
+                    Ok(ack) => {
+                        debug!("Published event to NATS (sequence: {})", ack.sequence);
+                        // Return 1 as subscriber count (we don't track this for NATS)
+                        // In a real scenario, we'd need to query active subscribers
+                        Ok(1)
+                    }
+                    Err(e) => {
+                        error!("Failed to receive publish acknowledgment: {}", e);
+                        Err(Error::Internal {
+                            message: format!("Failed to receive publish acknowledgment: {}", e),
+                        })
+                    }
+                }
             }
             Err(e) => {
                 error!("Failed to publish event to NATS: {}", e);
@@ -174,11 +191,10 @@ impl EventBusProvider for NatsEventBus {
         // Using pull subscription with durable consumer for reliability
         debug!("Creating NATS JetStream subscription");
 
-        // Create or get durable consumer
+        // Create durable consumer on stream
         let consumer = self
             .jetstream
-            .get_or_create_consumer(
-                &self.stream_name,
+            .create_consumer_on_stream(
                 jetstream::consumer::pull::Config {
                     durable_name: Some(NATS_CONSUMER_DURABLE.to_string()),
                     deliver_policy: jetstream::consumer::DeliverPolicy::All,
@@ -187,6 +203,7 @@ impl EventBusProvider for NatsEventBus {
                     max_deliver: 10,
                     ..Default::default()
                 },
+                &self.stream_name,
             )
             .await
             .map_err(|e| Error::Internal {
@@ -196,6 +213,7 @@ impl EventBusProvider for NatsEventBus {
         // Start pulling messages
         let subscription = consumer
             .stream()
+            .messages()
             .await
             .map_err(|e| Error::Internal {
                 message: format!("Failed to create NATS subscription: {}", e),

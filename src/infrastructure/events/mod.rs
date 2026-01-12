@@ -1,20 +1,20 @@
 //! Event Bus System for Decoupled Communication
 //!
 //! This module provides a pluggable event bus system supporting multiple backends:
-//! - Tokio broadcast (in-process, default)
-//! - NATS JetStream (cross-process, persistent) [TEMPORARILY DISABLED]
+//! - Tokio broadcast (in-process, default for single-instance)
+//! - NATS JetStream (cross-process, persistent, for cluster deployments)
 
-// mod nats;  // TEMPORARILY DISABLED due to jetstream API type inference issues
+pub mod nats;
 pub mod tokio_impl;
 
-// pub use nats::NatsEventBus;  // TEMPORARILY DISABLED
-pub use tokio_impl::{EventBus, TokioEventReceiver, create_shared_event_bus};
+pub use nats::NatsEventBus;
+pub use tokio_impl::{create_shared_event_bus, EventBus, TokioEventReceiver};
 
 use crate::domain::error::Result;
 use std::sync::Arc;
 
 /// System-wide events for internal communication
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub enum SystemEvent {
     /// Request to clear all caches
     CacheClear {
@@ -239,17 +239,16 @@ impl EventBusConfig {
 pub async fn create_event_bus(config: &EventBusConfig) -> Result<SharedEventBusProvider> {
     match config {
         EventBusConfig::Tokio { capacity } => {
-            tracing::info!("[EVENT_BUS] Using tokio broadcast backend (capacity: {})", capacity);
+            tracing::info!(
+                "[EVENT_BUS] Using tokio broadcast backend (capacity: {})",
+                capacity
+            );
             Ok(Arc::new(EventBus::new(*capacity)) as SharedEventBusProvider)
         }
-        EventBusConfig::Nats { url: _, .. } => {
-            // TEMPORARILY DISABLED: Fall back to Tokio due to jetstream API type inference issues
-            tracing::warn!("[EVENT_BUS] NATS backend temporarily disabled; falling back to tokio");
-            Ok(Arc::new(EventBus::new(100)) as SharedEventBusProvider)
-            // Original NATS code (disabled):
-            // tracing::info!("[EVENT_BUS] Using NATS backend (url: {})", url);
-            // let bus = NatsEventBus::new(url).await?;
-            // Ok(Arc::new(bus) as SharedEventBusProvider)
+        EventBusConfig::Nats { url, .. } => {
+            tracing::info!("[EVENT_BUS] Using NATS JetStream backend (url: {})", url);
+            let bus = NatsEventBus::new(url).await?;
+            Ok(Arc::new(bus) as SharedEventBusProvider)
         }
     }
 }

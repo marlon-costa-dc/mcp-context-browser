@@ -15,6 +15,10 @@ use crate::application::SearchService;
 use crate::domain::validation::{StringValidator, StringValidatorTrait, ValidationError};
 use crate::infrastructure::auth::Permission;
 use crate::infrastructure::cache::SharedCacheProvider;
+use crate::infrastructure::constants::{
+    HTTP_REQUEST_TIMEOUT, SEARCH_QUERY_MAX_LENGTH, SEARCH_QUERY_MIN_LENGTH,
+    SEARCH_RESULT_CACHE_TTL, SEARCH_RESULT_LIMIT_MAX, SEARCH_RESULT_LIMIT_MIN,
+};
 use crate::infrastructure::limits::ResourceLimits;
 use crate::server::args::SearchCodeArgs;
 use crate::server::auth::AuthHandler;
@@ -50,8 +54,8 @@ impl SearchCodeHandler {
 
         // Create validator for search queries
         let validator = StringValidator::not_empty()
-            .combine_with(StringValidator::min_length(3))
-            .combine_with(StringValidator::max_length(1000)); // Reasonable limit
+            .combine_with(StringValidator::min_length(SEARCH_QUERY_MIN_LENGTH))
+            .combine_with(StringValidator::max_length(SEARCH_QUERY_MAX_LENGTH));
 
         match validator.validate(trimmed) {
             Ok(validated) => Ok(validated),
@@ -62,12 +66,12 @@ impl SearchCodeHandler {
             }
             Err(ValidationError::TooShort { .. }) => {
                 Err(ResponseFormatter::format_query_validation_error(
-                    "Search query too short. Please use at least 3 characters for meaningful results.",
+                    &format!("Search query too short. Please use at least {} characters for meaningful results.", SEARCH_QUERY_MIN_LENGTH),
                 ))
             }
             Err(ValidationError::TooLong { .. }) => {
                 Err(ResponseFormatter::format_query_validation_error(
-                    "Search query too long. Please limit to 1000 characters.",
+                    &format!("Search query too long. Please limit to {} characters.", SEARCH_QUERY_MAX_LENGTH),
                 ))
             }
             _ => Err(ResponseFormatter::format_query_validation_error(
@@ -125,7 +129,7 @@ impl SearchCodeHandler {
         };
 
         // Validate limit
-        let limit = limit.clamp(1, 50); // Reasonable bounds for performance
+        let limit = limit.clamp(SEARCH_RESULT_LIMIT_MIN, SEARCH_RESULT_LIMIT_MAX);
         let collection = "default";
 
         // Check cache for search results (if cache is enabled)
@@ -158,11 +162,7 @@ impl SearchCodeHandler {
 
         // Add timeout for search operations
         let search_future = self.search_service.search(collection, &query, limit);
-        let result = tokio::time::timeout(
-            std::time::Duration::from_secs(30), // 30 second timeout
-            search_future,
-        )
-        .await;
+        let result = tokio::time::timeout(HTTP_REQUEST_TIMEOUT, search_future).await;
 
         let duration = start_time.elapsed();
 
@@ -176,7 +176,7 @@ impl SearchCodeHandler {
                                 "search_results",
                                 &cache_key,
                                 serialized,
-                                std::time::Duration::from_secs(1800), // 30 minutes
+                                SEARCH_RESULT_CACHE_TTL,
                             )
                             .await;
                     }
