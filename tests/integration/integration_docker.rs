@@ -38,11 +38,11 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_openai_mock_embedding() -> Result<(), Box<dyn std::error::Error>> {
-        // Use null provider for testing instead of external mock server
+    async fn test_fastembed_embedding() -> Result<(), Box<dyn std::error::Error>> {
+        // Use fastembed provider for local testing without external services
         let config = mcp_context_browser::domain::types::EmbeddingConfig {
-            provider: "mock".to_string(),
-            model: "test-model".to_string(),
+            provider: "fastembed".to_string(),
+            model: "all-MiniLM-L6-v2".to_string(),
             api_key: None,
             base_url: None,
             dimensions: Some(384),
@@ -59,10 +59,10 @@ mod tests {
         let test_text = "This is a test text for embedding";
         let embedding = embedding_provider.embed(test_text).await?;
 
-        assert_eq!(embedding.model, "null-test");
+        assert_eq!(embedding.model, "AllMiniLML6V2");
         assert_eq!(
             embedding.dimensions, 384,
-            "Null test provider returns 384-dimensional embeddings"
+            "FastEmbed provider returns 384-dimensional embeddings"
         );
         assert_eq!(
             embedding.vector.len(),
@@ -74,11 +74,11 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_openai_mock_batch_embedding() -> Result<(), Box<dyn std::error::Error>> {
-        // Use null provider for testing instead of external mock server
+    async fn test_fastembed_batch_embedding() -> Result<(), Box<dyn std::error::Error>> {
+        // Use fastembed provider for local testing without external services
         let config = mcp_context_browser::domain::types::EmbeddingConfig {
-            provider: "mock".to_string(),
-            model: "test-model".to_string(),
+            provider: "fastembed".to_string(),
+            model: "all-MiniLM-L6-v2".to_string(),
             api_key: None,
             base_url: None,
             dimensions: Some(384),
@@ -102,10 +102,10 @@ mod tests {
 
         assert_eq!(embeddings.len(), 3);
         for embedding in &embeddings {
-            assert_eq!(embedding.model, "null-test");
+            assert_eq!(embedding.model, "AllMiniLML6V2");
             assert_eq!(
                 embedding.dimensions, 384,
-                "Null test provider returns 384-dimensional embeddings"
+                "FastEmbed provider returns 384-dimensional embeddings"
             );
             assert_eq!(
                 embedding.vector.len(),
@@ -250,10 +250,10 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_full_pipeline_openai_milvus() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_full_pipeline_fastembed_inmemory() -> Result<(), Box<dyn std::error::Error>> {
         let embedding_config = mcp_context_browser::domain::types::EmbeddingConfig {
-            provider: "mock".to_string(),
-            model: "test-model".to_string(),
+            provider: "fastembed".to_string(),
+            model: "all-MiniLM-L6-v2".to_string(),
             api_key: None,
             base_url: None,
             dimensions: Some(384),

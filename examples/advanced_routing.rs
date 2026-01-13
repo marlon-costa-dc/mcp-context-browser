@@ -11,7 +11,6 @@ use mcp_context_browser::adapters::providers::routing::{
 use mcp_context_browser::domain::error::Error;
 use mcp_context_browser::domain::error::Result;
 use mcp_context_browser::infrastructure::di::registry::{ProviderRegistry, ProviderRegistryTrait};
-use std::path::PathBuf;
 use std::sync::Arc;
 
 #[tokio::main]

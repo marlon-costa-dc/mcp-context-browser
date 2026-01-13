@@ -34,7 +34,10 @@ pub mod test_helpers {
 
         // Load config from file instead of using Config::default()
         let loader = ConfigLoader::new();
-        let loaded_config = loader.load().await.expect("Failed to load config for tests");
+        let loaded_config = loader
+            .load()
+            .await
+            .expect("Failed to load config for tests");
         let config = Arc::new(ArcSwap::from_pointee(loaded_config));
 
         // Create the real admin service

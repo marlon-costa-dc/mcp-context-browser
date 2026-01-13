@@ -45,11 +45,11 @@ async fn test_circuit_breaker_successful_operations(
 async fn test_circuit_breaker_failure_threshold() {
     let id = format!("test_failure_{}", uuid::Uuid::new_v4());
     let config = CircuitBreakerConfig::new(
-        2,                        // failure_threshold
-        Duration::from_secs(60),  // recovery_timeout
-        3,                        // success_threshold
-        10,                       // half_open_max_requests
-        false,                    // persistence_enabled
+        2,                       // failure_threshold
+        Duration::from_secs(60), // recovery_timeout
+        3,                       // success_threshold
+        10,                      // half_open_max_requests
+        false,                   // persistence_enabled
     );
     let cb = create_test_circuit_breaker(&id, config).await;
 
@@ -74,11 +74,11 @@ async fn test_circuit_breaker_failure_threshold() {
 async fn test_circuit_breaker_reset() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let id = format!("test_reset_{}", uuid::Uuid::new_v4());
     let config = CircuitBreakerConfig::new(
-        1,                           // failure_threshold
-        Duration::from_millis(500),  // recovery_timeout
-        1,                           // success_threshold
-        10,                          // half_open_max_requests
-        false,                       // persistence_enabled
+        1,                          // failure_threshold
+        Duration::from_millis(500), // recovery_timeout
+        1,                          // success_threshold
+        10,                         // half_open_max_requests
+        false,                      // persistence_enabled
     );
     let cb = create_test_circuit_breaker(&id, config).await;
 
@@ -112,11 +112,11 @@ async fn test_circuit_breaker_reset() -> std::result::Result<(), Box<dyn std::er
 async fn test_state_transition_half_open_to_open_on_failure() {
     let id = format!("test_halfopen_fail_{}", uuid::Uuid::new_v4());
     let config = CircuitBreakerConfig::new(
-        1,                           // failure_threshold
-        Duration::from_millis(100),  // recovery_timeout
-        3,                           // success_threshold - Need 3 successes to close
-        10,                          // half_open_max_requests
-        false,                       // persistence_enabled
+        1,                          // failure_threshold
+        Duration::from_millis(100), // recovery_timeout
+        3,                          // success_threshold - Need 3 successes to close
+        10,                         // half_open_max_requests
+        false,                      // persistence_enabled
     );
     let cb = create_test_circuit_breaker(&id, config).await;
 
@@ -145,11 +145,11 @@ async fn test_state_transition_half_open_to_open_on_failure() {
 async fn test_state_transition_open_blocks_calls() {
     let id = format!("test_open_blocks_{}", uuid::Uuid::new_v4());
     let config = CircuitBreakerConfig::new(
-        1,                        // failure_threshold
-        Duration::from_secs(60),  // Long timeout so it stays Open
-        3,                        // success_threshold
-        10,                       // half_open_max_requests
-        false,                    // persistence_enabled
+        1,                       // failure_threshold
+        Duration::from_secs(60), // Long timeout so it stays Open
+        3,                       // success_threshold
+        10,                      // half_open_max_requests
+        false,                   // persistence_enabled
     );
     let cb = create_test_circuit_breaker(&id, config).await;
 
@@ -174,11 +174,11 @@ async fn test_state_transition_open_blocks_calls() {
 async fn test_state_transition_half_open_limits_requests() {
     let id = format!("test_halfopen_limit_{}", uuid::Uuid::new_v4());
     let config = CircuitBreakerConfig::new(
-        1,                           // failure_threshold
-        Duration::from_millis(100),  // recovery_timeout
-        10,                          // High threshold so circuit stays HalfOpen
-        3,                           // Only allow 3 requests in HalfOpen
-        false,                       // persistence_enabled
+        1,                          // failure_threshold
+        Duration::from_millis(100), // recovery_timeout
+        10,                         // High threshold so circuit stays HalfOpen
+        3,                          // Only allow 3 requests in HalfOpen
+        false,                      // persistence_enabled
     );
     let cb = create_test_circuit_breaker(&id, config).await;
 
@@ -210,11 +210,11 @@ async fn test_state_transition_half_open_limits_requests() {
 async fn test_state_transition_multiple_successes_to_close() {
     let id = format!("test_multi_success_{}", uuid::Uuid::new_v4());
     let config = CircuitBreakerConfig::new(
-        1,                           // failure_threshold
-        Duration::from_millis(100),  // recovery_timeout
-        3,                           // Need 3 successes to close
-        10,                          // half_open_max_requests
-        false,                       // persistence_enabled
+        1,                          // failure_threshold
+        Duration::from_millis(100), // recovery_timeout
+        3,                          // Need 3 successes to close
+        10,                         // half_open_max_requests
+        false,                      // persistence_enabled
     );
     let cb = create_test_circuit_breaker(&id, config).await;
 
@@ -250,11 +250,11 @@ async fn test_state_transition_multiple_successes_to_close() {
 async fn test_consecutive_failures_reset_on_success() {
     let id = format!("test_reset_failures_{}", uuid::Uuid::new_v4());
     let config = CircuitBreakerConfig::new(
-        3,                        // failure_threshold
-        Duration::from_secs(60),  // recovery_timeout
-        3,                        // success_threshold
-        10,                       // half_open_max_requests
-        false,                    // persistence_enabled
+        3,                       // failure_threshold
+        Duration::from_secs(60), // recovery_timeout
+        3,                       // success_threshold
+        10,                      // half_open_max_requests
+        false,                   // persistence_enabled
     );
     let cb = create_test_circuit_breaker(&id, config).await;
 
@@ -288,11 +288,11 @@ async fn test_consecutive_failures_reset_on_success() {
 async fn test_metrics_tracking_complete() {
     let id = format!("test_metrics_{}", uuid::Uuid::new_v4());
     let config = CircuitBreakerConfig::new(
-        2,                           // failure_threshold
-        Duration::from_millis(100),  // recovery_timeout
-        1,                           // success_threshold
-        10,                          // half_open_max_requests
-        false,                       // persistence_enabled
+        2,                          // failure_threshold
+        Duration::from_millis(100), // recovery_timeout
+        1,                          // success_threshold
+        10,                         // half_open_max_requests
+        false,                      // persistence_enabled
     );
     let cb = create_test_circuit_breaker(&id, config).await;
 
@@ -375,11 +375,11 @@ async fn test_production_config_values() {
 async fn test_circuit_breaker_with_custom_id() {
     let custom_id = "my-custom-service-breaker";
     let config = CircuitBreakerConfig::new(
-        5,                        // failure_threshold
-        Duration::from_secs(60),  // recovery_timeout
-        3,                        // success_threshold
-        10,                       // half_open_max_requests
-        false,                    // persistence_enabled
+        5,                       // failure_threshold
+        Duration::from_secs(60), // recovery_timeout
+        3,                       // success_threshold
+        10,                      // half_open_max_requests
+        false,                   // persistence_enabled
     );
     let cb = create_test_circuit_breaker(custom_id, config).await;
 

@@ -25,25 +25,32 @@
 //!
 //! ## Usage
 //!
-//! ```rust,no_run
-//! use mcp_context_browser::adapters::providers::routing::{ProviderRouter, ProviderContext};
+//! ```rust,ignore
+//! use mcp_context_browser::adapters::providers::routing::{
+//!     ProviderRouter, ProviderRouterDeps, ProviderContext,
+//!     HealthMonitor, CircuitBreaker, ProviderMetricsCollector,
+//!     CostTracker, FailoverManager
+//! };
 //! use mcp_context_browser::infrastructure::di::registry::ProviderRegistry;
 //! use std::sync::Arc;
 //!
-//! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-//! let registry = Arc::new(ProviderRegistry::new());
-//! let router = ProviderRouter::with_defaults(registry).await?;
+//! // All dependencies must be explicitly injected (DI pattern)
+//! let deps = ProviderRouterDeps::new(
+//!     registry,           // Arc<ProviderRegistry>
+//!     health_monitor,     // Arc<HealthMonitor>
+//!     circuit_breaker,    // Arc<CircuitBreaker>
+//!     metrics,            // Arc<ProviderMetricsCollector>
+//!     cost_tracker,       // Arc<CostTracker>
+//!     failover_manager,   // Arc<FailoverManager>
+//! );
+//! let router = ProviderRouter::new(deps);
 //!
-//! let context = ProviderContext {
-//!     operation_type: "embedding".to_string(),
-//!     cost_sensitivity: 0.8,
-//!     ..Default::default()
-//! };
+//! // Create context with required operation_type
+//! let context = ProviderContext::new("embedding")
+//!     .with_cost_sensitivity(0.8);
 //!
 //! let provider_id = router.select_embedding_provider(&context).await?;
 //! let provider = router.get_embedding_provider(&context).await?;
-//! # Ok(())
-//! # }
 //! ```
 
 pub mod circuit_breaker;

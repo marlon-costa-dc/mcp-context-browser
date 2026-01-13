@@ -88,16 +88,14 @@ impl ProviderFactory for DefaultProviderFactory {
                     http_client,
                 )) as Arc<dyn EmbeddingProvider>)
             }
-            EmbeddingProviderType::Ollama => {
-                Ok(Arc::new(OllamaEmbeddingProvider::new(
-                    config.base_url.clone().unwrap_or_else(|| {
-                        crate::infrastructure::constants::OLLAMA_DEFAULT_URL.to_string()
-                    }),
-                    config.model.clone(),
-                    HTTP_REQUEST_TIMEOUT,
-                    http_client,
-                )) as Arc<dyn EmbeddingProvider>)
-            }
+            EmbeddingProviderType::Ollama => Ok(Arc::new(OllamaEmbeddingProvider::new(
+                config.base_url.clone().unwrap_or_else(|| {
+                    crate::infrastructure::constants::OLLAMA_DEFAULT_URL.to_string()
+                }),
+                config.model.clone(),
+                HTTP_REQUEST_TIMEOUT,
+                http_client,
+            )) as Arc<dyn EmbeddingProvider>),
             EmbeddingProviderType::VoyageAI => {
                 let api_key = config
                     .api_key

@@ -1,434 +1,217 @@
 {% extends "base.html" %}
+{% import "icons.html" as icons %}
+{% block title %}Configuration - MCP Context Browser{% endblock %}
 
 {% block content %}
-<div class="space-y-6">
-    <!-- Page Header -->
-    <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700">
-        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Configuration Management</h1>
-                    <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">{{ page_description }}</p>
-                </div>
-                <div class="flex space-x-3">
-                    <button class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                        <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                        </svg>
-                        Export Config
-                    </button>
-                    <button class="inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                        <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                        </svg>
-                        Apply Changes
-                    </button>
-                </div>
-            </div>
+<div x-data="config()" x-init="init()" class="space-y-6">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Configuration Management</h1>
+            <p class="page-description">{{ page_description }}</p>
+        </div>
+        <div class="page-actions">
+            <button @click="exportConfig()" class="btn btn-secondary">Export Config</button>
+            <button @click="applyChanges()" class="btn btn-primary">Apply Changes</button>
         </div>
     </div>
 
-    <!-- Configuration Sections -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Configuration Form -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div class="lg:col-span-2 space-y-6">
-            <!-- Providers Configuration -->
-            <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700">
-                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-white">Provider Configuration</h3>
-                    <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">AI and vector store provider settings</p>
+            <!-- Providers -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="font-medium flex items-center gap-2">
+                        {{ icons::icon(name="providers", class="icon-sm") }}
+                        Provider Configuration
+                    </h3>
                 </div>
-                <div class="px-6 py-4 space-y-4">
-                    {% if configuration %}
-                        <!-- Embedding Provider -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Embedding Provider</label>
-                            <select id="embedding_provider" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                                <option value="openai" {% if configuration.providers.embedding.provider == "openai" %}selected{% endif %}>OpenAI</option>
-                                <option value="ollama" {% if configuration.providers.embedding.provider == "ollama" %}selected{% endif %}>Ollama</option>
-                                <option value="voyageai" {% if configuration.providers.embedding.provider == "voyageai" %}selected{% endif %}>VoyageAI</option>
-                                <option value="gemini" {% if configuration.providers.embedding.provider == "gemini" %}selected{% endif %}>Gemini</option>
-                                <option value="fastembed" {% if configuration.providers.embedding.provider == "fastembed" %}selected{% endif %}>FastEmbed</option>
-                            </select>
-                        </div>
-
-                        <!-- Vector Store Provider -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Vector Store Provider</label>
-                            <select id="vector_store_provider" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                                <option value="milvus" {% if configuration.providers.vector_store.provider == "milvus" %}selected{% endif %}>Milvus</option>
-                                <option value="pinecone" {% if configuration.providers.vector_store.provider == "pinecone" %}selected{% endif %}>Pinecone</option>
-                                <option value="qdrant" {% if configuration.providers.vector_store.provider == "qdrant" %}selected{% endif %}>Qdrant</option>
-                                <option value="in-memory" {% if configuration.providers.vector_store.provider == "in-memory" %}selected{% endif %}>In-Memory</option>
-                                <option value="filesystem" {% if configuration.providers.vector_store.provider == "filesystem" %}selected{% endif %}>Filesystem</option>
-                            </select>
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- System Configuration -->
-            <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700">
-                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-white">System Configuration</h3>
-                    <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Core system settings and limits</p>
-                </div>
-                <div class="px-6 py-4 space-y-4">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Metrics Collection Interval (seconds)</label>
-                            <input type="number" id="metrics_interval" value="{{ configuration.metrics.collection_interval | default(value=30) }}" class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Cache Max Size (MB)</label>
-                            <input type="number" id="cache_max_size" value="{{ configuration.cache.max_size_mb | default(value=1024) }}" class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Database Pool Size</label>
-                            <input type="number" id="db_pool_size" value="{{ configuration.database.pool_size | default(value=10) }}" class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Chunk Size</label>
-                            <input type="number" id="chunk_size" value="{{ configuration.indexing.chunk_size | default(value=1000) }}" class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Security Configuration -->
-            <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700">
-                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-white">Security Configuration</h3>
-                    <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Authentication and rate limiting settings</p>
-                </div>
-                <div class="px-6 py-4 space-y-4">
-                    <div class="flex items-center">
-                        <input type="checkbox" id="enable_auth" {% if configuration.security.enable_auth %}checked{% endif %} class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 dark:border-gray-600 rounded">
-                        <label class="ml-2 block text-sm text-gray-900 dark:text-white">Enable Authentication</label>
-                    </div>
-                    <div class="flex items-center">
-                        <input type="checkbox" id="enable_rate_limiting" {% if configuration.security.rate_limiting %}checked{% endif %} class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 dark:border-gray-600 rounded">
-                        <label class="ml-2 block text-sm text-gray-900 dark:text-white">Enable Rate Limiting</label>
+                <div class="card-body space-y-4">
+                    <div>
+                        <label class="input-label">Embedding Provider</label>
+                        <select x-model="form.embedding_provider" class="input">
+                            <option value="openai">OpenAI</option>
+                            <option value="ollama">Ollama</option>
+                            <option value="voyageai">VoyageAI</option>
+                            <option value="gemini">Gemini</option>
+                            <option value="fastembed">FastEmbed</option>
+                        </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Max Requests per Minute</label>
-                        <input type="number" id="max_requests_per_minute" value="{{ configuration.security.max_requests_per_minute | default(value=60) }}" class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        <label class="input-label">Vector Store Provider</label>
+                        <select x-model="form.vector_store_provider" class="input">
+                            <option value="milvus">Milvus</option>
+                            <option value="pinecone">Pinecone</option>
+                            <option value="qdrant">Qdrant</option>
+                            <option value="in-memory">In-Memory</option>
+                            <option value="filesystem">Filesystem</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="font-medium flex items-center gap-2">
+                        {{ icons::icon(name="config", class="icon-sm") }}
+                        System Configuration
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="input-label">Metrics Interval (s)</label>
+                            <input type="number" x-model="form.metrics_interval" class="input">
+                        </div>
+                        <div>
+                            <label class="input-label">Cache Max Size (MB)</label>
+                            <input type="number" x-model="form.cache_max_size" class="input">
+                        </div>
+                        <div>
+                            <label class="input-label">Database Pool Size</label>
+                            <input type="number" x-model="form.db_pool_size" class="input">
+                        </div>
+                        <div>
+                            <label class="input-label">Chunk Size</label>
+                            <input type="number" x-model="form.chunk_size" class="input">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Security -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="font-medium flex items-center gap-2">
+                        {{ icons::icon(name="lock", class="icon-sm") }}
+                        Security Configuration
+                    </h3>
+                </div>
+                <div class="card-body space-y-4">
+                    <label class="flex items-center gap-2">
+                        <input type="checkbox" x-model="form.enable_auth" class="checkbox">
+                        <span>Enable Authentication</span>
+                    </label>
+                    <label class="flex items-center gap-2">
+                        <input type="checkbox" x-model="form.enable_rate_limiting" class="checkbox">
+                        <span>Enable Rate Limiting</span>
+                    </label>
+                    <div>
+                        <label class="input-label">Max Requests per Minute</label>
+                        <input type="number" x-model="form.max_requests_per_minute" class="input">
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Configuration History -->
+        <!-- Sidebar -->
         <div class="space-y-6">
-            <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700">
-                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-white">Recent Changes</h3>
-                    <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Configuration change history</p>
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="font-medium flex items-center gap-2">
+                        {{ icons::icon(name="clock", class="icon-sm") }}
+                        Recent Changes
+                    </h3>
                 </div>
-                <div class="divide-y divide-gray-200 dark:divide-gray-700">
-                    {% if config_history %}
-                        {% for change in config_history %}
-                            <div class="px-6 py-4">
-                                <div class="flex items-center justify-between">
-                                    <div class="flex-1">
-                                        <p class="text-sm font-medium text-gray-900 dark:text-white">{{ change.path }}</p>
-                                        <p class="text-sm text-gray-600 dark:text-gray-400">{{ change.change_type }}</p>
-                                    </div>
-                                    <div class="text-right">
-                                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ change.timestamp | date(format="%Y-%m-%d %H:%M") }}</p>
-                                        <p class="text-xs text-gray-500 dark:text-gray-400">by {{ change.user }}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        {% endfor %}
-                    {% else %}
-                        <div class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
-                            No recent configuration changes
-                        </div>
-                    {% endif %}
-                </div>
+                <template x-if="history.length === 0">
+                    <div class="card-body text-center text-muted">No recent changes</div>
+                </template>
+                <template x-for="change in history" :key="change.id">
+                    <div class="card-body card-divider">
+                        <p class="text-sm font-medium" x-text="change.path"></p>
+                        <p class="text-xs text-muted" x-text="change.change_type"></p>
+                        <p class="text-xs text-muted" x-text="fmt.date(change.timestamp) + ' by ' + change.user"></p>
+                    </div>
+                </template>
             </div>
 
-            <!-- Configuration Validation -->
-            <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700">
-                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-white">Configuration Validation</h3>
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="font-medium flex items-center gap-2">
+                        {{ icons::icon(name="check-circle", class="icon-sm") }}
+                        Configuration Validation
+                    </h3>
                 </div>
-                <div class="px-6 py-4">
-                    <button id="validate-config" class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                        <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                        Validate Configuration
-                    </button>
-                    <div id="validation-results" class="mt-4 hidden">
-                        <!-- Validation results will be shown here -->
-                    </div>
+                <div class="card-body">
+                    <button @click="validate()" class="btn btn-primary w-full">Validate Configuration</button>
+                    <div x-show="validation.message" x-cloak class="mt-4 alert text-sm"
+                         :class="css.alertClass(validation.valid ? 'success' : 'danger')"
+                         x-text="validation.message"></div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
 
+{% block scripts %}
 <script>
-// Get auth token from cookie
-function getAuthToken() {
-    const name = 'auth_token=';
-    const decodedCookie = decodeURIComponent(document.cookie);
-    const cookieArray = decodedCookie.split(';');
-    for (let i = 0; i < cookieArray.length; i++) {
-        let cookie = cookieArray[i].trim();
-        if (cookie.indexOf(name) === 0) {
-            return cookie.substring(name.length);
-        }
-    }
-    return null;
-}
+function config() {
+    return {
+        form: {
+            embedding_provider: '{{ configuration.providers.embedding.provider | default(value="fastembed") }}',
+            vector_store_provider: '{{ configuration.providers.vector_store.provider | default(value="milvus") }}',
+            metrics_interval: {{ configuration.metrics.collection_interval | default(value=30) }},
+            cache_max_size: {{ configuration.cache.max_size_mb | default(value=1024) }},
+            db_pool_size: {{ configuration.database.pool_size | default(value=10) }},
+            chunk_size: {{ configuration.indexing.chunk_size | default(value=1000) }},
+            enable_auth: {{ configuration.security.enable_auth | default(value=false) }},
+            enable_rate_limiting: {{ configuration.security.rate_limiting | default(value=false) }},
+            max_requests_per_minute: {{ configuration.security.max_requests_per_minute | default(value=60) }}
+        },
+        history: [],
+        validation: { valid: null, message: '' },
 
-// Helper function for API requests with auth
-async function apiRequest(url, options = {}) {
-    const token = getAuthToken();
-    const headers = {
-        'Content-Type': 'application/json',
-        ...options.headers
-    };
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
-    return fetch(url, {
-        ...options,
-        headers,
-        credentials: 'include'
-    });
-}
+        async init() { await this.loadHistory(); },
 
-document.addEventListener('DOMContentLoaded', function() {
-    // Load configuration on page load
-    loadConfiguration();
-    loadConfigHistory();
+        async loadHistory() {
+            try {
+                const { data } = await API.get('/admin/configuration/history?limit=10');
+                this.history = data || [];
+            } catch (e) { console.error('Failed to load history:', e); }
+        },
 
-    // Find and attach event listeners to buttons
-    const buttons = document.querySelectorAll('button');
-    for (const button of buttons) {
-        if (button.textContent.includes('Apply Changes')) {
-            button.addEventListener('click', applyChanges);
-        } else if (button.textContent.includes('Export Config')) {
-            button.addEventListener('click', exportConfig);
-        }
-    }
+        async applyChanges() {
+            try {
+                await API.put('/admin/configuration', {
+                    'providers.embedding.provider': this.form.embedding_provider,
+                    'providers.vector_store.provider': this.form.vector_store_provider,
+                    'metrics.collection_interval': parseInt(this.form.metrics_interval),
+                    'cache.max_size_mb': parseInt(this.form.cache_max_size),
+                    'database.pool_size': parseInt(this.form.db_pool_size),
+                    'indexing.chunk_size': parseInt(this.form.chunk_size),
+                    'security.enable_auth': this.form.enable_auth,
+                    'security.rate_limiting': this.form.enable_rate_limiting,
+                    'security.max_requests_per_minute': parseInt(this.form.max_requests_per_minute)
+                });
+                toast.success('Configuration updated');
+                await this.loadHistory();
+            } catch (e) { toast.error(e.message); }
+        },
 
-    // Validate Config button
-    const validateBtn = document.getElementById('validate-config');
-    if (validateBtn) {
-        validateBtn.addEventListener('click', validateConfig);
-    }
-});
+        async exportConfig() {
+            try {
+                const { data } = await API.get('/admin/configuration');
+                const el = document.createElement('a');
+                el.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(data, null, 2));
+                el.download = 'configuration.json';
+                el.click();
+                toast.success('Configuration exported');
+            } catch (e) { toast.error(e.message); }
+        },
 
-async function loadConfiguration() {
-    try {
-        const response = await apiRequest('/admin/configuration');
-        if (!response.ok) {
-            throw new Error(`API error: ${response.status} ${response.statusText}`);
-        }
-        const data = await response.json();
-
-        if (!data.success) {
-            throw new Error(data.error || 'Failed to load configuration');
-        }
-
-        if (!data.data || typeof data.data !== 'object') {
-            throw new Error('Configuration data is invalid or missing');
-        }
-
-        const config = data.data;
-
-        // Provider settings - REQUIRE real data
-        if (config.providers && config.providers.embedding) {
-            const embedding_provider = config.providers.embedding.provider;
-            if (!embedding_provider) throw new Error('Embedding provider name missing');
-            document.getElementById('embedding_provider').value = embedding_provider;
-        }
-        if (config.providers && config.providers.vector_store) {
-            const vector_provider = config.providers.vector_store.provider;
-            if (!vector_provider) throw new Error('Vector store provider name missing');
-            document.getElementById('vector_store_provider').value = vector_provider;
-        }
-
-        // System settings - REQUIRE real data
-        if (config.metrics && config.metrics.collection_interval !== undefined) {
-            document.getElementById('metrics_interval').value = config.metrics.collection_interval;
-        }
-        if (config.cache && config.cache.max_size_mb !== undefined) {
-            document.getElementById('cache_max_size').value = config.cache.max_size_mb;
-        }
-        if (config.database && config.database.pool_size !== undefined) {
-            document.getElementById('db_pool_size').value = config.database.pool_size;
-        }
-        if (config.indexing && config.indexing.chunk_size !== undefined) {
-            document.getElementById('chunk_size').value = config.indexing.chunk_size;
-        }
-
-        // Security settings - REQUIRE real data
-        if (config.security) {
-            document.getElementById('enable_auth').checked = config.security.enable_auth;
-            document.getElementById('enable_rate_limiting').checked = config.security.rate_limiting;
-            if (config.security.max_requests_per_minute !== undefined) {
-                document.getElementById('max_requests_per_minute').value = config.security.max_requests_per_minute;
+        async validate() {
+            try {
+                const { data } = await API.post('/admin/configuration/validate', this.form);
+                const errors = data || [];
+                this.validation = errors.length === 0
+                    ? { valid: true, message: 'Configuration is valid' }
+                    : { valid: false, message: errors.join(', ') };
+            } catch (e) {
+                this.validation = { valid: false, message: e.message };
             }
         }
-    } catch (error) {
-        console.error('[ERROR] Failed to load configuration:', error);
-        showError(`Configuration error: ${error.message}`);
-    }
-}
-
-async function loadConfigHistory() {
-    try {
-        const response = await apiRequest('/admin/configuration/history?limit=10');
-        const data = await response.json();
-
-        if (data.success && data.data && data.data.length > 0) {
-            const historyHtml = data.data.map(change => `
-                <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
-                    <div class="flex items-center justify-between">
-                        <div class="flex-1">
-                            <p class="text-sm font-medium text-gray-900 dark:text-white">${escapeHtml(change.path)}</p>
-                            <p class="text-sm text-gray-600 dark:text-gray-400">${escapeHtml(change.change_type)}</p>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-xs text-gray-500 dark:text-gray-400">${new Date(change.timestamp).toLocaleString()}</p>
-                            <p class="text-xs text-gray-500 dark:text-gray-400">by ${escapeHtml(change.user)}</p>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-
-            const historyContainer = document.querySelector('[class*="Configuration History"]').parentElement;
-            const divideContainer = historyContainer.querySelector('[class*="divide-y"]');
-            if (divideContainer) {
-                divideContainer.innerHTML = historyHtml;
-            }
-        }
-    } catch (error) {
-        console.error('Failed to load configuration history:', error);
-    }
-}
-
-async function applyChanges() {
-    const updates = {
-        'providers.embedding.provider': document.getElementById('embedding_provider').value,
-        'providers.vector_store.provider': document.getElementById('vector_store_provider').value,
-        'metrics.collection_interval': parseInt(document.getElementById('metrics_interval').value),
-        'cache.max_size_mb': parseInt(document.getElementById('cache_max_size').value),
-        'database.pool_size': parseInt(document.getElementById('db_pool_size').value),
-        'indexing.chunk_size': parseInt(document.getElementById('chunk_size').value),
-        'security.enable_auth': document.getElementById('enable_auth').checked,
-        'security.rate_limiting': document.getElementById('enable_rate_limiting').checked,
-        'security.max_requests_per_minute': parseInt(document.getElementById('max_requests_per_minute').value)
     };
-
-    try {
-        const response = await apiRequest('/admin/configuration', {
-            method: 'PUT',
-            body: JSON.stringify(updates)
-        });
-
-        const data = await response.json();
-        if (data.success) {
-            showSuccess('Configuration updated successfully');
-            loadConfigHistory();
-        } else {
-            showError(data.error || 'Failed to update configuration');
-        }
-    } catch (error) {
-        console.error('Failed to apply changes:', error);
-        showError('Failed to apply changes');
-    }
-}
-
-async function exportConfig() {
-    try {
-        const response = await apiRequest('/admin/configuration');
-        const data = await response.json();
-
-        if (data.success) {
-            const element = document.createElement('a');
-            element.setAttribute('href', 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(data.data, null, 2)));
-            element.setAttribute('download', 'configuration.json');
-            element.style.display = 'none';
-            document.body.appendChild(element);
-            element.click();
-            document.body.removeChild(element);
-            showSuccess('Configuration exported successfully');
-        } else {
-            showError('Failed to export configuration');
-        }
-    } catch (error) {
-        console.error('Failed to export configuration:', error);
-        showError('Failed to export configuration');
-    }
-}
-
-async function validateConfig() {
-    const updates = {
-        'providers.embedding.provider': document.getElementById('embedding_provider').value,
-        'providers.vector_store.provider': document.getElementById('vector_store_provider').value,
-        'metrics.collection_interval': parseInt(document.getElementById('metrics_interval').value),
-        'cache.max_size_mb': parseInt(document.getElementById('cache_max_size').value),
-        'database.pool_size': parseInt(document.getElementById('db_pool_size').value),
-        'indexing.chunk_size': parseInt(document.getElementById('chunk_size').value)
-    };
-
-    try {
-        const response = await apiRequest('/admin/configuration/validate', {
-            method: 'POST',
-            body: JSON.stringify(updates)
-        });
-
-        const data = await response.json();
-        const resultsDiv = document.getElementById('validation-results');
-
-        if (data.success) {
-            const errors = data.data || [];
-            if (errors.length === 0) {
-                resultsDiv.innerHTML = '<div class="p-4 bg-green-50 dark:bg-green-900 border border-green-200 dark:border-green-700 rounded text-green-800 dark:text-green-200">Configuration is valid</div>';
-                resultsDiv.classList.remove('hidden');
-            } else {
-                resultsDiv.innerHTML = '<div class="p-4 bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700 rounded text-red-800 dark:text-red-200"><ul>' +
-                    errors.map(e => `<li class="mt-2">• ${escapeHtml(e)}</li>`).join('') + '</ul></div>';
-                resultsDiv.classList.remove('hidden');
-            }
-        } else {
-            showError(data.error || 'Validation failed');
-        }
-    } catch (error) {
-        console.error('Failed to validate configuration:', error);
-        showError('Failed to validate configuration');
-    }
-}
-
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-function showSuccess(message) {
-    // Create toast notification
-    const toast = document.createElement('div');
-    toast.className = 'fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg';
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
-}
-
-function showError(message) {
-    // Create toast notification
-    const toast = document.createElement('div');
-    toast.className = 'fixed bottom-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg';
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
 }
 </script>
 {% endblock %}

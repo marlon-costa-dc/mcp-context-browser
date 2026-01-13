@@ -56,7 +56,8 @@ mod test_utils {
     pub async fn create_ollama_provider() -> Option<Arc<dyn EmbeddingProvider>> {
         // Try to create Ollama provider - return None if Ollama is not available
         let http_client = match HttpClientPool::new() {
-            Ok(pool) => Arc::new(pool) as Arc<dyn mcp_context_browser::adapters::http_client::HttpClientProvider>,
+            Ok(pool) => Arc::new(pool)
+                as Arc<dyn mcp_context_browser::adapters::http_client::HttpClientProvider>,
             Err(_) => return None,
         };
 

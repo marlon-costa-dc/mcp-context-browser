@@ -1,137 +1,62 @@
 {% extends "base.html" %}
+{% import "icons.html" as icons %}
+{% block title %}Logs - MCP Context Browser{% endblock %}
 
 {% block content %}
-<div class="space-y-6">
-    <!-- Page Header -->
-    <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700">
-        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">System Logs</h1>
-                    <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">{{ page_description }}</p>
-                </div>
-                <div class="flex space-x-3">
-                    <button class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                        <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                        </svg>
-                        Export Logs
-                    </button>
-                    <button class="inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                        <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                        </svg>
-                        Refresh
-                    </button>
-                </div>
+<div x-data="logs()" x-init="init()" class="space-y-6">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">System Logs</h1>
+            <p class="page-description">{{ page_description }}</p>
+        </div>
+        <div class="page-actions">
+            <button @click="exportLogs()" class="btn btn-secondary">Export Logs</button>
+            <button @click="refresh()" class="btn btn-primary">Refresh</button>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="card card-body metric-card">
+            <div class="icon-box icon-box-md icon-box-primary">{{ icons::icon(name="document") }}</div>
+            <div class="metric-content">
+                <div class="metric-label">Total Entries</div>
+                <div class="metric-value" x-text="fmt.num(stats.total)"></div>
+            </div>
+        </div>
+        <div class="card card-body metric-card">
+            <div class="icon-box icon-box-md icon-box-danger">{{ icons::icon(name="error") }}</div>
+            <div class="metric-content">
+                <div class="metric-label">Errors</div>
+                <div class="metric-value" x-text="stats.errors"></div>
+                <div class="metric-subtext" x-text="stats.errorRate + '% of total'"></div>
+            </div>
+        </div>
+        <div class="card card-body metric-card">
+            <div class="icon-box icon-box-md icon-box-warning">{{ icons::icon(name="warning") }}</div>
+            <div class="metric-content">
+                <div class="metric-label">Warnings</div>
+                <div class="metric-value" x-text="stats.warnings"></div>
+                <div class="metric-subtext" x-text="stats.warnRate + '% of total'"></div>
+            </div>
+        </div>
+        <div class="card card-body metric-card">
+            <div class="icon-box icon-box-md icon-box-success">{{ icons::icon(name="check-circle") }}</div>
+            <div class="metric-content">
+                <div class="metric-label">Active Modules</div>
+                <div class="metric-value" x-text="stats.modules"></div>
             </div>
         </div>
     </div>
 
-    <!-- Log Statistics Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {% if log_stats %}
-            {% set total = log_stats.total_entries %}
-            {% set error_count = log_stats.entries_by_level.ERROR | default(value=0) %}
-            {% set warn_count = log_stats.entries_by_level.WARN | default(value=0) %}
-            {% set error_rate = error_count / total * 100 %}
-            {% set warn_rate = warn_count / total * 100 %}
-
-            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm rounded-lg border border-gray-200 dark:border-gray-700">
-                <div class="p-6">
-                    <div class="flex items-center">
-                        <div class="flex-shrink-0">
-                            <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-xl flex items-center justify-center">
-                                <svg class="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                                </svg>
-                            </div>
-                        </div>
-                        <div class="ml-5 w-0 flex-1">
-                            <dl>
-                                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Total Entries</dt>
-                                <dd class="text-lg font-medium text-gray-900 dark:text-white">{{ log_stats.total_entries }}</dd>
-                            </dl>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm rounded-lg border border-gray-200 dark:border-gray-700">
-                <div class="p-6">
-                    <div class="flex items-center">
-                        <div class="flex-shrink-0">
-                            <div class="w-12 h-12 bg-red-100 dark:bg-red-900 rounded-xl flex items-center justify-center">
-                                <svg class="w-6 h-6 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"/>
-                                </svg>
-                            </div>
-                        </div>
-                        <div class="ml-5 w-0 flex-1">
-                            <dl>
-                                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Errors</dt>
-                                <dd class="text-lg font-medium text-gray-900 dark:text-white">{{ log_stats.entries_by_level.ERROR | default(value=0) }}</dd>
-                                <dd class="text-sm text-gray-600 dark:text-gray-400">({{ error_rate | round(precision=1) }}% of total)</dd>
-                            </dl>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm rounded-lg border border-gray-200 dark:border-gray-700">
-                <div class="p-6">
-                    <div class="flex items-center">
-                        <div class="flex-shrink-0">
-                            <div class="w-12 h-12 bg-yellow-100 dark:bg-yellow-900 rounded-xl flex items-center justify-center">
-                                <svg class="w-6 h-6 text-yellow-600 dark:text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"/>
-                                </svg>
-                            </div>
-                        </div>
-                        <div class="ml-5 w-0 flex-1">
-                            <dl>
-                                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Warnings</dt>
-                                <dd class="text-lg font-medium text-gray-900 dark:text-white">{{ log_stats.entries_by_level.WARN | default(value=0) }}</dd>
-                                <dd class="text-sm text-gray-600 dark:text-gray-400">({{ warn_rate | round(precision=1) }}% of total)</dd>
-                            </dl>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm rounded-lg border border-gray-200 dark:border-gray-700">
-                <div class="p-6">
-                    <div class="flex items-center">
-                        <div class="flex-shrink-0">
-                            <div class="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-xl flex items-center justify-center">
-                                <svg class="w-6 h-6 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                </svg>
-                            </div>
-                        </div>
-                        <div class="ml-5 w-0 flex-1">
-                            <dl>
-                                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Active Modules</dt>
-                                <dd class="text-lg font-medium text-gray-900 dark:text-white">{{ log_stats.entries_by_module | length }}</dd>
-                                <dd class="text-sm text-gray-600 dark:text-gray-400">Logging modules</dd>
-                            </dl>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        {% endif %}
-    </div>
-
-    <!-- Log Filters -->
-    <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700">
-        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Log Filters</h3>
-        </div>
-        <div class="px-6 py-4">
+    <!-- Filters -->
+    <div class="card">
+        <div class="card-header"><h3 class="font-medium">Log Filters</h3></div>
+        <div class="card-body">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Log Level</label>
-                    <select class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    <label class="input-label">Log Level</label>
+                    <select x-model="filter.level" class="input">
                         <option value="">All Levels</option>
                         <option value="ERROR">ERROR</option>
                         <option value="WARN">WARN</option>
@@ -141,16 +66,16 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Module</label>
-                    <input type="text" placeholder="Filter by module..." class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    <label class="input-label">Module</label>
+                    <input type="text" x-model="filter.module" placeholder="Filter by module..." class="input">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Message Contains</label>
-                    <input type="text" placeholder="Search in messages..." class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    <label class="input-label">Message Contains</label>
+                    <input type="text" x-model="filter.search" placeholder="Search in messages..." class="input">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Time Range</label>
-                    <select class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    <label class="input-label">Time Range</label>
+                    <select x-model="filter.timeRange" class="input">
                         <option value="1h">Last Hour</option>
                         <option value="24h">Last 24 Hours</option>
                         <option value="7d">Last 7 Days</option>
@@ -159,317 +84,115 @@
                 </div>
             </div>
             <div class="mt-4 flex justify-end">
-                <button class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                    Apply Filters
-                </button>
+                <button @click="loadLogs()" class="btn btn-secondary">Apply Filters</button>
             </div>
         </div>
     </div>
 
-    <!-- Log Entries Table -->
-    <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700">
-        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Log Entries</h3>
-        </div>
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead class="bg-gray-50 dark:bg-gray-700">
+    <!-- Entries -->
+    <div class="card">
+        <div class="card-header"><h3 class="font-medium">Log Entries</h3></div>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Level</th>
+                    <th>Module</th>
+                    <th>Message</th>
+                    <th>File</th>
+                    <th>Line</th>
+                </tr>
+            </thead>
+            <tbody>
+                <template x-if="loading">
+                    <tr><td colspan="6" class="text-center p-4"><span class="spinner"></span> Loading...</td></tr>
+                </template>
+                <template x-if="!loading && entries.length === 0">
+                    <tr><td colspan="6" class="text-center p-4 text-muted">No log entries found</td></tr>
+                </template>
+                <template x-for="entry in entries" :key="entry.id">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Timestamp</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Level</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Module</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Message</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">File</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Line</th>
+                        <td x-text="fmt.datetime(entry.timestamp)"></td>
+                        <td><span class="badge" :class="css.statusBadge(entry.level)" x-text="entry.level"></span></td>
+                        <td x-text="entry.module || '-'"></td>
+                        <td x-text="entry.message || '-'"></td>
+                        <td x-text="entry.file || '-'"></td>
+                        <td x-text="entry.line || '-'"></td>
                     </tr>
-                </thead>
-                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                    <!-- Log entries will be loaded dynamically -->
-                    <tr>
-                        <td colspan="6" class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
-                            <div class="flex items-center justify-center">
-                                <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                Loading log entries...
-                            </div>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+                </template>
+            </tbody>
+        </table>
     </div>
 </div>
+{% endblock %}
 
+{% block scripts %}
 <script>
-// Get auth token from cookie
-function getAuthToken() {
-    const name = 'auth_token=';
-    const decodedCookie = decodeURIComponent(document.cookie);
-    const cookieArray = decodedCookie.split(';');
-    for (let i = 0; i < cookieArray.length; i++) {
-        let cookie = cookieArray[i].trim();
-        if (cookie.indexOf(name) === 0) {
-            return cookie.substring(name.length);
-        }
-    }
-    return null;
-}
+function logs() {
+    return {
+        stats: { total: 0, errors: 0, warnings: 0, modules: 0, errorRate: '0', warnRate: '0' },
+        filter: { level: '', module: '', search: '', timeRange: '24h' },
+        entries: [],
+        loading: true,
 
-// Helper function for API requests with auth
-async function apiRequest(url, options = {}) {
-    const token = getAuthToken();
-    const headers = {
-        'Content-Type': 'application/json',
-        ...options.headers
+        async init() {
+            await Promise.all([this.loadStats(), this.loadLogs()]);
+        },
+
+        async refresh() {
+            await Promise.all([this.loadStats(), this.loadLogs()]);
+            toast.success('Logs refreshed');
+        },
+
+        async loadStats() {
+            try {
+                const { data } = await API.get('/admin/logs/stats');
+                const total = data.total_entries || 0;
+                const errors = data.entries_by_level?.ERROR || 0;
+                const warnings = data.entries_by_level?.WARN || 0;
+                this.stats = {
+                    total,
+                    errors,
+                    warnings,
+                    modules: Object.keys(data.entries_by_module || {}).length,
+                    errorRate: total > 0 ? (errors / total * 100).toFixed(1) : '0',
+                    warnRate: total > 0 ? (warnings / total * 100).toFixed(1) : '0'
+                };
+            } catch (e) { toast.error(e.message); }
+        },
+
+        async loadLogs() {
+            this.loading = true;
+            try {
+                const params = new URLSearchParams();
+                if (this.filter.level) params.append('level', this.filter.level);
+                if (this.filter.module) params.append('module', this.filter.module);
+                if (this.filter.search) params.append('search', this.filter.search);
+                if (this.filter.timeRange) params.append('time_range', this.filter.timeRange);
+
+                const { data } = await API.get(`/admin/logs?${params.toString()}`);
+                this.entries = data.entries || [];
+            } catch (e) { toast.error(e.message); }
+            this.loading = false;
+        },
+
+        async exportLogs() {
+            try {
+                const params = new URLSearchParams({ format: 'json' });
+                if (this.filter.level) params.append('level', this.filter.level);
+                if (this.filter.module) params.append('module', this.filter.module);
+                if (this.filter.search) params.append('search', this.filter.search);
+
+                const { data } = await API.get(`/admin/logs/export?${params.toString()}`);
+                const el = document.createElement('a');
+                el.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(data, null, 2));
+                el.download = `logs-${new Date().toISOString()}.json`;
+                el.click();
+                toast.success('Logs exported');
+            } catch (e) { toast.error(e.message); }
+        },
+
     };
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
-    return fetch(url, {
-        ...options,
-        headers,
-        credentials: 'include'
-    });
-}
-
-let currentFilter = {
-    level: '',
-    module: '',
-    search: '',
-    timeRange: '24h'
-};
-
-document.addEventListener('DOMContentLoaded', function() {
-    // Load initial stats
-    loadLogStats();
-    // Load initial log entries
-    loadLogs();
-
-    // Find and attach event listeners
-    const buttons = document.querySelectorAll('button');
-    for (const button of buttons) {
-        if (button.textContent.includes('Export Logs')) {
-            button.addEventListener('click', exportLogs);
-        } else if (button.textContent.includes('Refresh')) {
-            button.addEventListener('click', () => {
-                loadLogStats();
-                loadLogs();
-            });
-        } else if (button.textContent.includes('Apply Filters')) {
-            button.addEventListener('click', applyFilters);
-        }
-    }
-});
-
-async function loadLogStats() {
-    try {
-        const response = await apiRequest('/admin/logs/stats');
-        if (!response.ok) {
-            throw new Error(`API error: ${response.status} ${response.statusText}`);
-        }
-        const data = await response.json();
-
-        if (!data.success) {
-            throw new Error(data.error || 'Failed to load log statistics');
-        }
-
-        if (!data.data || typeof data.data !== 'object') {
-            throw new Error('Log statistics data is invalid');
-        }
-
-        const stats = data.data;
-        updateStatsCards(stats);
-    } catch (error) {
-        console.error('[ERROR] Failed to load log statistics:', error);
-        showError(`Log stats error: ${error.message}`);
-    }
-}
-
-function updateStatsCards(stats) {
-    // Update stat cards dynamically
-    const cards = document.querySelectorAll('[class*="bg-white dark:bg-gray-800 overflow-hidden shadow-sm"]');
-
-    if (cards.length >= 4) {
-        // Total entries
-        const totalDD = cards[0].querySelector('dd:first-of-type');
-        if (totalDD) totalDD.textContent = stats.total_entries || 0;
-
-        // Error count
-        const errorCount = stats.entries_by_level?.ERROR || 0;
-        const errorDD = cards[1].querySelector('dd:first-of-type');
-        if (errorDD) {
-            errorDD.textContent = errorCount;
-            const errorRate = cards[1].querySelectorAll('dd')[1];
-            const rate = stats.total_entries > 0 ? ((errorCount / stats.total_entries) * 100).toFixed(1) : 0;
-            if (errorRate) errorRate.textContent = `(${rate}% of total)`;
-        }
-
-        // Warning count
-        const warnCount = stats.entries_by_level?.WARN || 0;
-        const warnDD = cards[2].querySelector('dd:first-of-type');
-        if (warnDD) {
-            warnDD.textContent = warnCount;
-            const warnRate = cards[2].querySelectorAll('dd')[1];
-            const rate = stats.total_entries > 0 ? ((warnCount / stats.total_entries) * 100).toFixed(1) : 0;
-            if (warnRate) warnRate.textContent = `(${rate}% of total)`;
-        }
-
-        // Active modules
-        const modulesDD = cards[3].querySelector('dd:first-of-type');
-        if (modulesDD) modulesDD.textContent = Object.keys(stats.entries_by_module || {}).length;
-    }
-}
-
-async function loadLogs() {
-    try {
-        const params = new URLSearchParams();
-        if (currentFilter.level) params.append('level', currentFilter.level);
-        if (currentFilter.module) params.append('module', currentFilter.module);
-        if (currentFilter.search) params.append('search', currentFilter.search);
-        if (currentFilter.timeRange) params.append('time_range', currentFilter.timeRange);
-
-        const response = await apiRequest(`/admin/logs?${params.toString()}`);
-        if (!response.ok) {
-            throw new Error(`API error: ${response.status} ${response.statusText}`);
-        }
-        const data = await response.json();
-
-        if (!data.success) {
-            throw new Error(data.error || 'Failed to load logs');
-        }
-
-        if (!data.data) {
-            throw new Error('Log data is invalid or missing');
-        }
-
-        const entries = data.data.entries || [];
-        displayLogs(entries);
-    } catch (error) {
-        console.error('[ERROR] Failed to load logs:', error);
-        showError(`Logs error: ${error.message}`);
-        displayLogs([]); // Show error explicitly
-    }
-}
-
-function displayLogs(entries) {
-    const tbody = document.querySelector('table tbody');
-    if (!tbody) return;
-
-    if (entries.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="6" class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
-                    No log entries found
-                </td>
-            </tr>
-        `;
-        return;
-    }
-
-    tbody.innerHTML = entries.map(entry => `
-        <tr>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                ${new Date(entry.timestamp).toLocaleString()}
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm">
-                <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getLevelColor(entry.level)}">
-                    ${escapeHtml(entry.level)}
-                </span>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                ${escapeHtml(entry.module || '-')}
-            </td>
-            <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">
-                ${escapeHtml(entry.message || '-')}
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                ${escapeHtml(entry.file || '-')}
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                ${entry.line ? entry.line : '-'}
-            </td>
-        </tr>
-    `).join('');
-}
-
-function getLevelColor(level) {
-    switch(level?.toUpperCase()) {
-        case 'ERROR': return 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200';
-        case 'WARN': return 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200';
-        case 'INFO': return 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200';
-        case 'DEBUG': return 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200';
-        default: return 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200';
-    }
-}
-
-function applyFilters() {
-    // Get filter values from form
-    const filterContainer = document.querySelector('[class*="Log Filters"]').parentElement;
-    const selects = filterContainer.querySelectorAll('select');
-    const inputs = filterContainer.querySelectorAll('input');
-
-    currentFilter.level = selects[0]?.value || '';
-    currentFilter.timeRange = selects[1]?.value || '24h';
-    currentFilter.module = inputs[0]?.value || '';
-    currentFilter.search = inputs[1]?.value || '';
-
-    // Load logs with new filters
-    loadLogs();
-}
-
-async function exportLogs() {
-    try {
-        const params = new URLSearchParams();
-        params.append('format', 'json');
-        if (currentFilter.level) params.append('level', currentFilter.level);
-        if (currentFilter.module) params.append('module', currentFilter.module);
-        if (currentFilter.search) params.append('search', currentFilter.search);
-
-        const response = await apiRequest(`/admin/logs/export?${params.toString()}`, {
-            method: 'GET'
-        });
-        const data = await response.json();
-
-        if (data.success) {
-            const element = document.createElement('a');
-            element.setAttribute('href', 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(data.data, null, 2)));
-            element.setAttribute('download', `logs-${new Date().toISOString()}.json`);
-            element.style.display = 'none';
-            document.body.appendChild(element);
-            element.click();
-            document.body.removeChild(element);
-            showSuccess('Logs exported successfully');
-        } else {
-            showError('Failed to export logs');
-        }
-    } catch (error) {
-        console.error('Failed to export logs:', error);
-        showError('Failed to export logs');
-    }
-}
-
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-function showSuccess(message) {
-    const toast = document.createElement('div');
-    toast.className = 'fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg';
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
-}
-
-function showError(message) {
-    const toast = document.createElement('div');
-    toast.className = 'fixed bottom-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg';
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
 }
 </script>
 {% endblock %}

@@ -143,53 +143,63 @@ impl HttpClientProvider for HttpClientPool {
     }
 }
 
-/// Null HTTP client pool for testing (always returns errors)
-#[derive(Clone)]
-pub struct NullHttpClientPool {
-    config: HttpClientConfig,
-    client: Client,
-}
+// Note: NullHttpClientPool in test_utils module (Phase 5 DI audit)
+// Public for external test access but NOT re-exported at parent level
+// Tests import via: mcp_context_browser::adapters::http_client::test_utils::NullHttpClientPool
+pub mod test_utils {
+    use super::*;
 
-impl Default for NullHttpClientPool {
-    fn default() -> Self {
-        Self::new()
+    /// Null HTTP client pool for testing (always returns errors)
+    #[derive(Clone)]
+    pub struct NullHttpClientPool {
+        config: HttpClientConfig,
+        client: Client,
     }
-}
 
-impl NullHttpClientPool {
-    /// Create a new null HTTP client pool for testing
-    pub fn new() -> Self {
-        // Create a minimal client for the null implementation
-        // Using default Client if builder fails (should never happen with these basic options)
-        let client = Client::builder()
-            .timeout(Duration::from_millis(1))
-            .build()
-            .unwrap_or_default();
+    impl Default for NullHttpClientPool {
+        fn default() -> Self {
+            Self::new()
+        }
+    }
 
-        Self {
-            config: HttpClientConfig::default(),
-            client,
+    impl NullHttpClientPool {
+        /// Create a new null HTTP client pool for testing
+        pub fn new() -> Self {
+            // Create a minimal client for the null implementation
+            // Using default Client if builder fails (should never happen with these basic options)
+            let client = Client::builder()
+                .timeout(Duration::from_millis(1))
+                .build()
+                .unwrap_or_default();
+
+            Self {
+                config: HttpClientConfig::default(),
+                client,
+            }
+        }
+    }
+
+    impl HttpClientProvider for NullHttpClientPool {
+        fn client(&self) -> &Client {
+            &self.client
+        }
+
+        fn config(&self) -> &HttpClientConfig {
+            &self.config
+        }
+
+        fn client_with_timeout(
+            &self,
+            _timeout: Duration,
+        ) -> Result<Client, Box<dyn std::error::Error + Send + Sync>> {
+            Ok(self.client.clone())
+        }
+
+        fn is_enabled(&self) -> bool {
+            false
         }
     }
 }
 
-impl HttpClientProvider for NullHttpClientPool {
-    fn client(&self) -> &Client {
-        &self.client
-    }
-
-    fn config(&self) -> &HttpClientConfig {
-        &self.config
-    }
-
-    fn client_with_timeout(
-        &self,
-        _timeout: Duration,
-    ) -> Result<Client, Box<dyn std::error::Error + Send + Sync>> {
-        Ok(self.client.clone())
-    }
-
-    fn is_enabled(&self) -> bool {
-        false
-    }
-}
+// NullHttpClientPool NOT re-exported at module level
+// Tests import via: mcp_context_browser::adapters::http_client::test_utils::NullHttpClientPool

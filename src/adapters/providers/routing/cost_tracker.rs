@@ -230,4 +230,3 @@ impl CostTrackerTrait for CostTracker {
         self.get_current_period_cost()
     }
 }
-

@@ -8,7 +8,7 @@ pub mod routing;
 pub mod vector_store;
 
 // Re-export implementations for convenience (Infrastructure layer usage)
-pub use embedding::NullEmbeddingProvider;
+// Note: NullEmbeddingProvider NOT re-exported (Phase 5 DI audit - test-only)
 pub use embedding::OllamaEmbeddingProvider;
 pub use embedding::OpenAIEmbeddingProvider;
 pub use vector_store::InMemoryVectorStoreProvider;

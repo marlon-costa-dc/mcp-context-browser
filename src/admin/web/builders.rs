@@ -372,6 +372,7 @@ impl<'a> ViewModelBuilder<'a> {
 
         Ok(ConfigurationViewModel {
             page: "config",
+            page_description: "Manage system settings and parameters",
             categories,
         })
     }
@@ -437,6 +438,7 @@ impl<'a> ViewModelBuilder<'a> {
 
         Ok(LogsViewModel {
             page: "logs",
+            page_description: "View and filter system logs",
             entries,
             total_count: logs.total_count,
             stats: LogStatsViewModel {
@@ -539,6 +541,8 @@ mod tests {
 
     fn create_test_tera() -> Tera {
         let mut tera = Tera::default();
+        tera.add_raw_template("icons.html", include_str!("templates/icons.html"))
+            .expect("Failed to load icons.html");
         tera.add_raw_template("base.html", include_str!("templates/base.html"))
             .expect("Failed to load base.html");
         tera.add_raw_template("dashboard.html", include_str!("templates/dashboard.html"))
@@ -547,18 +551,30 @@ mod tests {
             .expect("Failed to load providers.html");
         tera.add_raw_template("indexes.html", include_str!("templates/indexes.html"))
             .expect("Failed to load indexes.html");
-        tera.add_raw_template("configuration.html", include_str!("templates/configuration.html"))
-            .expect("Failed to load configuration.html");
+        tera.add_raw_template(
+            "configuration.html",
+            include_str!("templates/configuration.html"),
+        )
+        .expect("Failed to load configuration.html");
         tera.add_raw_template("logs.html", include_str!("templates/logs.html"))
             .expect("Failed to load logs.html");
         tera.add_raw_template("error.html", include_str!("templates/error.html"))
             .expect("Failed to load error.html");
-        tera.add_raw_template("htmx/dashboard_metrics.html", include_str!("templates/htmx/dashboard_metrics.html"))
-            .expect("Failed to load htmx/dashboard_metrics.html");
-        tera.add_raw_template("htmx/providers_list.html", include_str!("templates/htmx/providers_list.html"))
-            .expect("Failed to load htmx/providers_list.html");
-        tera.add_raw_template("htmx/indexes_list.html", include_str!("templates/htmx/indexes_list.html"))
-            .expect("Failed to load htmx/indexes_list.html");
+        tera.add_raw_template(
+            "htmx/dashboard_metrics.html",
+            include_str!("templates/htmx/dashboard_metrics.html"),
+        )
+        .expect("Failed to load htmx/dashboard_metrics.html");
+        tera.add_raw_template(
+            "htmx/providers_list.html",
+            include_str!("templates/htmx/providers_list.html"),
+        )
+        .expect("Failed to load htmx/providers_list.html");
+        tera.add_raw_template(
+            "htmx/indexes_list.html",
+            include_str!("templates/htmx/indexes_list.html"),
+        )
+        .expect("Failed to load htmx/indexes_list.html");
         tera
     }
 
@@ -618,31 +634,43 @@ mod tests {
         context.insert("page", &vm.page);
 
         let result = tera.render("dashboard.html", &context);
-        assert!(result.is_ok(), "Dashboard template failed to render: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Dashboard template failed to render: {:?}",
+            result.err()
+        );
 
         let html = result.unwrap();
-        assert!(html.contains("System Dashboard"), "Dashboard should contain title");
-        assert!(html.len() > 1000, "Dashboard should have substantial content");
+        assert!(
+            html.contains("System Dashboard"),
+            "Dashboard should contain title"
+        );
+        assert!(
+            html.len() > 1000,
+            "Dashboard should have substantial content"
+        );
     }
 
     #[test]
     fn test_providers_template_renders() {
         let tera = create_test_tera();
-        let vm = ProvidersViewModel::new(vec![
-            ProviderViewModel::new(
-                "openai-1".to_string(),
-                "OpenAI".to_string(),
-                "embedding".to_string(),
-                "available".to_string(),
-            ),
-        ]);
+        let vm = ProvidersViewModel::new(vec![ProviderViewModel::new(
+            "openai-1".to_string(),
+            "OpenAI".to_string(),
+            "embedding".to_string(),
+            "available".to_string(),
+        )]);
 
         let mut context = Context::new();
         context.insert("vm", &vm);
         context.insert("page", &vm.page);
 
         let result = tera.render("providers.html", &context);
-        assert!(result.is_ok(), "Providers template failed to render: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Providers template failed to render: {:?}",
+            result.err()
+        );
     }
 
     #[test]
@@ -665,7 +693,11 @@ mod tests {
         context.insert("page", &vm.page);
 
         let result = tera.render("indexes.html", &context);
-        assert!(result.is_ok(), "Indexes template failed to render: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Indexes template failed to render: {:?}",
+            result.err()
+        );
     }
 
     #[test]
@@ -673,6 +705,7 @@ mod tests {
         let tera = create_test_tera();
         let vm = ConfigurationViewModel {
             page: "config",
+            page_description: "Manage system settings",
             categories: vec![ConfigCategoryViewModel {
                 name: "Indexing".to_string(),
                 description: "Indexing settings".to_string(),
@@ -690,10 +723,16 @@ mod tests {
 
         let mut context = Context::new();
         context.insert("vm", &vm);
-        context.insert("page", &vm.page);
+        // Use the &'static str directly without extra reference
+        context.insert("page", vm.page);
+        context.insert("page_description", vm.page_description);
 
         let result = tera.render("configuration.html", &context);
-        assert!(result.is_ok(), "Configuration template failed to render: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Configuration template failed to render: {:?}",
+            result.err()
+        );
     }
 
     #[test]
@@ -701,6 +740,7 @@ mod tests {
         let tera = create_test_tera();
         let vm = LogsViewModel {
             page: "logs",
+            page_description: "View and filter system logs",
             entries: vec![LogEntryViewModel {
                 timestamp: "2024-01-01 12:00:00".to_string(),
                 level: "INFO".to_string(),
@@ -719,10 +759,16 @@ mod tests {
 
         let mut context = Context::new();
         context.insert("vm", &vm);
-        context.insert("page", &vm.page);
+        // Use the &'static str directly without extra reference
+        context.insert("page", vm.page);
+        context.insert("page_description", vm.page_description);
 
         let result = tera.render("logs.html", &context);
-        assert!(result.is_ok(), "Logs template failed to render: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Logs template failed to render: {:?}",
+            result.err()
+        );
     }
 
     #[test]
@@ -732,12 +778,20 @@ mod tests {
 
         let mut context = Context::new();
         context.insert("error", &error_vm);
+        context.insert("page", "error");
 
         let result = tera.render("error.html", &context);
-        assert!(result.is_ok(), "Error template failed to render: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Error template failed to render: {:?}",
+            result.err()
+        );
 
         let html = result.unwrap();
-        assert!(html.contains("Test Error"), "Error page should contain error title");
+        assert!(
+            html.contains("Test Error"),
+            "Error page should contain error title"
+        );
     }
 
     #[test]
@@ -749,26 +803,32 @@ mod tests {
         context.insert("vm", &vm);
 
         let result = tera.render("htmx/dashboard_metrics.html", &context);
-        assert!(result.is_ok(), "HTMX dashboard metrics failed to render: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "HTMX dashboard metrics failed to render: {:?}",
+            result.err()
+        );
     }
 
     #[test]
     fn test_htmx_providers_list_renders() {
         let tera = create_test_tera();
-        let providers = vec![
-            ProviderViewModel::new(
-                "openai-1".to_string(),
-                "OpenAI".to_string(),
-                "embedding".to_string(),
-                "available".to_string(),
-            ),
-        ];
+        let providers = vec![ProviderViewModel::new(
+            "openai-1".to_string(),
+            "OpenAI".to_string(),
+            "embedding".to_string(),
+            "available".to_string(),
+        )];
 
         let mut context = Context::new();
         context.insert("providers", &providers);
 
         let result = tera.render("htmx/providers_list.html", &context);
-        assert!(result.is_ok(), "HTMX providers list failed to render: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "HTMX providers list failed to render: {:?}",
+            result.err()
+        );
     }
 
     #[test]
@@ -787,6 +847,10 @@ mod tests {
         context.insert("indexes", &indexes);
 
         let result = tera.render("htmx/indexes_list.html", &context);
-        assert!(result.is_ok(), "HTMX indexes list failed to render: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "HTMX indexes list failed to render: {:?}",
+            result.err()
+        );
     }
 }

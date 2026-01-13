@@ -1,139 +1,83 @@
+{% import "icons.html" as icons %}
 <!DOCTYPE html>
-<html lang="en" x-data="loginForm()">
+<html lang="en" x-data="loginForm()" :class="{ 'dark': localStorage.getItem('theme') === 'dark' }">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Login - MCP Context Browser</title>
-
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Alpine.js -->
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
-
-    <script>
-        tailwind.config = {
-            darkMode: 'class'
-        }
-    </script>
+    <link rel="stylesheet" href="/static/admin.css">
+    <script src="/static/admin.js"></script>
+    <script>tailwind.config = { darkMode: 'class' }</script>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-md w-full space-y-8">
+<body class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center py-12 px-4">
+    <div class="max-w-md w-full space-y-6">
         <!-- Header -->
         <div class="text-center">
-            <div class="mx-auto h-16 w-16 bg-blue-600 rounded-full flex items-center justify-center">
-                <svg class="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
-                </svg>
+            <div class="icon-box icon-box-lg icon-box-primary mx-auto">
+                {{ icons::icon(name="lock", class="icon-xl") }}
             </div>
-            <h2 class="mt-6 text-3xl font-extrabold text-gray-900 dark:text-white">
-                Admin Access
-            </h2>
-            <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                Sign in to access the MCP Context Browser admin panel
-            </p>
+            <h2 class="mt-6 text-3xl font-bold text-gray-900 dark:text-white">Admin Access</h2>
+            <p class="mt-2 text-sm text-muted">Sign in to access the MCP Context Browser admin panel</p>
         </div>
 
         <!-- Login Form -->
-        <form @submit.prevent="login()" class="mt-8 space-y-6">
-            <div class="bg-white dark:bg-gray-800 py-8 px-6 shadow-xl rounded-lg space-y-4">
-                <!-- Username -->
-                <div>
-                    <label for="username" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Username
-                    </label>
-                    <div class="mt-1">
-                        <input x-model="credentials.username" id="username" name="username" type="text" autocomplete="username" required
-                               class="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm">
+        <form @submit.prevent="login()" class="mt-6 space-y-6">
+            <div class="card">
+                <div class="card-body space-y-4">
+                    <div>
+                        <label class="input-label">Username</label>
+                        <input x-model="credentials.username" type="text" autocomplete="username" required class="input">
                     </div>
-                </div>
-
-                <!-- Password -->
-                <div>
-                    <label for="password" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Password
-                    </label>
-                    <div class="mt-1">
-                        <input x-model="credentials.password" id="password" name="password" type="password" autocomplete="current-password" required
-                               class="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm">
+                    <div>
+                        <label class="input-label">Password</label>
+                        <input x-model="credentials.password" type="password" autocomplete="current-password" required class="input">
                     </div>
-                </div>
 
-                <!-- Error Message -->
-                <div x-show="error" x-text="error" x-transition
-                     class="text-red-600 dark:text-red-400 text-sm bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-3">
-                </div>
+                    <!-- Error Alert -->
+                    <div x-show="error" x-cloak class="alert alert-danger text-sm" x-text="error"></div>
 
-                <!-- Submit Button -->
-                <div>
-                    <button type="submit" :disabled="loading"
-                            class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
-                        <span x-show="!loading" class="absolute left-0 inset-y-0 flex items-center pl-3">
-                            <svg class="h-5 w-5 text-blue-500 group-hover:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-                            </svg>
-                        </span>
+                    <!-- Submit Button -->
+                    <button type="submit" :disabled="loading" class="btn btn-primary w-full">
                         <span x-show="!loading">Sign in</span>
-                        <span x-show="loading" x-cloak>
-                            <svg class="animate-spin h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Signing in...
+                        <span x-show="loading" class="flex items-center justify-center">
+                            <span class="spinner spinner-sm mr-2"></span> Signing in...
                         </span>
                     </button>
                 </div>
             </div>
 
-            <!-- Help Text -->
-            <div class="text-center">
-                <p class="text-sm text-gray-600 dark:text-gray-400">
-                    Default credentials: <code class="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-xs">admin / admin</code>
-                </p>
-            </div>
+            <p class="text-center text-sm text-muted">
+                Default: <code class="code">admin / admin</code>
+            </p>
         </form>
     </div>
 </body>
-
 <script>
 function loginForm() {
     return {
-        credentials: {
-            username: '',
-            password: ''
-        },
+        credentials: { username: '', password: '' },
         loading: false,
         error: '',
 
         async login() {
             this.loading = true;
             this.error = '';
-
             try {
-                const response = await fetch('/admin/auth/login', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(this.credentials)
-                });
-
-                const data = await response.json();
-
+                const data = await API.post('/admin/auth/login', this.credentials);
                 if (data.success) {
-                    // Store token and redirect
-                    localStorage.setItem('admin_token', data.data.token);
+                    auth.setToken(data.data.token);
                     window.location.href = '/dashboard';
                 } else {
                     this.error = data.error || 'Login failed';
                 }
-            } catch (error) {
-                this.error = 'Network error. Please try again.';
-            } finally {
-                this.loading = false;
+            } catch (e) {
+                this.error = e.message || 'Network error. Please try again.';
             }
+            this.loading = false;
         }
-    }
+    };
 }
 </script>
 </html>

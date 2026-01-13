@@ -68,6 +68,7 @@ fn init_tracing(
 /// - Recovery manager for automatic component restart
 async fn initialize_server_components(
     log_buffer: crate::infrastructure::logging::SharedLogBuffer,
+    config_path: Option<&std::path::Path>,
 ) -> Result<
     (
         Arc<McpServer>,
@@ -80,12 +81,19 @@ async fn initialize_server_components(
     ),
     Box<dyn std::error::Error>,
 > {
-    // Load configuration from environment
+    // Load configuration: from file if specified, otherwise from XDG paths + environment
     let loader = ConfigLoader::new();
-    let config = loader
-        .load()
-        .await
-        .map_err(|e| format!("Failed to load configuration: {}", e))?;
+    let config = match config_path {
+        Some(path) => {
+            tracing::info!("📁 Loading configuration from: {}", path.display());
+            loader.load_with_file(path).await
+        }
+        None => {
+            tracing::info!("📁 Loading configuration from XDG paths and environment");
+            loader.load().await
+        }
+    }
+    .map_err(|e| format!("Failed to load configuration: {}", e))?;
 
     let event_bus_config = EventBusConfig::from_env();
     let event_bus = create_event_bus(&event_bus_config)
@@ -97,22 +105,12 @@ async fn initialize_server_components(
         config.resource_limits.clone(),
     ));
 
-    // Initialize HTTP client pool
+    // Initialize HTTP client pool (DI: failures propagate, no fallback)
     tracing::info!("🌐 Initializing HTTP client pool...");
-    let http_client = match HttpClientPool::with_config(HttpClientConfig::default()) {
-        Ok(pool) => {
-            tracing::info!("✅ HTTP client pool initialized successfully");
-            Arc::new(pool) as Arc<dyn crate::adapters::http_client::HttpClientProvider>
-        }
-        Err(e) => {
-            tracing::warn!(
-                "⚠️  Failed to initialize HTTP client pool: {}. Using null client.",
-                e
-            );
-            Arc::new(crate::adapters::http_client::NullHttpClientPool::new())
-                as Arc<dyn crate::adapters::http_client::HttpClientProvider>
-        }
-    };
+    let http_client = HttpClientPool::with_config(HttpClientConfig::default())
+        .map_err(|e| format!("Failed to initialize HTTP client pool: {}", e))?;
+    tracing::info!("✅ HTTP client pool initialized successfully");
+    let http_client: Arc<dyn crate::adapters::http_client::HttpClientProvider> = Arc::new(http_client);
 
     // Initialize database pool (not used directly, but available for DI)
     if config.database.enabled {
@@ -361,7 +359,7 @@ async fn initialize_server_components(
 /// - Production-ready rate limiting
 /// - Server version compatibility (±1 minor version)
 /// - Session management with resumption support
-pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
+pub async fn run_server(config_path: Option<&std::path::Path>) -> Result<(), Box<dyn std::error::Error>> {
     let log_buffer = create_shared_log_buffer(1000);
     // Initialize tracing first for proper error reporting
     init_tracing(log_buffer.clone())?;
@@ -385,7 +383,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         connection_tracker,
         _recovery_manager,
         _cache_provider,
-    ) = initialize_server_components(log_buffer).await?;
+    ) = initialize_server_components(log_buffer, config_path).await?;
 
     // Get transport mode from environment variable or default
     let transport_config = {

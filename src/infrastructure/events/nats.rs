@@ -79,8 +79,13 @@ impl NatsEventBus {
     ///
     /// # Example
     ///
-    /// ```no_run
-    /// let bus = NatsEventBus::new("nats://localhost:4222").await?;
+    /// ```ignore
+    /// use mcp_context_browser::infrastructure::events::NatsEventBus;
+    ///
+    /// async fn connect() -> Result<(), Box<dyn std::error::Error>> {
+    ///     let bus = NatsEventBus::new("nats://localhost:4222").await?;
+    ///     Ok(())
+    /// }
     /// ```
     pub async fn new(server_url: &str) -> Result<Self> {
         debug!("Connecting to NATS server: {}", server_url);

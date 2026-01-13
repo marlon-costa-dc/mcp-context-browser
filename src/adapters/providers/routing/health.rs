@@ -428,6 +428,12 @@ pub struct HealthMonitor {
     checker: Option<Arc<dyn ProviderHealthChecker>>,
 }
 
+impl Default for HealthMonitor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl HealthMonitor {
     /// Create a new health monitor
     pub fn new() -> Self {
@@ -574,4 +580,3 @@ impl HealthMonitorTrait for HealthMonitor {
         }
     }
 }
-

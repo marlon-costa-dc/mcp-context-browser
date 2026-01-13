@@ -326,6 +326,7 @@ impl HealthViewModel {
 #[derive(Debug, Clone, Serialize)]
 pub struct ConfigurationViewModel {
     pub page: &'static str,
+    pub page_description: &'static str,
     pub categories: Vec<ConfigCategoryViewModel>,
 }
 
@@ -357,6 +358,7 @@ pub struct ConfigSettingViewModel {
 #[derive(Debug, Clone, Serialize)]
 pub struct LogsViewModel {
     pub page: &'static str,
+    pub page_description: &'static str,
     pub entries: Vec<LogEntryViewModel>,
     pub total_count: u64,
     pub stats: LogStatsViewModel,

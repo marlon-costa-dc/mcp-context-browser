@@ -17,7 +17,8 @@
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<(), Box<dyn std::error::Error>> {
-//!     run_server().await?;
+//!     // Run with default config (XDG paths + environment)
+//!     run_server(None).await?;
 //!     Ok(())
 //! }
 //! ```

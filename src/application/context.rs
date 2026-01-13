@@ -139,26 +139,5 @@ impl ContextService {
     }
 }
 
-impl Default for ContextService {
-    fn default() -> Self {
-        let embedding_provider: Arc<dyn EmbeddingProvider> =
-            Arc::new(crate::adapters::providers::embedding::NullEmbeddingProvider::new());
-        let vector_store_provider: Arc<dyn crate::domain::ports::VectorStoreProvider> =
-            Arc::new(crate::adapters::providers::vector_store::InMemoryVectorStoreProvider::new());
-
-        // Create default repositories
-        let chunk_repo = Arc::new(
-            crate::adapters::repository::VectorStoreChunkRepository::new(
-                Arc::clone(&embedding_provider),
-                Arc::clone(&vector_store_provider),
-            ),
-        );
-        let search_repo = Arc::new(
-            crate::adapters::repository::VectorStoreSearchRepository::new(Arc::clone(
-                &vector_store_provider,
-            )),
-        );
-
-        Self::new(chunk_repo, search_repo, embedding_provider)
-    }
-}
+// Note: impl Default removed (Phase 5 DI audit)
+// ContextService requires explicit dependency injection via new()

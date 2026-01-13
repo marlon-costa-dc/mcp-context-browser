@@ -300,13 +300,14 @@ mod validator_property_tests {
     };
     use proptest::prelude::*;
 
-    // Property: not_empty validator accepts any non-empty string
+    // Property: not_empty validator accepts strings with non-whitespace content
+    // Note: The validator uses trim().is_empty() so whitespace-only strings are rejected
     proptest! {
         #[test]
-        fn test_not_empty_accepts_non_empty(s in "\\PC+") {
+        fn test_not_empty_accepts_non_empty(s in "[^\\s]+") {
             let validator = StringValidator::not_empty();
             let result = validator.validate(&s);
-            prop_assert!(result.is_ok(), "Non-empty string should be valid");
+            prop_assert!(result.is_ok(), "Non-whitespace string should be valid");
         }
     }
 

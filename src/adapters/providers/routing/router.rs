@@ -93,6 +93,12 @@ pub struct ContextualStrategy {
     load_weight: f64,
 }
 
+impl Default for ContextualStrategy {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ContextualStrategy {
     /// Create a new contextual strategy with default weights
     pub fn new() -> Self {
@@ -166,7 +172,6 @@ impl ContextualStrategy {
         }
     }
 }
-
 
 #[async_trait::async_trait]
 impl ProviderSelectionStrategy for ContextualStrategy {
@@ -287,7 +292,10 @@ impl ProviderRouter {
     }
 
     /// Create a new provider router with custom selection strategy
-    pub fn with_strategy(deps: ProviderRouterDeps, strategy: Box<dyn ProviderSelectionStrategy>) -> Self {
+    pub fn with_strategy(
+        deps: ProviderRouterDeps,
+        strategy: Box<dyn ProviderSelectionStrategy>,
+    ) -> Self {
         Self {
             deps,
             selection_strategy: strategy,

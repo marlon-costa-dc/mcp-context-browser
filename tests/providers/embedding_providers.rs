@@ -562,7 +562,7 @@ mod gemini_tests {
 #[cfg(test)]
 mod provider_trait_tests {
     use super::*;
-    use mcp_context_browser::adapters::providers::embedding::NullEmbeddingProvider;
+    use mcp_context_browser::adapters::providers::embedding::null::NullEmbeddingProvider;
 
     #[test]
     fn test_null_provider() -> Result<(), Box<dyn std::error::Error>> {
@@ -1297,7 +1297,8 @@ mod factory_tests {
         assert!(providers.contains(&"ollama".to_string()));
         assert!(providers.contains(&"voyageai".to_string()));
         assert!(providers.contains(&"gemini".to_string()));
-        assert!(providers.contains(&"null".to_string()));
+        assert!(providers.contains(&"fastembed".to_string()));
+        // Note: "null" provider removed from production factory (Phase 5 DI audit)
     }
 
     #[test]

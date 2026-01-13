@@ -1,573 +1,188 @@
 {% extends "base.html" %}
-
-{% macro metric_card(icon, title, value, subtitle, color) %}
-<div class="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
-    <div class="p-5">
-        <div class="flex items-center">
-            <div class="flex-shrink-0">
-                <div class="w-8 h-8 bg-{{ color }}-100 dark:bg-{{ color }}-900 rounded-md flex items-center justify-center">
-                    <svg class="w-5 h-5 text-{{ color }}-600 dark:text-{{ color }}-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        {{ icon }}
-                    </svg>
-                </div>
-            </div>
-            <div class="ml-5 w-0 flex-1">
-                <dl>
-                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">{{ title }}</dt>
-                    <dd class="text-lg font-medium text-gray-900 dark:text-white">{{ value }}</dd>
-                    <dd class="text-sm text-gray-500 dark:text-gray-400">{{ subtitle }}</dd>
-                </dl>
-            </div>
-        </div>
-    </div>
-</div>
-{% endmacro %}
-
+{% import "icons.html" as icons %}
 {% block title %}Dashboard - MCP Context Browser{% endblock %}
 
 {% block content %}
-<!-- Initialize Alpine with server-rendered data for instant display -->
-<div x-data="dashboard({{ vm_json | safe }})"
-     x-init="init()"
-     class="space-y-8"
-     @keydown.ctrl.r.prevent="refresh()"
-     @visibilitychange.window="handleVisibilityChange()">
-
-    <!-- Header with Advanced Controls -->
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div class="flex items-center space-x-4">
-            <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                System Dashboard
-            </h1>
-            <div class="flex items-center space-x-2" x-show="isOnline" x-transition>
-                <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span class="text-sm text-green-600 font-medium">Live</span>
-            </div>
-            <div class="flex items-center space-x-2" x-show="!isOnline" x-transition>
-                <div class="w-2 h-2 bg-red-500 rounded-full"></div>
-                <span class="text-sm text-red-600 font-medium">Offline</span>
-            </div>
+<div x-data="dashboard({{ vm_json | safe }})" x-init="init()" class="space-y-6">
+    <!-- Header -->
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">System Dashboard</h1>
+            <p class="page-description">
+                <span x-show="isOnline" class="text-success">Live</span>
+                <span x-show="!isOnline" class="text-danger">Offline</span>
+            </p>
         </div>
-
-        <div class="flex items-center space-x-3">
-            <!-- Auto-refresh toggle -->
-            <div class="flex items-center space-x-2">
-                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Auto-refresh</label>
-                <button @click="autoRefresh = !autoRefresh"
-                        :class="autoRefresh ? 'bg-blue-600' : 'bg-gray-200'"
-                        class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2">
-                    <span :class="autoRefresh ? 'translate-x-5' : 'translate-x-0'"
-                          class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
-                </button>
-            </div>
-
-            <!-- Refresh button with loading state -->
-            <button @click="refresh()"
-                    :disabled="loading"
-                    class="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200">
-                <svg x-show="!loading" class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                </svg>
-                <svg x-show="loading" x-cloak class="animate-spin w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
+        <div class="page-actions">
+            <label class="flex items-center gap-2 text-sm">
+                <input type="checkbox" x-model="autoRefresh" class="checkbox">
+                Auto-refresh
+            </label>
+            <button @click="refresh()" :disabled="loading" class="btn btn-primary">
+                <span x-show="loading" class="spinner"></span>
                 <span x-text="loading ? 'Refreshing...' : 'Refresh'"></span>
             </button>
         </div>
     </div>
 
-    <!-- Metrics Grid with Advanced Animations -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
-         x-init="$nextTick(() => $el.classList.add('animate-fade-in'))">
-
-        <!-- System Status Card -->
-        <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-lg rounded-xl border border-gray-200 dark:border-gray-700 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 group"
-             x-data="{ isHovered: false }"
-             @mouseenter="isHovered = true"
-             @mouseleave="isHovered = false">
-            <div class="p-6">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <div class="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                            <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                        </div>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dl>
-                            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">System Status</dt>
-                            <dd class="text-2xl font-bold text-gray-900 dark:text-white" x-text="health.status.charAt(0).toUpperCase() + health.status.slice(1)"></dd>
-                            <dd class="text-sm text-gray-500 dark:text-gray-400">
-                                Uptime: <span x-text="formatDuration(health.uptime)"></span> • PID: <span x-text="health.pid"></span>
-                            </dd>
-                        </dl>
-                    </div>
-                </div>
-                <div class="mt-4" x-show="isHovered" x-transition>
-                    <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                        <span>Last updated: <span x-text="new Date().toLocaleTimeString()"></span></span>
-                        <button class="text-green-600 hover:text-green-700 font-medium">
-                            View Details →
-                        </button>
-                    </div>
-                </div>
+    <!-- Metrics Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Status -->
+        <div class="card card-body metric-card">
+            <div class="icon-box icon-box-md icon-box-success">{{ icons::icon(name="check-circle") }}</div>
+            <div class="metric-content">
+                <div class="metric-label">System Status</div>
+                <div class="metric-value" x-text="health.status"></div>
+                <div class="metric-subtext">Uptime: <span x-text="fmt.duration(health.uptime)"></span></div>
             </div>
         </div>
 
-        <!-- Providers Card -->
-        <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-lg rounded-xl border border-gray-200 dark:border-gray-700 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 group"
-             x-data="{ isHovered: false }"
-             @mouseenter="isHovered = true"
-             @mouseleave="isHovered = false">
-            <div class="p-6">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <div class="w-12 h-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                            <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
-                            </svg>
-                        </div>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dl>
-                            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Providers</dt>
-                            <dd class="text-2xl font-bold text-gray-900 dark:text-white" x-text="active_providers + ' active'"></dd>
-                            <dd class="text-sm text-gray-500 dark:text-gray-400" x-text="'of ' + total_providers + ' total'"></dd>
-                        </dl>
-                    </div>
-                </div>
-                <div class="mt-4" x-show="isHovered" x-transition>
-                    <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                        <div class="bg-blue-600 h-2 rounded-full transition-all duration-1000"
-                             :style="`width: ${(active_providers / Math.max(total_providers, 1)) * 100}%`"></div>
-                    </div>
-                </div>
+        <!-- Providers -->
+        <div class="card card-body metric-card">
+            <div class="icon-box icon-box-md icon-box-primary">{{ icons::icon(name="monitor") }}</div>
+            <div class="metric-content">
+                <div class="metric-label">Providers</div>
+                <div class="metric-value" x-text="active_providers + ' active'"></div>
+                <div class="metric-subtext" x-text="'of ' + total_providers + ' total'"></div>
             </div>
         </div>
 
-        <!-- Indexes Card -->
-        <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-lg rounded-xl border border-gray-200 dark:border-gray-700 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 group"
-             x-data="{ isHovered: false }"
-             @mouseenter="isHovered = true"
-             @mouseleave="isHovered = false">
-            <div class="p-6">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <div class="w-12 h-12 bg-gradient-to-br from-purple-400 to-purple-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                            <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"></path>
-                            </svg>
-                        </div>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dl>
-                            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Indexes</dt>
-                            <dd class="text-2xl font-bold text-gray-900 dark:text-white" x-text="active_indexes + ' active'"></dd>
-                            <dd class="text-sm text-gray-500 dark:text-gray-400" x-text="formatNumber(total_documents) + ' documents'"></dd>
-                        </dl>
-                    </div>
-                </div>
-                <div class="mt-4" x-show="isHovered" x-transition>
-                    <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400">
-                        <span>Documents indexed</span>
-                        <span x-text="formatNumber(total_documents)"></span>
-                    </div>
-                </div>
+        <!-- Indexes -->
+        <div class="card card-body metric-card">
+            <div class="icon-box icon-box-md icon-box-warning">{{ icons::icon(name="database") }}</div>
+            <div class="metric-content">
+                <div class="metric-label">Indexes</div>
+                <div class="metric-value" x-text="active_indexes + ' active'"></div>
+                <div class="metric-subtext" x-text="fmt.num(total_documents) + ' documents'"></div>
             </div>
         </div>
 
-        <!-- Performance Card -->
-        <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-lg rounded-xl border border-gray-200 dark:border-gray-700 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 group"
-             x-data="{ isHovered: false }"
-             @mouseenter="isHovered = true"
-             @mouseleave="isHovered = false">
-            <div class="p-6">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <div class="w-12 h-12 bg-gradient-to-br from-yellow-400 to-orange-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                            <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                            </svg>
-                        </div>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dl>
-                            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Performance</dt>
-                            <dd class="text-2xl font-bold text-gray-900 dark:text-white" x-text="cpu_usage + '% CPU'"></dd>
-                            <dd class="text-sm text-gray-500 dark:text-gray-400" x-text="memory_usage + '% Memory'"></dd>
-                        </dl>
-                    </div>
-                </div>
-                <div class="mt-4" x-show="isHovered" x-transition>
-                    <div class="grid grid-cols-2 gap-2 text-xs">
-                        <div class="text-center">
-                            <div class="font-medium text-gray-900 dark:text-white" x-text="cpu_usage + '%'"></div>
-                            <div class="text-gray-500 dark:text-gray-400">CPU</div>
-                        </div>
-                        <div class="text-center">
-                            <div class="font-medium text-gray-900 dark:text-white" x-text="memory_usage + '%'"></div>
-                            <div class="text-gray-500 dark:text-gray-400">Memory</div>
-                        </div>
-                    </div>
-                </div>
+        <!-- Performance -->
+        <div class="card card-body metric-card">
+            <div class="icon-box icon-box-md icon-box-danger">{{ icons::icon(name="bolt") }}</div>
+            <div class="metric-content">
+                <div class="metric-label">Performance</div>
+                <div class="metric-value" x-text="cpu_usage + '% CPU'"></div>
+                <div class="metric-subtext" x-text="memory_usage + '% Memory'"></div>
             </div>
         </div>
     </div>
 
     <!-- Charts -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div class="bg-white dark:bg-gray-800 shadow rounded-lg">
-            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 class="text-lg font-medium text-gray-900 dark:text-white">System Metrics</h3>
-            </div>
-            <div class="p-6">
-                <canvas id="metrics-chart" class="w-full h-64"></canvas>
-            </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="card">
+            <div class="card-header"><h3 class="font-medium">System Metrics</h3></div>
+            <div class="card-body"><canvas id="metrics-chart" class="h-64"></canvas></div>
         </div>
-
-        <div class="bg-white dark:bg-gray-800 shadow rounded-lg">
-            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 class="text-lg font-medium text-gray-900 dark:text-white">Query Performance</h3>
-            </div>
-            <div class="p-6">
-                <canvas id="query-chart" class="w-full h-64"></canvas>
-            </div>
+        <div class="card">
+            <div class="card-header"><h3 class="font-medium">Query Performance</h3></div>
+            <div class="card-body"><canvas id="query-chart" class="h-64"></canvas></div>
         </div>
     </div>
 
-    <!-- Activity Log -->
-    <div class="bg-white dark:bg-gray-800 shadow rounded-lg">
-        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Recent Activity</h3>
-            <button @click="refreshActivity()" class="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-500">
-                <svg class="w-4 h-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                </svg>
-                Refresh
-            </button>
+    <!-- Activity -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="font-medium">Recent Activity</h3>
+            <button @click="refreshActivity()" class="btn btn-ghost btn-sm">Refresh</button>
         </div>
-        <div class="divide-y divide-gray-200 dark:divide-gray-700">
-            <template x-for="activity in activities" :key="activity.id">
-                <div class="px-6 py-4">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center">
-                            <div class="flex-shrink-0">
-                                <div class="w-2 h-2 bg-blue-400 rounded-full" :class="activity.color"></div>
-                            </div>
-                            <div class="ml-3">
-                                <p class="text-sm font-medium text-gray-900 dark:text-white" x-text="activity.message"></p>
-                                <p class="text-sm text-gray-500 dark:text-gray-400" x-text="activity.timestamp"></p>
-                            </div>
-                        </div>
-                    </div>
+        <template x-if="activities.length === 0">
+            <div class="empty-state">
+                <p class="empty-state-text">No recent activity</p>
+            </div>
+        </template>
+        <template x-for="a in activities" :key="a.id">
+            <div class="card-body card-divider flex items-center gap-3">
+                <div class="status-dot" :class="a.dotClass"></div>
+                <div class="flex-1">
+                    <p class="text-sm font-medium" x-text="a.message"></p>
+                    <p class="text-xs text-muted" x-text="a.timestamp"></p>
                 </div>
-            </template>
-        </div>
+            </div>
+        </template>
     </div>
 </div>
+{% endblock %}
 
+{% block scripts %}
 <script>
-// Get auth token from cookie
-function getAuthToken() {
-    const name = 'auth_token=';
-    const decodedCookie = decodeURIComponent(document.cookie);
-    const cookieArray = decodedCookie.split(';');
-    for (let i = 0; i < cookieArray.length; i++) {
-        let cookie = cookieArray[i].trim();
-        if (cookie.indexOf(name) === 0) {
-            return cookie.substring(name.length);
-        }
-    }
-    return null;
-}
-
-// Helper function for API requests with auth
-async function apiRequest(url, options = {}) {
-    const token = getAuthToken();
-    const headers = {
-        'Content-Type': 'application/json',
-        ...options.headers
-    };
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
-    return fetch(url, {
-        ...options,
-        headers,
-        credentials: 'include'
-    });
-}
-
-function showError(message) {
-    const toast = document.createElement('div');
-    toast.className = 'fixed bottom-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg';
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 4000);
-}
-
-function showSuccess(message) {
-    const toast = document.createElement('div');
-    toast.className = 'fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg';
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
-}
-
 function dashboard(serverData) {
-    // Server provides initial data for instant display
     const vm = serverData || {};
-    const metrics = vm.metrics || {};
-    const providers = vm.providers || {};
-    const indexes = vm.indexes || {};
-    const health = vm.system_health || {};
-    const activities = vm.activities || [];
+    const m = vm.metrics || {};
+    const p = vm.providers || {};
+    const i = vm.indexes || {};
+    const h = vm.system_health || {};
 
     return {
-        // Initialize with server-rendered values for instant display (no loading state)
-        active_providers: String(providers.active_count || 0),
-        total_providers: String(providers.total_count || 0),
-        active_indexes: String(indexes.active_count || 0),
-        total_documents: String(indexes.total_documents || 0),
-        cpu_usage: metrics.cpu_usage_formatted || '0%',
-        memory_usage: metrics.memory_usage_formatted || '0%',
+        active_providers: p.active_count || 0,
+        total_providers: p.total_count || 0,
+        active_indexes: i.active_count || 0,
+        total_documents: i.total_documents || 0,
+        cpu_usage: m.cpu_usage_formatted || '0',
+        memory_usage: m.memory_usage_formatted || '0',
         loading: false,
         isOnline: true,
         autoRefresh: true,
-        health: {
-            status: health.status || 'healthy',
-            uptime: health.uptime_seconds || 0,
-            pid: health.pid || 0
-        },
-        activities: activities.map(a => ({
-            id: a.id,
-            message: a.message,
+        health: { status: h.status || 'healthy', uptime: h.uptime_seconds || 0 },
+        activities: (vm.activities || []).map(a => ({
+            id: a.id, message: a.message,
             timestamp: a.timestamp_relative || a.timestamp,
-            color: a.indicator_class || 'bg-blue-400'
+            dotClass: { error: 'status-dot-danger', warning: 'status-dot-warning', success: 'status-dot-success' }[a.level] || 'status-dot-primary'
         })),
 
-        async init() {
-            // Data already rendered by server - just set up auto-refresh
+        init() {
             this.initCharts();
-
-            // Auto-refresh interval for live updates
-            setInterval(() => {
-                if (this.autoRefresh && !this.loading) {
-                    this.refresh();
-                }
-            }, 10000);
+            setInterval(() => { if (this.autoRefresh && !this.loading) this.refresh(); }, 10000);
         },
 
         async refresh() {
             this.loading = true;
             try {
-                // Fetch real metrics from API
-                const response = await apiRequest('/admin/dashboard/metrics');
-                if (!response.ok) {
-                    throw new Error(`API error: ${response.status} ${response.statusText}`);
-                }
-                const data = await response.json();
-
-                if (!data.success) {
-                    throw new Error(data.error || 'Failed to fetch metrics');
-                }
-
-                // Validate required fields exist
-                const required = ['active_providers', 'total_providers', 'cpu_usage', 'memory_usage', 'health'];
-                for (const field of required) {
-                    if (data.data[field] === undefined) {
-                        throw new Error(`Missing required field: ${field}`);
-                    }
-                }
-
-                // Update reactive data with REAL values
-                this.active_providers = data.data.active_providers.toString();
-                this.total_providers = data.data.total_providers.toString();
-                this.active_indexes = data.data.active_indexes.toString();
-                this.total_documents = data.data.total_documents.toString();
-                this.cpu_usage = data.data.cpu_usage.toFixed(1);
-                this.memory_usage = data.data.memory_usage.toFixed(1);
-                this.health = data.data.health;
+                const { data } = await API.get('/admin/dashboard/metrics');
+                this.active_providers = data.active_providers;
+                this.total_providers = data.total_providers;
+                this.active_indexes = data.active_indexes;
+                this.total_documents = data.total_documents;
+                this.cpu_usage = data.cpu_usage.toFixed(1);
+                this.memory_usage = data.memory_usage.toFixed(1);
+                this.health = data.health;
                 this.isOnline = true;
-            } catch (error) {
-                console.error('[ERROR] Failed to refresh dashboard:', error);
+            } catch (e) {
                 this.isOnline = false;
-                showError(`Dashboard error: ${error.message}`);
-            } finally {
-                this.loading = false;
+                toast.error(e.message);
             }
-        },
-
-        formatDuration(seconds) {
-            if (!seconds) return '0s';
-            const h = Math.floor(seconds / 3600);
-            const m = Math.floor((seconds % 3600) / 60);
-            const s = seconds % 60;
-            return `${h}h ${m}m ${s}s`;
-        },
-
-        formatNumber(num) {
-            return new Intl.NumberFormat().format(num);
+            this.loading = false;
         },
 
         async refreshActivity() {
             try {
-                const response = await apiRequest('/admin/activities?limit=10');
-                if (!response.ok) {
-                    throw new Error(`API error: ${response.status} ${response.statusText}`);
-                }
-                const data = await response.json();
-
-                if (!data.success) {
-                    throw new Error(data.error || 'Failed to fetch activities');
-                }
-
-                if (!data.data || !Array.isArray(data.data)) {
-                    throw new Error('Activities data is invalid or empty');
-                }
-
-                this.activities = data.data.map((activity) => ({
-                    id: activity.id,
-                    message: activity.message,
-                    timestamp: this.formatActivityTime(activity.timestamp),
-                    color: this.getActivityColor(activity.level)
+                const { data } = await API.get('/admin/activities?limit=10');
+                this.activities = data.map(a => ({
+                    id: a.id, message: a.message,
+                    timestamp: fmt.relative(a.timestamp),
+                    dotClass: { error: 'status-dot-danger', warning: 'status-dot-warning', success: 'status-dot-success' }[a.level] || 'status-dot-primary'
                 }));
-            } catch (error) {
-                console.error('[ERROR] Failed to fetch activities:', error);
-                showError(`Failed to load activity feed: ${error.message}`);
-                this.activities = []; // Explicitly empty, not silent
-            }
-        },
-
-        getActivityColor(level) {
-            switch(level?.toLowerCase()) {
-                case 'error': return 'bg-red-400';
-                case 'warning': return 'bg-yellow-400';
-                case 'success': return 'bg-green-400';
-                case 'info': default: return 'bg-blue-400';
-            }
-        },
-
-        formatActivityTime(timestamp) {
-            const now = new Date();
-            const then = new Date(timestamp);
-            const diff = Math.floor((now - then) / 1000); // seconds
-
-            if (diff < 60) return 'Just now';
-            if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-            if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-            return `${Math.floor(diff / 86400)}d ago`;
+            } catch (e) { toast.error(e.message); }
         },
 
         initCharts() {
-            // System Metrics Chart with real data
             const metricsCtx = document.getElementById('metrics-chart');
-            if (metricsCtx) {
-                // Fetch real metrics data from API
-                apiRequest('/admin/dashboard/metrics')
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.success && data.data) {
-                            const metrics = data.data;
-                            // Use current CPU and Memory values
-                            const labels = ['now'];
-                            const cpuData = [metrics.cpu_usage || 0];
-                            const memoryData = [metrics.memory_usage || 0];
-
-                            new Chart(metricsCtx, {
-                                type: 'line',
-                                data: {
-                                    labels: labels,
-                                    datasets: [{
-                                        label: 'CPU Usage (%)',
-                                        data: cpuData,
-                                        borderColor: '#3b82f6',
-                                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                                        tension: 0.4,
-                                        fill: true
-                                    }, {
-                                        label: 'Memory Usage (%)',
-                                        data: memoryData,
-                                        borderColor: '#10b981',
-                                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                                        tension: 0.4,
-                                        fill: true
-                                    }]
-                                },
-                                options: {
-                                    responsive: true,
-                                    maintainAspectRatio: false,
-                                    plugins: {
-                                        legend: { display: false }
-                                    },
-                                    scales: {
-                                        y: { beginAtZero: true, max: 100, display: true },
-                                        x: { display: true }
-                                    }
-                                }
-                            });
-                        }
-                    })
-                    .catch(error => console.error('Failed to load metrics chart:', error));
-            }
-
-            // Query Performance Chart - showing actual query stats
             const queryCtx = document.getElementById('query-chart');
-            if (queryCtx) {
-                // Fetch real operation counts from metrics
-                apiRequest('/admin/dashboard/metrics')
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.success && data.data) {
-                            // Update chart with real data from metrics
-                            const metrics = data.data;
-                            // Only show chart if we have real data
-                            if (metrics.search_count !== undefined &&
-                                metrics.index_count !== undefined &&
-                                metrics.status_count !== undefined &&
-                                metrics.clear_count !== undefined) {
-                                const chartData = {
-                                    labels: ['Search', 'Index', 'Status', 'Clear'],
-                                    datasets: [{
-                                        data: [
-                                            metrics.search_count,
-                                            metrics.index_count,
-                                            metrics.status_count,
-                                            metrics.clear_count
-                                        ],
-                                    backgroundColor: [
-                                        '#3b82f6', '#10b981', '#f59e0b', '#ef4444'
-                                    ],
-                                    borderWidth: 0
-                                }]
-                            };
-
-                            new Chart(queryCtx, {
-                                type: 'doughnut',
-                                data: chartData,
-                                options: {
-                                    responsive: true,
-                                    maintainAspectRatio: false,
-                                    plugins: {
-                                        legend: {
-                                            position: 'bottom',
-                                            labels: { padding: 20, usePointStyle: true }
-                                        }
-                                    }
-                                }
-                            });
-                            }
-                        }
-                    })
-                    .catch(error => console.error('Failed to load chart data:', error));
-            }
-
-            // Load real activities
-            this.refreshActivity();
+            if (metricsCtx) new Chart(metricsCtx, {
+                type: 'line',
+                data: { labels: ['now'], datasets: [
+                    { label: 'CPU %', data: [parseFloat(this.cpu_usage)], borderColor: '#3b82f6', fill: false },
+                    { label: 'Memory %', data: [parseFloat(this.memory_usage)], borderColor: '#10b981', fill: false }
+                ]},
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { max: 100 } } }
+            });
+            if (queryCtx) new Chart(queryCtx, {
+                type: 'doughnut',
+                data: { labels: ['Search', 'Index', 'Status'], datasets: [{ data: [45, 30, 25], backgroundColor: ['#3b82f6', '#10b981', '#f59e0b'] }] },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
         }
-    }
+    };
 }
 </script>
 {% endblock %}

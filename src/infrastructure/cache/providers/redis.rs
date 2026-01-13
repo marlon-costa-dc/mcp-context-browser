@@ -73,10 +73,10 @@ impl RedisCacheProvider {
         .await
         .map_err(|_| {
             Error::generic(
-                    "redis connection pool timeout: failed to acquire connection within 5 seconds. \
+                "redis connection pool timeout: failed to acquire connection within 5 seconds. \
                      pool may be exhausted. check redis server availability and pool configuration"
-                        .to_string(),
-                )
+                    .to_string(),
+            )
         })?
         .map_err(|e| {
             Error::generic(format!(
@@ -88,10 +88,7 @@ impl RedisCacheProvider {
 
     /// Scan Redis keys matching a pattern using SCAN command for better performance
     /// This replaces KEYS command which can block Redis server on large keyspaces
-    async fn scan_keys(
-        conn: &mut MultiplexedConnection,
-        pattern: &str,
-    ) -> Result<Vec<String>> {
+    async fn scan_keys(conn: &mut MultiplexedConnection, pattern: &str) -> Result<Vec<String>> {
         let mut cursor: u64 = 0;
         let mut all_keys: Vec<String> = Vec::new();
 
@@ -105,7 +102,10 @@ impl RedisCacheProvider {
                 .query_async(conn)
                 .await
                 .map_err(|e| {
-                    Error::generic(format!("redis scan failed for pattern '{}': {}", pattern, e))
+                    Error::generic(format!(
+                        "redis scan failed for pattern '{}': {}",
+                        pattern, e
+                    ))
                 })?;
 
             all_keys.extend(keys);

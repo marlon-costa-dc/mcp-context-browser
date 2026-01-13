@@ -130,6 +130,7 @@ async fn dashboard_handler(State(state): State<AdminState>) -> impl IntoResponse
             // Pre-serialize to JSON for Alpine.js initialization
             let vm_json = serde_json::to_string(&view_model).unwrap_or_else(|_| "{}".to_string());
             let mut context = Context::new();
+            context.insert("page", &view_model.page);
             context.insert("vm", &view_model);
             context.insert("vm_json", &vm_json);
             render_template(&state.templates, "dashboard.html", &context)
@@ -147,6 +148,7 @@ async fn providers_handler(State(state): State<AdminState>) -> impl IntoResponse
     match builder.build_providers_page().await {
         Ok(view_model) => {
             let mut context = Context::new();
+            context.insert("page", &view_model.page);
             context.insert("vm", &view_model);
             render_template(&state.templates, "providers.html", &context)
         }
@@ -163,6 +165,7 @@ async fn indexes_handler(State(state): State<AdminState>) -> impl IntoResponse {
     match builder.build_indexes_page().await {
         Ok(view_model) => {
             let mut context = Context::new();
+            context.insert("page", &view_model.page);
             context.insert("vm", &view_model);
             render_template(&state.templates, "indexes.html", &context)
         }
@@ -179,6 +182,8 @@ async fn configuration_handler(State(state): State<AdminState>) -> impl IntoResp
     match builder.build_configuration_page().await {
         Ok(view_model) => {
             let mut context = Context::new();
+            context.insert("page", &view_model.page);
+            context.insert("page_description", &view_model.page_description);
             context.insert("vm", &view_model);
             render_template(&state.templates, "configuration.html", &context)
         }
@@ -195,6 +200,8 @@ async fn logs_handler(State(state): State<AdminState>) -> impl IntoResponse {
     match builder.build_logs_page().await {
         Ok(view_model) => {
             let mut context = Context::new();
+            context.insert("page", &view_model.page);
+            context.insert("page_description", &view_model.page_description);
             context.insert("vm", &view_model);
             render_template(&state.templates, "logs.html", &context)
         }
@@ -303,6 +310,7 @@ fn render_error_page(tera: &Tera, title: &str, message: &str) -> Response {
     let error_vm = ViewModelBuilder::build_error(title, message, None);
     let mut context = Context::new();
     context.insert("error", &error_vm);
+    context.insert("page", "error");
 
     match tera.render("error.html", &context) {
         Ok(html) => Html(html).into_response(),

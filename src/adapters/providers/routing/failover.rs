@@ -56,6 +56,11 @@ pub struct PriorityBasedStrategy {
     priorities: dashmap::DashMap<String, u32>,
 }
 
+impl Default for PriorityBasedStrategy {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl PriorityBasedStrategy {
     /// Create a new priority-based strategy
@@ -130,6 +135,12 @@ pub struct RoundRobinStrategy {
     index: std::sync::atomic::AtomicUsize,
 }
 
+impl Default for RoundRobinStrategy {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl RoundRobinStrategy {
     /// Create a new round-robin strategy
     pub fn new() -> Self {
@@ -138,7 +149,6 @@ impl RoundRobinStrategy {
         }
     }
 }
-
 
 #[async_trait::async_trait]
 impl FailoverStrategy for RoundRobinStrategy {
@@ -393,4 +403,3 @@ impl FailoverManager {
         Self::new(health_monitor)
     }
 }
-

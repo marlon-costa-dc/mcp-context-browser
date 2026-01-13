@@ -1,64 +1,48 @@
-<!-- Activity Feed - Uses server-rendered view model data -->
+<!-- Activity Feed -->
 <div class="space-y-3">
     {% if vm.activities %}
         {% for activity in vm.activities %}
         <div class="flex items-start justify-between text-sm">
-            <div class="flex items-start space-x-2">
-                <!-- Activity level indicator (pre-computed class from view model) -->
-                <span class="mt-1 h-2 w-2 rounded-full {{ activity.indicator_class }}"></span>
+            <div class="flex items-start gap-2">
+                <span class="status-dot mt-1 {{ activity.indicator_class }}"></span>
                 <div>
-                    <span class="font-medium text-gray-900 dark:text-white">
-                        {{ activity.message }}
-                    </span>
+                    <span class="font-medium">{{ activity.message }}</span>
                     {% if activity.category %}
-                    <span class="ml-2 text-xs text-gray-500 dark:text-gray-400">
-                        [{{ activity.category }}]
-                    </span>
+                    <span class="ml-2 text-xs text-muted">[{{ activity.category }}]</span>
                     {% endif %}
                 </div>
             </div>
-            <span class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap ml-4">
-                {{ activity.timestamp }}
-            </span>
+            <span class="text-xs text-muted whitespace-nowrap ml-4">{{ activity.timestamp }}</span>
         </div>
         {% endfor %}
     {% else %}
-        <div class="text-sm text-gray-500 dark:text-gray-400 italic">
-            No recent activity
-        </div>
+        <div class="text-sm text-muted italic">No recent activity</div>
     {% endif %}
 </div>
 
-<!-- System Metrics Summary -->
+<!-- Metrics Summary -->
 <div class="mt-6 grid grid-cols-2 gap-4">
-    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-        <div class="text-sm font-medium text-gray-500 dark:text-gray-400">CPU Usage</div>
-        <div class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{{ vm.metrics.cpu_usage_formatted }}</div>
+    <div class="metric-box">
+        <div class="metric-label">CPU Usage</div>
+        <div class="metric-value">{{ vm.metrics.cpu_usage_formatted }}</div>
     </div>
-    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-        <div class="text-sm font-medium text-gray-500 dark:text-gray-400">Memory Usage</div>
-        <div class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{{ vm.metrics.memory_usage_formatted }}</div>
+    <div class="metric-box">
+        <div class="metric-label">Memory Usage</div>
+        <div class="metric-value">{{ vm.metrics.memory_usage_formatted }}</div>
     </div>
-    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-        <div class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Queries</div>
-        <div class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{{ vm.metrics.total_queries_formatted }}</div>
+    <div class="metric-box">
+        <div class="metric-label">Total Queries</div>
+        <div class="metric-value">{{ vm.metrics.total_queries_formatted }}</div>
     </div>
-    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-        <div class="text-sm font-medium text-gray-500 dark:text-gray-400">Avg Latency</div>
-        <div class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{{ vm.metrics.avg_latency_formatted }}</div>
+    <div class="metric-box">
+        <div class="metric-label">Avg Latency</div>
+        <div class="metric-value">{{ vm.metrics.avg_latency_formatted }}</div>
     </div>
 </div>
 
 <!-- System Health -->
-<div class="mt-6">
-    <div class="flex items-center justify-between">
-        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">System Health</span>
-        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ vm.system_health.status_class }}">
-            <span class="mr-1.5 h-2 w-2 rounded-full {{ vm.system_health.indicator_class }}"></span>
-            {{ vm.system_health.status_display }}
-        </span>
-    </div>
-    <div class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-        Uptime: {{ vm.system_health.uptime_formatted }} | PID: {{ vm.system_health.pid }}
-    </div>
+<div class="mt-6 flex items-center justify-between">
+    <span class="text-sm font-medium">System Health</span>
+    <span class="badge {{ vm.system_health.status_class }}">{{ vm.system_health.status_display }}</span>
 </div>
+<div class="mt-2 text-sm text-muted">Uptime: {{ vm.system_health.uptime_formatted }} | PID: {{ vm.system_health.pid }}</div>
