@@ -61,10 +61,7 @@ impl SnapshotManager {
         let file_count = files.len();
         let snapshot = CodebaseSnapshot {
             root_path: root_path_str,
-            created_at: SystemTime::now()
-                .duration_since(SystemTime::UNIX_EPOCH)
-                .unwrap_or_default()
-                .as_secs(),
+            created_at: crate::infrastructure::utils::TimeUtils::now_unix_secs(),
             files,
             file_count,
             total_size,

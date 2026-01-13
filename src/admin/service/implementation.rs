@@ -17,6 +17,7 @@ use super::types::{
 use crate::application::search::SearchService;
 use crate::infrastructure::di::factory::ServiceProviderInterface;
 use crate::infrastructure::metrics::system::SystemMetricsCollectorInterface;
+use crate::infrastructure::service_helpers::ValidationBuilder;
 use crate::server::metrics::PerformanceMetricsInterface;
 use crate::server::operations::IndexingOperationsInterface;
 use arc_swap::ArcSwap;
@@ -471,34 +472,31 @@ impl AdminService for AdminServiceImpl {
         &self,
         updates: &HashMap<String, serde_json::Value>,
     ) -> Result<Vec<String>, AdminError> {
-        let mut warnings = Vec::new();
+        let mut builder = ValidationBuilder::new("configuration updates");
 
         for (path, value) in updates {
             match path.as_str() {
                 "metrics.collection_interval" => {
                     if let Some(interval) = value.as_u64() {
                         if interval < 5 {
-                            warnings.push(
-                                "Collection interval below 5 seconds may impact performance"
-                                    .to_string(),
-                            );
+                            builder = builder
+                                .warn("Collection interval below 5 seconds may impact performance");
                         }
                     }
                 }
                 "cache.max_size" => {
                     if let Some(size) = value.as_u64() {
                         if size > 10 * 1024 * 1024 * 1024 {
-                            warnings
-                                .push("Cache size above 10GB may cause memory issues".to_string());
+                            builder = builder
+                                .warn("Cache size above 10GB may cause memory issues");
                         }
                     }
                 }
                 "database.pool_size" => {
                     if let Some(pool_size) = value.as_u64() {
                         if pool_size > 100 {
-                            warnings.push(
-                                "Database pool size above 100 may cause resource exhaustion"
-                                    .to_string(),
+                            builder = builder.warn(
+                                "Database pool size above 100 may cause resource exhaustion",
                             );
                         }
                     }
@@ -507,7 +505,7 @@ impl AdminService for AdminServiceImpl {
             }
         }
 
-        Ok(warnings)
+        builder.finalize().map_err(|e| AdminError::ConfigError(e.to_string()))
     }
 
     async fn get_configuration_history(

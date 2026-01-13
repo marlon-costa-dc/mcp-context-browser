@@ -8,6 +8,7 @@ use crate::admin::service::types::{
 };
 use crate::infrastructure::di::factory::ServiceProviderInterface;
 use crate::infrastructure::metrics::system::SystemMetricsCollectorInterface;
+use crate::infrastructure::service_helpers::{SafeMetrics, TimedOperation};
 use crate::infrastructure::utils::status;
 use std::sync::Arc;
 
@@ -16,7 +17,7 @@ pub async fn run_health_check(
     system_collector: &Arc<dyn SystemMetricsCollectorInterface>,
     providers: Vec<ProviderInfo>,
 ) -> Result<HealthCheckResult, AdminError> {
-    let start_time = std::time::Instant::now();
+    let timer = TimedOperation::start();
     let mut checks = Vec::new();
 
     // Load runtime configuration with dynamic thresholds
@@ -32,23 +33,27 @@ pub async fn run_health_check(
     // Get system thresholds from runtime config
     let thresholds = &runtime_cfg.thresholds;
 
-    // Collect system metrics
-    let cpu_metrics = system_collector
-        .collect_cpu_metrics()
-        .await
-        .unwrap_or_default();
-    let memory_metrics = system_collector
-        .collect_memory_metrics()
-        .await
-        .unwrap_or_default();
-    let disk_metrics = system_collector
-        .collect_disk_metrics()
-        .await
-        .unwrap_or_default();
-    let process_metrics = system_collector
-        .collect_process_metrics()
-        .await
-        .unwrap_or_default();
+    // Collect system metrics with safe defaults
+    let cpu_metrics = SafeMetrics::collect(
+        system_collector.collect_cpu_metrics(),
+        Default::default(),
+    )
+    .await;
+    let memory_metrics = SafeMetrics::collect(
+        system_collector.collect_memory_metrics(),
+        Default::default(),
+    )
+    .await;
+    let disk_metrics = SafeMetrics::collect(
+        system_collector.collect_disk_metrics(),
+        Default::default(),
+    )
+    .await;
+    let process_metrics = SafeMetrics::collect(
+        system_collector.collect_process_metrics(),
+        Default::default(),
+    )
+    .await;
 
     // Determine CPU health status based on dynamic thresholds
     let cpu_status = if cpu_metrics.usage > thresholds.cpu_unhealthy_percent as f32 {
@@ -273,7 +278,7 @@ pub async fn run_health_check(
         overall_status,
         checks,
         timestamp: chrono::Utc::now(),
-        duration_ms: start_time.elapsed().as_millis() as u64,
+        duration_ms: timer.elapsed_ms(),
     })
 }
 

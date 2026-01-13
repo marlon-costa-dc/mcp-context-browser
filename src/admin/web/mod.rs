@@ -3,6 +3,11 @@
 //! This module provides the web UI for the admin dashboard.
 //! It uses server-side rendering with Tera templates, composing
 //! data from AdminService via ViewModelBuilder.
+//!
+//! # Helper Functions
+//!
+//! - **create_page_context**: Create Tera context with page and view model
+//! - **create_page_context_with_json**: Create context with JSON-serialized view model for client-side JavaScript
 
 pub mod builders;
 pub mod html_helpers;

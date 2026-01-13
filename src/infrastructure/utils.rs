@@ -2,6 +2,20 @@
 //!
 //! This module demonstrates clean code principles and TDD refactoring.
 //! Contains well-tested utility functions that follow SOLID principles.
+//!
+//! # Available Utilities
+//!
+//! - **StringUtils**: String manipulation (title case, capitalization, relative time formatting)
+//! - **ProviderUtils**: Provider identification and parsing (type inference, ID parsing)
+//! - **StatusUtils**: Status checking and categorization (healthy, degraded, error, processing)
+//! - **FormattingUtils**: Data formatting (numbers, bytes, duration, age, percentages)
+//! - **TimeUtils**: Time utilities (Unix timestamps, expiration checks)
+//! - **FileUtils**: Async file I/O with error handling
+//! - **RetryUtils**: Async retry with exponential backoff
+//! - **HttpResponseUtils**: HTTP response checking and JSON parsing
+//! - **HealthUtils**: System health status computation
+//! - **css**: CSS class generation for UI components (badges, indicators)
+//! - **JsonExt**: Extension trait for convenient JSON value access
 
 use std::collections::HashMap;
 
