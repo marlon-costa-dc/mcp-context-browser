@@ -4,7 +4,6 @@
 //! supporting bcrypt verification for migration.
 
 use crate::domain::error::{Error, Result};
-use crate::infrastructure::constants::BCRYPT_COST;
 
 // Feature flags for password hashing backends
 // Argon2id is preferred, bcrypt is fallback for migration

@@ -85,6 +85,57 @@ pub fn html_info(message: impl AsRef<str>) -> Html<String> {
     ))
 }
 
+// =============================================================================
+// HTMX-Specific Helpers - For AJAX responses (used in HTMX handlers)
+// =============================================================================
+
+/// Generate HTMX-compatible error message HTML
+/// Uses Tailwind classes with dark mode support.
+///
+/// # Example
+/// ```rust,ignore
+/// htmx_error("Failed to load metrics")
+/// ```
+///
+/// Outputs:
+/// ```html
+/// <div class="text-red-500 dark:text-red-400">Failed to load metrics</div>
+/// ```
+#[inline]
+pub fn htmx_error(message: impl AsRef<str>) -> Html<String> {
+    Html(format!(
+        r#"<div class="text-red-500 dark:text-red-400">{}</div>"#,
+        message.as_ref()
+    ))
+}
+
+/// Generate HTMX-compatible loading message HTML
+/// Uses gray color to indicate loading state.
+///
+/// # Example
+/// ```rust,ignore
+/// htmx_loading()
+/// ```
+#[inline]
+pub fn htmx_loading() -> Html<String> {
+    Html(r#"<div class="text-gray-500 dark:text-gray-400">Loading...</div>"#.to_string())
+}
+
+/// Generate HTMX-compatible success message HTML
+/// Uses green color for success state.
+///
+/// # Example
+/// ```rust,ignore
+/// htmx_success("Metrics updated successfully")
+/// ```
+#[inline]
+pub fn htmx_success(message: impl AsRef<str>) -> Html<String> {
+    Html(format!(
+        r#"<div class="text-green-500 dark:text-green-400">{}</div>"#,
+        message.as_ref()
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -115,5 +166,29 @@ mod tests {
         let result = html_info("test info");
         assert!(result.0.contains("text-blue-600"));
         assert!(result.0.contains("test info"));
+    }
+
+    #[test]
+    fn test_htmx_error() {
+        let result = htmx_error("Failed to load metrics");
+        assert!(result.0.contains("text-red-500"));
+        assert!(result.0.contains("dark:text-red-400"));
+        assert!(result.0.contains("Failed to load metrics"));
+    }
+
+    #[test]
+    fn test_htmx_loading() {
+        let result = htmx_loading();
+        assert!(result.0.contains("text-gray-500"));
+        assert!(result.0.contains("dark:text-gray-400"));
+        assert!(result.0.contains("Loading..."));
+    }
+
+    #[test]
+    fn test_htmx_success() {
+        let result = htmx_success("Updated successfully");
+        assert!(result.0.contains("text-green-500"));
+        assert!(result.0.contains("dark:text-green-400"));
+        assert!(result.0.contains("Updated successfully"));
     }
 }

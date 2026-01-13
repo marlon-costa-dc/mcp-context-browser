@@ -474,7 +474,10 @@ impl ProviderUtils {
                 parts.get(1).map(|s| s.to_string()).unwrap_or_default(),
             )
         } else {
-            (Self::infer_type(provider_id).to_string(), provider_id.to_string())
+            (
+                Self::infer_type(provider_id).to_string(),
+                provider_id.to_string(),
+            )
         }
     }
 }

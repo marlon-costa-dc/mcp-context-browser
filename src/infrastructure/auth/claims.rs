@@ -122,6 +122,7 @@ impl User {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::infrastructure::constants::JWT_EXPIRATION_SECS;
 
     #[test]
     fn test_claims_creation() {

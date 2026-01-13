@@ -61,14 +61,6 @@ impl GeminiEmbeddingProvider {
 
 #[async_trait]
 impl EmbeddingProvider for GeminiEmbeddingProvider {
-    async fn embed(&self, text: &str) -> Result<Embedding> {
-        let embeddings = self.embed_batch(&[text.to_string()]).await?;
-        embeddings
-            .into_iter()
-            .next()
-            .ok_or_else(|| Error::embedding("No embedding returned".to_string()))
-    }
-
     async fn embed_batch(&self, texts: &[String]) -> Result<Vec<Embedding>> {
         if texts.is_empty() {
             return Ok(Vec::new());

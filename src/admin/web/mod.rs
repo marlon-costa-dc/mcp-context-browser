@@ -22,6 +22,7 @@ use tera::{Context, Tera};
 
 use crate::admin::auth::web_auth_middleware;
 use crate::admin::models::AdminState;
+use crate::admin::web::html_helpers::{htmx_error, htmx_loading, htmx_success};
 
 use self::builders::ViewModelBuilder;
 
@@ -274,8 +275,7 @@ async fn htmx_dashboard_metrics_handler(State(state): State<AdminState>) -> impl
             context.insert("vm", &view_model);
             render_template(&state.templates, "htmx/dashboard_metrics.html", &context)
         }
-        Err(_) => Html("<div class='text-red-500'>Failed to load metrics</div>".to_string())
-            .into_response(),
+        Err(_) => htmx_error("Failed to load metrics").into_response(),
     }
 }
 
@@ -288,8 +288,7 @@ async fn htmx_providers_list_handler(State(state): State<AdminState>) -> impl In
             context.insert("providers", &view_model.providers);
             render_template(&state.templates, "htmx/providers_list.html", &context)
         }
-        Err(_) => Html("<div class='text-red-500'>Failed to load providers</div>".to_string())
-            .into_response(),
+        Err(_) => htmx_error("Failed to load providers").into_response(),
     }
 }
 
@@ -302,8 +301,7 @@ async fn htmx_indexes_list_handler(State(state): State<AdminState>) -> impl Into
             context.insert("indexes", &view_model.indexes);
             render_template(&state.templates, "htmx/indexes_list.html", &context)
         }
-        Err(_) => Html("<div class='text-red-500'>Failed to load indexes</div>".to_string())
-            .into_response(),
+        Err(_) => htmx_error("Failed to load indexes").into_response(),
     }
 }
 

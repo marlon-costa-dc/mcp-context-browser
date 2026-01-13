@@ -9,9 +9,9 @@
 //!
 //! Goal: Reduce 300+ lines of duplicated code across services
 
-use std::time::Instant;
-use std::time::Duration;
 use anyhow::{Context, Result};
+use std::time::Duration;
+use std::time::Instant;
 
 /// Timing instrumentation helper - tracks operation elapsed time
 ///
@@ -107,10 +107,7 @@ pub struct RetryHelper;
 
 impl RetryHelper {
     /// Execute operation with exponential backoff retry
-    pub async fn with_backoff<F, Fut, T, E>(
-        mut operation: F,
-        max_retries: u32,
-    ) -> Result<T>
+    pub async fn with_backoff<F, Fut, T, E>(mut operation: F, max_retries: u32) -> Result<T>
     where
         F: FnMut() -> Fut,
         Fut: std::future::Future<Output = std::result::Result<T, E>>,
@@ -125,9 +122,18 @@ impl RetryHelper {
                 Err(e) => {
                     retries += 1;
                     if retries > max_retries {
-                        return Err(anyhow::anyhow!("Max retries ({}) exceeded: {}", max_retries, e));
+                        return Err(anyhow::anyhow!(
+                            "Max retries ({}) exceeded: {}",
+                            max_retries,
+                            e
+                        ));
                     }
-                    tracing::debug!("Operation failed (attempt {}), retrying in {}ms: {}", retries, delay_ms, e);
+                    tracing::debug!(
+                        "Operation failed (attempt {}), retrying in {}ms: {}",
+                        retries,
+                        delay_ms,
+                        e
+                    );
                     tokio::time::sleep(Duration::from_millis(delay_ms)).await;
                     delay_ms = (delay_ms * 2).min(5000); // Exponential backoff, capped at 5s
                 }
@@ -136,10 +142,7 @@ impl RetryHelper {
     }
 
     /// Execute operation with timeout
-    pub async fn with_timeout<F, Fut, T>(
-        operation: F,
-        timeout: Duration,
-    ) -> Result<T>
+    pub async fn with_timeout<F, Fut, T>(operation: F, timeout: Duration) -> Result<T>
     where
         F: FnOnce() -> Fut,
         Fut: std::future::Future<Output = Result<T>>,
@@ -177,9 +180,18 @@ impl RetryHelper {
                 Ok(Err(e)) => {
                     retries += 1;
                     if retries > max_retries {
-                        return Err(anyhow::anyhow!("Max retries ({}) exceeded: {}", max_retries, e));
+                        return Err(anyhow::anyhow!(
+                            "Max retries ({}) exceeded: {}",
+                            max_retries,
+                            e
+                        ));
                     }
-                    tracing::debug!("Operation failed (attempt {}), retrying in {}ms: {}", retries, delay_ms, e);
+                    tracing::debug!(
+                        "Operation failed (attempt {}), retrying in {}ms: {}",
+                        retries,
+                        delay_ms,
+                        e
+                    );
                     tokio::time::sleep(Duration::from_millis(delay_ms)).await;
                     delay_ms = (delay_ms * 2).min(5000);
                 }
@@ -229,7 +241,8 @@ impl ValidationBuilder {
         message: &str,
     ) -> Self {
         if value < min || value > max {
-            self.errors.push(format!("{}: {} ({})", field, message, value));
+            self.errors
+                .push(format!("{}: {} ({})", field, message, value));
         }
         self
     }
@@ -237,7 +250,8 @@ impl ValidationBuilder {
     /// Check value is positive
     pub fn check_positive(mut self, field: &str, value: i64, message: &str) -> Self {
         if value <= 0 {
-            self.errors.push(format!("{}: {} (value: {})", field, message, value));
+            self.errors
+                .push(format!("{}: {} (value: {})", field, message, value));
         }
         self
     }
@@ -329,10 +343,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_safe_metrics_collect_success() {
-        let result: i32 = SafeMetrics::collect::<_, i32, String>(
-            async { Ok::<i32, String>(42) },
-            0,
-        ).await;
+        let result: i32 =
+            SafeMetrics::collect::<_, i32, String>(async { Ok::<i32, String>(42) }, 0).await;
         assert_eq!(result, 42);
     }
 
@@ -341,7 +353,8 @@ mod tests {
         let result: i32 = SafeMetrics::collect::<_, i32, String>(
             async { Err::<i32, String>("error".to_string()) },
             99,
-        ).await;
+        )
+        .await;
         assert_eq!(result, 99);
     }
 

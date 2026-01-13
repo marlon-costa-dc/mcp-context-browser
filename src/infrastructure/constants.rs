@@ -517,6 +517,9 @@ pub const CHUNK_SIZE_SWIFT: usize = 15;
 /// Kotlin language chunk size
 pub const CHUNK_SIZE_KOTLIN: usize = 15;
 
+/// Generic/fallback language chunk size (for unsupported languages)
+pub const CHUNK_SIZE_GENERIC: usize = 15;
+
 /// Node extraction rule default minimum content length
 pub const NODE_EXTRACTION_MIN_LENGTH: usize = 20;
 

@@ -224,6 +224,7 @@ impl RequirePermission {
 mod tests {
     use super::*;
     use crate::infrastructure::auth::roles::UserRole;
+    use crate::infrastructure::constants::JWT_EXPIRATION_SECS;
 
     #[test]
     fn test_claims_extractor() {

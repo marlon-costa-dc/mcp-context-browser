@@ -15,7 +15,7 @@ use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Minimum JWT secret length for security (alias for centralized constant)
-pub const MIN_JWT_SECRET_LENGTH: usize = JWT_SECRET_MIN_LENGTH_STRICT as usize;
+pub const MIN_JWT_SECRET_LENGTH: usize = JWT_SECRET_MIN_LENGTH_STRICT;
 
 /// Characters used for password generation (alphanumeric + special)
 const PASSWORD_CHARSET: &[u8] =

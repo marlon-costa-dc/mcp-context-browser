@@ -5,6 +5,7 @@
 
 use crate::domain::error::Result;
 use crate::domain::types::{CodeChunk, Language};
+use crate::infrastructure::constants::CHUNK_SIZE_GENERIC;
 use std::collections::HashMap;
 
 /// Intelligent chunking engine using tree-sitter
@@ -67,7 +68,7 @@ impl IntelligentChunker {
     fn chunk_generic(&self, content: &str, file_name: &str, language: Language) -> Vec<CodeChunk> {
         let lines: Vec<&str> = content.lines().collect();
         let mut chunks = Vec::new();
-        let chunk_size = 15; // lines per chunk for generic code
+        let chunk_size = CHUNK_SIZE_GENERIC;
 
         for (chunk_idx, chunk_lines) in lines.chunks(chunk_size).enumerate() {
             let start_line = chunk_idx * chunk_size;
