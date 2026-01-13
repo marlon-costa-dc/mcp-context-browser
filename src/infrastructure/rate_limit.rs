@@ -5,6 +5,7 @@
 //! rate limiting for production security.
 
 use crate::domain::error::{Error, Result};
+use crate::infrastructure::ErrorContext;
 use crate::infrastructure::constants::{
     RATE_LIMIT_BURST_ALLOWANCE, RATE_LIMIT_CACHE_MAX_ENTRIES, RATE_LIMIT_DEFAULT_MAX_REQUESTS,
     RATE_LIMIT_WINDOW_SECONDS,
@@ -463,13 +464,13 @@ impl RateLimiter {
             .arg("-inf")
             .arg(window_start)
             .query(&mut conn)
-            .map_err(|e| Error::internal(format!("Redis ZREMRANGEBYSCORE failed: {}", e)))?;
+            .internal_context("Redis ZREMRANGEBYSCORE failed")?;
 
         // Count current requests in window
         let current_count: u32 = redis::cmd("ZCARD")
             .arg(&redis_key)
             .query(&mut conn)
-            .map_err(|e| Error::internal(format!("Redis ZCARD failed: {}", e)))?;
+            .internal_context("Redis ZCARD failed")?;
 
         let max_allowed = self.config.max_requests_per_window + self.config.burst_allowance;
         let allowed = current_count < max_allowed;
@@ -482,14 +483,14 @@ impl RateLimiter {
                 .arg(now)
                 .arg(now)
                 .query(&mut conn)
-                .map_err(|e| Error::internal(format!("Redis ZADD failed: {}", e)))?;
+                .internal_context("Redis ZADD failed")?;
 
             // Set expiration on the key (window + buffer)
             let _: () = redis::cmd("EXPIRE")
                 .arg(&redis_key)
                 .arg(self.config.window_seconds as i64 * 2)
                 .query(&mut conn)
-                .map_err(|e| Error::internal(format!("Redis EXPIRE failed: {}", e)))?;
+                .internal_context("Redis EXPIRE failed")?;
         }
 
         // Calculate reset time (end of current window)
@@ -541,13 +542,13 @@ impl RateLimiter {
 
                 let mut conn = redis_client
                     .get_connection()
-                    .map_err(|e| Error::internal(format!("Redis connection failed: {}", e)))?;
+                    .internal_context("Redis connection failed")?;
 
                 let redis_key = format!("ratelimit:{}", key);
                 let _: () = redis::cmd("DEL")
                     .arg(&redis_key)
                     .query(&mut conn)
-                    .map_err(|e| Error::internal(format!("Redis DEL failed: {}", e)))?;
+                    .internal_context("Redis DEL failed")?;
             }
         }
 

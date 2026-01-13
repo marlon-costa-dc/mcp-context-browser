@@ -118,8 +118,8 @@ impl LanguageProcessor for BaseProcessor {
 #[macro_export]
 macro_rules! impl_language_processor {
     ($processor:ty) => {
-        impl LanguageProcessor for $processor {
-            fn config(&self) -> &LanguageConfig {
+        impl $crate::chunking::LanguageProcessor for $processor {
+            fn config(&self) -> &$crate::chunking::config::LanguageConfig {
                 &self.processor.config()
             }
 
@@ -128,8 +128,8 @@ macro_rules! impl_language_processor {
                 tree: &tree_sitter::Tree,
                 content: &str,
                 file_name: &str,
-                language: &Language,
-            ) -> Vec<CodeChunk> {
+                language: &$crate::domain::types::Language,
+            ) -> Vec<$crate::domain::types::CodeChunk> {
                 use crate::chunking::traverser::AstTraverser;
 
                 let mut chunks = Vec::new();
@@ -172,8 +172,8 @@ macro_rules! impl_language_processor {
                 &self,
                 content: &str,
                 file_name: &str,
-                language: &Language,
-            ) -> Vec<CodeChunk> {
+                language: &$crate::domain::types::Language,
+            ) -> Vec<$crate::domain::types::CodeChunk> {
                 crate::chunking::fallback::GenericFallbackChunker::new(self.config())
                     .chunk_with_patterns(content, file_name, language)
             }

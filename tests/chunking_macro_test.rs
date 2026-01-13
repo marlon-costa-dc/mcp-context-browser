@@ -1,6 +1,8 @@
 //! Test the new define_language_processor! macro
 
 use mcp_context_browser::chunking::LanguageProcessor;
+use mcp_context_browser::chunking::config::LanguageConfig;
+use mcp_context_browser::domain::types::{CodeChunk, Language};
 
 mcp_context_browser::define_language_processor! {
     TestProcessorSimple,

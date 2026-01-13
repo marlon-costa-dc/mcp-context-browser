@@ -17,7 +17,7 @@ use super::types::{
 use crate::application::search::SearchService;
 use crate::infrastructure::di::factory::ServiceProviderInterface;
 use crate::infrastructure::metrics::system::SystemMetricsCollectorInterface;
-use crate::infrastructure::service_helpers::ValidationBuilder;
+use crate::infrastructure::service_helpers::{ValidationBuilder, TimedOperation};
 use crate::server::metrics::PerformanceMetricsInterface;
 use crate::server::operations::IndexingOperationsInterface;
 use arc_swap::ArcSwap;
@@ -220,7 +220,7 @@ impl AdminService for AdminServiceImpl {
         collection: Option<&str>,
         limit: Option<usize>,
     ) -> Result<SearchResults, AdminError> {
-        let start = std::time::Instant::now();
+        let timer = TimedOperation::start();
         let search_limit = limit.unwrap_or(10);
         let collection_name = collection.unwrap_or("default");
 
@@ -241,7 +241,7 @@ impl AdminService for AdminServiceImpl {
                     query: query.to_string(),
                     results: vec![],
                     total: 0,
-                    took_ms: start.elapsed().as_millis() as u64,
+                    took_ms: timer.elapsed_ms(),
                 });
             }
         };
@@ -258,7 +258,7 @@ impl AdminService for AdminServiceImpl {
                     query: query.to_string(),
                     results: vec![],
                     total: 0,
-                    took_ms: start.elapsed().as_millis() as u64,
+                    took_ms: timer.elapsed_ms(),
                 });
             }
         };
@@ -278,7 +278,7 @@ impl AdminService for AdminServiceImpl {
             query: query.to_string(),
             results: result_items,
             total,
-            took_ms: start.elapsed().as_millis() as u64,
+            took_ms: timer.elapsed_ms(),
         })
     }
 
@@ -576,7 +576,7 @@ impl AdminService for AdminServiceImpl {
         &self,
         test_config: PerformanceTestConfig,
     ) -> Result<PerformanceTestResult, AdminError> {
-        let start = std::time::Instant::now();
+        let timer = TimedOperation::start();
         let mut successful_requests = 0;
         let mut failed_requests = 0;
         let mut total_latency_ms = 0.0;
@@ -591,22 +591,22 @@ impl AdminService for AdminServiceImpl {
 
         for _ in 0..test_config.concurrency.max(1) {
             for query in &queries {
-                let q_start = std::time::Instant::now();
+                let q_timer = TimedOperation::start();
                 match self.search(query, None, Some(10)).await {
                     Ok(_) => {
                         successful_requests += 1;
-                        total_latency_ms += q_start.elapsed().as_millis() as f64;
+                        total_latency_ms += q_timer.elapsed_ms() as f64;
                     }
                     Err(_) => {
                         failed_requests += 1;
                     }
                 }
 
-                if start.elapsed().as_secs() >= test_config.duration_seconds as u64 {
+                if timer.elapsed_secs() >= test_config.duration_seconds as f64 {
                     break;
                 }
             }
-            if start.elapsed().as_secs() >= test_config.duration_seconds as u64 {
+            if timer.elapsed_secs() >= test_config.duration_seconds as f64 {
                 break;
             }
         }
