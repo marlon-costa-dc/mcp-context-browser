@@ -2,8 +2,8 @@
 //!
 //! Provides functions for log retrieval, filtering, export, and statistics.
 
-use crate::admin::service::helpers::admin_defaults;
-use crate::admin::service::types::{
+use crate::server::admin::service::helpers::admin_defaults;
+use crate::server::admin::service::types::{
     AdminError, LogEntries, LogEntry, LogExportFormat, LogFilter, LogStats,
 };
 use crate::infrastructure::logging::SharedLogBuffer;

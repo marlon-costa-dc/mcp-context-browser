@@ -27,10 +27,10 @@ pub async fn htmx_recovery_status_handler(State(state): State<AdminState>) -> Ht
 
     for state in recovery_states {
         let status_color = match state.status {
-            crate::daemon::types::RecoveryStatus::Healthy => "bg-green-500",
-            crate::daemon::types::RecoveryStatus::Recovering => "bg-yellow-500 animate-pulse",
-            crate::daemon::types::RecoveryStatus::Exhausted => "bg-red-500",
-            crate::daemon::types::RecoveryStatus::Manual => "bg-orange-500",
+            crate::infrastructure::daemon::types::RecoveryStatus::Healthy => "bg-green-500",
+            crate::infrastructure::daemon::types::RecoveryStatus::Recovering => "bg-yellow-500 animate-pulse",
+            crate::infrastructure::daemon::types::RecoveryStatus::Exhausted => "bg-red-500",
+            crate::infrastructure::daemon::types::RecoveryStatus::Manual => "bg-orange-500",
         };
 
         let status_text = format!("{}", state.status);
@@ -68,7 +68,7 @@ pub async fn htmx_recovery_status_handler(State(state): State<AdminState>) -> Ht
         }
 
         // Action buttons based on status
-        if state.status == crate::daemon::types::RecoveryStatus::Exhausted {
+        if state.status == crate::infrastructure::daemon::types::RecoveryStatus::Exhausted {
             html.push_str(&format!(
                 r##"<button hx-post="/admin/api/recovery/{}/reset"
                           hx-target="#recovery-status"
@@ -121,10 +121,10 @@ pub async fn htmx_maintenance_history_handler(State(state): State<AdminState>) -
 
     for activity in activities {
         let level_class = match activity.level {
-            crate::admin::service::helpers::activity::ActivityLevel::Info => css::badge::INFO,
-            crate::admin::service::helpers::activity::ActivityLevel::Warning => css::badge::WARNING,
-            crate::admin::service::helpers::activity::ActivityLevel::Error => css::badge::ERROR,
-            crate::admin::service::helpers::activity::ActivityLevel::Success => css::badge::SUCCESS,
+            crate::server::admin::service::helpers::activity::ActivityLevel::Info => css::badge::INFO,
+            crate::server::admin::service::helpers::activity::ActivityLevel::Warning => css::badge::WARNING,
+            crate::server::admin::service::helpers::activity::ActivityLevel::Error => css::badge::ERROR,
+            crate::server::admin::service::helpers::activity::ActivityLevel::Success => css::badge::SUCCESS,
         };
 
         let time_ago = chrono::Utc::now()

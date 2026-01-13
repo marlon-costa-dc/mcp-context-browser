@@ -17,7 +17,7 @@
 //! use std::sync::Arc;
 //! use mcp_context_browser::infrastructure::recovery::{RecoveryManager, RecoveryManagerInterface};
 //! use mcp_context_browser::infrastructure::events::EventBus;
-//! use mcp_context_browser::daemon::types::RecoveryConfig;
+//! use mcp_context_browser::infrastructure::daemon::types::RecoveryConfig;
 //!
 //! async fn example() {
 //!     let config = RecoveryConfig::default();
@@ -27,7 +27,7 @@
 //! }
 //! ```
 
-use crate::daemon::types::{RecoveryConfig, RecoveryState, RecoveryStatus, RecoveryStrategy};
+use super::daemon::types::{RecoveryConfig, RecoveryState, RecoveryStatus, RecoveryStrategy};
 use crate::infrastructure::events::{SharedEventBusProvider, SystemEvent};
 use dashmap::DashMap;
 use std::sync::Arc;
@@ -528,7 +528,7 @@ mod tests {
 
     #[test]
     fn test_recovery_policy_backoff() {
-        let policy = crate::daemon::types::RecoveryPolicy {
+        let policy = crate::infrastructure::daemon::types::RecoveryPolicy {
             base_delay_ms: 1000,
             max_delay_ms: 30000,
             backoff_multiplier: 2.0,

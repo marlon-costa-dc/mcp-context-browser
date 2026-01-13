@@ -2,8 +2,8 @@
 //!
 //! Provides functions for backup creation, listing, and restoration.
 
-use crate::admin::service::helpers::admin_defaults;
-use crate::admin::service::types::{
+use crate::server::admin::service::helpers::admin_defaults;
+use crate::server::admin::service::types::{
     AdminError, BackupConfig, BackupInfo, BackupResult, RestoreResult,
 };
 use crate::infrastructure::events::SharedEventBusProvider;

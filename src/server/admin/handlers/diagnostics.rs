@@ -6,7 +6,7 @@ use crate::infrastructure::utils::IntoStatusCode;
 /// Run comprehensive health check
 pub async fn health_check_handler(
     State(state): State<AdminState>,
-) -> Result<Json<ApiResponse<crate::admin::service::HealthCheckResult>>, StatusCode> {
+) -> Result<Json<ApiResponse<crate::server::admin::service::HealthCheckResult>>, StatusCode> {
     let result = state.admin_service.run_health_check().await.to_500()?;
 
     Ok(Json(ApiResponse::success(result)))
@@ -16,7 +16,7 @@ pub async fn health_check_handler(
 pub async fn test_connectivity_handler(
     State(state): State<AdminState>,
     Path(provider_id): Path<String>,
-) -> Result<Json<ApiResponse<crate::admin::service::ConnectivityTestResult>>, StatusCode> {
+) -> Result<Json<ApiResponse<crate::server::admin::service::ConnectivityTestResult>>, StatusCode> {
     let result = state
         .admin_service
         .test_provider_connectivity(&provider_id)
@@ -29,8 +29,8 @@ pub async fn test_connectivity_handler(
 /// Run performance test
 pub async fn performance_test_handler(
     State(state): State<AdminState>,
-    Json(test_config): Json<crate::admin::service::PerformanceTestConfig>,
-) -> Result<Json<ApiResponse<crate::admin::service::PerformanceTestResult>>, StatusCode> {
+    Json(test_config): Json<crate::server::admin::service::PerformanceTestConfig>,
+) -> Result<Json<ApiResponse<crate::server::admin::service::PerformanceTestResult>>, StatusCode> {
     let result = state
         .admin_service
         .run_performance_test(test_config)

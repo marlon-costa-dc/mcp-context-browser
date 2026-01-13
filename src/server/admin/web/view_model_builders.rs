@@ -4,8 +4,8 @@
 //! repeat throughout the builder service. Each helper eliminates 10+ lines of code.
 
 use super::view_models::*;
-use crate::admin::models::AdminState;
-use crate::admin::service::helpers::activity::ActivityLevel;
+use crate::server::admin::models::AdminState;
+use crate::server::admin::service::helpers::activity::ActivityLevel;
 use crate::infrastructure::utils::{activity_level, FormattingUtils};
 use anyhow::{Context, Result};
 

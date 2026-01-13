@@ -6,7 +6,7 @@
 //! # Usage
 //!
 //! ```rust,ignore
-//! use crate::admin::config_keys::indexing;
+//! use crate::server::admin::config_keys::indexing;
 //! let chunk_size_key = indexing::CHUNK_SIZE;
 //! ```
 

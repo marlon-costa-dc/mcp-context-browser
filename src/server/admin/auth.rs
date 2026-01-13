@@ -11,7 +11,7 @@ use bcrypt::{hash, verify, DEFAULT_COST};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 
-use crate::admin::models::{ApiResponse, LoginRequest, LoginResponse, UserInfo};
+use super::models::{ApiResponse, LoginRequest, LoginResponse, UserInfo};
 use crate::infrastructure::utils::TimeUtils;
 
 /// Cookie name for JWT token
@@ -148,7 +148,7 @@ impl AuthService {
 /// Validates JWT tokens using proper cryptographic signature verification.
 /// All requests must have a valid Bearer token in the Authorization header.
 pub async fn auth_middleware(
-    State(state): State<crate::admin::models::AdminState>,
+    State(state): State<super::models::AdminState>,
     mut req: Request<axum::body::Body>,
     next: Next,
 ) -> Result<Response, StatusCode> {
@@ -203,7 +203,7 @@ pub async fn auth_middleware(
 /// Authenticates user and returns JWT token in both JSON response and Set-Cookie header.
 /// The cookie allows web pages to be authenticated server-side.
 pub async fn login_handler(
-    State(state): State<crate::admin::models::AdminState>,
+    State(state): State<super::models::AdminState>,
     Json(login_req): Json<LoginRequest>,
 ) -> Response {
     let auth_service = match AuthService::new(
@@ -269,7 +269,7 @@ pub async fn logout_handler(jar: CookieJar) -> impl IntoResponse {
 /// Checks for JWT token in cookie and redirects to login page if not present or invalid.
 /// This middleware is for protecting web pages (HTML), not API endpoints.
 pub async fn web_auth_middleware(
-    State(state): State<crate::admin::models::AdminState>,
+    State(state): State<super::models::AdminState>,
     jar: CookieJar,
     mut req: Request<axum::body::Body>,
     next: Next,

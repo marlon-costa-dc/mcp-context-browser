@@ -2,7 +2,7 @@
 //!
 //! Single Responsibility: Orchestrate code chunking across multiple files.
 
-use crate::chunking::IntelligentChunker;
+use crate::domain::chunking::IntelligentChunker;
 use crate::domain::error::{Error, Result};
 use crate::domain::types::{CodeChunk, Language};
 use crate::infrastructure::constants::{

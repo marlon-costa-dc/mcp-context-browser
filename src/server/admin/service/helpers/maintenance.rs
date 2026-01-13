@@ -2,8 +2,8 @@
 //!
 //! Provides functions for cache management, provider restart, index rebuilding, and data cleanup.
 
-use crate::admin::service::helpers::admin_defaults;
-use crate::admin::service::types::{AdminError, CacheType, CleanupConfig, MaintenanceResult};
+use crate::server::admin::service::helpers::admin_defaults;
+use crate::server::admin::service::types::{AdminError, CacheType, CleanupConfig, MaintenanceResult};
 use crate::infrastructure::events::SharedEventBusProvider;
 use crate::infrastructure::logging::SharedLogBuffer;
 use crate::infrastructure::service_helpers::TimedOperation;

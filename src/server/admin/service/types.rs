@@ -4,7 +4,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-pub use crate::admin::models::{IndexingConfig, ProviderInfo, SecurityConfig};
+pub use crate::server::admin::models::{IndexingConfig, ProviderInfo, SecurityConfig};
 
 /// Configuration data structure
 #[derive(Debug, Clone, Serialize, Deserialize)]

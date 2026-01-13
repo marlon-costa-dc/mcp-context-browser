@@ -2,7 +2,7 @@
 //!
 //! Builds SubsystemInfo structures from runtime data.
 
-use crate::admin::service::types::{
+use crate::server::admin::service::types::{
     HealthCheck, PerformanceMetricsData, ProviderInfo, SubsystemInfo, SubsystemMetrics,
     SubsystemStatus, SubsystemType,
 };
@@ -359,7 +359,7 @@ impl SubsystemType {
 // Signal dispatch helpers
 // ============================================================================
 
-use crate::admin::service::types::{SignalResult, SubsystemSignal};
+use crate::server::admin::service::types::{SignalResult, SubsystemSignal};
 use crate::infrastructure::events::{SharedEventBusProvider, SystemEvent};
 
 /// Get the string name for a signal

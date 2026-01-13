@@ -45,7 +45,7 @@ pub use traits::{AdaptersModule, AdminModule, InfrastructureModule, ServerModule
 use shaku::module;
 
 use crate::adapters::http_client::HttpClientProvider;
-use crate::admin::service::AdminService;
+use crate::server::admin::service::AdminService;
 use crate::infrastructure::di::factory::ServiceProviderInterface;
 use crate::infrastructure::metrics::system::SystemMetricsCollectorInterface;
 use crate::server::metrics::PerformanceMetricsInterface;

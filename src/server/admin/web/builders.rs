@@ -23,7 +23,7 @@ use super::view_model_builders::{
     ActivityLevelFormatter, ConfigCategoryBuilder, ConfigSettingBuilder, MetricsCollector,
 };
 use super::view_models::*;
-use crate::admin::models::AdminState;
+use crate::server::admin::models::AdminState;
 use crate::infrastructure::utils::{css, FormattingUtils, HealthUtils, TimeUtils};
 
 /// Builds view models from AdminService data
@@ -300,7 +300,7 @@ impl<'a> ViewModelBuilder<'a> {
     /// Build logs page view model
     pub async fn build_logs_page(&self) -> Result<LogsViewModel> {
         // Create filter manually as LogFilter doesn't impl Default
-        let filter = crate::admin::service::LogFilter {
+        let filter = crate::server::admin::service::LogFilter {
             level: None,
             module: None,
             message_contains: None,

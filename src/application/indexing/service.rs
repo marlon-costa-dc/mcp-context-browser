@@ -14,8 +14,8 @@ use crate::domain::types::CodeChunk;
 // Cross-cutting concern: Event bus for decoupled notifications
 use crate::infrastructure::constants::INDEXING_BATCH_SIZE;
 use crate::infrastructure::events::{SharedEventBusProvider, SystemEvent};
-use crate::snapshot::SnapshotManager;
-use crate::sync::SyncManager;
+use crate::infrastructure::snapshot::SnapshotManager;
+use crate::infrastructure::sync::SyncManager;
 use futures::future::join_all;
 use std::path::Path;
 use std::sync::Arc;

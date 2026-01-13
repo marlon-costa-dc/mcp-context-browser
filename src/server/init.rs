@@ -5,7 +5,7 @@
 
 use crate::adapters::http_client::{HttpClientConfig, HttpClientPool};
 use crate::adapters::providers::routing::health::HealthMonitor;
-use crate::daemon::types::RecoveryConfig;
+use crate::infrastructure::daemon::types::RecoveryConfig;
 use crate::infrastructure::cache::{create_cache_provider, SharedCacheProvider};
 use crate::infrastructure::config::ConfigLoader;
 use crate::infrastructure::connection_tracker::{ConnectionTracker, ConnectionTrackerConfig};
@@ -284,7 +284,7 @@ async fn initialize_server_components(
         // Initialize admin API server with first-run support
         // Priority: env vars > data file (users.json) > generate new credentials
         let data_dir = config.data.base_path();
-        match crate::admin::config::AdminConfig::load_with_first_run(&data_dir) {
+        match crate::server::admin::config::AdminConfig::load_with_first_run(&data_dir) {
             Ok((admin_config, generated_password)) => {
                 if admin_config.enabled {
                     // Display first-run message if password was generated
@@ -305,7 +305,7 @@ async fn initialize_server_components(
                     }
 
                     let admin_api_server =
-                        crate::admin::api::AdminApiServer::new(admin_config, Arc::clone(&server));
+                        crate::server::admin::api::AdminApiServer::new(admin_config, Arc::clone(&server));
 
                     // Merge admin router into metrics server
                     match admin_api_server.create_router() {

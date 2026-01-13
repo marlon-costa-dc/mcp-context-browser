@@ -3,11 +3,11 @@
 // The alternative (duplicating config types) would violate DRY principle.
 use crate::adapters::database::DatabaseConfig;
 use crate::adapters::hybrid_search::HybridSearchConfig;
-use crate::daemon::DaemonConfig;
+use crate::infrastructure::daemon::DaemonConfig;
 use crate::infrastructure::auth::AuthConfig;
 use crate::infrastructure::cache::CacheConfig;
 use crate::infrastructure::limits::ResourceLimitsConfig;
-use crate::sync::SyncConfig;
+use crate::infrastructure::sync::SyncConfig;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
@@ -76,7 +76,7 @@ pub struct Config {
     #[validate(nested)]
     pub metrics: MetricsConfig,
     /// Admin interface configuration (optional - only if credentials provided)
-    pub admin: Option<crate::admin::AdminConfig>,
+    pub admin: Option<crate::server::admin::AdminConfig>,
     /// Authentication and authorization settings
     #[validate(nested)]
     pub auth: AuthConfig,

@@ -2,14 +2,14 @@
 
 use super::common::*;
 use super::{CleanupRequest, ExportQuery};
-use crate::admin::web::html_helpers::*;
+use crate::server::admin::web::html_helpers::*;
 use crate::infrastructure::utils::IntoStatusCode;
 
 /// Get system logs with filtering
 pub async fn get_logs_handler(
     State(state): State<AdminState>,
-    Query(filter): Query<crate::admin::service::LogFilter>,
-) -> Result<Json<ApiResponse<crate::admin::service::LogEntries>>, StatusCode> {
+    Query(filter): Query<crate::server::admin::service::LogFilter>,
+) -> Result<Json<ApiResponse<crate::server::admin::service::LogEntries>>, StatusCode> {
     let logs = state.admin_service.get_logs(filter).await.to_500()?;
 
     Ok(Json(ApiResponse::success(logs)))
@@ -18,7 +18,7 @@ pub async fn get_logs_handler(
 /// Export logs to file
 pub async fn export_logs_handler(
     State(state): State<AdminState>,
-    Query(filter): Query<crate::admin::service::LogFilter>,
+    Query(filter): Query<crate::server::admin::service::LogFilter>,
     Query(params): Query<ExportQuery>,
 ) -> Result<Json<ApiResponse<String>>, StatusCode> {
     let filename = state
@@ -33,7 +33,7 @@ pub async fn export_logs_handler(
 /// Get log statistics
 pub async fn get_log_stats_handler(
     State(state): State<AdminState>,
-) -> Result<Json<ApiResponse<crate::admin::service::LogStats>>, StatusCode> {
+) -> Result<Json<ApiResponse<crate::server::admin::service::LogStats>>, StatusCode> {
     let stats = state.admin_service.get_log_stats().await.to_500()?;
 
     Ok(Json(ApiResponse::success(stats)))
@@ -43,12 +43,12 @@ pub async fn get_log_stats_handler(
 pub async fn clear_cache_handler(
     State(state): State<AdminState>,
     Path(cache_type): Path<String>,
-) -> Result<Json<ApiResponse<crate::admin::service::MaintenanceResult>>, StatusCode> {
+) -> Result<Json<ApiResponse<crate::server::admin::service::MaintenanceResult>>, StatusCode> {
     let cache_type_enum = match cache_type.as_str() {
-        "all" => crate::admin::service::CacheType::All,
-        "query" => crate::admin::service::CacheType::QueryResults,
-        "embeddings" => crate::admin::service::CacheType::Embeddings,
-        "indexes" => crate::admin::service::CacheType::Indexes,
+        "all" => crate::server::admin::service::CacheType::All,
+        "query" => crate::server::admin::service::CacheType::QueryResults,
+        "embeddings" => crate::server::admin::service::CacheType::Embeddings,
+        "indexes" => crate::server::admin::service::CacheType::Indexes,
         _ => return Ok(Json(ApiResponse::error("Invalid cache type".to_string()))),
     };
 
@@ -65,7 +65,7 @@ pub async fn clear_cache_handler(
 pub async fn restart_provider_handler(
     State(state): State<AdminState>,
     Path(provider_id): Path<String>,
-) -> Result<Json<ApiResponse<crate::admin::service::MaintenanceResult>>, StatusCode> {
+) -> Result<Json<ApiResponse<crate::server::admin::service::MaintenanceResult>>, StatusCode> {
     let result = state
         .admin_service
         .restart_provider(&provider_id)
@@ -79,7 +79,7 @@ pub async fn restart_provider_handler(
 pub async fn rebuild_index_handler(
     State(state): State<AdminState>,
     Path(index_id): Path<String>,
-) -> Result<Json<ApiResponse<crate::admin::service::MaintenanceResult>>, StatusCode> {
+) -> Result<Json<ApiResponse<crate::server::admin::service::MaintenanceResult>>, StatusCode> {
     let result = state
         .admin_service
         .rebuild_index(&index_id)
@@ -92,8 +92,8 @@ pub async fn rebuild_index_handler(
 /// Cleanup old data
 pub async fn cleanup_data_handler(
     State(state): State<AdminState>,
-    Json(cleanup_config): Json<crate::admin::service::CleanupConfig>,
-) -> Result<Json<ApiResponse<crate::admin::service::MaintenanceResult>>, StatusCode> {
+    Json(cleanup_config): Json<crate::server::admin::service::CleanupConfig>,
+) -> Result<Json<ApiResponse<crate::server::admin::service::MaintenanceResult>>, StatusCode> {
     let result = state
         .admin_service
         .cleanup_data(cleanup_config)
@@ -113,10 +113,10 @@ pub async fn api_clear_cache_handler(
     Path(cache_type): Path<String>,
 ) -> Html<String> {
     let cache_type_enum = match cache_type.as_str() {
-        "all" => crate::admin::service::CacheType::All,
-        "query" => crate::admin::service::CacheType::QueryResults,
-        "embeddings" => crate::admin::service::CacheType::Embeddings,
-        "indexes" => crate::admin::service::CacheType::Indexes,
+        "all" => crate::server::admin::service::CacheType::All,
+        "query" => crate::server::admin::service::CacheType::QueryResults,
+        "embeddings" => crate::server::admin::service::CacheType::Embeddings,
+        "indexes" => crate::server::admin::service::CacheType::Indexes,
         _ => return html_error(format!("Invalid cache type: {}", cache_type)),
     };
 
@@ -138,7 +138,7 @@ pub async fn api_restart_all_providers_handler(State(state): State<AdminState>) 
         .map(|p| (p.provider_type, p.id))
         .collect();
 
-    match crate::admin::service::helpers::maintenance::restart_all_providers(
+    match crate::server::admin::service::helpers::maintenance::restart_all_providers(
         &state.event_bus,
         &provider_list,
     )
@@ -169,7 +169,7 @@ pub async fn api_restart_providers_by_type_handler(
         return html_warning(format!("No {} providers found", provider_type));
     }
 
-    match crate::admin::service::helpers::maintenance::restart_all_providers(
+    match crate::server::admin::service::helpers::maintenance::restart_all_providers(
         &state.event_bus,
         &provider_list,
     )
@@ -230,7 +230,7 @@ pub async fn api_cleanup_handler(
     State(state): State<AdminState>,
     Query(params): Query<CleanupRequest>,
 ) -> Html<String> {
-    let cleanup_config = crate::admin::service::CleanupConfig {
+    let cleanup_config = crate::server::admin::service::CleanupConfig {
         older_than_days: params.older_than_days.unwrap_or(30),
         max_items_to_keep: None,
         cleanup_types: vec!["logs".to_string(), "exports".to_string()],

@@ -5,7 +5,7 @@
 use std::collections::HashMap;
 
 // Import the real service creation function
-use crate::admin::handler_tests::test_helpers::create_test_admin_service;
+use crate::server::admin::handler_tests::test_helpers::create_test_admin_service;
 
 /// Test infrastructure for setting up real services
 

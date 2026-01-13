@@ -43,7 +43,7 @@ pub struct ComprehensiveMetrics {
     pub timestamp: u64,
     pub cpu: CpuMetrics,
     pub memory: MemoryMetrics,
-    pub query_performance: crate::admin::service::PerformanceMetricsData, // Updated to match interface
+    pub query_performance: crate::server::admin::service::PerformanceMetricsData, // Updated to match interface
     pub cache: crate::infrastructure::metrics::CacheMetrics,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub resource_limits: Option<crate::infrastructure::limits::ResourceStats>,
@@ -365,7 +365,7 @@ impl MetricsApiServer {
 
     async fn query_metrics_handler(
         State(state): State<MetricsServerState>,
-    ) -> Result<Json<crate::admin::service::PerformanceMetricsData>, StatusCode> {
+    ) -> Result<Json<crate::server::admin::service::PerformanceMetricsData>, StatusCode> {
         Ok(Json(state.performance_metrics.get_performance_metrics()))
     }
 

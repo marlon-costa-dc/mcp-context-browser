@@ -20,12 +20,12 @@ impl IntelligentChunker {
 
     /// Check if a language is supported for intelligent chunking
     pub fn is_language_supported(language: &Language) -> bool {
-        crate::chunking::LANGUAGE_CONFIGS.contains_key(language)
+        crate::domain::chunking::LANGUAGE_CONFIGS.contains_key(language)
     }
 
     /// Chunk code based on language-specific structural analysis
     pub fn chunk_code(&self, content: &str, file_name: &str, language: Language) -> Vec<CodeChunk> {
-        if let Some(processor) = crate::chunking::LANGUAGE_CONFIGS.get(&language) {
+        if let Some(processor) = crate::domain::chunking::LANGUAGE_CONFIGS.get(&language) {
             // Try tree-sitter parsing first
             match self.parse_with_tree_sitter(content, processor.get_language()) {
                 Ok(tree) => {

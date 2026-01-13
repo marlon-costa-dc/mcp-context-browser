@@ -4,7 +4,7 @@
 //! eliminating hardcoded values by reading from actual subsystems.
 
 use super::defaults::*;
-use crate::admin::service::types::AdminError;
+use crate::server::admin::service::types::AdminError;
 
 /// Runtime configuration values loaded from actual subsystems
 #[derive(Debug, Clone)]

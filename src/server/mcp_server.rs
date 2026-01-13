@@ -58,7 +58,7 @@ pub struct McpServer {
     /// Ongoing indexing operations tracking
     pub indexing_operations: Arc<dyn IndexingOperationsInterface>,
     /// Admin service
-    pub admin_service: Arc<dyn crate::admin::service::AdminService>,
+    pub admin_service: Arc<dyn crate::server::admin::service::AdminService>,
     /// Configuration state
     pub config: Arc<ArcSwap<crate::infrastructure::config::Config>>,
     /// Event bus for decoupled communication
@@ -84,7 +84,7 @@ pub struct ServerComponents {
     pub cache_provider: Option<SharedCacheProvider>,
     pub performance_metrics: Arc<dyn PerformanceMetricsInterface>,
     pub indexing_operations: Arc<dyn IndexingOperationsInterface>,
-    pub admin_service: Arc<dyn crate::admin::service::AdminService>,
+    pub admin_service: Arc<dyn crate::server::admin::service::AdminService>,
     pub service_provider: Arc<dyn ServiceProviderInterface>,
     pub resource_limits: Arc<ResourceLimits>,
     pub http_client: Arc<dyn crate::adapters::http_client::HttpClientProvider>,
@@ -152,7 +152,7 @@ impl McpServer {
         ));
 
         // Create sync manager with cache support
-        let sync_manager = Arc::new(crate::sync::SyncManager::with_event_bus(
+        let sync_manager = Arc::new(crate::infrastructure::sync::SyncManager::with_event_bus(
             config.sync.clone(),
             event_bus,
             cache_provider,
@@ -181,7 +181,7 @@ impl McpServer {
         auth_handler: Arc<AuthHandler>,
         resource_limits: Arc<ResourceLimits>,
         cache_provider: Option<SharedCacheProvider>,
-        admin_service: Arc<dyn crate::admin::service::AdminService>,
+        admin_service: Arc<dyn crate::server::admin::service::AdminService>,
     ) -> Result<InitializedHandlers, Box<dyn std::error::Error>> {
         Ok((
             Arc::new(IndexCodebaseHandler::new(
@@ -262,7 +262,7 @@ impl McpServer {
     }
 
     /// Get the admin service
-    pub fn admin_service(&self) -> Arc<dyn crate::admin::service::AdminService> {
+    pub fn admin_service(&self) -> Arc<dyn crate::server::admin::service::AdminService> {
         Arc::clone(&self.admin_service)
     }
 
@@ -314,7 +314,7 @@ impl McpServer {
     }
 
     /// Get detailed provider information for admin interface
-    pub fn get_registered_providers(&self) -> Vec<crate::admin::service::ProviderInfo> {
+    pub fn get_registered_providers(&self) -> Vec<crate::server::admin::service::ProviderInfo> {
         let (embedding_providers, vector_store_providers) = self.list_providers();
         let registry = self.service_provider.registry();
 
@@ -326,7 +326,7 @@ impl McpServer {
                 Ok(_) => "available".to_string(),
                 Err(_) => "unavailable".to_string(),
             };
-            providers.push(crate::admin::service::ProviderInfo {
+            providers.push(crate::server::admin::service::ProviderInfo {
                 id: name.clone(),
                 name,
                 provider_type: "embedding".to_string(),
@@ -341,7 +341,7 @@ impl McpServer {
                 Ok(_) => "available".to_string(),
                 Err(_) => "unavailable".to_string(),
             };
-            providers.push(crate::admin::service::ProviderInfo {
+            providers.push(crate::server::admin::service::ProviderInfo {
                 id: name.clone(),
                 name,
                 provider_type: "vector_store".to_string(),
@@ -470,9 +470,9 @@ impl McpServer {
     }
 
     /// Get system information for admin interface
-    pub fn get_system_info(&self) -> crate::admin::service::SystemInfo {
+    pub fn get_system_info(&self) -> crate::server::admin::service::SystemInfo {
         let uptime_seconds = self.performance_metrics.uptime_secs();
-        crate::admin::service::SystemInfo {
+        crate::server::admin::service::SystemInfo {
             version: env!("CARGO_PKG_VERSION").to_string(),
             uptime: uptime_seconds,
             pid: std::process::id(),
@@ -480,7 +480,7 @@ impl McpServer {
     }
 
     /// Get real indexing status for admin interface
-    pub async fn get_indexing_status_admin(&self) -> crate::admin::service::IndexingStatus {
+    pub async fn get_indexing_status_admin(&self) -> crate::server::admin::service::IndexingStatus {
         // Check if any indexing operations are active
         let ops_map = self.indexing_operations.get_map();
         let is_indexing = !ops_map.is_empty();
@@ -524,7 +524,7 @@ impl McpServer {
             None
         };
 
-        crate::admin::service::IndexingStatus {
+        crate::server::admin::service::IndexingStatus {
             is_indexing,
             total_documents: total_documents as u64,
             indexed_documents: indexed_documents as u64,
@@ -586,7 +586,7 @@ impl McpServer {
     }
 
     /// Get real performance metrics for admin interface
-    pub fn get_performance_metrics(&self) -> crate::admin::service::PerformanceMetricsData {
+    pub fn get_performance_metrics(&self) -> crate::server::admin::service::PerformanceMetricsData {
         self.performance_metrics.get_performance_metrics()
     }
 }

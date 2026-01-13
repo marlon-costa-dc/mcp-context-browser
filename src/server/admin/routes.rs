@@ -7,7 +7,7 @@ use axum::{
 };
 use tower_http::cors::CorsLayer;
 
-use crate::admin::{
+use super::{
     auth::{auth_middleware, login_handler},
     handlers::{
         add_provider_handler,
@@ -72,7 +72,7 @@ pub fn create_admin_router(state: AdminState) -> Router {
         .route("/admin/auth/login", post(login_handler))
         .route(
             "/admin/auth/logout",
-            post(crate::admin::auth::logout_handler),
+            post(super::auth::logout_handler),
         )
         .route("/admin/status", get(get_status_handler))
         .route(

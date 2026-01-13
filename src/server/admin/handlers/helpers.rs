@@ -8,7 +8,7 @@
 //!
 //! All helpers are designed for maximum code reuse across handlers.
 
-use crate::admin::models::ApiResponse;
+use crate::server::admin::models::ApiResponse;
 use axum::http::StatusCode;
 use axum::Json;
 use serde::Serialize;

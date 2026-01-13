@@ -13,7 +13,7 @@ pub trait PerformanceMetricsInterface: Interface + Send + Sync {
     fn uptime_secs(&self) -> u64;
     fn record_query(&self, response_time_ms: u64, success: bool, cache_hit: bool);
     fn update_active_connections(&self, delta: i64);
-    fn get_performance_metrics(&self) -> crate::admin::service::PerformanceMetricsData;
+    fn get_performance_metrics(&self) -> crate::server::admin::service::PerformanceMetricsData;
 }
 
 /// Real-time performance metrics tracking
@@ -81,7 +81,7 @@ impl PerformanceMetricsInterface for McpPerformanceMetrics {
         }
     }
 
-    fn get_performance_metrics(&self) -> crate::admin::service::PerformanceMetricsData {
+    fn get_performance_metrics(&self) -> crate::server::admin::service::PerformanceMetricsData {
         let total_queries = self.total_queries.load(Ordering::Relaxed);
         let successful_queries = self.successful_queries.load(Ordering::Relaxed);
         let failed_queries = self.failed_queries.load(Ordering::Relaxed);
@@ -104,7 +104,7 @@ impl PerformanceMetricsInterface for McpPerformanceMetrics {
 
         let uptime_seconds = self.uptime.elapsed_secs();
 
-        crate::admin::service::PerformanceMetricsData {
+        crate::server::admin::service::PerformanceMetricsData {
             total_queries,
             successful_queries,
             failed_queries,

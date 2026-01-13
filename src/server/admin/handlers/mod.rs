@@ -42,11 +42,11 @@ pub(crate) mod common {
         response::{Html, Json},
     };
 
-    pub use crate::admin::models::{
+    pub use crate::server::admin::models::{
         AdminState, ApiResponse, IndexInfo, IndexOperationRequest, ProviderConfigRequest,
         ProviderInfo, SystemConfig,
     };
-    pub use crate::admin::service::MaintenanceResult;
+    pub use crate::server::admin::service::MaintenanceResult;
 }
 
 // Query parameter structures shared across handlers
@@ -68,13 +68,13 @@ pub struct HistoryQuery {
 /// Query parameters for log export
 #[derive(Deserialize)]
 pub struct ExportQuery {
-    pub format: crate::admin::service::LogExportFormat,
+    pub format: crate::server::admin::service::LogExportFormat,
 }
 
 /// Request body for sending signals to subsystems
 #[derive(Deserialize)]
 pub struct SubsystemSignalRequest {
-    pub signal: crate::admin::service::SubsystemSignal,
+    pub signal: crate::server::admin::service::SubsystemSignal,
 }
 
 /// Request for cleanup operation

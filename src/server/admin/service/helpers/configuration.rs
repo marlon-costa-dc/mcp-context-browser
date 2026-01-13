@@ -3,8 +3,8 @@
 //! Provides persistence for configuration changes, enabling audit trails
 //! and history viewing in the admin interface.
 
-use crate::admin::service::helpers::admin_defaults;
-use crate::admin::service::types::{AdminError, ConfigurationChange};
+use crate::server::admin::service::helpers::admin_defaults;
+use crate::server::admin::service::types::{AdminError, ConfigurationChange};
 use crate::infrastructure::utils::FileUtils;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};

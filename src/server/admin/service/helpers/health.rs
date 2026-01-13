@@ -3,7 +3,7 @@
 //! Provides functions for health checks, connectivity tests, and performance testing.
 
 use super::runtime_config::RuntimeConfig;
-use crate::admin::service::types::{
+use crate::server::admin::service::types::{
     AdminError, ConnectivityTestResult, HealthCheck, HealthCheckResult, ProviderInfo,
 };
 use crate::infrastructure::di::factory::ServiceProviderInterface;

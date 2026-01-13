@@ -3,7 +3,7 @@
 use axum::Router;
 use std::sync::Arc;
 
-use crate::admin::{models::AdminState, routes::create_admin_router, AdminApi, AdminConfig};
+use super::{models::AdminState, routes::create_admin_router, AdminApi, AdminConfig};
 
 /// Admin API server
 pub struct AdminApiServer {
@@ -23,12 +23,12 @@ impl AdminApiServer {
         let admin_service = self.mcp_server.admin_service();
 
         // Initialize web interface and templates
-        let web_interface = crate::admin::web::WebInterface::new()?;
+        let web_interface = super::web::WebInterface::new()?;
         let templates = web_interface.templates();
 
         // Create activity logger for tracking system events
         let activity_logger =
-            Arc::new(crate::admin::service::helpers::activity::ActivityLogger::new());
+            Arc::new(super::service::helpers::activity::ActivityLogger::new());
         // Start listening to system events
         activity_logger.start_listening(self.mcp_server.event_bus.clone());
 

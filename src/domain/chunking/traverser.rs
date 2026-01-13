@@ -3,7 +3,7 @@
 //! This module provides the AstTraverser that walks tree-sitter ASTs
 //! and extracts code chunks according to configurable rules.
 
-use crate::chunking::config::NodeExtractionRule;
+use super::config::NodeExtractionRule;
 use crate::domain::error::Result;
 use crate::domain::types::{CodeChunk, Language};
 use std::collections::HashMap;

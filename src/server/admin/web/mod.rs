@@ -25,9 +25,9 @@ use axum::{
 use std::sync::Arc;
 use tera::{Context, Tera};
 
-use crate::admin::auth::web_auth_middleware;
-use crate::admin::models::AdminState;
-use crate::admin::web::html_helpers::htmx_error;
+use crate::server::admin::auth::web_auth_middleware;
+use crate::server::admin::models::AdminState;
+use crate::server::admin::web::html_helpers::htmx_error;
 
 use self::builders::ViewModelBuilder;
 
