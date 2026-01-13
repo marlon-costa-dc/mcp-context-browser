@@ -188,23 +188,20 @@ pub async fn api_reconfigure_provider_handler(
 ) -> Result<Json<ApiResponse<MaintenanceResult>>, StatusCode> {
     let full_provider_id = format!("{}:{}", provider_type, provider_id);
 
-    match state
+    let result = state
         .admin_service
         .reconfigure_provider(&full_provider_id, config)
         .await
-    {
-        Ok(result) => {
-            tracing::info!(
-                "[ADMIN] Provider reconfiguration successful for {}",
-                full_provider_id
-            );
-            Ok(Json(ApiResponse::success(result)))
-        }
-        Err(e) => {
+        .map_err(|e| {
             tracing::error!("[ADMIN] Provider reconfiguration failed: {}", e);
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
-        }
-    }
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    tracing::info!(
+        "[ADMIN] Provider reconfiguration successful for {}",
+        full_provider_id
+    );
+    Ok(Json(ApiResponse::success(result)))
 }
 
 /// Rebuild all indexes (simplified endpoint for HTMX)

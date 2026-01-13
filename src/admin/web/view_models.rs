@@ -41,9 +41,9 @@ impl MetricsViewModel {
     pub fn new(cpu_usage: f64, memory_usage: f64, total_queries: u64, avg_latency_ms: f64) -> Self {
         Self {
             cpu_usage,
-            cpu_usage_formatted: format!("{:.1}%", cpu_usage),
+            cpu_usage_formatted: FormattingUtils::format_percentage_raw(cpu_usage),
             memory_usage,
-            memory_usage_formatted: format!("{:.1}%", memory_usage),
+            memory_usage_formatted: FormattingUtils::format_percentage_raw(memory_usage),
             total_queries,
             total_queries_formatted: FormattingUtils::format_number(total_queries),
             avg_latency_ms,
