@@ -3,9 +3,9 @@
 // The alternative (duplicating config types) would violate DRY principle.
 use crate::adapters::database::DatabaseConfig;
 use crate::adapters::hybrid_search::HybridSearchConfig;
-use crate::infrastructure::daemon::DaemonConfig;
 use crate::infrastructure::auth::AuthConfig;
 use crate::infrastructure::cache::CacheConfig;
+use crate::infrastructure::daemon::DaemonConfig;
 use crate::infrastructure::limits::ResourceLimitsConfig;
 use crate::infrastructure::sync::SyncConfig;
 use serde::{Deserialize, Serialize};

@@ -7,9 +7,6 @@ use arc_swap::ArcSwap;
 use std::sync::Arc;
 
 use mcp_context_browser::adapters::http_client::{HttpClientPool, HttpClientProvider};
-use mcp_context_browser::server::admin::service::{
-    AdminService, AdminServiceDependencies, AdminServiceImpl,
-};
 use mcp_context_browser::application::search::SearchService;
 use mcp_context_browser::infrastructure::config::Config;
 use mcp_context_browser::infrastructure::di::factory::{ServiceProvider, ServiceProviderInterface};
@@ -17,6 +14,9 @@ use mcp_context_browser::infrastructure::events::{EventBus, SharedEventBusProvid
 use mcp_context_browser::infrastructure::logging::SharedLogBuffer;
 use mcp_context_browser::infrastructure::metrics::system::{
     SystemMetricsCollector, SystemMetricsCollectorInterface,
+};
+use mcp_context_browser::server::admin::service::{
+    AdminService, AdminServiceDependencies, AdminServiceImpl,
 };
 use mcp_context_browser::server::metrics::{McpPerformanceMetrics, PerformanceMetricsInterface};
 use mcp_context_browser::server::operations::{IndexingOperationsInterface, McpIndexingOperations};

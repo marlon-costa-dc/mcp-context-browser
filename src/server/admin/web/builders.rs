@@ -23,8 +23,8 @@ use super::view_model_builders::{
     ActivityLevelFormatter, ConfigCategoryBuilder, ConfigSettingBuilder, MetricsCollector,
 };
 use super::view_models::*;
-use crate::server::admin::models::AdminState;
 use crate::infrastructure::utils::{css, FormattingUtils, HealthUtils, TimeUtils};
+use crate::server::admin::models::AdminState;
 
 /// Builds view models from AdminService data
 ///

@@ -3,9 +3,9 @@
 //! Converts SystemEvents into human-readable activity log entries
 //! for display in the admin dashboard.
 
+use crate::infrastructure::events::SystemEvent;
 use crate::server::admin::service::helpers::admin_defaults;
 use crate::server::admin::service::types::AdminError;
-use crate::infrastructure::events::SystemEvent;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;

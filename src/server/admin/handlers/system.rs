@@ -130,8 +130,10 @@ pub async fn search_handler(
 pub async fn get_activities_handler(
     State(state): State<AdminState>,
     Query(params): Query<std::collections::HashMap<String, String>>,
-) -> Result<Json<ApiResponse<Vec<crate::server::admin::service::helpers::activity::Activity>>>, StatusCode>
-{
+) -> Result<
+    Json<ApiResponse<Vec<crate::server::admin::service::helpers::activity::Activity>>>,
+    StatusCode,
+> {
     let limit = params
         .get("limit")
         .and_then(|l| l.parse::<usize>().ok())

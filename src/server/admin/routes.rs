@@ -70,10 +70,7 @@ pub fn create_admin_router(state: AdminState) -> Router {
     // Public routes (no auth required)
     let public_routes = Router::new()
         .route("/admin/auth/login", post(login_handler))
-        .route(
-            "/admin/auth/logout",
-            post(super::auth::logout_handler),
-        )
+        .route("/admin/auth/logout", post(super::auth::logout_handler))
         .route("/admin/status", get(get_status_handler))
         .route(
             "/admin/dashboard/metrics",

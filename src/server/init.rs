@@ -5,10 +5,10 @@
 
 use crate::adapters::http_client::{HttpClientConfig, HttpClientPool};
 use crate::adapters::providers::routing::health::HealthMonitor;
-use crate::infrastructure::daemon::types::RecoveryConfig;
 use crate::infrastructure::cache::{create_cache_provider, SharedCacheProvider};
 use crate::infrastructure::config::ConfigLoader;
 use crate::infrastructure::connection_tracker::{ConnectionTracker, ConnectionTrackerConfig};
+use crate::infrastructure::daemon::types::RecoveryConfig;
 use crate::infrastructure::health::ActiveHealthMonitor;
 use crate::infrastructure::limits::ResourceLimits;
 use crate::infrastructure::metrics::MetricsApiServer;
@@ -304,8 +304,10 @@ async fn initialize_server_components(
                         eprintln!();
                     }
 
-                    let admin_api_server =
-                        crate::server::admin::api::AdminApiServer::new(admin_config, Arc::clone(&server));
+                    let admin_api_server = crate::server::admin::api::AdminApiServer::new(
+                        admin_config,
+                        Arc::clone(&server),
+                    );
 
                     // Merge admin router into metrics server
                     match admin_api_server.create_router() {

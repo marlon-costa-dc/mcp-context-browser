@@ -12,12 +12,12 @@ use mcp_context_browser::server::admin::service::AdminService;
 async fn create_test_admin_service() -> std::sync::Arc<dyn AdminService> {
     use arc_swap::ArcSwap;
     use mcp_context_browser::adapters::http_client::test_utils::NullHttpClientPool;
-    use mcp_context_browser::server::admin::service::{AdminServiceDependencies, AdminServiceImpl};
     use mcp_context_browser::infrastructure::config::ConfigLoader;
     use mcp_context_browser::infrastructure::di::factory::ServiceProvider;
     use mcp_context_browser::infrastructure::events::EventBus;
     use mcp_context_browser::infrastructure::logging;
     use mcp_context_browser::infrastructure::metrics::system::SystemMetricsCollector;
+    use mcp_context_browser::server::admin::service::{AdminServiceDependencies, AdminServiceImpl};
     use mcp_context_browser::server::metrics::McpPerformanceMetrics;
     use mcp_context_browser::server::operations::McpIndexingOperations;
     use std::sync::Arc;

@@ -53,7 +53,8 @@ pub async fn reload_routes_handler(
 /// Get recovery status for all subsystems
 pub async fn get_recovery_status_handler(
     State(state): State<AdminState>,
-) -> Result<Json<ApiResponse<Vec<crate::infrastructure::daemon::types::RecoveryState>>>, StatusCode> {
+) -> Result<Json<ApiResponse<Vec<crate::infrastructure::daemon::types::RecoveryState>>>, StatusCode>
+{
     if let Some(recovery_manager) = &state.recovery_manager {
         let states = recovery_manager.get_recovery_states();
         Ok(Json(ApiResponse::success(states)))

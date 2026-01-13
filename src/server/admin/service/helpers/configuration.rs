@@ -3,9 +3,9 @@
 //! Provides persistence for configuration changes, enabling audit trails
 //! and history viewing in the admin interface.
 
+use crate::infrastructure::utils::FileUtils;
 use crate::server::admin::service::helpers::admin_defaults;
 use crate::server::admin::service::types::{AdminError, ConfigurationChange};
-use crate::infrastructure::utils::FileUtils;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -290,7 +290,11 @@ impl ConfigChangeHandler {
     /// Handle boolean configuration change
     fn handle_bool(&mut self, path: &str, value: &serde_json::Value, label: &str) {
         if let Some(enabled) = value.as_bool() {
-            tracing::info!("{}: {}", label, if enabled { "enabled" } else { "disabled" });
+            tracing::info!(
+                "{}: {}",
+                label,
+                if enabled { "enabled" } else { "disabled" }
+            );
             self.changes_applied.push(format!("{} = {}", path, enabled));
         }
     }
@@ -298,18 +302,41 @@ impl ConfigChangeHandler {
     /// Handle u64 configuration change
     fn handle_u64(&mut self, path: &str, value: &serde_json::Value, label: &str, unit: &str) {
         if let Some(val) = value.as_u64() {
-            let unit_suffix = if unit.is_empty() { String::new() } else { format!(" {}", unit) };
+            let unit_suffix = if unit.is_empty() {
+                String::new()
+            } else {
+                format!(" {}", unit)
+            };
             tracing::info!("{} set to {}{}", label, val, unit_suffix);
-            self.changes_applied.push(format!("{} = {}{}", path, val, unit_suffix));
+            self.changes_applied
+                .push(format!("{} = {}{}", path, val, unit_suffix));
         }
     }
 
     /// Handle u64 configuration change requiring restart
-    fn handle_u64_restart(&mut self, path: &str, value: &serde_json::Value, label: &str, unit: &str) {
+    fn handle_u64_restart(
+        &mut self,
+        path: &str,
+        value: &serde_json::Value,
+        label: &str,
+        unit: &str,
+    ) {
         if let Some(val) = value.as_u64() {
-            let unit_suffix = if unit.is_empty() { String::new() } else { format!(" {}", unit) };
-            tracing::info!("{} set to {}{} (change requires restart)", label, val, unit_suffix);
-            self.changes_applied.push(format!("{} = {}{} (requires restart)", path, val, unit_suffix));
+            let unit_suffix = if unit.is_empty() {
+                String::new()
+            } else {
+                format!(" {}", unit)
+            };
+            tracing::info!(
+                "{} set to {}{} (change requires restart)",
+                label,
+                val,
+                unit_suffix
+            );
+            self.changes_applied.push(format!(
+                "{} = {}{} (requires restart)",
+                path, val, unit_suffix
+            ));
             self.requires_restart = true;
         }
     }
@@ -326,7 +353,8 @@ impl ConfigChangeHandler {
     fn handle_string_restart(&mut self, path: &str, value: &serde_json::Value, label: &str) {
         if let Some(val) = value.as_str() {
             tracing::info!("{} configured to {} (change requires restart)", label, val);
-            self.changes_applied.push(format!("{} = {} (requires restart)", path, val));
+            self.changes_applied
+                .push(format!("{} = {} (requires restart)", path, val));
             self.requires_restart = true;
         }
     }
@@ -343,7 +371,8 @@ impl ConfigChangeHandler {
     /// Handle unknown configuration path
     fn handle_unknown(&mut self, path: &str, value: &serde_json::Value) {
         tracing::warn!("Unknown configuration path: {}", path);
-        self.changes_applied.push(format!("{} = {:?} (unknown, not applied)", path, value));
+        self.changes_applied
+            .push(format!("{} = {:?} (unknown, not applied)", path, value));
     }
 
     /// Get final results
@@ -368,8 +397,12 @@ pub fn apply_configuration_updates(
         match path.as_str() {
             // Metrics configuration
             "metrics.enabled" => handler.handle_bool(path, value, "Metrics collection"),
-            "metrics.collection_interval" => handler.handle_u64(path, value, "Metrics collection interval", "seconds"),
-            "metrics.retention_days" => handler.handle_u64(path, value, "Metrics retention", "days"),
+            "metrics.collection_interval" => {
+                handler.handle_u64(path, value, "Metrics collection interval", "seconds")
+            }
+            "metrics.retention_days" => {
+                handler.handle_u64(path, value, "Metrics retention", "days")
+            }
 
             // Cache configuration
             "cache.enabled" => handler.handle_bool(path, value, "Cache"),
@@ -378,12 +411,18 @@ pub fn apply_configuration_updates(
 
             // Database configuration (requires restart)
             "database.url" => handler.handle_secret(path, value, "Database URL"),
-            "database.pool_size" => handler.handle_u64_restart(path, value, "Database pool size", ""),
-            "database.connection_timeout" => handler.handle_u64_restart(path, value, "Database connection timeout", "ms"),
+            "database.pool_size" => {
+                handler.handle_u64_restart(path, value, "Database pool size", "")
+            }
+            "database.connection_timeout" => {
+                handler.handle_u64_restart(path, value, "Database connection timeout", "ms")
+            }
 
             // Server configuration (requires restart)
             "server.port" => handler.handle_u64_restart(path, value, "Server port", ""),
-            "server.listen_address" => handler.handle_string_restart(path, value, "Server listen address"),
+            "server.listen_address" => {
+                handler.handle_string_restart(path, value, "Server listen address")
+            }
 
             // Logging configuration
             "logging.level" => handler.handle_string(path, value, "Logging level"),

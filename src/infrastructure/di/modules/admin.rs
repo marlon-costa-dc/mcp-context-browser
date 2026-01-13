@@ -6,9 +6,9 @@ use shaku::module;
 
 use super::traits::{AdaptersModule, AdminModule, InfrastructureModule, ServerModule};
 use crate::adapters::http_client::HttpClientProvider;
-use crate::server::admin::service::AdminServiceImpl;
 use crate::infrastructure::di::factory::ServiceProviderInterface;
 use crate::infrastructure::metrics::system::SystemMetricsCollectorInterface;
+use crate::server::admin::service::AdminServiceImpl;
 use crate::server::metrics::PerformanceMetricsInterface;
 use crate::server::operations::IndexingOperationsInterface;
 

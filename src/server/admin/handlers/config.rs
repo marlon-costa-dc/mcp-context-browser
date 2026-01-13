@@ -2,8 +2,8 @@
 
 use super::common::*;
 use super::HistoryQuery;
-use crate::server::admin::config_keys;
 use crate::infrastructure::utils::IntoStatusCode;
+use crate::server::admin::config_keys;
 
 /// Get system configuration (legacy endpoint)
 pub async fn get_config_handler(
@@ -144,7 +144,8 @@ pub async fn update_configuration_handler(
     State(state): State<AdminState>,
     Extension(claims): Extension<crate::server::admin::auth::Claims>,
     Json(updates): Json<std::collections::HashMap<String, serde_json::Value>>,
-) -> Result<Json<ApiResponse<crate::server::admin::service::ConfigurationUpdateResult>>, StatusCode> {
+) -> Result<Json<ApiResponse<crate::server::admin::service::ConfigurationUpdateResult>>, StatusCode>
+{
     let user = &claims.sub;
 
     let result = state
@@ -174,7 +175,8 @@ pub async fn validate_configuration_handler(
 pub async fn get_configuration_history_handler(
     State(state): State<AdminState>,
     Query(params): Query<HistoryQuery>,
-) -> Result<Json<ApiResponse<Vec<crate::server::admin::service::ConfigurationChange>>>, StatusCode> {
+) -> Result<Json<ApiResponse<Vec<crate::server::admin::service::ConfigurationChange>>>, StatusCode>
+{
     let history = state
         .admin_service
         .get_configuration_history(params.limit)

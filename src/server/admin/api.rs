@@ -27,8 +27,7 @@ impl AdminApiServer {
         let templates = web_interface.templates();
 
         // Create activity logger for tracking system events
-        let activity_logger =
-            Arc::new(super::service::helpers::activity::ActivityLogger::new());
+        let activity_logger = Arc::new(super::service::helpers::activity::ActivityLogger::new());
         // Start listening to system events
         activity_logger.start_listening(self.mcp_server.event_bus.clone());
 
