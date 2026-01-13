@@ -111,6 +111,57 @@ pub const DEFAULT_BACKUPS_DIR: &str = "./backups";
 pub const DEFAULT_DATA_DIR: &str = "./data";
 pub const DEFAULT_EXPORTS_DIR: &str = "./exports";
 
+// Indexing Configuration
+/// Supported file extensions for code indexing
+/// These 12 languages are supported: Rust, Python, JavaScript, TypeScript, Go, Java, C, C++, C#, Ruby, PHP, Swift, Kotlin
+pub const SUPPORTED_FILE_EXTENSIONS: &[&str] = &[
+    ".rs",    // Rust
+    ".py",    // Python
+    ".js",    // JavaScript
+    ".ts",    // TypeScript
+    ".go",    // Go
+    ".java",  // Java
+    ".c",     // C
+    ".cpp",   // C++
+    ".cc",    // C++ (alternative)
+    ".cxx",   // C++ (alternative)
+    ".cs",    // C#
+    ".rb",    // Ruby
+    ".php",   // PHP
+    ".swift", // Swift
+    ".kt",    // Kotlin
+    ".h",     // C/C++ header
+    ".hpp",   // C++ header
+];
+
+/// Default exclude patterns for indexing
+pub const DEFAULT_EXCLUDE_PATTERNS: &[&str] = &[
+    "node_modules",
+    "target",
+    ".git",
+    "dist",
+    "build",
+    ".venv",
+    "venv",
+    "__pycache__",
+];
+
+/// Helper to get supported extensions as Vec<String>
+pub fn supported_extensions() -> Vec<String> {
+    SUPPORTED_FILE_EXTENSIONS
+        .iter()
+        .map(|s| s.to_string())
+        .collect()
+}
+
+/// Helper to get default exclude patterns as Vec<String>
+pub fn default_exclude_patterns() -> Vec<String> {
+    DEFAULT_EXCLUDE_PATTERNS
+        .iter()
+        .map(|s| s.to_string())
+        .collect()
+}
+
 // Time Constants
 pub const SECONDS_PER_DAY: u64 = 86400;
 

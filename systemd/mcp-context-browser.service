@@ -38,6 +38,11 @@ Environment=RUST_LOG=info
 Environment=MCP_TRANSPORT_MODE=hybrid
 Environment=MCP_PORT=3001
 
+# Admin credentials (required for admin dashboard)                                                                                            
+Environment=MCP_ADMIN_USERNAME=admin                                                                                                          
+Environment=MCP_ADMIN_PASSWORD=adminpass123                                                                                                   
+Environment=MCP_ADMIN_JWT_SECRET=mcp-context-browser-jwt-secret-key-32chars     
+
 # Working directory for data storage
 WorkingDirectory=%h/.local/share/mcp-context-browser
 

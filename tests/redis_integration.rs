@@ -6,7 +6,7 @@
 //! Run with: cargo test --test '*' -- redis_cache_integration --nocapture
 
 use mcp_context_browser::infrastructure::cache::{
-    CacheConfig, CacheBackendConfig, CacheNamespacesConfig, create_cache_provider,
+    create_cache_provider, CacheBackendConfig, CacheConfig, CacheNamespacesConfig,
 };
 use std::time::Duration;
 
@@ -87,7 +87,10 @@ async fn test_redis_cache_set_and_get() {
         .expect("Failed to create cache provider");
 
     let ttl = Duration::from_secs(60);
-    let key = format!("test_redis_set_get_{}", chrono::Utc::now().timestamp_millis());
+    let key = format!(
+        "test_redis_set_get_{}",
+        chrono::Utc::now().timestamp_millis()
+    );
     let value = "test_value_redis".as_bytes().to_vec();
 
     // Set value
@@ -129,7 +132,10 @@ async fn test_redis_cache_delete() {
         .expect("Failed to create cache provider");
 
     let ttl = Duration::from_secs(60);
-    let key = format!("test_redis_delete_{}", chrono::Utc::now().timestamp_millis());
+    let key = format!(
+        "test_redis_delete_{}",
+        chrono::Utc::now().timestamp_millis()
+    );
     let value = "delete_me_redis".as_bytes().to_vec();
 
     // Set value
@@ -143,7 +149,10 @@ async fn test_redis_cache_delete() {
         .get("redis_test_ns", &key)
         .await
         .expect("Failed to get value");
-    assert!(before_delete.is_some(), "Value should exist before deletion");
+    assert!(
+        before_delete.is_some(),
+        "Value should exist before deletion"
+    );
 
     // Delete it
     cache
@@ -156,7 +165,10 @@ async fn test_redis_cache_delete() {
         .get("redis_test_ns", &key)
         .await
         .expect("Failed to get value after deletion");
-    assert!(after_delete.is_none(), "Value should not exist after deletion");
+    assert!(
+        after_delete.is_none(),
+        "Value should not exist after deletion"
+    );
 
     println!("✅ Redis delete operation works correctly");
 }
@@ -184,17 +196,32 @@ async fn test_redis_cache_clear_namespace() {
 
     // Set values in different namespaces
     cache
-        .set("redis_ns1", &format!("key1_{}", ts), "value1".as_bytes().to_vec(), ttl)
+        .set(
+            "redis_ns1",
+            &format!("key1_{}", ts),
+            "value1".as_bytes().to_vec(),
+            ttl,
+        )
         .await
         .expect("Failed to set value 1");
 
     cache
-        .set("redis_ns1", &format!("key2_{}", ts), "value2".as_bytes().to_vec(), ttl)
+        .set(
+            "redis_ns1",
+            &format!("key2_{}", ts),
+            "value2".as_bytes().to_vec(),
+            ttl,
+        )
         .await
         .expect("Failed to set value 2");
 
     cache
-        .set("redis_ns2", &format!("key1_{}", ts), "value3".as_bytes().to_vec(), ttl)
+        .set(
+            "redis_ns2",
+            &format!("key1_{}", ts),
+            "value3".as_bytes().to_vec(),
+            ttl,
+        )
         .await
         .expect("Failed to set value 3");
 
@@ -247,7 +274,10 @@ async fn test_redis_cache_exists() {
         .expect("Failed to create cache provider");
 
     let ttl = Duration::from_secs(60);
-    let key = format!("test_redis_exists_{}", chrono::Utc::now().timestamp_millis());
+    let key = format!(
+        "test_redis_exists_{}",
+        chrono::Utc::now().timestamp_millis()
+    );
     let value = "exists_test".as_bytes().to_vec();
 
     // Set a value
@@ -342,10 +372,7 @@ async fn test_redis_cache_health_check() {
         .expect("Failed to create cache provider");
 
     // Test health check
-    let health = cache
-        .health_check()
-        .await
-        .expect("Failed to check health");
+    let health = cache.health_check().await.expect("Failed to check health");
 
     assert_eq!(
         health,
@@ -377,7 +404,10 @@ async fn test_redis_cache_concurrent_access() {
     );
 
     let ttl = Duration::from_secs(60);
-    let base_key = format!("test_redis_concurrent_{}", chrono::Utc::now().timestamp_millis());
+    let base_key = format!(
+        "test_redis_concurrent_{}",
+        chrono::Utc::now().timestamp_millis()
+    );
 
     // Spawn multiple concurrent tasks
     let mut handles = vec![];

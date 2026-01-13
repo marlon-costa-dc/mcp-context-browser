@@ -13,7 +13,6 @@ use tracing::{debug, error};
 
 const NATS_STREAM_NAME: &str = "MCP_EVENTS";
 const NATS_SUBJECT: &str = "mcp.events.>";
-const NATS_CONSUMER_DURABLE: &str = "mcp-consumer";
 const STREAM_MAX_AGE: Duration = Duration::from_secs(3600); // 1 hour retention
 const STREAM_MAX_MSGS: i64 = 10000;
 
@@ -69,7 +68,6 @@ pub struct NatsEventBus {
     jetstream: jetstream::Context,
     stream_name: String,
     subject: String,
-    consumer_name: String,
 }
 
 impl NatsEventBus {
@@ -90,32 +88,20 @@ impl NatsEventBus {
     /// }
     /// ```
     pub async fn new(server_url: &str) -> Result<Self> {
-        Self::new_with_config(
-            server_url,
-            NATS_STREAM_NAME,
-            NATS_SUBJECT,
-            NATS_CONSUMER_DURABLE,
-        )
-        .await
+        Self::new_with_config(server_url, NATS_STREAM_NAME, NATS_SUBJECT).await
     }
 
-    /// Create a new NATS event bus with custom stream/subject/consumer names
+    /// Create a new NATS event bus with custom stream/subject names
     /// Useful for test isolation where each test needs its own namespace
     pub async fn new_with_prefix(server_url: &str, prefix: &str) -> Result<Self> {
         let stream_name = format!("{}_{}", prefix, NATS_STREAM_NAME);
         let subject = format!("{}.events.>", prefix.to_lowercase());
-        let consumer_name = format!("{}-consumer", prefix.to_lowercase());
 
-        Self::new_with_config(server_url, &stream_name, &subject, &consumer_name).await
+        Self::new_with_config(server_url, &stream_name, &subject).await
     }
 
     /// Internal constructor with full configuration
-    async fn new_with_config(
-        server_url: &str,
-        stream_name: &str,
-        subject: &str,
-        consumer_name: &str,
-    ) -> Result<Self> {
+    async fn new_with_config(server_url: &str, stream_name: &str, subject: &str) -> Result<Self> {
         debug!("Connecting to NATS server: {}", server_url);
 
         // Connect to NATS
@@ -140,7 +126,6 @@ impl NatsEventBus {
             jetstream: jetstream_ctx,
             stream_name: stream_name.to_string(),
             subject: subject.to_string(),
-            consumer_name: consumer_name.to_string(),
         })
     }
 

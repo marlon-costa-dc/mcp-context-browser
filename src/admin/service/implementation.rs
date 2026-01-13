@@ -9,11 +9,10 @@ use super::types::{
     AdminError, BackupConfig, BackupInfo, BackupResult, CacheConfigData, CacheType, CleanupConfig,
     ConfigDiff, ConfigPersistResult, ConfigurationChange, ConfigurationData,
     ConfigurationUpdateResult, ConnectivityTestResult, DashboardData, DatabaseConfigData,
-    HealthCheck, HealthCheckResult, IndexingConfig, IndexingStatus, LogEntries, LogExportFormat,
-    LogFilter, LogStats, MaintenanceResult, MetricsConfigData, PerformanceMetricsData,
-    PerformanceTestConfig, PerformanceTestResult, ProviderInfo, RestoreResult, RouteInfo,
-    SearchResultItem, SearchResults, SecurityConfig, SignalResult, SubsystemInfo, SubsystemMetrics,
-    SubsystemSignal, SubsystemStatus, SubsystemType, SystemInfo,
+    HealthCheckResult, IndexingConfig, IndexingStatus, LogEntries, LogExportFormat, LogFilter,
+    LogStats, MaintenanceResult, MetricsConfigData, PerformanceMetricsData, PerformanceTestConfig,
+    PerformanceTestResult, ProviderInfo, RestoreResult, RouteInfo, SearchResultItem, SearchResults,
+    SecurityConfig, SignalResult, SubsystemInfo, SubsystemSignal, SystemInfo,
 };
 use crate::application::search::SearchService;
 use crate::infrastructure::di::factory::ServiceProviderInterface;
@@ -374,27 +373,8 @@ impl AdminService for AdminServiceImpl {
 
         let providers = self.get_providers().await?;
 
-        // Load supported extensions from all available language processors
-        // These 12 languages are supported: Rust, Python, JavaScript, TypeScript, Go, Java, C, C++, C#, Ruby, PHP, Swift, Kotlin
-        let supported_extensions = vec![
-            ".rs".to_string(),    // Rust
-            ".py".to_string(),    // Python
-            ".js".to_string(),    // JavaScript
-            ".ts".to_string(),    // TypeScript
-            ".go".to_string(),    // Go
-            ".java".to_string(),  // Java
-            ".c".to_string(),     // C
-            ".cpp".to_string(),   // C++
-            ".cc".to_string(),    // C++ (alternative)
-            ".cxx".to_string(),   // C++ (alternative)
-            ".cs".to_string(),    // C#
-            ".rb".to_string(),    // Ruby
-            ".php".to_string(),   // PHP
-            ".swift".to_string(), // Swift
-            ".kt".to_string(),    // Kotlin
-            ".h".to_string(),     // C/C++ header
-            ".hpp".to_string(),   // C++ header
-        ];
+        // Use centralized constants from admin_defaults
+        use super::helpers::admin_defaults;
 
         Ok(ConfigurationData {
             providers,
@@ -402,17 +382,8 @@ impl AdminService for AdminServiceImpl {
                 chunk_size: 1000,
                 chunk_overlap: 200,
                 max_file_size: 10 * 1024 * 1024,
-                supported_extensions, // Real data: 17 extensions for 12 languages
-                exclude_patterns: vec![
-                    "node_modules".to_string(),
-                    "target".to_string(),
-                    ".git".to_string(),
-                    "dist".to_string(),
-                    "build".to_string(),
-                    ".venv".to_string(),
-                    "venv".to_string(),
-                    "__pycache__".to_string(),
-                ],
+                supported_extensions: admin_defaults::supported_extensions(),
+                exclude_patterns: admin_defaults::default_exclude_patterns(),
             },
             security: SecurityConfig {
                 enable_auth: config.auth.enabled,
@@ -448,161 +419,11 @@ impl AdminService for AdminServiceImpl {
         user: &str,
     ) -> Result<ConfigurationUpdateResult, AdminError> {
         let validation_warnings = self.validate_configuration(&updates).await?;
-        let mut changes_applied = Vec::new();
-        let mut requires_restart = false;
 
-        for (path, value) in &updates {
-            // Apply configuration changes to the appropriate subsystem
-            match path.as_str() {
-                // Metrics configuration
-                "metrics.enabled" => {
-                    if let Some(enabled) = value.as_bool() {
-                        tracing::info!(
-                            "Metrics collection: {}",
-                            if enabled { "enabled" } else { "disabled" }
-                        );
-                        changes_applied.push(format!("metrics.enabled = {}", enabled));
-                    }
-                }
-                "metrics.collection_interval" => {
-                    if let Some(interval) = value.as_u64() {
-                        tracing::info!("Metrics collection interval set to {} seconds", interval);
-                        changes_applied.push(format!(
-                            "metrics.collection_interval = {} seconds",
-                            interval
-                        ));
-                    }
-                }
-                "metrics.retention_days" => {
-                    if let Some(days) = value.as_u64() {
-                        tracing::info!("Metrics retention set to {} days", days);
-                        changes_applied.push(format!("metrics.retention_days = {} days", days));
-                    }
-                }
-                // Cache configuration
-                "cache.enabled" => {
-                    if let Some(enabled) = value.as_bool() {
-                        tracing::info!("Cache: {}", if enabled { "enabled" } else { "disabled" });
-                        changes_applied.push(format!("cache.enabled = {}", enabled));
-                    }
-                }
-                "cache.max_size" => {
-                    if let Some(size) = value.as_u64() {
-                        tracing::info!("Cache max size set to {} bytes", size);
-                        changes_applied.push(format!("cache.max_size = {} bytes", size));
-                    }
-                }
-                "cache.ttl_seconds" => {
-                    if let Some(ttl) = value.as_u64() {
-                        tracing::info!("Cache TTL set to {} seconds", ttl);
-                        changes_applied.push(format!("cache.ttl_seconds = {} seconds", ttl));
-                    }
-                }
-                // Database configuration (requires restart)
-                "database.url" => {
-                    if let Some(_url) = value.as_str() {
-                        tracing::info!("Database URL configured (change requires restart)");
-                        changes_applied.push("database.url = ***".to_string());
-                        requires_restart = true;
-                    }
-                }
-                "database.pool_size" => {
-                    if let Some(pool_size) = value.as_u64() {
-                        tracing::info!(
-                            "Database pool size set to {} (change requires restart)",
-                            pool_size
-                        );
-                        changes_applied.push(format!(
-                            "database.pool_size = {} (requires restart)",
-                            pool_size
-                        ));
-                        requires_restart = true;
-                    }
-                }
-                "database.connection_timeout" => {
-                    if let Some(timeout) = value.as_u64() {
-                        tracing::info!(
-                            "Database connection timeout set to {} ms (change requires restart)",
-                            timeout
-                        );
-                        changes_applied
-                            .push(format!("database.connection_timeout = {} ms", timeout));
-                        requires_restart = true;
-                    }
-                }
-                // Server configuration (requires restart)
-                "server.port" => {
-                    if let Some(port) = value.as_u64() {
-                        tracing::info!(
-                            "Server port configured to {} (change requires restart)",
-                            port
-                        );
-                        changes_applied.push(format!("server.port = {} (requires restart)", port));
-                        requires_restart = true;
-                    }
-                }
-                "server.listen_address" => {
-                    if let Some(addr) = value.as_str() {
-                        tracing::info!(
-                            "Server listen address configured to {} (change requires restart)",
-                            addr
-                        );
-                        changes_applied.push(format!(
-                            "server.listen_address = {} (requires restart)",
-                            addr
-                        ));
-                        requires_restart = true;
-                    }
-                }
-                // Logging configuration
-                "logging.level" => {
-                    if let Some(level) = value.as_str() {
-                        tracing::info!("Logging level set to {}", level);
-                        changes_applied.push(format!("logging.level = {}", level));
-                    }
-                }
-                "logging.format" => {
-                    if let Some(format) = value.as_str() {
-                        tracing::info!("Logging format set to {}", format);
-                        changes_applied.push(format!("logging.format = {}", format));
-                    }
-                }
-                // Indexing configuration
-                "indexing.enabled" => {
-                    if let Some(enabled) = value.as_bool() {
-                        tracing::info!(
-                            "Indexing: {}",
-                            if enabled { "enabled" } else { "disabled" }
-                        );
-                        changes_applied.push(format!("indexing.enabled = {}", enabled));
-                    }
-                }
-                "indexing.batch_size" => {
-                    if let Some(batch_size) = value.as_u64() {
-                        tracing::info!("Indexing batch size set to {}", batch_size);
-                        changes_applied.push(format!("indexing.batch_size = {}", batch_size));
-                    }
-                }
-                // Provider configuration
-                "providers.embedding" => {
-                    if let Some(provider) = value.as_str() {
-                        tracing::info!("Embedding provider set to {}", provider);
-                        changes_applied.push(format!("providers.embedding = {}", provider));
-                    }
-                }
-                "providers.vector_store" => {
-                    if let Some(provider) = value.as_str() {
-                        tracing::info!("Vector store provider set to {}", provider);
-                        changes_applied.push(format!("providers.vector_store = {}", provider));
-                    }
-                }
-                // Unknown configuration path
-                _ => {
-                    tracing::warn!("Unknown configuration path: {}", path);
-                    changes_applied.push(format!("{} = {:?} (unknown, not applied)", path, value));
-                }
-            }
-        }
+        // Apply configuration updates using helper
+        let result = helpers::configuration::apply_configuration_updates(&updates);
+        let changes_applied = result.changes_applied;
+        let requires_restart = result.requires_restart;
 
         // Emit configuration change event
         if !changes_applied.is_empty() {
@@ -823,7 +644,6 @@ impl AdminService for AdminServiceImpl {
     // === Subsystem Control Methods (ADR-007) ===
 
     async fn get_subsystems(&self) -> Result<Vec<SubsystemInfo>, AdminError> {
-        let mut subsystems = Vec::new();
         let providers = self.get_providers().await?;
 
         // Get real process-level metrics for distribution
@@ -835,260 +655,16 @@ impl AdminService for AdminServiceImpl {
 
         // Get performance metrics for activity-based distribution
         let perf = self.performance_metrics.get_performance_metrics();
+        let active_indexing_count = self.indexing_operations.get_map().len();
+        let config = self.config.load();
 
-        // Calculate subsystem weights for proportional CPU/memory distribution
-        // Based on activity: search gets most if queries are running, indexing if indexing
-        let is_indexing = !self.indexing_operations.get_map().is_empty();
-        let _total_subsystems = providers.len() + 4; // providers + search + indexing + cache + http
-
-        // Base allocation percentages (adjust based on activity)
-        let search_weight = if perf.total_queries > 0 { 0.30 } else { 0.10 };
-        let indexing_weight = if is_indexing { 0.35 } else { 0.05 };
-        let cache_weight = if self.config.load().cache.enabled {
-            0.15
-        } else {
-            0.0
-        };
-        let http_weight = 0.10;
-        let provider_weight: f64 = f64::max(
-            1.0 - search_weight - indexing_weight - cache_weight - http_weight,
-            0.0,
-        );
-        let per_provider_weight = if !providers.is_empty() {
-            provider_weight / providers.len() as f64
-        } else {
-            0.0
-        };
-
-        let total_memory_mb = process_metrics.memory / (1024 * 1024);
-
-        // Add embedding providers as subsystems
-        for provider in providers.iter().filter(|p| p.provider_type == "embedding") {
-            let is_active = provider.status == "active";
-            subsystems.push(SubsystemInfo {
-                id: format!("embedding:{}", provider.id),
-                name: format!("Embedding Provider: {}", provider.name),
-                subsystem_type: SubsystemType::Embedding,
-                status: if is_active {
-                    SubsystemStatus::Running
-                } else {
-                    SubsystemStatus::Stopped
-                },
-                health: HealthCheck {
-                    name: provider.name.clone(),
-                    status: provider.status.clone(),
-                    message: "Provider operational".to_string(),
-                    duration_ms: 0,
-                    details: Some(provider.config.clone()),
-                },
-                config: provider.config.clone(),
-                metrics: SubsystemMetrics {
-                    cpu_percent: if is_active {
-                        process_metrics.cpu_percent as f64 * per_provider_weight
-                    } else {
-                        0.0
-                    },
-                    memory_mb: if is_active {
-                        (total_memory_mb as f64 * per_provider_weight) as u64
-                    } else {
-                        0
-                    },
-                    requests_per_sec: perf.total_queries as f64
-                        / perf.uptime_seconds.max(1) as f64
-                        / providers
-                            .iter()
-                            .filter(|p| p.provider_type == "embedding")
-                            .count()
-                            .max(1) as f64,
-                    error_rate: 0.0,
-                    last_activity: Some(chrono::Utc::now()),
-                },
-            });
-        }
-
-        // Add vector store providers as subsystems
-        for provider in providers
-            .iter()
-            .filter(|p| p.provider_type == "vector_store")
-        {
-            let is_active = provider.status == "active";
-            subsystems.push(SubsystemInfo {
-                id: format!("vector_store:{}", provider.id),
-                name: format!("Vector Store: {}", provider.name),
-                subsystem_type: SubsystemType::VectorStore,
-                status: if is_active {
-                    SubsystemStatus::Running
-                } else {
-                    SubsystemStatus::Stopped
-                },
-                health: HealthCheck {
-                    name: provider.name.clone(),
-                    status: provider.status.clone(),
-                    message: "Vector store operational".to_string(),
-                    duration_ms: 0,
-                    details: Some(provider.config.clone()),
-                },
-                config: provider.config.clone(),
-                metrics: SubsystemMetrics {
-                    cpu_percent: if is_active {
-                        process_metrics.cpu_percent as f64 * per_provider_weight
-                    } else {
-                        0.0
-                    },
-                    memory_mb: if is_active {
-                        (total_memory_mb as f64 * per_provider_weight) as u64
-                    } else {
-                        0
-                    },
-                    requests_per_sec: perf.total_queries as f64
-                        / perf.uptime_seconds.max(1) as f64
-                        / providers
-                            .iter()
-                            .filter(|p| p.provider_type == "vector_store")
-                            .count()
-                            .max(1) as f64,
-                    error_rate: 0.0,
-                    last_activity: Some(chrono::Utc::now()),
-                },
-            });
-        }
-
-        // Add core subsystems with real metrics
-        let queries_per_sec = perf.total_queries as f64 / perf.uptime_seconds.max(1) as f64;
-        let error_rate = perf.failed_queries as f64 / perf.total_queries.max(1) as f64;
-
-        subsystems.push(SubsystemInfo {
-            id: "search".to_string(),
-            name: "Search Service".to_string(),
-            subsystem_type: SubsystemType::Search,
-            status: SubsystemStatus::Running,
-            health: HealthCheck {
-                name: "search".to_string(),
-                status: "healthy".to_string(),
-                message: format!("{} queries processed", perf.total_queries),
-                duration_ms: perf.average_response_time_ms as u64,
-                details: Some(serde_json::json!({
-                    "avg_response_time_ms": perf.average_response_time_ms,
-                    "successful_queries": perf.successful_queries,
-                })),
-            },
-            config: serde_json::json!({}),
-            metrics: SubsystemMetrics {
-                cpu_percent: process_metrics.cpu_percent as f64 * search_weight,
-                memory_mb: (total_memory_mb as f64 * search_weight) as u64,
-                requests_per_sec: queries_per_sec,
-                error_rate,
-                last_activity: Some(chrono::Utc::now()),
-            },
-        });
-
-        subsystems.push(SubsystemInfo {
-            id: "indexing".to_string(),
-            name: "Indexing Service".to_string(),
-            subsystem_type: SubsystemType::Indexing,
-            status: SubsystemStatus::Running,
-            health: HealthCheck {
-                name: "indexing".to_string(),
-                status: if is_indexing { "busy" } else { "healthy" }.to_string(),
-                message: if is_indexing {
-                    let active_count = self.indexing_operations.get_map().len();
-                    format!("{} indexing operations in progress", active_count)
-                } else {
-                    "Indexing service ready".to_string()
-                },
-                duration_ms: 0,
-                details: None,
-            },
-            config: serde_json::json!({}),
-            metrics: SubsystemMetrics {
-                cpu_percent: process_metrics.cpu_percent as f64 * indexing_weight,
-                memory_mb: (total_memory_mb as f64 * indexing_weight) as u64,
-                requests_per_sec: if is_indexing {
-                    self.indexing_operations.get_map().len() as f64
-                } else {
-                    0.0
-                },
-                error_rate: 0.0,
-                last_activity: Some(chrono::Utc::now()),
-            },
-        });
-
-        let cache_enabled = self.config.load().cache.enabled;
-        subsystems.push(SubsystemInfo {
-            id: "cache".to_string(),
-            name: "Cache Manager".to_string(),
-            subsystem_type: SubsystemType::Cache,
-            status: if cache_enabled {
-                SubsystemStatus::Running
-            } else {
-                SubsystemStatus::Stopped
-            },
-            health: HealthCheck {
-                name: "cache".to_string(),
-                status: if cache_enabled { "healthy" } else { "disabled" }.to_string(),
-                message: format!("Cache hit rate: {:.1}%", perf.cache_hit_rate * 100.0),
-                duration_ms: 0,
-                details: Some(serde_json::json!({
-                    "hit_rate": perf.cache_hit_rate,
-                    "enabled": cache_enabled,
-                })),
-            },
-            config: serde_json::json!({
-                "enabled": cache_enabled,
-                "backend": match &self.config.load().cache.backend {
-                    crate::infrastructure::cache::CacheBackendConfig::Local { max_entries, .. } => {
-                        serde_json::json!({ "type": "local", "max_entries": max_entries })
-                    }
-                    crate::infrastructure::cache::CacheBackendConfig::Redis { url, .. } => {
-                        serde_json::json!({ "type": "redis", "url": url })
-                    }
-                },
-            }),
-            metrics: SubsystemMetrics {
-                cpu_percent: if cache_enabled {
-                    process_metrics.cpu_percent as f64 * cache_weight
-                } else {
-                    0.0
-                },
-                memory_mb: if cache_enabled {
-                    (total_memory_mb as f64 * cache_weight) as u64
-                } else {
-                    0
-                },
-                requests_per_sec: queries_per_sec * perf.cache_hit_rate,
-                error_rate: 0.0,
-                last_activity: Some(chrono::Utc::now()),
-            },
-        });
-
-        subsystems.push(SubsystemInfo {
-            id: "http_transport".to_string(),
-            name: "HTTP Transport".to_string(),
-            subsystem_type: SubsystemType::HttpTransport,
-            status: SubsystemStatus::Running,
-            health: HealthCheck {
-                name: "http_transport".to_string(),
-                status: "healthy".to_string(),
-                message: format!("{} active connections", perf.active_connections),
-                duration_ms: 0,
-                details: Some(serde_json::json!({
-                    "active_connections": perf.active_connections,
-                    "port": self.config.load().metrics.port,
-                })),
-            },
-            config: serde_json::json!({
-                "port": self.config.load().metrics.port,
-            }),
-            metrics: SubsystemMetrics {
-                cpu_percent: process_metrics.cpu_percent as f64 * http_weight,
-                memory_mb: (total_memory_mb as f64 * http_weight) as u64,
-                requests_per_sec: queries_per_sec,
-                error_rate: 0.0,
-                last_activity: Some(chrono::Utc::now()),
-            },
-        });
-
-        Ok(subsystems)
+        Ok(helpers::subsystems::build_subsystem_list(
+            &providers,
+            &process_metrics,
+            &perf,
+            &config,
+            active_indexing_count,
+        ))
     }
 
     async fn send_subsystem_signal(
@@ -1096,82 +672,7 @@ impl AdminService for AdminServiceImpl {
         subsystem_id: &str,
         signal: SubsystemSignal,
     ) -> Result<SignalResult, AdminError> {
-        use crate::infrastructure::events::SystemEvent;
-
-        let signal_name = match &signal {
-            SubsystemSignal::Restart => "restart",
-            SubsystemSignal::Reload => "reload",
-            SubsystemSignal::Pause => "pause",
-            SubsystemSignal::Resume => "resume",
-            SubsystemSignal::Configure(_) => "configure",
-        };
-
-        // Parse subsystem ID (format: "type:id" or just "id")
-        let (subsystem_type, provider_id): (&str, &str) = if subsystem_id.contains(':') {
-            let parts: Vec<&str> = subsystem_id.splitn(2, ':').collect();
-            (parts[0], parts.get(1).copied().unwrap_or(""))
-        } else {
-            ("", subsystem_id)
-        };
-
-        // Dispatch appropriate event based on signal type and subsystem
-        match signal {
-            SubsystemSignal::Restart => {
-                if subsystem_type == "embedding" || subsystem_type == "vector_store" {
-                    let _ = self
-                        .event_bus
-                        .publish(SystemEvent::ProviderRestart {
-                            provider_type: subsystem_type.to_string(),
-                            provider_id: provider_id.to_string(),
-                        })
-                        .await;
-                } else if subsystem_id == "cache" {
-                    let _ = self
-                        .event_bus
-                        .publish(SystemEvent::CacheClear { namespace: None })
-                        .await;
-                } else if subsystem_id == "indexing" {
-                    let _ = self
-                        .event_bus
-                        .publish(SystemEvent::IndexRebuild { collection: None })
-                        .await;
-                }
-            }
-            SubsystemSignal::Reload => {
-                let _ = self.event_bus.publish(SystemEvent::Reload).await;
-            }
-            SubsystemSignal::Configure(config) => {
-                if subsystem_type == "embedding" || subsystem_type == "vector_store" {
-                    let _ = self
-                        .event_bus
-                        .publish(SystemEvent::ProviderReconfigure {
-                            provider_type: subsystem_type.to_string(),
-                            config,
-                        })
-                        .await;
-                }
-            }
-            SubsystemSignal::Pause | SubsystemSignal::Resume => {
-                // Pause/Resume not yet implemented for all subsystems
-                tracing::warn!(
-                    "[ADMIN] Pause/Resume not implemented for subsystem: {}",
-                    subsystem_id
-                );
-            }
-        }
-
-        tracing::info!(
-            "[ADMIN] Sent {} signal to subsystem {}",
-            signal_name,
-            subsystem_id
-        );
-
-        Ok(SignalResult {
-            success: true,
-            subsystem_id: subsystem_id.to_string(),
-            signal: signal_name.to_string(),
-            message: format!("Signal '{}' sent to '{}'", signal_name, subsystem_id),
-        })
+        Ok(helpers::subsystems::dispatch_subsystem_signal(&self.event_bus, subsystem_id, signal).await)
     }
 
     async fn get_routes(&self) -> Result<Vec<RouteInfo>, AdminError> {

@@ -234,6 +234,107 @@ impl AuthConfig {
     pub fn get_user(&self, email: &str) -> Option<&User> {
         self.users.get(email)
     }
+
+    /// Load auth config with first-run support
+    ///
+    /// Priority order:
+    /// 1. Environment variables (ADMIN_PASSWORD + JWT_SECRET) - if both set
+    /// 2. Data file (users.json in data_dir) - if exists
+    /// 3. First run - generate new credentials
+    ///
+    /// Returns the config and status indicating how credentials were obtained.
+    pub fn load_with_first_run(
+        data_dir: &std::path::Path,
+    ) -> crate::domain::error::Result<(Self, super::user_store::FirstRunStatus)> {
+        use super::user_store::{FirstRunStatus, UserStore};
+
+        // Priority 1: Check environment variables
+        let jwt_secret_env = std::env::var("JWT_SECRET").ok();
+        let admin_password_env = std::env::var("ADMIN_PASSWORD").ok();
+
+        if let (Some(jwt_secret), Some(admin_password)) = (&jwt_secret_env, &admin_password_env) {
+            if !jwt_secret.is_empty() && !admin_password.is_empty() {
+                // Use environment variables
+                let config = Self::from_env().map_err(crate::domain::error::Error::config)?;
+                return Ok((config, FirstRunStatus::FromEnv));
+            }
+        }
+
+        // Priority 2: Check data file
+        let users_file = UserStore::file_path(data_dir);
+        if let Some(store) = UserStore::load(&users_file)? {
+            let config = Self {
+                jwt_secret: store.jwt_secret.clone(),
+                jwt_expiration: DEFAULT_JWT_EXPIRATION,
+                jwt_issuer: "mcp-context-browser".to_string(),
+                enabled: true,
+                bypass_paths: vec![
+                    "/api/health".to_string(),
+                    "/api/context/metrics".to_string(),
+                ],
+                users: store.to_user_map(),
+            };
+            return Ok((config, FirstRunStatus::FromFile));
+        }
+
+        // Priority 3: First run - generate new credentials
+        let (store, password) = UserStore::generate_new()?;
+        store.save(&users_file)?;
+
+        let email = store
+            .users
+            .first()
+            .map(|u| u.email.clone())
+            .unwrap_or_default();
+
+        let config = Self {
+            jwt_secret: store.jwt_secret.clone(),
+            jwt_expiration: DEFAULT_JWT_EXPIRATION,
+            jwt_issuer: "mcp-context-browser".to_string(),
+            enabled: true,
+            bypass_paths: vec![
+                "/api/health".to_string(),
+                "/api/context/metrics".to_string(),
+            ],
+            users: store.to_user_map(),
+        };
+
+        Ok((config, FirstRunStatus::Generated { password, email }))
+    }
+
+    /// Load auth config with first-run support, using provided credentials
+    ///
+    /// Use this when the user provides credentials interactively.
+    pub fn load_with_credentials(
+        data_dir: &std::path::Path,
+        email: &str,
+        password: &str,
+    ) -> crate::domain::error::Result<(Self, super::user_store::FirstRunStatus)> {
+        use super::user_store::{FirstRunStatus, UserStore};
+
+        let users_file = UserStore::file_path(data_dir);
+        let store = UserStore::with_credentials(email, password)?;
+        store.save(&users_file)?;
+
+        let config = Self {
+            jwt_secret: store.jwt_secret.clone(),
+            jwt_expiration: DEFAULT_JWT_EXPIRATION,
+            jwt_issuer: "mcp-context-browser".to_string(),
+            enabled: true,
+            bypass_paths: vec![
+                "/api/health".to_string(),
+                "/api/context/metrics".to_string(),
+            ],
+            users: store.to_user_map(),
+        };
+
+        Ok((
+            config,
+            FirstRunStatus::Provided {
+                email: email.to_string(),
+            },
+        ))
+    }
 }
 
 /// Security warning from configuration validation

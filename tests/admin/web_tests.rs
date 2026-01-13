@@ -405,8 +405,11 @@ fn test_error_renders_with_details() {
     let web_interface = WebInterface::new().expect("Failed to create web interface");
     let templates = web_interface.templates();
 
-    let error_vm =
-        ViewModelBuilder::build_error("Database Error", "Connection failed", Some("Stack trace: ..."));
+    let error_vm = ViewModelBuilder::build_error(
+        "Database Error",
+        "Connection failed",
+        Some("Stack trace: ..."),
+    );
     let mut context = Context::new();
     context.insert("error", &error_vm);
     context.insert("page", "error");
@@ -452,7 +455,10 @@ fn test_diagnostics_renders() {
 
     let mut context = Context::new();
     context.insert("page", "diagnostics");
-    context.insert("page_description", "System health and connectivity diagnostics");
+    context.insert(
+        "page_description",
+        "System health and connectivity diagnostics",
+    );
     let result = templates.render("diagnostics.html", &context);
     assert!(
         result.is_ok(),
@@ -636,12 +642,7 @@ fn test_nav_links_match_routes() {
         .expect("Dashboard template should render");
 
     // Check that nav links are present and correctly formatted
-    let expected_nav_links = vec![
-        "/dashboard",
-        "/providers",
-        "/indexes",
-        "/config",
-    ];
+    let expected_nav_links = vec!["/dashboard", "/providers", "/indexes", "/config"];
 
     for href in expected_nav_links {
         let search = format!("href=\"{}\"", href);

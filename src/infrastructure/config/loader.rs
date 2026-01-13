@@ -269,10 +269,16 @@ provider = "milvus"
             .expect("Should load config");
 
         // Layer 1 (embedded default): server.port = 3000
-        assert_eq!(config.server.port, 3000, "Default should provide server.port");
+        assert_eq!(
+            config.server.port, 3000,
+            "Default should provide server.port"
+        );
 
         // Layer 2 (file): metrics.port = 4001, vector_store = milvus
-        assert_eq!(config.metrics.port, 4001, "File should override metrics.port");
+        assert_eq!(
+            config.metrics.port, 4001,
+            "File should override metrics.port"
+        );
         assert_eq!(
             config.providers.vector_store.provider, "milvus",
             "File should override vector_store.provider"
@@ -377,9 +383,18 @@ provider = "openai"
         let parsed: toml::Value = toml::from_str(toml_str).expect("Default TOML should be valid");
 
         // Verify expected sections exist
-        assert!(parsed.get("server").is_some(), "Should have [server] section");
-        assert!(parsed.get("metrics").is_some(), "Should have [metrics] section");
-        assert!(parsed.get("providers").is_some(), "Should have [providers] section");
+        assert!(
+            parsed.get("server").is_some(),
+            "Should have [server] section"
+        );
+        assert!(
+            parsed.get("metrics").is_some(),
+            "Should have [metrics] section"
+        );
+        assert!(
+            parsed.get("providers").is_some(),
+            "Should have [providers] section"
+        );
 
         // Verify provider defaults
         let providers = parsed.get("providers").unwrap();

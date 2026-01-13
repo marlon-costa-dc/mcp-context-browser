@@ -334,6 +334,82 @@ impl AdminConfig {
             jwt_expiration: 3600,
         }
     }
+
+    /// Load admin config with first-run support
+    ///
+    /// Priority order:
+    /// 1. Environment variables (MCP_ADMIN_USERNAME, MCP_ADMIN_PASSWORD, MCP_ADMIN_JWT_SECRET)
+    /// 2. Data file (users.json in data_dir)
+    /// 3. First run - generate new credentials and save to data file
+    ///
+    /// Returns (config, Option<generated_password>) - password is Some only on first run
+    pub fn load_with_first_run(
+        data_dir: &std::path::Path,
+    ) -> Result<(Self, Option<String>), ConfigError> {
+        use crate::infrastructure::auth::user_store::UserStore;
+
+        // Priority 1: Check MCP_ADMIN_* environment variables
+        let username_env = std::env::var("MCP_ADMIN_USERNAME").ok();
+        let password_env = std::env::var("MCP_ADMIN_PASSWORD").ok();
+        let jwt_secret_env = std::env::var("MCP_ADMIN_JWT_SECRET").ok();
+
+        if let (Some(username), Some(password), Some(jwt_secret)) =
+            (&username_env, &password_env, &jwt_secret_env)
+        {
+            if !username.is_empty() && !password.is_empty() && !jwt_secret.is_empty() {
+                let config = Self::from_env()?;
+                return Ok((config, None));
+            }
+        }
+
+        // Priority 2: Check data file (users.json)
+        let users_file = UserStore::file_path(data_dir);
+        if let Ok(Some(store)) = UserStore::load(&users_file) {
+            // Get first admin user's credentials
+            if let Some(user) = store.users.first() {
+                // Note: We can't recover the plaintext password from the hash,
+                // so admin auth must use the stored hash directly.
+                // For now, we create a config that can be used with the stored credentials.
+                let config = Self {
+                    enabled: true,
+                    username: user.email.clone(),
+                    // Password field stores the HASH for verification in auth.rs
+                    // The auth.rs AuthService will need to be updated to use hash directly
+                    password: user.password_hash.clone(),
+                    jwt_secret: store.jwt_secret.clone(),
+                    jwt_expiration: 3600,
+                };
+                return Ok((config, None));
+            }
+        }
+
+        // Priority 3: First run - generate new credentials
+        let (store, generated_password) = UserStore::generate_new().map_err(|e| {
+            ConfigError::ConfigError(format!("Failed to generate credentials: {}", e))
+        })?;
+
+        // Save to data file
+        store
+            .save(&users_file)
+            .map_err(|e| ConfigError::ConfigError(format!("Failed to save credentials: {}", e)))?;
+
+        let user = store
+            .users
+            .first()
+            .ok_or_else(|| ConfigError::ConfigError("No user generated".to_string()))?;
+
+        let config = Self {
+            enabled: true,
+            username: user.email.clone(),
+            // Store the plaintext password for first-run so auth works
+            // On subsequent runs, we'll load the hash from file
+            password: generated_password.clone(),
+            jwt_secret: store.jwt_secret.clone(),
+            jwt_expiration: 3600,
+        };
+
+        Ok((config, Some(generated_password)))
+    }
 }
 
 impl Default for AdminConfig {

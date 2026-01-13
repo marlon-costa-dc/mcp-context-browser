@@ -281,23 +281,52 @@ async fn initialize_server_components(
             cache_provider.clone(),
         );
 
-        // Initialize admin API server (optional - only if credentials configured)
-        if let Some(admin_config) = config.admin.clone() {
-            let admin_api_server =
-                crate::admin::api::AdminApiServer::new(admin_config, Arc::clone(&server));
+        // Initialize admin API server with first-run support
+        // Priority: env vars > data file (users.json) > generate new credentials
+        let data_dir = config.data.base_path();
+        match crate::admin::config::AdminConfig::load_with_first_run(&data_dir) {
+            Ok((admin_config, generated_password)) => {
+                if admin_config.enabled {
+                    // Display first-run message if password was generated
+                    if let Some(password) = generated_password {
+                        eprintln!();
+                        eprintln!("========================================");
+                        eprintln!("  FIRST RUN - Admin credentials created");
+                        eprintln!("========================================");
+                        eprintln!("  Email:    {}", admin_config.username);
+                        eprintln!("  Password: {}", password);
+                        eprintln!();
+                        eprintln!("  Stored in: {}/users.json", data_dir.display());
+                        eprintln!();
+                        eprintln!("  IMPORTANT: Save this password securely!");
+                        eprintln!("  It will NOT be displayed again.");
+                        eprintln!("========================================");
+                        eprintln!();
+                    }
 
-            // Merge admin router into metrics server
-            match admin_api_server.create_router() {
-                Ok(router) => {
-                    metrics_server = metrics_server.with_external_router(router);
-                    tracing::info!("✅ Admin interface enabled");
-                }
-                Err(e) => {
-                    tracing::error!("💥 Failed to create admin router: {}", e);
+                    let admin_api_server =
+                        crate::admin::api::AdminApiServer::new(admin_config, Arc::clone(&server));
+
+                    // Merge admin router into metrics server
+                    match admin_api_server.create_router() {
+                        Ok(router) => {
+                            metrics_server = metrics_server.with_external_router(router);
+                            tracing::info!("✅ Admin interface enabled");
+                        }
+                        Err(e) => {
+                            tracing::error!("💥 Failed to create admin router: {}", e);
+                        }
+                    }
+                } else {
+                    tracing::info!("ℹ️  Admin interface disabled");
                 }
             }
-        } else {
-            tracing::info!("ℹ️  Admin interface disabled (no credentials configured)");
+            Err(e) => {
+                tracing::warn!(
+                    "⚠️  Failed to load admin config: {}. Admin interface disabled.",
+                    e
+                );
+            }
         }
 
         // Create and merge MCP router for unified port architecture
@@ -383,6 +412,7 @@ pub async fn run_server(
     );
 
     // Initialize all server components (unified HTTP server with MCP + Admin + Metrics)
+    // Note: Admin credential initialization with first-run support happens inside initialize_server_components
     let (
         server,
         http_handle,

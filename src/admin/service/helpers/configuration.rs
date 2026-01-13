@@ -278,6 +278,182 @@ pub async fn record_batch_changes(
     Ok(changes)
 }
 
+/// Result of applying configuration updates
+#[derive(Debug, Clone)]
+pub struct ConfigUpdateApplicationResult {
+    /// Changes that were applied
+    pub changes_applied: Vec<String>,
+    /// Whether changes require a restart
+    pub requires_restart: bool,
+}
+
+/// Apply configuration updates and return what was applied
+///
+/// This function handles the mapping of configuration paths to actual changes,
+/// logging each change and determining if a restart is required.
+pub fn apply_configuration_updates(
+    updates: &HashMap<String, serde_json::Value>,
+) -> ConfigUpdateApplicationResult {
+    let mut changes_applied = Vec::new();
+    let mut requires_restart = false;
+
+    for (path, value) in updates {
+        match path.as_str() {
+            // Metrics configuration
+            "metrics.enabled" => {
+                if let Some(enabled) = value.as_bool() {
+                    tracing::info!(
+                        "Metrics collection: {}",
+                        if enabled { "enabled" } else { "disabled" }
+                    );
+                    changes_applied.push(format!("metrics.enabled = {}", enabled));
+                }
+            }
+            "metrics.collection_interval" => {
+                if let Some(interval) = value.as_u64() {
+                    tracing::info!("Metrics collection interval set to {} seconds", interval);
+                    changes_applied.push(format!(
+                        "metrics.collection_interval = {} seconds",
+                        interval
+                    ));
+                }
+            }
+            "metrics.retention_days" => {
+                if let Some(days) = value.as_u64() {
+                    tracing::info!("Metrics retention set to {} days", days);
+                    changes_applied.push(format!("metrics.retention_days = {} days", days));
+                }
+            }
+            // Cache configuration
+            "cache.enabled" => {
+                if let Some(enabled) = value.as_bool() {
+                    tracing::info!("Cache: {}", if enabled { "enabled" } else { "disabled" });
+                    changes_applied.push(format!("cache.enabled = {}", enabled));
+                }
+            }
+            "cache.max_size" => {
+                if let Some(size) = value.as_u64() {
+                    tracing::info!("Cache max size set to {} bytes", size);
+                    changes_applied.push(format!("cache.max_size = {} bytes", size));
+                }
+            }
+            "cache.ttl_seconds" => {
+                if let Some(ttl) = value.as_u64() {
+                    tracing::info!("Cache TTL set to {} seconds", ttl);
+                    changes_applied.push(format!("cache.ttl_seconds = {} seconds", ttl));
+                }
+            }
+            // Database configuration (requires restart)
+            "database.url" => {
+                if value.as_str().is_some() {
+                    tracing::info!("Database URL configured (change requires restart)");
+                    changes_applied.push("database.url = ***".to_string());
+                    requires_restart = true;
+                }
+            }
+            "database.pool_size" => {
+                if let Some(pool_size) = value.as_u64() {
+                    tracing::info!(
+                        "Database pool size set to {} (change requires restart)",
+                        pool_size
+                    );
+                    changes_applied.push(format!(
+                        "database.pool_size = {} (requires restart)",
+                        pool_size
+                    ));
+                    requires_restart = true;
+                }
+            }
+            "database.connection_timeout" => {
+                if let Some(timeout) = value.as_u64() {
+                    tracing::info!(
+                        "Database connection timeout set to {} ms (change requires restart)",
+                        timeout
+                    );
+                    changes_applied.push(format!("database.connection_timeout = {} ms", timeout));
+                    requires_restart = true;
+                }
+            }
+            // Server configuration (requires restart)
+            "server.port" => {
+                if let Some(port) = value.as_u64() {
+                    tracing::info!(
+                        "Server port configured to {} (change requires restart)",
+                        port
+                    );
+                    changes_applied.push(format!("server.port = {} (requires restart)", port));
+                    requires_restart = true;
+                }
+            }
+            "server.listen_address" => {
+                if let Some(addr) = value.as_str() {
+                    tracing::info!(
+                        "Server listen address configured to {} (change requires restart)",
+                        addr
+                    );
+                    changes_applied.push(format!(
+                        "server.listen_address = {} (requires restart)",
+                        addr
+                    ));
+                    requires_restart = true;
+                }
+            }
+            // Logging configuration
+            "logging.level" => {
+                if let Some(level) = value.as_str() {
+                    tracing::info!("Logging level set to {}", level);
+                    changes_applied.push(format!("logging.level = {}", level));
+                }
+            }
+            "logging.format" => {
+                if let Some(format) = value.as_str() {
+                    tracing::info!("Logging format set to {}", format);
+                    changes_applied.push(format!("logging.format = {}", format));
+                }
+            }
+            // Indexing configuration
+            "indexing.enabled" => {
+                if let Some(enabled) = value.as_bool() {
+                    tracing::info!(
+                        "Indexing: {}",
+                        if enabled { "enabled" } else { "disabled" }
+                    );
+                    changes_applied.push(format!("indexing.enabled = {}", enabled));
+                }
+            }
+            "indexing.batch_size" => {
+                if let Some(batch_size) = value.as_u64() {
+                    tracing::info!("Indexing batch size set to {}", batch_size);
+                    changes_applied.push(format!("indexing.batch_size = {}", batch_size));
+                }
+            }
+            // Provider configuration
+            "providers.embedding" => {
+                if let Some(provider) = value.as_str() {
+                    tracing::info!("Embedding provider set to {}", provider);
+                    changes_applied.push(format!("providers.embedding = {}", provider));
+                }
+            }
+            "providers.vector_store" => {
+                if let Some(provider) = value.as_str() {
+                    tracing::info!("Vector store provider set to {}", provider);
+                    changes_applied.push(format!("providers.vector_store = {}", provider));
+                }
+            }
+            // Unknown configuration path
+            _ => {
+                tracing::warn!("Unknown configuration path: {}", path);
+                changes_applied.push(format!("{} = {:?} (unknown, not applied)", path, value));
+            }
+        }
+    }
+
+    ConfigUpdateApplicationResult {
+        changes_applied,
+        requires_restart,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

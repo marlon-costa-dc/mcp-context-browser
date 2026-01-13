@@ -46,6 +46,7 @@ pub mod password;
 pub mod rate_limit;
 pub mod roles;
 pub mod service;
+pub mod user_store;
 
 // Re-export main types for convenience
 pub use claims::{Claims, HashVersion, User};
@@ -64,3 +65,6 @@ pub use api_keys::{ApiKey, ApiKeyStore, API_KEY_PREFIX};
 pub use rate_limit::{
     AuthRateLimiter, RateLimitConfig, RateLimitError, RateLimitStatus, RateLimiterState,
 };
+
+// Re-export user store types
+pub use user_store::{FirstRunStatus, UserStore};

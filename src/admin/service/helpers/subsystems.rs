@@ -3,18 +3,18 @@
 //! Builds SubsystemInfo structures from runtime data.
 
 use crate::admin::service::types::{
-    HealthCheck, ProviderInfo, SubsystemInfo, SubsystemMetrics, SubsystemStatus, SubsystemType,
+    HealthCheck, PerformanceMetricsData, ProviderInfo, SubsystemInfo, SubsystemMetrics,
+    SubsystemStatus, SubsystemType,
 };
 use crate::infrastructure::cache::CacheBackendConfig;
 use crate::infrastructure::config::Config;
-use crate::infrastructure::metrics::system::ProcessMetrics;
-use crate::server::metrics::types::PerformanceSnapshot;
+use crate::infrastructure::metrics::ProcessMetrics;
 
 /// Build subsystem info from providers and metrics
 pub fn build_subsystem_list(
     providers: &[ProviderInfo],
     process_metrics: &ProcessMetrics,
-    perf: &PerformanceSnapshot,
+    perf: &PerformanceMetricsData,
     config: &Config,
     active_indexing_count: usize,
 ) -> Vec<SubsystemInfo> {
@@ -59,7 +59,7 @@ struct SubsystemWeights {
 
 fn calculate_weights(
     provider_count: usize,
-    perf: &PerformanceSnapshot,
+    perf: &PerformanceMetricsData,
     config: &Config,
     is_indexing: bool,
 ) -> SubsystemWeights {
@@ -69,8 +69,10 @@ fn calculate_weights(
     let cache_weight = if config.cache.enabled { 0.15 } else { 0.0 };
     let http_weight = 0.10;
 
-    let provider_weight: f64 =
-        f64::max(1.0 - search_weight - indexing_weight - cache_weight - http_weight, 0.0);
+    let provider_weight: f64 = f64::max(
+        1.0 - search_weight - indexing_weight - cache_weight - http_weight,
+        0.0,
+    );
 
     let per_provider_weight = if provider_count > 0 {
         provider_weight / provider_count as f64
@@ -91,85 +93,99 @@ fn add_provider_subsystems(
     subsystems: &mut Vec<SubsystemInfo>,
     providers: &[ProviderInfo],
     process_metrics: &ProcessMetrics,
-    perf: &PerformanceSnapshot,
+    perf: &PerformanceMetricsData,
     per_provider_weight: f64,
     total_memory_mb: u64,
 ) {
-    let embedding_count = providers.iter().filter(|p| p.provider_type == "embedding").count().max(1);
-    let vector_store_count = providers.iter().filter(|p| p.provider_type == "vector_store").count().max(1);
+    let embedding_count = providers
+        .iter()
+        .filter(|p| p.provider_type == "embedding")
+        .count()
+        .max(1);
+    let vector_store_count = providers
+        .iter()
+        .filter(|p| p.provider_type == "vector_store")
+        .count()
+        .max(1);
 
     // Add embedding providers
     for provider in providers.iter().filter(|p| p.provider_type == "embedding") {
-        subsystems.push(build_provider_subsystem(
+        subsystems.push(build_provider_subsystem(&ProviderSubsystemConfig {
             provider,
-            SubsystemType::Embedding,
-            "Embedding Provider",
+            subsystem_type: SubsystemType::Embedding,
+            type_name: "Embedding Provider",
             process_metrics,
             perf,
             per_provider_weight,
             total_memory_mb,
-            embedding_count,
-        ));
+            provider_count: embedding_count,
+        }));
     }
 
     // Add vector store providers
-    for provider in providers.iter().filter(|p| p.provider_type == "vector_store") {
-        subsystems.push(build_provider_subsystem(
+    for provider in providers
+        .iter()
+        .filter(|p| p.provider_type == "vector_store")
+    {
+        subsystems.push(build_provider_subsystem(&ProviderSubsystemConfig {
             provider,
-            SubsystemType::VectorStore,
-            "Vector Store",
+            subsystem_type: SubsystemType::VectorStore,
+            type_name: "Vector Store",
             process_metrics,
             perf,
             per_provider_weight,
             total_memory_mb,
-            vector_store_count,
-        ));
+            provider_count: vector_store_count,
+        }));
     }
 }
 
-fn build_provider_subsystem(
-    provider: &ProviderInfo,
+/// Configuration for building a provider subsystem
+struct ProviderSubsystemConfig<'a> {
+    provider: &'a ProviderInfo,
     subsystem_type: SubsystemType,
-    type_name: &str,
-    process_metrics: &ProcessMetrics,
-    perf: &PerformanceSnapshot,
+    type_name: &'a str,
+    process_metrics: &'a ProcessMetrics,
+    perf: &'a PerformanceMetricsData,
     per_provider_weight: f64,
     total_memory_mb: u64,
     provider_count: usize,
-) -> SubsystemInfo {
-    let is_active = provider.status == "active";
+}
+
+fn build_provider_subsystem(config: &ProviderSubsystemConfig) -> SubsystemInfo {
+    let is_active = config.provider.status == "active";
 
     SubsystemInfo {
-        id: format!("{}:{}", subsystem_type.as_str(), provider.id),
-        name: format!("{}: {}", type_name, provider.name),
-        subsystem_type,
+        id: format!("{}:{}", config.subsystem_type.as_str(), config.provider.id),
+        name: format!("{}: {}", config.type_name, config.provider.name),
+        subsystem_type: config.subsystem_type.clone(),
         status: if is_active {
             SubsystemStatus::Running
         } else {
             SubsystemStatus::Stopped
         },
         health: HealthCheck {
-            name: provider.name.clone(),
-            status: provider.status.clone(),
-            message: format!("{} operational", type_name),
+            name: config.provider.name.clone(),
+            status: config.provider.status.clone(),
+            message: format!("{} operational", config.type_name),
             duration_ms: 0,
-            details: Some(provider.config.clone()),
+            details: Some(config.provider.config.clone()),
         },
-        config: provider.config.clone(),
+        config: config.provider.config.clone(),
         metrics: SubsystemMetrics {
             cpu_percent: if is_active {
-                process_metrics.cpu_percent as f64 * per_provider_weight
+                config.process_metrics.cpu_percent as f64 * config.per_provider_weight
             } else {
                 0.0
             },
             memory_mb: if is_active {
-                (total_memory_mb as f64 * per_provider_weight) as u64
+                (config.total_memory_mb as f64 * config.per_provider_weight) as u64
             } else {
                 0
             },
-            requests_per_sec: perf.total_queries as f64
-                / perf.uptime_seconds.max(1) as f64
-                / provider_count as f64,
+            requests_per_sec: config.perf.total_queries as f64
+                / config.perf.uptime_seconds.max(1) as f64
+                / config.provider_count as f64,
             error_rate: 0.0,
             last_activity: Some(chrono::Utc::now()),
         },
@@ -179,7 +195,7 @@ fn build_provider_subsystem(
 fn add_core_subsystems(
     subsystems: &mut Vec<SubsystemInfo>,
     process_metrics: &ProcessMetrics,
-    perf: &PerformanceSnapshot,
+    perf: &PerformanceMetricsData,
     config: &Config,
     weights: &SubsystemWeights,
     total_memory_mb: u64,
@@ -333,6 +349,102 @@ impl SubsystemType {
             SubsystemType::Indexing => "indexing",
             SubsystemType::Cache => "cache",
             SubsystemType::HttpTransport => "http_transport",
+            SubsystemType::Metrics => "metrics",
+            SubsystemType::Daemon => "daemon",
         }
+    }
+}
+
+// ============================================================================
+// Signal dispatch helpers
+// ============================================================================
+
+use crate::admin::service::types::{SignalResult, SubsystemSignal};
+use crate::infrastructure::events::{SharedEventBusProvider, SystemEvent};
+
+/// Get the string name for a signal
+pub fn signal_name(signal: &SubsystemSignal) -> &'static str {
+    match signal {
+        SubsystemSignal::Restart => "restart",
+        SubsystemSignal::Reload => "reload",
+        SubsystemSignal::Pause => "pause",
+        SubsystemSignal::Resume => "resume",
+        SubsystemSignal::Configure(_) => "configure",
+    }
+}
+
+/// Parse subsystem ID into (type, id) tuple
+/// Format: "type:id" or just "id"
+pub fn parse_subsystem_id(subsystem_id: &str) -> (&str, &str) {
+    if subsystem_id.contains(':') {
+        let parts: Vec<&str> = subsystem_id.splitn(2, ':').collect();
+        (parts[0], parts.get(1).copied().unwrap_or(""))
+    } else {
+        ("", subsystem_id)
+    }
+}
+
+/// Dispatch a signal to a subsystem via the event bus
+pub async fn dispatch_subsystem_signal(
+    event_bus: &SharedEventBusProvider,
+    subsystem_id: &str,
+    signal: SubsystemSignal,
+) -> SignalResult {
+    let name = signal_name(&signal);
+    let (subsystem_type, provider_id) = parse_subsystem_id(subsystem_id);
+
+    // Dispatch appropriate event based on signal type and subsystem
+    match signal {
+        SubsystemSignal::Restart => {
+            if subsystem_type == "embedding" || subsystem_type == "vector_store" {
+                let _ = event_bus
+                    .publish(SystemEvent::ProviderRestart {
+                        provider_type: subsystem_type.to_string(),
+                        provider_id: provider_id.to_string(),
+                    })
+                    .await;
+            } else if subsystem_id == "cache" {
+                let _ = event_bus
+                    .publish(SystemEvent::CacheClear { namespace: None })
+                    .await;
+            } else if subsystem_id == "indexing" {
+                let _ = event_bus
+                    .publish(SystemEvent::IndexRebuild { collection: None })
+                    .await;
+            }
+        }
+        SubsystemSignal::Reload => {
+            let _ = event_bus.publish(SystemEvent::Reload).await;
+        }
+        SubsystemSignal::Configure(config) => {
+            if subsystem_type == "embedding" || subsystem_type == "vector_store" {
+                let _ = event_bus
+                    .publish(SystemEvent::ProviderReconfigure {
+                        provider_type: subsystem_type.to_string(),
+                        config,
+                    })
+                    .await;
+            }
+        }
+        SubsystemSignal::Pause | SubsystemSignal::Resume => {
+            // Pause/Resume not yet implemented for all subsystems
+            tracing::warn!(
+                "[ADMIN] Pause/Resume not implemented for subsystem: {}",
+                subsystem_id
+            );
+        }
+    }
+
+    tracing::info!(
+        "[ADMIN] Sent {} signal to subsystem {}",
+        name,
+        subsystem_id
+    );
+
+    SignalResult {
+        success: true,
+        subsystem_id: subsystem_id.to_string(),
+        signal: name.to_string(),
+        message: format!("Signal '{}' sent to '{}'", name, subsystem_id),
     }
 }

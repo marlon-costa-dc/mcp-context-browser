@@ -36,14 +36,26 @@ pub struct AuthService {
 
 impl AuthService {
     /// Create a new authentication service
+    ///
+    /// The admin_password can be either:
+    /// - A plaintext password (will be hashed with bcrypt)
+    /// - An already-hashed password starting with "$argon2" or "$2" (used as-is)
     pub fn new(
         jwt_secret: String,
         jwt_expiration: u64,
         admin_username: String,
         admin_password: String,
     ) -> Result<Self, String> {
-        let admin_password_hash = hash(admin_password, DEFAULT_COST)
-            .map_err(|e| format!("Failed to hash password: {}", e))?;
+        // Check if password is already a hash (Argon2 or bcrypt format)
+        let admin_password_hash =
+            if admin_password.starts_with("$argon2") || admin_password.starts_with("$2") {
+                // Already a hash, use as-is
+                admin_password
+            } else {
+                // Plaintext password, hash it with bcrypt
+                hash(&admin_password, DEFAULT_COST)
+                    .map_err(|e| format!("Failed to hash password: {}", e))?
+            };
 
         Ok(Self {
             jwt_secret,
@@ -66,9 +78,19 @@ impl AuthService {
         }
     }
 
-    /// Verify password using bcrypt
+    /// Verify password against stored hash (supports both Argon2 and bcrypt)
     fn verify_password(&self, password: &str) -> bool {
-        verify(password, &self.admin_password_hash).unwrap_or(false)
+        if self.admin_password_hash.starts_with("$argon2") {
+            // Argon2 hash - use the infrastructure auth password module
+            crate::infrastructure::auth::password::verify_password(
+                password,
+                &self.admin_password_hash,
+            )
+            .unwrap_or(false)
+        } else {
+            // bcrypt hash
+            verify(password, &self.admin_password_hash).unwrap_or(false)
+        }
     }
 
     /// Generate JWT token
