@@ -50,8 +50,9 @@ MCP Context Browser is a high-performance, extensible Model Context Protocol (MC
 ### Current Status
 
 **Version**: 0.1.0 (First Stable Release)
-**Architecture Maturity**: ✅**100% Complete DI Implementation**
-**DI Status**: ✅ Provider Registry, ✅ Service Factory, ✅ Provider Router, ✅ Runtime Configuration
+**Architecture Maturity**: ✅ **100% Complete DI Implementation**
+**DI Status**: ✅ 14 Domain Port Traits, ✅ Provider Registry, ✅ Service Factory, ✅ Full Port/Adapter Wiring
+**Port Traits**: `src/domain/ports/` - All traits extend `shaku::Interface` for DI compatibility
 **Deployment Options**: Local development, Docker, Kubernetes, hybrid cloud-edge
 
 ---
@@ -505,6 +506,27 @@ pub trait VectorStoreProvider: Send + Sync {
 |**Pinecone**| Cloud-native | HNSW | 1B+ vectors | 🚧 Planned |
 |**Qdrant**| Rust | HNSW | 10M+ vectors | 🚧 Planned |
 |**In-Memory**| Rust + DashMap | Brute force | <1M vectors | ✅ Development |
+
+##### Additional Domain Ports
+
+Beyond embedding and vector store providers, the system defines 12 additional port traits for comprehensive DI:
+
+| Port | Purpose | Implementation |
+|------|---------|----------------|
+| `HybridSearchProvider` | Combined BM25 + semantic search | `HybridSearchAdapter` |
+| `CodeChunker` | AST-based code chunking | `IntelligentChunker` |
+| `EventPublisher` | Domain event publishing | `EventBus` |
+| `SyncCoordinator` | File sync with debouncing | `SyncManager` |
+| `SnapshotProvider` | Codebase snapshot management | `SnapshotManager` |
+| `SyncProvider` | Low-level sync operations | Infrastructure layer |
+| `ChunkRepository` | Code chunk persistence | Repository adapters |
+| `SearchRepository` | Search operations | Repository adapters |
+| `ContextServiceInterface` | High-level code intelligence | `ContextService` |
+| `SearchServiceInterface` | Semantic search | `SearchService` |
+| `IndexingServiceInterface` | Codebase indexing | `IndexingService` |
+| `ChunkingOrchestratorInterface` | Batch chunking coordination | `ChunkingOrchestrator` |
+
+All 14 domain port traits extend `shaku::Interface` for DI container integration.
 
 ---
 

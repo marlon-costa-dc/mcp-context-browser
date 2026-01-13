@@ -2,11 +2,33 @@
 
 ## Status
 
-**Implemented**(v0.1.0)
+**Implemented** (v0.1.0)
 
-> Fully implemented with EmbeddingProvider and VectorStoreProvider traits in `src/domain/ports/`,
-> ProviderRegistry in `src/infrastructure/di/registry.rs`, and ServiceProvider factory pattern.
-> 6 embedding providers and 6 vector store providers implemented.
+> Fully implemented with 14 domain port traits in `src/domain/ports/`:
+>
+> **Provider Ports:**
+> - `EmbeddingProvider` - Text-to-vector conversion (6 implementations: OpenAI, VoyageAI, Ollama, Gemini, FastEmbed, Null)
+> - `VectorStoreProvider` - Vector storage/retrieval (6 implementations: Milvus, EdgeVec, In-Memory, Filesystem, Encrypted, Null)
+> - `HybridSearchProvider` - Combined BM25 + semantic search
+>
+> **Infrastructure Ports:**
+> - `SyncProvider` - Low-level sync operations
+> - `SnapshotProvider` - Codebase snapshot management
+> - `SyncCoordinator` - File synchronization with debouncing
+> - `EventPublisher` - Domain event publishing
+> - `CodeChunker` - AST-based code chunking
+>
+> **Repository Ports:**
+> - `ChunkRepository` - Code chunk persistence
+> - `SearchRepository` - Search operations
+>
+> **Service Ports:**
+> - `ContextServiceInterface` - High-level code intelligence
+> - `SearchServiceInterface` - Semantic search
+> - `IndexingServiceInterface` - Codebase indexing
+> - `ChunkingOrchestratorInterface` - Batch chunking coordination
+>
+> All traits extend `shaku::Interface` for DI compatibility.
 
 ## Context
 

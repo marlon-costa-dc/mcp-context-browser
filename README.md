@@ -183,7 +183,7 @@ First stable release - drop-in replacement for Claude-context:
 -   ✅ Claude-context environment variable compatibility
 -   ✅ 493 tests with comprehensive coverage
 -   ✅ JWT authentication and rate limiting
--   ✅ Clean architecture with trait-based DI
+-   ✅ Clean architecture with 14 domain port traits and full DI wiring
 -   ✅ HTTP transport foundation
 -   ✅ Systemd service integration
 

@@ -1,13 +1,15 @@
 use crate::infrastructure::cache::{create_cache_provider, SharedCacheProvider};
 use crate::infrastructure::config::Config;
 use crate::infrastructure::di::factory::ServiceProviderInterface;
+use crate::infrastructure::di::DiContainer;
 use crate::infrastructure::events::SharedEventBusProvider;
 use crate::infrastructure::limits::ResourceLimits;
 use crate::infrastructure::logging::SharedLogBuffer;
 use crate::infrastructure::metrics::system::SystemMetricsCollectorInterface;
+use crate::server::admin::service::AdminService;
 use crate::server::mcp_server::McpServer;
-use crate::server::metrics::{McpPerformanceMetrics, PerformanceMetricsInterface};
-use crate::server::operations::{IndexingOperationsInterface, McpIndexingOperations};
+use crate::server::metrics::PerformanceMetricsInterface;
+use crate::server::operations::IndexingOperationsInterface;
 use arc_swap::ArcSwap;
 use std::sync::Arc;
 
@@ -102,6 +104,12 @@ impl McpServerBuilder {
             Arc::new(ArcSwap::from_pointee(config))
         };
 
+        // Build DI container for component resolution
+        // Components provided via builder take precedence over DI resolution
+        let container = DiContainer::build()
+            .map_err(|e| anyhow::anyhow!("Failed to build DI container: {}", e))?;
+
+        // EventBus not yet in DI modules - use default
         let event_bus = self
             .event_bus
             .unwrap_or_else(|| Arc::new(crate::infrastructure::events::EventBus::default()));
@@ -109,23 +117,25 @@ impl McpServerBuilder {
             .log_buffer
             .unwrap_or_else(|| crate::infrastructure::logging::create_shared_log_buffer(1000));
 
-        let performance_metrics = self
+        // Resolve from DI container if not explicitly provided
+        let performance_metrics: Arc<dyn PerformanceMetricsInterface> = self
             .performance_metrics
-            .unwrap_or_else(|| Arc::new(McpPerformanceMetrics::default()));
+            .unwrap_or_else(|| container.resolve());
 
-        let indexing_operations = self
+        let indexing_operations: Arc<dyn IndexingOperationsInterface> = self
             .indexing_operations
-            .unwrap_or_else(|| Arc::new(McpIndexingOperations::default()));
+            .unwrap_or_else(|| container.resolve());
 
-        let service_provider = self.service_provider.unwrap_or_else(|| {
-            Arc::new(crate::infrastructure::di::factory::ServiceProvider::new())
-        });
+        let service_provider: Arc<dyn ServiceProviderInterface> = self
+            .service_provider
+            .unwrap_or_else(|| container.resolve());
 
-        let system_collector = self.system_collector.unwrap_or_else(|| {
-            Arc::new(crate::infrastructure::metrics::system::SystemMetricsCollector::new())
-        });
+        let system_collector: Arc<dyn SystemMetricsCollectorInterface> = self
+            .system_collector
+            .unwrap_or_else(|| container.resolve());
 
         // Initialize resource limits from config if not provided
+        // ResourceLimits not yet in DI modules
         let resource_limits = if let Some(rl) = self.resource_limits {
             rl
         } else {
@@ -133,14 +143,9 @@ impl McpServerBuilder {
             Arc::new(ResourceLimits::new(config.resource_limits.clone()))
         };
 
-        // Initialize HTTP client if not provided
-        let http_client = match self.http_client {
-            Some(client) => client,
-            None => Arc::new(
-                crate::adapters::http_client::HttpClientPool::new()
-                    .map_err(|e| anyhow::anyhow!("Failed to create HTTP client pool: {}", e))?,
-            ),
-        };
+        // Resolve HTTP client from DI container if not provided
+        let http_client: Arc<dyn crate::adapters::http_client::HttpClientProvider> =
+            self.http_client.unwrap_or_else(|| container.resolve());
 
         // Initialize cache provider if not provided
         let cache_provider = match self.cache_provider {
@@ -151,8 +156,9 @@ impl McpServerBuilder {
             }
         };
 
-        // Create admin service with all dependencies
-        // Cast concrete event bus to trait object for AdminService which uses async methods
+        // Resolve admin service from DI container
+        // The DI-resolved AdminService doesn't have all dependencies wired yet,
+        // so we need to manually construct for now until Phase 3 completes
         let event_bus_trait: SharedEventBusProvider = event_bus.clone() as SharedEventBusProvider;
         let deps = crate::server::admin::service::AdminServiceDependencies {
             performance_metrics: Arc::clone(&performance_metrics),
@@ -164,8 +170,8 @@ impl McpServerBuilder {
             log_buffer: log_buffer.clone(),
             config: Arc::clone(&config_arc),
         };
-        let admin_service = Arc::new(crate::server::admin::service::AdminServiceImpl::new(deps))
-            as Arc<dyn crate::server::admin::service::AdminService>;
+        let admin_service: Arc<dyn AdminService> =
+            Arc::new(crate::server::admin::service::AdminServiceImpl::new(deps));
 
         // Use from_components to assemble the server
         McpServer::from_components(crate::server::mcp_server::ServerComponents {

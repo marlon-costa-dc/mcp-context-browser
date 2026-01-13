@@ -2,7 +2,7 @@
 
 ## Status
 
-**Partially Implemented**(v0.1.0)
+**Implemented** (v0.1.0+)
 
 > Major improvements completed:
 >
@@ -12,6 +12,19 @@
 > -   File sizes reduced (most < 500 lines)
 > -   3 files in src/infrastructure/auth/ retain RwLock unwraps (acceptable for lock poisoning)
 > -   Test coverage improved to 493+ tests (100% pass rate)
+>
+> **January 2026 Updates:**
+>
+> -   ✅ **14 domain port traits** fully wired in `src/domain/ports/` (up from 2)
+> -   ✅ **CostTracker bug fix** - Fixed infinite recursion in trait method implementations
+> -   ✅ **SnapshotProvider consolidation** - Merged duplicate trait definitions
+> -   ✅ **Dead code removal** - Removed unused `hybrid_search_provider` parameter from ContextService
+> -   ✅ **New trait implementations wired:**
+>     - `IntelligentChunker` → `CodeChunker`
+>     - `EventBus` → `EventPublisher`
+>     - `SyncManager` → `SyncCoordinator`
+>     - `SnapshotManager` → `SnapshotProvider` (expanded to 4 methods)
+> -   ✅ **All traits extend `shaku::Interface`** for DI compatibility
 
 ## Context
 

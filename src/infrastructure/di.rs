@@ -13,12 +13,14 @@
 //! - `AdminModule` - Admin service (depends on infrastructure and server)
 //! - `McpModule` - Root module composing all domain modules
 
+pub mod bootstrap;
 pub mod dispatch;
 pub mod factory;
 pub mod modules;
 pub mod registry;
 
 // Re-export main types for convenience
+pub use bootstrap::DiContainer;
 pub use dispatch::{
     create_embedding_provider_from_config, create_vector_store_provider_from_config,
     dispatch_embedding_provider, dispatch_vector_store_provider,
