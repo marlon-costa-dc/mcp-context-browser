@@ -34,21 +34,15 @@ pub async fn run_health_check(
     let thresholds = &runtime_cfg.thresholds;
 
     // Collect system metrics with safe defaults
-    let cpu_metrics = SafeMetrics::collect(
-        system_collector.collect_cpu_metrics(),
-        Default::default(),
-    )
-    .await;
+    let cpu_metrics =
+        SafeMetrics::collect(system_collector.collect_cpu_metrics(), Default::default()).await;
     let memory_metrics = SafeMetrics::collect(
         system_collector.collect_memory_metrics(),
         Default::default(),
     )
     .await;
-    let disk_metrics = SafeMetrics::collect(
-        system_collector.collect_disk_metrics(),
-        Default::default(),
-    )
-    .await;
+    let disk_metrics =
+        SafeMetrics::collect(system_collector.collect_disk_metrics(), Default::default()).await;
     let process_metrics = SafeMetrics::collect(
         system_collector.collect_process_metrics(),
         Default::default(),

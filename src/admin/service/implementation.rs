@@ -487,17 +487,15 @@ impl AdminService for AdminServiceImpl {
                 "cache.max_size" => {
                     if let Some(size) = value.as_u64() {
                         if size > 10 * 1024 * 1024 * 1024 {
-                            builder = builder
-                                .warn("Cache size above 10GB may cause memory issues");
+                            builder = builder.warn("Cache size above 10GB may cause memory issues");
                         }
                     }
                 }
                 "database.pool_size" => {
                     if let Some(pool_size) = value.as_u64() {
                         if pool_size > 100 {
-                            builder = builder.warn(
-                                "Database pool size above 100 may cause resource exhaustion",
-                            );
+                            builder = builder
+                                .warn("Database pool size above 100 may cause resource exhaustion");
                         }
                     }
                 }
@@ -505,7 +503,9 @@ impl AdminService for AdminServiceImpl {
             }
         }
 
-        builder.finalize().map_err(|e| AdminError::ConfigError(e.to_string()))
+        builder
+            .finalize()
+            .map_err(|e| AdminError::ConfigError(e.to_string()))
     }
 
     async fn get_configuration_history(

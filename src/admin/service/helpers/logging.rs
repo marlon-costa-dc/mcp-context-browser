@@ -7,6 +7,7 @@ use crate::admin::service::types::{
     AdminError, LogEntries, LogEntry, LogExportFormat, LogFilter, LogStats,
 };
 use crate::infrastructure::logging::SharedLogBuffer;
+use crate::infrastructure::service_helpers::IteratorHelpers;
 use std::collections::HashMap;
 
 /// Get filtered log entries from the log buffer

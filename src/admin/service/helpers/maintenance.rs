@@ -6,6 +6,7 @@ use crate::admin::service::helpers::admin_defaults;
 use crate::admin::service::types::{AdminError, CacheType, CleanupConfig, MaintenanceResult};
 use crate::infrastructure::events::SharedEventBusProvider;
 use crate::infrastructure::logging::SharedLogBuffer;
+use crate::infrastructure::service_helpers::TimedOperation;
 use crate::infrastructure::utils::ProviderUtils;
 
 /// Clear cache by type
@@ -13,7 +14,7 @@ pub async fn clear_cache(
     event_bus: &SharedEventBusProvider,
     cache_type: CacheType,
 ) -> Result<MaintenanceResult, AdminError> {
-    let start_time = std::time::Instant::now();
+    let timer = TimedOperation::start();
     let namespace = match cache_type {
         CacheType::All => None,
         CacheType::QueryResults => Some("search_results".to_string()),
@@ -35,7 +36,7 @@ pub async fn clear_cache(
         operation: format!("clear_cache_{:?}", cache_type),
         message: format!("Successfully requested cache clear for {:?}", cache_type),
         affected_items: 0,
-        execution_time_ms: start_time.elapsed().as_millis() as u64,
+        execution_time_ms: timer.elapsed_ms(),
     })
 }
 
@@ -50,7 +51,7 @@ pub async fn restart_provider(
     event_bus: &SharedEventBusProvider,
     provider_id: &str,
 ) -> Result<MaintenanceResult, AdminError> {
-    let start_time = std::time::Instant::now();
+    let timer = TimedOperation::start();
 
     // Parse provider_id to extract type and id
     let (provider_type, actual_id) = ProviderUtils::parse_provider_id(provider_id);
@@ -84,7 +85,7 @@ pub async fn restart_provider(
             actual_id, provider_type
         ),
         affected_items: 1,
-        execution_time_ms: start_time.elapsed().as_millis() as u64,
+        execution_time_ms: timer.elapsed_ms(),
     })
 }
 
@@ -99,7 +100,7 @@ pub async fn reconfigure_provider(
     provider_id: &str,
     config: serde_json::Value,
 ) -> Result<MaintenanceResult, AdminError> {
-    let start_time = std::time::Instant::now();
+    let timer = TimedOperation::start();
 
     // Parse provider_id to extract type
     let (provider_type, _) = ProviderUtils::parse_provider_id(provider_id);
@@ -141,7 +142,7 @@ pub async fn reconfigure_provider(
             provider_id, provider_type
         ),
         affected_items: 1,
-        execution_time_ms: start_time.elapsed().as_millis() as u64,
+        execution_time_ms: timer.elapsed_ms(),
     })
 }
 
@@ -153,7 +154,7 @@ pub async fn restart_all_providers(
     event_bus: &SharedEventBusProvider,
     providers: &[(String, String)],
 ) -> Result<MaintenanceResult, AdminError> {
-    let start_time = std::time::Instant::now();
+    let timer = TimedOperation::start();
     let mut successful = 0;
     let mut errors = Vec::new();
 
@@ -185,7 +186,7 @@ pub async fn restart_all_providers(
         operation: "restart_all_providers".to_string(),
         message,
         affected_items: successful as u64,
-        execution_time_ms: start_time.elapsed().as_millis() as u64,
+        execution_time_ms: timer.elapsed_ms(),
     })
 }
 
@@ -194,7 +195,7 @@ pub async fn rebuild_index(
     event_bus: &SharedEventBusProvider,
     index_id: &str,
 ) -> Result<MaintenanceResult, AdminError> {
-    let start_time = std::time::Instant::now();
+    let timer = TimedOperation::start();
     event_bus
         .publish(crate::infrastructure::events::SystemEvent::IndexRebuild {
             collection: Some(index_id.to_string()),
@@ -209,7 +210,7 @@ pub async fn rebuild_index(
         operation: "rebuild_index".to_string(),
         message: format!("Successfully requested rebuild for index {}", index_id),
         affected_items: 0,
-        execution_time_ms: start_time.elapsed().as_millis() as u64,
+        execution_time_ms: timer.elapsed_ms(),
     })
 }
 
@@ -218,7 +219,7 @@ pub async fn cleanup_data(
     log_buffer: &SharedLogBuffer,
     cleanup_config: CleanupConfig,
 ) -> Result<MaintenanceResult, AdminError> {
-    let start_time = std::time::Instant::now();
+    let timer = TimedOperation::start();
     let mut affected_items = 0;
 
     for cleanup_type in &cleanup_config.cleanup_types {
@@ -266,6 +267,6 @@ pub async fn cleanup_data(
         operation: "cleanup_data".to_string(),
         message: format!("Cleanup completed. Affected {} items.", affected_items),
         affected_items,
-        execution_time_ms: start_time.elapsed().as_millis() as u64,
+        execution_time_ms: timer.elapsed_ms(),
     })
 }

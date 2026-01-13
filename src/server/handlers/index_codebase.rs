@@ -8,12 +8,13 @@ use rmcp::handler::server::wrapper::Parameters;
 use rmcp::model::CallToolResult;
 use rmcp::ErrorData as McpError;
 use std::sync::Arc;
-use std::time::Instant;
+use std::time::Duration;
 
 use crate::application::IndexingService;
 use crate::infrastructure::auth::Permission;
 use crate::infrastructure::constants::INDEXING_OPERATION_TIMEOUT;
 use crate::infrastructure::limits::ResourceLimits;
+use crate::infrastructure::service_helpers::TimedOperation;
 use crate::server::args::IndexCodebaseArgs;
 use crate::server::auth::AuthHandler;
 use crate::server::formatter::ResponseFormatter;
@@ -49,7 +50,7 @@ impl IndexCodebaseHandler {
             ..
         }): Parameters<IndexCodebaseArgs>,
     ) -> Result<CallToolResult, McpError> {
-        let start_time = Instant::now();
+        let timer = TimedOperation::start();
 
         // Check authentication and permissions
         if let Err(e) = self
@@ -106,7 +107,7 @@ impl IndexCodebaseHandler {
         let indexing_future = self.indexing_service.index_directory(path, collection);
         let result = tokio::time::timeout(INDEXING_OPERATION_TIMEOUT, indexing_future).await;
 
-        let duration = start_time.elapsed();
+        let duration = Duration::from_millis(timer.elapsed_ms());
 
         match result {
             Ok(Ok(chunk_count)) => Ok(ResponseFormatter::format_indexing_success(
