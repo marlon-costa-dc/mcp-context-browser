@@ -16,10 +16,10 @@ Coordinates embedding generation and vector storage operations.
 
 **Responsibilities**:
 
--   Generate embeddings via AI providers
--   Store and retrieve vectors
--   Handle batch processing
--   Collect performance metrics
+\1-   Generate embeddings via AI providers
+\1-   Store and retrieve vectors
+\1-   Handle batch processing
+\1-   Collect performance metrics
 
 **Related**: [providers/embedding](./providers.md), [core/types](./core.md)
 
@@ -29,10 +29,10 @@ Processes codebases and creates searchable vector indexes.
 
 **Responsibilities**:
 
--   Repository scanning and file discovery
--   Language detection and AST parsing
--   Incremental indexing with change detection
--   Chunk generation and metadata extraction
+\1-   Repository scanning and file discovery
+\1-   Language detection and AST parsing
+\1-   Incremental indexing with change detection
+\1-   Chunk generation and metadata extraction
 
 **Related**: [chunking module](../../src/chunking/), [core/types](./core.md)
 
@@ -42,10 +42,10 @@ Executes semantic similarity searches across indexed codebases.
 
 **Responsibilities**:
 
--   Query processing and embedding generation
--   Vector similarity search execution
--   Result ranking and filtering
--   Response caching and optimization
+\1-   Query processing and embedding generation
+\1-   Vector similarity search execution
+\1-   Result ranking and filtering
+\1-   Response caching and optimization
 
 **Related**: [providers/vector_store](./providers.md), [core/hybrid_search](./core.md)
 
@@ -53,19 +53,19 @@ Executes semantic similarity searches across indexed codebases.
 
 ### AI Providers
 
--   OpenAI, Ollama, Gemini, VoyageAI
--   Intelligent routing with failover
--   See [providers module](./providers.md)
+\1-   OpenAI, Ollama, Gemini, VoyageAI
+\1-   Intelligent routing with failover
+\1-   See [providers module](./providers.md)
 
 ### Vector Storage
 
--   Milvus (production), InMemory (development)
--   See [providers module](./providers.md)
+\1-   Milvus (production), InMemory (development)
+\1-   See [providers module](./providers.md)
 
 ### MCP Protocol
 
--   Standardized interface with AI assistants
--   See [server module](./server.md)
+\1-   Standardized interface with AI assistants
+\1-   See [server module](./server.md)
 
 ## Key Exports
 
@@ -91,7 +91,7 @@ src/services/
 
 ## Cross-References
 
--   **Architecture**: [ARCHITECTURE.md](../architecture/ARCHITECTURE.md)
--   **Core Types**: [core.md](./core.md)
--   **Providers**: [providers.md](./providers.md)
--   **Server**: [server.md](./server.md)
+\1-  **Architecture**: [ARCHITECTURE.md](../architecture/ARCHITECTURE.md)
+\1-  **Core Types**: [core.md](./core.md)
+\1-  **Providers**: [providers.md](./providers.md)
+\1-  **Server**: [server.md](./server.md)

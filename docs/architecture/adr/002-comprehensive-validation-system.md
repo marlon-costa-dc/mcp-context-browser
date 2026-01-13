@@ -10,10 +10,10 @@ Accepted
 
 The MCP Context Browser handles complex business data structures (CodeChunk, Embedding, configuration) that require validation at multiple levels:
 
-1. **Data integrity**: Ensuring required fields are present and valid
-2. **Business rules**: Enforcing domain-specific constraints
-3. **Security**: Preventing malicious input and injection attacks
-4. **Performance**: Early validation to avoid expensive operations with invalid data
+1.**Data integrity**: Ensuring required fields are present and valid
+2.**Business rules**: Enforcing domain-specific constraints
+3.**Security**: Preventing malicious input and injection attacks
+4.**Performance**: Early validation to avoid expensive operations with invalid data
 
 The current validation is scattered across the codebase with inconsistent patterns and incomplete coverage.
 
@@ -21,34 +21,38 @@ The current validation is scattered across the codebase with inconsistent patter
 
 Implement a comprehensive validation system using the `validator` crate with custom business logic validators. The system will provide:
 
-1. **Declarative validation** using derive macros
-2. **Custom validators** for business-specific rules
-3. **Multi-layer validation** (input, business logic, security)
-4. **Consistent error handling** with actionable messages
-5. **Performance optimization** through early validation
+1.**Declarative validation**using derive macros
+2.**Custom validators**for business-specific rules
+3.**Multi-layer validation**(input, business logic, security)
+4.**Consistent error handling**with actionable messages
+5.**Performance optimization**through early validation
 
 ## Consequences
 
 ### Positive
-- **Consistency**: Unified validation approach across all data structures
-- **Maintainability**: Centralized validation logic
-- **Security**: Comprehensive input sanitization and validation
-- **Performance**: Early rejection of invalid data
-- **Developer Experience**: Clear validation errors with actionable messages
+
+\1-  **Consistency**: Unified validation approach across all data structures
+\1-  **Maintainability**: Centralized validation logic
+\1-  **Security**: Comprehensive input sanitization and validation
+\1-  **Performance**: Early rejection of invalid data
+\1-  **Developer Experience**: Clear validation errors with actionable messages
 
 ### Negative
-- **Dependency**: Additional crate dependency
-- **Learning curve**: New validation DSL to learn
-- **Runtime overhead**: Validation execution time
+
+\1-  **Dependency**: Additional crate dependency
+\1-  **Learning curve**: New validation DSL to learn
+\1-  **Runtime overhead**: Validation execution time
 
 ### Risks
-- **Performance impact**: Validation on hot paths
-- **Error message quality**: Ensuring messages are actionable
-- **Coverage completeness**: Missing validation rules
+
+\1-  **Performance impact**: Validation on hot paths
+\1-  **Error message quality**: Ensuring messages are actionable
+\1-  **Coverage completeness**: Missing validation rules
 
 ## Implementation
 
 ### Data Structure Validation
+
 ```rust
 #[derive(Debug, Validate)]
 pub struct CodeChunk {
@@ -71,6 +75,7 @@ pub struct CodeChunk {
 ```
 
 ### Custom Validators
+
 ```rust
 fn validate_file_path(path: &str) -> Result<(), ValidationError> {
     if path.is_empty() {
@@ -85,7 +90,7 @@ fn validate_file_path(path: &str) -> Result<(), ValidationError> {
 }
 
 fn validate_line_range(end_line: u32, start_line: &u32) -> Result<(), ValidationError> {
-    if *start_line > end_line {
+    if*start_line > end_line {
         return Err(ValidationError::new("Start line cannot be greater than end line"));
     }
     Ok(())
@@ -93,6 +98,7 @@ fn validate_line_range(end_line: u32, start_line: &u32) -> Result<(), Validation
 ```
 
 ### Business Logic Integration
+
 ```rust
 impl CodeChunk {
     pub fn validate_business_rules(&self) -> Result<(), Error> {
@@ -109,54 +115,62 @@ impl CodeChunk {
 ## Alternatives Considered
 
 ### Option 1: Manual Validation
+
 ```rust
 if chunk.content.is_empty() {
     return Err("Content cannot be empty");
 }
 ```
-- **Pros**: No dependencies, full control
-- **Cons**: Verbose, error-prone, inconsistent
+
+\1-  **Pros**: No dependencies, full control
+\1-  **Cons**: Verbose, error-prone, inconsistent
 
 ### Option 2: Custom Derive Macros
-- **Pros**: Clean syntax, compile-time validation
-- **Cons**: Complex macro implementation, maintenance burden
+
+\1-  **Pros**: Clean syntax, compile-time validation
+\1-  **Cons**: Complex macro implementation, maintenance burden
 
 ### Option 3: JSON Schema Validation
-- **Pros**: Standard schemas, tooling support
-- **Cons**: Runtime-only, less type-safe
+
+\1-  **Pros**: Standard schemas, tooling support
+\1-  **Cons**: Runtime-only, less type-safe
 
 ## Validation Layers
 
 ### 1. Input Validation
-- Required fields presence
-- Type constraints (string length, number ranges)
-- Format validation (paths, URLs)
+
+\1-   Required fields presence
+\1-   Type constraints (String length, number ranges)
+\1-   Format validation (paths, URLs)
 
 ### 2. Business Logic Validation
-- Domain-specific rules
-- Cross-field validation
-- Consistency checks
+
+\1-   Domain-specific rules
+\1-   Cross-field validation
+\1-   Consistency checks
 
 ### 3. Security Validation
-- Path traversal prevention
-- XSS prevention
-- Injection attack prevention
+
+\1-   Path traversal prevention
+\1-   XSS prevention
+\1-   Injection attack prevention
 
 ### 4. Performance Validation
-- Size limits to prevent DoS
-- Complexity limits
-- Resource usage validation
+
+\1-   Size limits to prevent DoS
+\1-   Complexity limits
+\1-   Resource usage validation
 
 ## Error Handling
 
 Validation errors provide:
-- **Field identification**: Which field failed validation
-- **Error type**: What validation rule was violated
-- **Actionable message**: How to fix the issue
-- **Context**: Additional debugging information
+\1-  **Field identification**: Which field failed validation
+\1-  **Error type**: What validation rule was violated
+\1-  **Actionable message**: How to fix the issue
+\1-  **Context**: Additional debugging information
 
 ## References
 
-- [Validator Crate](https://docs.rs/validator/latest/validator/)
-- [Input Validation](https://owasp.org/www-community/Input_Validation_Cheat_Sheet)
-- [Domain Validation](https://martinfowler.com/bliki/EvansClassification.html)
+\1-   [Validator Crate](https://docs.rs/validator/latest/validator/)
+\1-   [Input Validation](https://owasp.org/www-community/Input_Validation_Cheat_Sheet)
+\1-   [Domain Validation](https://martinfowler.com/bliki/EvansClassification.html)

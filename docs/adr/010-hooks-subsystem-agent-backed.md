@@ -2,13 +2,14 @@
 
 ## Status
 
-**Proposed** (Planned for v0.2.0)
+**Proposed**(Planned for v0.2.0)
 
 > Not yet implemented. Key dependencies:
-> - EventBus exists and can be extended (src/infrastructure/events.rs)
-> - No HookService, HookProcessor, or PolicyEngine
-> - Requires ADR-009 memory integration for hook observations
-> - Blocking: New application service and processor infrastructure required
+>
+> -   EventBus exists and can be extended (src/infrastructure/events.rs)
+> -   No HookService, HookProcessor, or PolicyEngine
+> -   Requires ADR-009 memory integration for hook observations
+> -   Blocking: New application service and processor infrastructure required
 
 ## Context
 
@@ -16,34 +17,34 @@ Claude Code provides a hooks system for extending AI assistant behavior at lifec
 
 **Current limitations:**
 
-- Hooks are shell scripts with hardcoded rules
-- No semantic understanding of context
-- No integration with code search or session memory
-- Each hook operates in isolation
-- Complex decisions require manual rule maintenance
+\1-   Hooks are shell scripts with hardcoded rules
+\1-   No semantic understanding of context
+\1-   No integration with code search or session memory
+\1-   Each hook operates in isolation
+\1-   Complex decisions require manual rule maintenance
 
 **Opportunity for integration:**
 
 MCP Context Browser v0.2.0 already provides (via ADR 008 and ADR 009):
 
-- **Semantic code search** - understand code context
-- **Session memory** - recall past decisions and observations
-- **Hybrid search** - combine BM25 + vector similarity
-- **Event bus** - decoupled component communication
-- **Provider pattern** - pluggable implementations
-- **Actor pattern** - async message-based processing
+\1-  **Semantic code search**- understand code context
+\1-  **Session memory**- recall past decisions and observations
+\1-  **Hybrid search**- combine BM25 + vector similarity
+\1-  **Event bus**- decoupled component communication
+\1-  **Provider pattern**- pluggable implementations
+\1-  **Actor pattern**- async message-based processing
 
 **User demand:**
 
-- Intelligent hook processing with semantic context
-- Agent-backed decisions using Claude models
-- Integration with existing code search and memory
-- Policy-based filtering with semantic fallback
-- Zero-config for basic use, full customization available
+\1-   Intelligent hook processing with semantic context
+\1-   Agent-backed decisions using Claude models
+\1-   Integration with existing code search and memory
+\1-   Policy-based filtering with semantic fallback
+\1-   Zero-config for basic use, full customization available
 
 ## Decision
 
-Implement a Hooks Subsystem that **maximally reuses existing infrastructure**:
+Implement a Hooks Subsystem that**maximally reuses existing infrastructure**:
 
 ### Component Reuse Strategy
 
@@ -97,41 +98,41 @@ Claude Code Session
 
 ### Key Design Principles
 
-1. **Extend, don't duplicate**: Add to existing enums/traits rather than creating parallel structures
-2. **Reuse providers**: Use existing `MemoryProvider`, `SearchRepository` for context
-3. **Follow patterns**: Match `ContextService`, `IndexingService` patterns exactly
-4. **Event-driven**: Integrate with `EventBus` like `IndexingService.start_event_listener()`
-5. **Actor for async**: Use `mpsc`/`oneshot` pattern from `HybridSearchActor`
+1.**Extend, don't duplicate**: Add to existing enums/traits rather than creating parallel structures
+2.**Reuse providers**: Use existing `MemoryProvider`, `SearchRepository` for context
+3.**Follow patterns**: Match `ContextService`, `IndexingService` patterns exactly
+4.**Event-driven**: Integrate with `EventBus` like `IndexingService.start_event_listener()`
+5.**Actor for async**: Use `mpsc`/`oneshot` pattern from `HybridSearchActor`
 
 ## Consequences
 
 ### Positive
 
-- **Minimal new code**: ~1500 LOC vs ~4000 LOC if built from scratch
-- **Consistent patterns**: Same DI, error handling, event patterns
-- **Unified platform**: Hooks integrate naturally with search + memory
-- **Tested infrastructure**: Reuses battle-tested components
-- **Easy maintenance**: Single codebase, shared improvements
+\1-  **Minimal new code**: ~1500 LOC vs ~4000 LOC if built from scratch
+\1-  **Consistent patterns**: Same DI, error handling, event patterns
+\1-  **Unified platform**: Hooks integrate naturally with search + memory
+\1-  **Tested infrastructure**: Reuses battle-tested components
+\1-  **Easy maintenance**: Single codebase, shared improvements
 
 ### Negative
 
-- **Coupling**: Hooks depend on ADR 009 memory infrastructure
-- **Latency**: Agent calls add 500-2000ms for complex decisions
-- **API cost**: Claude API calls for agent processing
+\1-  **Coupling**: Hooks depend on ADR 009 memory infrastructure
+\1-  **Latency**: Agent calls add 500-2000ms for complex decisions
+\1-  **API cost**: Claude API calls for agent processing
 
 ## Alternatives Considered
 
 ### Alternative 1: Standalone hooks service
 
-- **Pros**: Independent, no dependencies
-- **Cons**: Duplicates 80% of existing infrastructure
-- **Rejected**: Misses integration opportunity
+\1-  **Pros**: Independent, no dependencies
+\1-  **Cons**: Duplicates 80% of existing infrastructure
+\1-  **Rejected**: Misses integration opportunity
 
 ### Alternative 2: Simple MCP tools only (no agent)
 
-- **Pros**: Fast, no API cost
-- **Cons**: Limited to rule-based decisions
-- **Rejected**: Doesn't meet semantic understanding requirement
+\1-  **Pros**: Fast, no API cost
+\1-  **Cons**: Limited to rule-based decisions
+\1-  **Rejected**: Doesn't meet semantic understanding requirement
 
 ## Implementation Notes
 
@@ -1130,15 +1131,15 @@ if let Some(git) = &self.git_provider {
 
 ### With ADR 009 (Memory)
 
-1. **Context retrieval**: Use `MemoryProvider.search_observations()` for context injection
-2. **Observation storage**: Store hook observations via `MemoryProvider.store_observation()`
-3. **Shared types**: Reuse `Observation`, `ObservationType` from memory domain
+1.**Context retrieval**: Use `MemoryProvider.search_observations()` for context injection
+2.**Observation storage**: Store hook observations via `MemoryProvider.store_observation()`
+3.**Shared types**: Reuse `Observation`, `ObservationType` from memory domain
 
 ## References
 
-- [ADR 001: Provider Pattern Architecture](001-provider-pattern-architecture.md)
-- [ADR 002: Async-First Architecture](002-async-first-architecture.md)
-- [ADR 008: Git-Aware Semantic Indexing](008-git-aware-semantic-indexing-v0.2.0.md)
-- [ADR 009: Persistent Session Memory](009-persistent-session-memory-v0.2.0.md)
-- [Claude Code Hooks Documentation](https://docs.anthropic.com/claude-code/hooks)
-- Existing patterns: `src/infrastructure/events.rs`, `src/infrastructure/di/registry.rs`, `src/application/context.rs`
+\1-   [ADR 001: Provider Pattern Architecture](001-provider-pattern-architecture.md)
+\1-   [ADR 002: Async-First Architecture](002-async-first-architecture.md)
+\1-   [ADR 008: Git-Aware Semantic Indexing](008-git-aware-semantic-indexing-v0.2.0.md)
+\1-   [ADR 009: Persistent Session Memory](009-persistent-session-memory-v0.2.0.md)
+\1-   [Claude Code Hooks Documentation](https://docs.anthropic.com/claude-code/hooks)
+\1-   Existing patterns: `src/infrastructure/events.rs`, `src/infrastructure/di/registry.rs`, `src/application/context.rs`

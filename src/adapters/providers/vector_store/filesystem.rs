@@ -6,6 +6,7 @@
 use crate::domain::error::Result;
 use crate::domain::ports::VectorStoreProvider;
 use crate::domain::types::{Embedding, SearchResult};
+use crate::infrastructure::utils::FileUtils;
 use async_trait::async_trait;
 use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
@@ -112,15 +113,9 @@ impl FilesystemVectorStore {
             .config
             .base_path
             .join(format!("{}_index.json", collection));
-        if index_path.exists() {
-            let content = tokio::fs::read(&index_path).await.map_err(|e| {
-                crate::domain::error::Error::io(format!("Failed to read index file: {}", e))
-            })?;
+        if FileUtils::exists(&index_path).await {
             let index: HashMap<String, IndexEntry> =
-                serde_json::from_slice(&content).map_err(|e| {
-                    crate::domain::error::Error::internal(format!("Failed to parse index: {}", e))
-                })?;
-
+                FileUtils::read_json(&index_path, "collection index").await?;
             for (id, entry) in index {
                 self.index_cache.insert((collection.to_string(), id), entry);
             }
@@ -178,45 +173,23 @@ impl FilesystemVectorStore {
             .config
             .base_path
             .join(format!("{}_index.json", collection));
-
         let index: HashMap<String, IndexEntry> = self
             .index_cache
             .iter()
             .filter(|r| r.key().0 == collection)
             .map(|r| (r.key().1.clone(), r.value().clone()))
             .collect();
-
-        let content = serde_json::to_vec_pretty(&index).map_err(|e| {
-            crate::domain::error::Error::internal(format!("Failed to serialize index: {}", e))
-        })?;
-
-        tokio::fs::write(index_path, content).await.map_err(|e| {
-            crate::domain::error::Error::io(format!("Failed to write index file: {}", e))
-        })?;
+        FileUtils::write_json(&index_path, &index, "collection index").await?;
 
         // Save shard metadata
         let shards_path = self.config.base_path.join(format!("{}_shards", collection));
-        tokio::fs::create_dir_all(&shards_path).await.map_err(|e| {
-            crate::domain::error::Error::io(format!("Failed to create shards directory: {}", e))
-        })?;
-
         for r in self.shard_cache.iter() {
             let (c, shard_id) = r.key();
             if c == collection {
-                let metadata = r.value();
                 let meta_path = shards_path.join(format!("shard_{}.meta", shard_id));
-                let content = serde_json::to_vec(metadata).map_err(|e| {
-                    crate::domain::error::Error::internal(format!(
-                        "Failed to serialize shard meta: {}",
-                        e
-                    ))
-                })?;
-                tokio::fs::write(meta_path, content).await.map_err(|e| {
-                    crate::domain::error::Error::io(format!("Failed to write shard meta: {}", e))
-                })?;
+                FileUtils::ensure_dir_write_json(&meta_path, r.value(), "shard metadata").await?;
             }
         }
-
         Ok(())
     }
 
@@ -241,20 +214,9 @@ impl FilesystemVectorStore {
     async fn ensure_shard_capacity(&self, collection: &str, shard_id: u32) -> Result<()> {
         let shard_path = self.get_shard_path(collection, shard_id);
 
-        if !shard_path.exists() {
-            // Create parent directory if it doesn't exist
-            if let Some(parent) = shard_path.parent() {
-                tokio::fs::create_dir_all(parent).await.map_err(|e| {
-                    crate::domain::error::Error::io(format!(
-                        "Failed to create shard parent dir: {}",
-                        e
-                    ))
-                })?;
-            }
-            // Create new shard file
-            tokio::fs::File::create(&shard_path).await.map_err(|e| {
-                crate::domain::error::Error::io(format!("Failed to create shard file: {}", e))
-            })?;
+        if !FileUtils::exists(&shard_path).await {
+            // Create shard file with empty content
+            FileUtils::ensure_dir_write(&shard_path, &[], "shard file").await?;
 
             let metadata = ShardMetadata {
                 shard_id,
@@ -266,11 +228,9 @@ impl FilesystemVectorStore {
                     .unwrap_or_default()
                     .as_secs(),
             };
-
             self.shard_cache
                 .insert((collection.to_string(), shard_id), metadata);
         }
-
         Ok(())
     }
 

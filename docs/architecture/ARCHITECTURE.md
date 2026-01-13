@@ -31,26 +31,26 @@ MCP Context Browser is a high-performance, extensible Model Context Protocol (MC
 
 ### Core Capabilities
 
--   **🔍 Semantic Code Search**: Natural language to code search using vector embeddings
--   **📁 Multi-Language Support**: AST-based parsing for Rust, Python, JavaScript, TypeScript, and more
--   **🔌 Provider Architecture**: Pluggable embedding and vector storage providers
--   **⚡ High Performance**: Async processing with Tokio runtime
--   **🛡️ Enterprise Ready**: Comprehensive security, monitoring, and scalability features
--   **📊 Observability**: Full metrics, logging, and distributed tracing
+\1-  **🔍 Semantic Code Search**: Natural language to code search using vector embeddings
+\1-  **📁 Multi-Language Support**: AST-based parsing for Rust, Python, JavaScript, TypeScript, and more
+\1-  **🔌 Provider Architecture**: Pluggable embedding and vector storage providers
+\1-  **⚡ High Performance**: Async processing with Tokio runtime
+\1-  **🛡️ Enterprise Ready**: Comprehensive security, monitoring, and scalability features
+\1-  **📊 Observability**: Full metrics, logging, and distributed tracing
 
 ### Architectural Principles
 
--   **SOLID Design**: Clean separation of concerns with dependency injection
--   **Provider Pattern**: Extensible architecture for AI and storage providers
--   **Async-First**: Built for high concurrency and performance
--   **Security by Design**: Comprehensive security controls and compliance
--   **Observability**: Full monitoring and debugging capabilities
--   **Scalability**: Horizontal scaling with distributed deployment options
+\1-  **SOLID Design**: Clean separation of concerns with dependency injection
+\1-  **Provider Pattern**: Extensible architecture for AI and storage providers
+\1-  **Async-First**: Built for high concurrency and performance
+\1-  **Security by Design**: Comprehensive security controls and compliance
+\1-  **Observability**: Full monitoring and debugging capabilities
+\1-  **Scalability**: Horizontal scaling with distributed deployment options
 
 ### Current Status
 
 **Version**: 0.1.0 (First Stable Release)
-**Architecture Maturity**: ✅ **100% Complete DI Implementation**
+**Architecture Maturity**: ✅**100% Complete DI Implementation**
 **DI Status**: ✅ Provider Registry, ✅ Service Factory, ✅ Provider Router, ✅ Runtime Configuration
 **Deployment Options**: Local development, Docker, Kubernetes, hybrid cloud-edge
 
@@ -101,11 +101,11 @@ graph TB
 
 MCP Context Browser serves as a semantic code intelligence layer between AI assistants and codebases, enabling:
 
--   **Natural Language Code Search**: Find code by describing functionality
--   **Intelligent Code Analysis**: Understand code relationships and patterns
--   **Context-Aware Assistance**: Provide relevant code examples and references
--   **Multi-Repository Support**: Index and search across multiple codebases
--   **Real-time Updates**: Incremental indexing with change detection
+\1-  **Natural Language Code Search**: Find code by describing functionality
+\1-  **Intelligent Code Analysis**: Understand code relationships and patterns
+\1-  **Context-Aware Assistance**: Provide relevant code examples and references
+\1-  **Multi-Repository Support**: Index and search across multiple codebases
+\1-  **Real-time Updates**: Incremental indexing with change detection
 
 ### External Interfaces
 
@@ -113,35 +113,35 @@ MCP Context Browser serves as a semantic code intelligence layer between AI assi
 
 | Interface | Protocol | Purpose | Status |
 |-----------|----------|---------|--------|
-| **MCP Protocol** | JSON-RPC 2.0 over stdio | AI assistant integration | ✅ Implemented |
-| **REST API** | HTTP/JSON | Direct API access | 🚧 Planned |
-| **WebSocket** | Real-time protocol | Live indexing updates | 🚧 Planned |
+|**MCP Protocol**| JSON-RPC 2.0 over stdio | AI assistant integration | ✅ Implemented |
+|**REST API**| HTTP/JSON | Direct API access | 🚧 Planned |
+|**WebSocket**| Real-time protocol | Live indexing updates | 🚧 Planned |
 
 #### Secondary Interfaces
 
 | Interface | Protocol | Purpose | Status |
 |-----------|----------|---------|--------|
-| **Embedding APIs** | REST/gRPC | AI model integration | ⚠️ Framework ready |
-| **Vector Databases** | Native protocols | Vector storage | ⚠️ Framework ready |
-| **Git Integration** | Git protocol | Repository access | 🚧 Planned |
+|**Embedding APIs**| REST/gRPC | AI model integration | ⚠️ Framework ready |
+|**Vector Databases**| Native protocols | Vector storage | ⚠️ Framework ready |
+|**Git Integration**| Git protocol | Repository access | 🚧 Planned |
 
 ### Quality Attributes
 
 #### Functional Requirements
 
--   **Search Accuracy**: >90% relevant results for natural language queries
--   **Indexing Speed**: <5 seconds for 1000 files (<1MB each)
--   **Query Latency**: <500ms average response time
--   **Language Support**: 8+ programming languages with AST parsing
--   **Provider Compatibility**: 4+ embedding providers, 3+ vector stores
+\1-  **Search Accuracy**: >90% relevant results for natural language queries
+\1-  **Indexing Speed**: <5 seconds for 1000 files (<1MB each)
+\1-  **Query Latency**: <500ms average response time
+\1-  **Language Support**: 8+ programming languages with AST parsing
+\1-  **Provider Compatibility**: 4+ embedding providers, 3+ vector stores
 
 #### Non-Functional Requirements
 
--   **Performance**: 1000 concurrent users, 10k queries/minute
--   **Availability**: 99.9% uptime with automatic failover
--   **Security**: SOC 2 compliant with end-to-end encryption
--   **Scalability**: Horizontal scaling across 100+ nodes
--   **Maintainability**: <24 hours for hotfixes, <1 week for features
+\1-  **Performance**: 1000 concurrent users, 10k queries/minute
+\1-  **Availability**: 99.9% uptime with automatic failover
+\1-  **Security**: SOC 2 compliant with end-to-end encryption
+\1-  **Scalability**: Horizontal scaling across 100+ nodes
+\1-  **Maintainability**: <24 hours for hotfixes, <1 week for features
 
 ---
 
@@ -204,33 +204,33 @@ graph TB
 
 | Container | Technology | Responsibility | Interfaces |
 |-----------|------------|----------------|------------|
-| **MCP Server** | Rust/Tokio | Protocol translation, request routing | MCP Protocol (stdio), Internal APIs |
-| **REST API** | Rust/Axum | HTTP interface, API gateway | HTTP/JSON, OpenAPI |
-| **WebSocket** | Rust/Tokio | Real-time notifications, live updates | WebSocket protocol |
+|**MCP Server**| Rust/Tokio | Protocol translation, request routing | MCP Protocol (stdio), Internal APIs |
+|**REST API**| Rust/Axum | HTTP interface, API gateway | HTTP/JSON, OpenAPI |
+|**WebSocket**| Rust/Tokio | Real-time notifications, live updates | WebSocket protocol |
 
 #### Application Containers
 
 | Container | Technology | Responsibility | Interfaces |
 |-----------|------------|----------------|------------|
-| **Core Services** | Rust | Business logic orchestration | Provider interfaces, data access |
-| **Task Scheduler** | Rust/Tokio | Background job processing | Internal queues, provider APIs |
-| **Cache Manager** | Rust/Redis | Caching layer abstraction | Redis protocol, internal APIs |
+|**Core Services**| Rust | Business logic orchestration | Provider interfaces, data access |
+|**Task Scheduler**| Rust/Tokio | Background job processing | Internal queues, provider APIs |
+|**Cache Manager**| Rust/Redis | Caching layer abstraction | Redis protocol, internal APIs |
 
 #### Provider Containers
 
 | Container | Technology | Responsibility | Interfaces |
 |-----------|------------|----------------|------------|
-| **Embedding Providers** | Rust + AI SDKs | Text-to-vector conversion | AI provider APIs, internal interfaces |
-| **Vector Store Providers** | Rust + DB SDKs | Vector storage and retrieval | Database protocols, internal interfaces |
-| **VCS Providers** | Rust/Git2 | Repository access and monitoring | Git/SSH protocols, internal interfaces |
+|**Embedding Providers**| Rust + AI SDKs | Text-to-vector conversion | AI provider APIs, internal interfaces |
+|**Vector Store Providers**| Rust + DB SDKs | Vector storage and retrieval | Database protocols, internal interfaces |
+|**VCS Providers**| Rust/Git2 | Repository access and monitoring | Git/SSH protocols, internal interfaces |
 
 #### Data Containers
 
 | Container | Technology | Responsibility | Interfaces |
 |-----------|------------|----------------|------------|
-| **Metadata Store** | PostgreSQL | Structured data, user management | SQL, connection pooling |
-| **Vector Database** | Milvus/Qdrant | High-dimensional vector storage | gRPC/REST, bulk operations |
-| **Cache Store** | Redis | Fast data caching, sessions | Redis protocol, pub/sub |
+|**Metadata Store**| PostgreSQL | Structured data, user management | SQL, connection pooling |
+|**Vector Database**| Milvus/Qdrant | High-dimensional vector storage | gRPC/REST, bulk operations |
+|**Cache Store**| Redis | Fast data caching, sessions | Redis protocol, pub/sub |
 
 ### Container Interactions
 
@@ -354,10 +354,10 @@ impl ContextService {
 
 **Responsibilities**:
 
--   Coordinate embedding generation
--   Manage vector storage operations
--   Handle batch processing
--   Collect performance metrics
+\1-   Coordinate embedding generation
+\1-   Manage vector storage operations
+\1-   Handle batch processing
+\1-   Collect performance metrics
 
 ##### SearchService
 
@@ -398,10 +398,10 @@ impl SearchService {
 
 **Responsibilities**:
 
--   Query processing and embedding generation
--   Vector similarity search execution
--   Result ranking and filtering
--   Response caching and optimization
+\1-   Query processing and embedding generation
+\1-   Vector similarity search execution
+\1-   Result ranking and filtering
+\1-   Response caching and optimization
 
 ##### IndexingService
 
@@ -449,10 +449,10 @@ impl IndexingService {
 
 **Responsibilities**:
 
--   Repository scanning and file discovery
--   Language detection and AST parsing
--   Incremental indexing with change detection
--   Chunk generation and metadata extraction
+\1-   Repository scanning and file discovery
+\1-   Language detection and AST parsing
+\1-   Incremental indexing with change detection
+\1-   Chunk generation and metadata extraction
 
 #### Provider Implementations
 
@@ -475,12 +475,12 @@ pub trait EmbeddingProvider: Send + Sync {
 
 | Provider | Technology | Dimensions | Cost Model | Status |
 |----------|------------|------------|------------|--------|
-| **OpenAI** | text-embedding-3-small | 1536 | Pay-per-token | ✅ Production |
-| **Ollama** | nomic-embed-text | 768 | Self-hosted | ✅ Production |
-| **Gemini** | text-embedding-004 | 768 | Pay-per-token | ✅ Production |
-| **VoyageAI** | voyage-3-lite | 512 | Pay-per-token | ✅ Production |
-| **Anthropic** | N/A | N/A | Pay-per-token | 🚧 Planned |
-| **Mock** | Fixed vectors | 128 | Free | ✅ Development |
+|**OpenAI**| text-embedding-3-small | 1536 | Pay-per-token | ✅ Production |
+|**Ollama**| nomic-embed-text | 768 | Self-hosted | ✅ Production |
+|**Gemini**| text-embedding-004 | 768 | Pay-per-token | ✅ Production |
+|**VoyageAI**| voyage-3-lite | 512 | Pay-per-token | ✅ Production |
+|**Anthropic**| N/A | N/A | Pay-per-token | 🚧 Planned |
+|**Mock**| Fixed vectors | 128 | Free | ✅ Development |
 
 ##### Vector Store Providers
 
@@ -501,10 +501,10 @@ pub trait VectorStoreProvider: Send + Sync {
 
 | Provider | Technology | Index Type | Scalability | Status |
 |----------|------------|------------|-------------|--------|
-| **Milvus** | C++ + Go | IVF_FLAT, HNSW | 100M+ vectors | ✅ Production |
-| **Pinecone** | Cloud-native | HNSW | 1B+ vectors | 🚧 Planned |
-| **Qdrant** | Rust | HNSW | 10M+ vectors | 🚧 Planned |
-| **In-Memory** | Rust + DashMap | Brute force | <1M vectors | ✅ Development |
+|**Milvus**| C++ + Go | IVF_FLAT, HNSW | 100M+ vectors | ✅ Production |
+|**Pinecone**| Cloud-native | HNSW | 1B+ vectors | 🚧 Planned |
+|**Qdrant**| Rust | HNSW | 10M+ vectors | 🚧 Planned |
+|**In-Memory**| Rust + DashMap | Brute force | <1M vectors | ✅ Development |
 
 ---
 
@@ -520,16 +520,16 @@ The system is organized into specialized modules, each handling distinct respons
 
 **Key Components**:
 
--   `IntelligentChunker`: AST-aware chunking with language-specific rules
--   `LanguageProcessor`: Language detection and syntax-aware processing
--   `ChunkProcessor`: Parallel processing with configurable chunk sizes
+\1-   `IntelligentChunker`: AST-aware chunking with language-specific rules
+\1-   `LanguageProcessor`: Language detection and syntax-aware processing
+\1-   `ChunkProcessor`: Parallel processing with configurable chunk sizes
 
 **Features**:
 
--   Multi-language support (Rust, Python, JavaScript, TypeScript, Java, Go, etc.)
--   AST-based semantic boundary detection
--   Configurable chunk sizes with overlap control
--   Syntax-aware splitting preserving code structure
+\1-   Multi-language support (Rust, Python, JavaScript, TypeScript, Java, Go, etc.)
+\1-   AST-based semantic boundary detection
+\1-   Configurable chunk sizes with overlap control
+\1-   Syntax-aware splitting preserving code structure
 
 #### ⚙️ Core Module (`src/core/`)
 
@@ -537,17 +537,17 @@ The system is organized into specialized modules, each handling distinct respons
 
 **Submodules**:
 
--   `auth`: Authentication and authorization utilities
--   `cache`: Advanced caching with TTL and size limits
--   `crypto`: Encryption utilities for secure data handling
--   `database`: Database connection pooling and utilities
--   `error`: Comprehensive error types and handling
--   `http_client`: Configurable HTTP client with retry logic
--   `hybrid_search`: BM25 + semantic search combination
--   `limits`: Resource limits and rate limiting
--   `merkle`: Merkle tree implementation for integrity
--   `rate_limit`: Rate limiting with multiple strategies
--   `types`: Core data types and serialization
+\1-   `auth`: Authentication and authorization utilities
+\1-   `cache`: Advanced caching with TTL and size limits
+\1-   `crypto`: Encryption utilities for secure data handling
+\1-   `database`: Database connection pooling and utilities
+\1-   `error`: Comprehensive error types and handling
+\1-   `http_client`: Configurable HTTP client with retry logic
+\1-   `hybrid_search`: BM25 + semantic search combination
+\1-   `limits`: Resource limits and rate limiting
+\1-   `merkle`: Merkle tree implementation for integrity
+\1-   `rate_limit`: Rate limiting with multiple strategies
+\1-   `types`: Core data types and serialization
 
 #### 👻 Daemon Module (`src/daemon/`)
 
@@ -555,11 +555,11 @@ The system is organized into specialized modules, each handling distinct respons
 
 **Features**:
 
--   Automatic cleanup of stale lockfiles
--   Continuous monitoring of sync operations
--   Configurable cleanup and monitoring intervals
--   Graceful shutdown handling
--   Lock metadata tracking and reporting
+\1-   Automatic cleanup of stale lockfiles
+\1-   Continuous monitoring of sync operations
+\1-   Configurable cleanup and monitoring intervals
+\1-   Graceful shutdown handling
+\1-   Lock metadata tracking and reporting
 
 #### 🏭 Factory Module (`src/factory/`)
 
@@ -567,9 +567,9 @@ The system is organized into specialized modules, each handling distinct respons
 
 **Key Components**:
 
--   `ServiceProvider`: Main dependency injection container
--   `ProviderFactory`: Runtime provider instantiation
--   `ServiceRegistry`: Service registration and lookup
+\1-   `ServiceProvider`: Main dependency injection container
+\1-   `ProviderFactory`: Runtime provider instantiation
+\1-   `ServiceRegistry`: Service registration and lookup
 
 #### 📊 Metrics Module (`src/metrics/`)
 
@@ -577,10 +577,10 @@ The system is organized into specialized modules, each handling distinct respons
 
 **Components**:
 
--   `SystemMetricsCollector`: CPU, memory, disk monitoring
--   `PerformanceMetrics`: Query performance tracking
--   `MetricsApiServer`: HTTP metrics endpoint (Prometheus-compatible)
--   `CacheMetrics`: Cache hit/miss statistics
+\1-   `SystemMetricsCollector`: CPU, memory, disk monitoring
+\1-   `PerformanceMetrics`: Query performance tracking
+\1-   `MetricsApiServer`: HTTP metrics endpoint (Prometheus-compatible)
+\1-   `CacheMetrics`: Cache hit/miss statistics
 
 #### 🔌 Providers Module (`src/providers/`)
 
@@ -588,9 +588,9 @@ The system is organized into specialized modules, each handling distinct respons
 
 **Submodules**:
 
--   `embedding/`: Text-to-vector conversion providers (OpenAI, Ollama, Gemini, VoyageAI)
--   `vector_store/`: Vector storage providers (Milvus, In-Memory, Filesystem, Encrypted)
--   `routing/`: Intelligent provider routing with circuit breakers and failover
+\1-   `embedding/`: Text-to-vector conversion providers (OpenAI, Ollama, Gemini, VoyageAI)
+\1-   `vector_store/`: Vector storage providers (Milvus, In-Memory, Filesystem, Encrypted)
+\1-   `routing/`: Intelligent provider routing with circuit breakers and failover
 
 #### 📋 Registry Module (`src/registry/`)
 
@@ -598,10 +598,10 @@ The system is organized into specialized modules, each handling distinct respons
 
 **Features**:
 
--   Dynamic provider registration
--   Health-aware provider selection
--   Configuration-driven provider setup
--   Thread-safe operations
+\1-   Dynamic provider registration
+\1-   Health-aware provider selection
+\1-   Configuration-driven provider setup
+\1-   Thread-safe operations
 
 #### 🌐 Server Module (`src/server/`)
 
@@ -609,10 +609,10 @@ The system is organized into specialized modules, each handling distinct respons
 
 **Components**:
 
--   MCP protocol handlers
--   HTTP server with Axum
--   WebSocket support for real-time updates
--   Rate limiting middleware
+\1-   MCP protocol handlers
+\1-   HTTP server with Axum
+\1-   WebSocket support for real-time updates
+\1-   Rate limiting middleware
 
 #### 🔧 Services Module (`src/services/`)
 
@@ -620,9 +620,9 @@ The system is organized into specialized modules, each handling distinct respons
 
 **Services**:
 
--   `ContextService`: Embedding and vector operations
--   `IndexingService`: Codebase indexing and chunking
--   `SearchService`: Semantic search operations
+\1-   `ContextService`: Embedding and vector operations
+\1-   `IndexingService`: Codebase indexing and chunking
+\1-   `SearchService`: Semantic search operations
 
 #### 📸 Snapshot Module (`src/snapshot/`)
 
@@ -634,9 +634,9 @@ The system is organized into specialized modules, each handling distinct respons
 
 **Components**:
 
--   `lockfile`: File-based locking for process coordination
--   `manager`: Sync operation management and statistics
--   `CodebaseLockManager`: Lock lifecycle management
+\1-   `lockfile`: File-based locking for process coordination
+\1-   `manager`: Sync operation management and statistics
+\1-   `CodebaseLockManager`: Lock lifecycle management
 
 ### Advanced Features
 
@@ -648,46 +648,46 @@ The system is organized into specialized modules, each handling distinct respons
 
 **Health Monitoring (`health/`)**:
 
--   `HealthMonitor`: Continuous provider health checking
--   `ProviderHealthChecker`: Automated health assessment
--   `HealthCheckResult`: Structured health status reporting
+\1-   `HealthMonitor`: Continuous provider health checking
+\1-   `ProviderHealthChecker`: Automated health assessment
+\1-   `HealthCheckResult`: Structured health status reporting
 
 **Circuit Breaker (`circuit_breaker/`)**:
 
--   `CircuitBreaker`: Failure detection and recovery
--   `CircuitBreakerConfig`: Configurable failure thresholds
--   `CircuitBreakerState`: State management for resilience
+\1-   `CircuitBreaker`: Failure detection and recovery
+\1-   `CircuitBreakerConfig`: Configurable failure thresholds
+\1-   `CircuitBreakerState`: State management for resilience
 
 **Metrics Collection (`metrics/`)**:
 
--   `ProviderMetricsCollector`: Usage and performance tracking
--   `MetricsSummary`: Aggregated metrics reporting
+\1-   `ProviderMetricsCollector`: Usage and performance tracking
+\1-   `MetricsSummary`: Aggregated metrics reporting
 
 **Cost Tracking (`cost_tracker/`)**:
 
--   `CostTracker`: API usage and cost monitoring
--   `UsageMetrics`: Detailed usage statistics
--   `CostTrackerConfig`: Cost optimization settings
+\1-   `CostTracker`: API usage and cost monitoring
+\1-   `UsageMetrics`: Detailed usage statistics
+\1-   `CostTrackerConfig`: Cost optimization settings
 
 **Failover Management (`failover/`)**:
 
--   `FailoverManager`: Automatic provider switching
--   `FailoverStrategy`: Priority-based and round-robin strategies
--   `PriorityBasedStrategy`: Cost and performance-aware selection
+\1-   `FailoverManager`: Automatic provider switching
+\1-   `FailoverStrategy`: Priority-based and round-robin strategies
+\1-   `PriorityBasedStrategy`: Cost and performance-aware selection
 
 **Router Core (`router/`)**:
 
--   `ProviderRouter`: Main routing orchestration
--   `ProviderContext`: Contextual routing decisions
--   `ProviderSelectionStrategy`: Pluggable selection algorithms
+\1-   `ProviderRouter`: Main routing orchestration
+\1-   `ProviderContext`: Contextual routing decisions
+\1-   `ProviderSelectionStrategy`: Pluggable selection algorithms
 
 **Key Features**:
 
--   **Health-Aware Routing**: Automatic failover from unhealthy providers
--   **Cost Optimization**: Intelligent selection based on cost efficiency
--   **Circuit Breaker Protection**: Prevents cascade failures
--   **Performance Balancing**: Load distribution across providers
--   **Metrics-Driven Decisions**: Data-driven provider selection
+\1-  **Health-Aware Routing**: Automatic failover from unhealthy providers
+\1-  **Cost Optimization**: Intelligent selection based on cost efficiency
+\1-  **Circuit Breaker Protection**: Prevents cascade failures
+\1-  **Performance Balancing**: Load distribution across providers
+\1-  **Metrics-Driven Decisions**: Data-driven provider selection
 
 #### 🔍 Hybrid Search Engine (`src/core/hybrid_search.rs`)
 
@@ -697,16 +697,16 @@ The system is organized into specialized modules, each handling distinct respons
 
 **Components**:
 
--   `BM25Scorer`: Term frequency-based ranking
--   `BM25Params`: Configurable BM25 parameters (k1=1.2, b=0.75)
--   `HybridSearchEngine`: Combined search orchestration
--   `SearchResult`: Unified Result format
+\1-   `BM25Scorer`: Term frequency-based ranking
+\1-   `BM25Params`: Configurable BM25 parameters (k1=1.2, b=0.75)
+\1-   `HybridSearchEngine`: Combined search orchestration
+\1-   `SearchResult`: Unified Result format
 
 **Benefits**:
 
--   Better relevance through dual ranking
--   Handles both keyword and semantic queries
--   Configurable weighting between lexical and semantic scores
+\1-   Better relevance through dual ranking
+\1-   Handles both keyword and semantic queries
+\1-   Configurable weighting between lexical and semantic scores
 
 ---
 
@@ -898,10 +898,10 @@ impl VectorRecord {
 
 | Database | Use Case | Performance | Scalability |
 |----------|----------|-------------|-------------|
-| **Milvus** | Production, large scale | High (HNSW index) | 100M+ vectors |
-| **Pinecone** | Cloud-native, managed | High (optimized) | 1B+ vectors |
-| **Qdrant** | Self-hosted, Rust-native | High (HNSW) | 10M+ vectors |
-| **In-Memory** | Development, testing | Fast (brute force) | <1M vectors |
+|**Milvus**| Production, large scale | High (HNSW index) | 100M+ vectors |
+|**Pinecone**| Cloud-native, managed | High (optimized) | 1B+ vectors |
+|**Qdrant**| Self-hosted, Rust-native | High (HNSW) | 10M+ vectors |
+|**In-Memory**| Development, testing | Fast (brute force) | <1M vectors |
 
 #### Metadata Storage
 
@@ -982,10 +982,10 @@ impl Default for RetentionPolicy {
 
 #### Data Archival Strategy
 
--   **Hot Data**: Recent embeddings and frequently accessed chunks (SSD storage)
--   **Warm Data**: Older embeddings with occasional access (HDD storage)
--   **Cold Data**: Archived repositories and historical data (Object storage)
--   **Delete**: Expired data according to retention policies
+\1-  **Hot Data**: Recent embeddings and frequently accessed chunks (SSD storage)
+\1-  **Warm Data**: Older embeddings with occasional access (HDD storage)
+\1-  **Cold Data**: Archived repositories and historical data (Object storage)
+\1-  **Delete**: Expired data according to retention policies
 
 ---
 
@@ -993,11 +993,11 @@ impl Default for RetentionPolicy {
 
 ### Security Principles
 
--   **Defense in Depth**: Multiple security layers and controls
--   **Zero Trust**: Verify all access requests regardless of origin
--   **Least Privilege**: Minimal permissions for all operations
--   **Fail-Safe Defaults**: Secure defaults with explicit opt-in for features
--   **Audit Everything**: Comprehensive logging and monitoring
+\1-  **Defense in Depth**: Multiple security layers and controls
+\1-  **Zero Trust**: Verify all access requests regardless of origin
+\1-  **Least Privilege**: Minimal permissions for all operations
+\1-  **Fail-Safe Defaults**: Secure defaults with explicit opt-in for features
+\1-  **Audit Everything**: Comprehensive logging and monitoring
 
 ### Threat Model
 
@@ -1005,12 +1005,12 @@ impl Default for RetentionPolicy {
 
 | Threat Category | Description | Mitigations |
 |----------------|-------------|-------------|
-| **Spoofing** | Unauthorized access to MCP server | JWT authentication, API key validation |
-| **Tampering** | Modification of code or data in transit | TLS 1.3, message integrity checks |
-| **Repudiation** | Denial of Actions performed | Comprehensive audit logging |
-| **Information Disclosure** | Exposure of sensitive code/data | Encryption at rest, access controls |
-| **Denial of Service** | Resource exhaustion attacks | Rate limiting, resource quotas |
-| **Elevation of Privilege** | Unauthorized privilege escalation | RBAC, input validation |
+|**Spoofing**| Unauthorized access to MCP server | JWT authentication, API key validation |
+|**Tampering**| Modification of code or data in transit | TLS 1.3, message integrity checks |
+|**Repudiation**| Denial of Actions performed | Comprehensive audit logging |
+|**Information Disclosure**| Exposure of sensitive code/data | Encryption at rest, access controls |
+|**Denial of Service**| Resource exhaustion attacks | Rate limiting, resource quotas |
+|**Elevation of Privilege**| Unauthorized privilege escalation | RBAC, input validation |
 
 ### Authentication & Authorization
 
@@ -1128,9 +1128,9 @@ impl DataEncryptor {
 
 #### Encryption in Transit
 
--   **TLS 1.3**: Mandatory for all external communications
--   **mTLS**: Mutual TLS for service-to-service communication
--   **Protocol Encryption**: MCP protocol over encrypted stdio
+\1-  **TLS 1.3**: Mandatory for all external communications
+\1-  **mTLS**: Mutual TLS for service-to-service communication
+\1-  **Protocol Encryption**: MCP protocol over encrypted stdio
 
 ### Security Monitoring
 
@@ -1174,10 +1174,10 @@ impl SecurityMonitor {
 
 | Standard | Requirement | Implementation |
 |----------|-------------|----------------|
-| **GDPR** | Data protection, consent | Data minimization, encryption, audit logs |
-| **SOC 2** | Security controls | Access controls, monitoring, incident response |
-| **ISO 27001** | Information security | Risk assessment, security policies |
-| **HIPAA** | Health data protection | N/A (not applicable) |
+|**GDPR**| Data protection, consent | Data minimization, encryption, audit logs |
+|**SOC 2**| Security controls | Access controls, monitoring, incident response |
+|**ISO 27001**| Information security | Risk assessment, security policies |
+|**HIPAA**| Health data protection | N/A (not applicable) |
 
 #### Audit & Compliance Logging
 
@@ -1218,18 +1218,18 @@ impl ComplianceLogger {
 
 | Operation | Target Latency | Current Status | Measurement |
 |-----------|----------------|----------------|-------------|
-| **Text Embedding** | <200ms | ✅ Achieved | P95 embedding time |
-| **Vector Search** | <100ms | ⚠️ Near target | P95 search time |
-| **MCP Response** | <500ms | ✅ Achieved | End-to-end response time |
-| **Indexing (1000 files)** | <30s | ⚠️ Near target | Total indexing time |
+|**Text Embedding**| <200ms | ✅ Achieved | P95 embedding time |
+|**Vector Search**| <100ms | ⚠️ Near target | P95 search time |
+|**MCP Response**| <500ms | ✅ Achieved | End-to-end response time |
+|**Indexing (1000 files)**| <30s | ⚠️ Near target | Total indexing time |
 
 #### Throughput Requirements
 
 | Metric | Target | Current Status | Scaling Strategy |
 |--------|--------|----------------|------------------|
-| **Concurrent Users** | 1000 | 🚧 Testing | Horizontal scaling |
-| **Queries/Minute** | 10,000 | ⚠️ In progress | Load balancing |
-| **Indexing Rate** | 100 files/sec | ✅ Achieved | Parallel processing |
+|**Concurrent Users**| 1000 | 🚧 Testing | Horizontal scaling |
+|**Queries/Minute**| 10,000 | ⚠️ In progress | Load balancing |
+|**Indexing Rate**| 100 files/sec | ✅ Achieved | Parallel processing |
 
 ### Scalability Architecture
 
@@ -1323,7 +1323,7 @@ impl CircuitBreaker {
     where
         F: Future<Output = Result<T>>,
     {
-        match *self.state.read().await {
+        match*self.state.read().await {
             CircuitBreakerState::Open { .. } => {
                 return Err(Error::CircuitBreakerOpen);
             }
@@ -1347,6 +1347,7 @@ impl CircuitBreaker {
 #### High Availability Deployment
 
 ```yaml
+
 # Kubernetes deployment for HA
 apiVersion: apps/v1
 kind: Deployment
@@ -1362,7 +1363,7 @@ spec:
   template:
     spec:
       containers:
-      - name: mcp-context-browser
+\1-   name: mcp-context-browser
         image: mcp-context-browser:latest
         livenessProbe:
           httpGet:
@@ -1498,6 +1499,7 @@ impl Tracer {
 
 ```toml
 [quality_gates]
+
 # Code coverage requirements
 minimum_coverage = 80.0
 
@@ -1552,6 +1554,7 @@ impl QualityGateChecker {
 ### ADR Template
 
 ```markdown
+
 # ADR {number}: {title}
 
 ## Status
@@ -1588,10 +1591,10 @@ impl QualityGateChecker {
 
 **Consequences**:
 
--   ✅ High extensibility for adding new providers
--   ✅ Clean separation of concerns
--   ✅ Testability through dependency injection
--   ⚠️ Additional complexity in provider management
+\1-   ✅ High extensibility for adding new providers
+\1-   ✅ Clean separation of concerns
+\1-   ✅ Testability through dependency injection
+\1-   ⚠️ Additional complexity in provider management
 
 #### ADR-002: Async-First Architecture
 
@@ -1603,10 +1606,10 @@ impl QualityGateChecker {
 
 **Consequences**:
 
--   ✅ Excellent performance for concurrent operations
--   ✅ Scalability for high-throughput scenarios
--   ⚠️ Higher complexity for error handling
--   ⚠️ Learning curve for async Rust patterns
+\1-   ✅ Excellent performance for concurrent operations
+\1-   ✅ Scalability for high-throughput scenarios
+\1-   ⚠️ Higher complexity for error handling
+\1-   ⚠️ Learning curve for async Rust patterns
 
 #### ADR-003: C4 Model Documentation
 
@@ -1618,10 +1621,10 @@ impl QualityGateChecker {
 
 **Consequences**:
 
--   ✅ Clear, hierarchical documentation structure
--   ✅ Multiple levels of detail for different audiences
--   ✅ Tooling support for diagram generation
--   ⚠️ Learning curve for C4 model concepts
+\1-   ✅ Clear, hierarchical documentation structure
+\1-   ✅ Multiple levels of detail for different audiences
+\1-   ✅ Tooling support for diagram generation
+\1-   ⚠️ Learning curve for C4 model concepts
 
 #### ADR-004: Multi-Provider Strategy
 
@@ -1633,10 +1636,10 @@ impl QualityGateChecker {
 
 **Consequences**:
 
--   ✅ High availability and fault tolerance
--   ✅ Cost optimization through provider selection
--   ⚠️ Configuration complexity
--   ⚠️ Testing complexity across providers
+\1-   ✅ High availability and fault tolerance
+\1-   ✅ Cost optimization through provider selection
+\1-   ⚠️ Configuration complexity
+\1-   ⚠️ Testing complexity across providers
 
 ### ADR Maintenance Process
 
@@ -1655,6 +1658,7 @@ impl QualityGateChecker {
 #### Development Deployment
 
 ```yaml
+
 # docker-compose.dev.yml
 version: '3.8'
 services:
@@ -1663,25 +1667,26 @@ services:
       context: .
       dockerfile: Dockerfile.dev
     ports:
-      - "3000:3000"
+\1-   "3000:3000"
     environment:
-      - RUST_LOG=debug
-      - MCP_MODE=development
-      - EMBEDDING_PROVIDER=mock
-      - VECTOR_STORE=memory
+\1-   RUST_LOG=debug
+\1-   MCP_MODE=development
+\1-   EMBEDDING_PROVIDER=mock
+\1-   VECTOR_STORE=memory
     volumes:
-      - .:/app
-      - cargo-cache:/usr/local/cargo/registry
+\1-   .:/app
+\1-   cargo-cache:/usr/local/cargo/registry
 
   redis:
     image: redis:7-alpine
     ports:
-      - "6379:6379"
+\1-   "6379:6379"
 ```
 
 #### Production Deployment
 
 ```yaml
+
 # k8s/deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -1692,16 +1697,16 @@ spec:
   template:
     spec:
       containers:
-      - name: mcp-context-browser
+\1-   name: mcp-context-browser
         image: mcp-context-browser:v1.0.0
         env:
-        - name: MCP_MODE
+\1-   name: MCP_MODE
           value: "production"
-        - name: EMBEDDING_PROVIDER
+\1-   name: EMBEDDING_PROVIDER
           value: "openai"
-        - name: VECTOR_STORE
+\1-   name: VECTOR_STORE
           value: "milvus"
-        - name: OPENAI_API_KEY
+\1-   name: OPENAI_API_KEY
           valueFrom:
             secretKeyRef:
               name: mcp-secrets
@@ -1714,12 +1719,12 @@ spec:
           httpGet:
             path: /ready
             port: 3000
-      - name: milvus
+\1-   name: milvus
         image: milvusdb/milvus:latest
         env:
-        - name: ETCD_ENDPOINTS
+\1-   name: ETCD_ENDPOINTS
           value: "etcd:2379"
-        - name: MINIO_ADDRESS
+\1-   name: MINIO_ADDRESS
           value: "minio:9000"
 ```
 
@@ -1810,11 +1815,12 @@ impl HealthCheck for ProviderHealthCheck {
 #### Alerting Rules
 
 ```yaml
+
 # alerting-rules.yml
 groups:
-  - name: mcp-context-browser
+\1-   name: mcp-context-browser
     rules:
-      - alert: HighErrorRate
+\1-   alert: HighErrorRate
         expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.05
         for: 5m
         labels:
@@ -1822,7 +1828,7 @@ groups:
         annotations:
           summary: "High error rate detected"
 
-      - alert: ProviderDown
+\1-   alert: ProviderDown
         expr: up{job="mcp-provider"} == 0
         for: 2m
         labels:
@@ -1886,51 +1892,51 @@ impl BackupManager {
 
 **Delivered**:
 
--   Clean Rust architecture with SOLID principles
--   Provider pattern with mock implementations
--   MCP protocol framework (stdio transport)
--   In-memory vector storage with cosine similarity
--   Core data structures and comprehensive error handling
+\1-   Clean Rust architecture with SOLID principles
+\1-   Provider pattern with mock implementations
+\1-   MCP protocol framework (stdio transport)
+\1-   In-memory vector storage with cosine similarity
+\1-   Core data structures and comprehensive error handling
 
 ### Phase 2: Provider Ecosystem (Completed ✅)
 
 **Delivered**:
 
--   ✅ Real embedding provider integrations (OpenAI, Ollama, Gemini, VoyageAI)
--   ✅ Production vector database integration (Milvus, In-Memory, Filesystem)
--   ✅ Enhanced file processing with AST parsing
--   ✅ Performance optimization and caching
--   ✅ Complete DI system with provider registry and routing
+\1-   ✅ Real embedding provider integrations (OpenAI, Ollama, Gemini, VoyageAI)
+\1-   ✅ Production vector database integration (Milvus, In-Memory, Filesystem)
+\1-   ✅ Enhanced file processing with AST parsing
+\1-   ✅ Performance optimization and caching
+\1-   ✅ Complete DI system with provider registry and routing
 
 **Upcoming Milestones**:
 
--   ✅ **v0.1.0**: First stable release - drop-in replacement for claude-context
--   🚧 **v0.2.0**: Git-aware indexing + persistent session memory ([ADR-008](../adr/008-git-aware-semantic-indexing-v0.2.0.md), [ADR-009](../adr/009-persistent-session-memory-v0.2.0.md))
-    - Repository-aware indexing with git2
-    - Multi-branch and commit history search
-    - Cross-session memory with SQLite storage
-    - Hybrid search for observations and decisions
--   📋 **v0.3.0**: Advanced code intelligence
-    - Symbol extraction and cross-referencing
-    - Call graph analysis
-    - Dependency impact mapping
+\1-   ✅**v0.1.0**: First stable release - drop-in replacement for Claude-context
+\1-   🚧**v0.2.0**: Git-aware indexing + persistent session memory ([ADR-008](../adr/008-git-aware-semantic-indexing-v0.2.0.md), [ADR-009](../adr/009-persistent-session-memory-v0.2.0.md))
+\1-   Repository-aware indexing with git2
+\1-   Multi-branch and commit history search
+\1-   Cross-session memory with SQLite storage
+\1-   Hybrid search for observations and decisions
+\1-   📋**v0.3.0**: Advanced code intelligence
+\1-   Symbol extraction and cross-referencing
+\1-   Call graph analysis
+\1-   Dependency impact mapping
 
 ### Phase 3: Enterprise Features (Planned 📋)
 
 **Target Features**:
 
--   Multi-user support with authentication
--   REST API alongside MCP protocol
--   Advanced monitoring and alerting
--   Automated scaling and high availability
--   Enterprise security and compliance
+\1-   Multi-user support with authentication
+\1-   REST API alongside MCP protocol
+\1-   Advanced monitoring and alerting
+\1-   Automated scaling and high availability
+\1-   Enterprise security and compliance
 
 **Long-term Vision**:
 
--   Distributed deployment across multiple regions
--   Edge computing support for low-latency access
--   Advanced AI features (code generation, refactoring suggestions)
--   Integration with popular IDEs and development tools
+\1-   Distributed deployment across multiple regions
+\1-   Edge computing support for low-latency access
+\1-   Advanced AI features (code generation, refactoring suggestions)
+\1-   Integration with popular IDEs and development tools
 
 ### Technical Debt & Improvements
 
@@ -1952,17 +1958,17 @@ impl BackupManager {
 
 #### Technical Metrics
 
--   **Performance**: <500ms average query response time
--   **Scalability**: Support 1000+ concurrent users
--   **Reliability**: 99.9% uptime with <1% error rate
--   **Efficiency**: <100ms embedding generation, <50ms vector search
+\1-  **Performance**: <500ms average query response time
+\1-  **Scalability**: Support 1000+ concurrent users
+\1-  **Reliability**: 99.9% uptime with <1% error rate
+\1-  **Efficiency**: <100ms embedding generation, <50ms vector search
 
 #### Business Metrics
 
--   **Adoption**: 100+ active repositories indexed
--   **User Satisfaction**: >4.5/5 user satisfaction score
--   **Cost Efficiency**: <$0.01 per 1000 search queries
--   **Time Savings**: 50% reduction in code search time
+\1-  **Adoption**: 100+ active repositories indexed
+\1-  **User Satisfaction**: >4.5/5 user satisfaction score
+\1-  **Cost Efficiency**: <$0.01 per 1000 search queries
+\1-  **Time Savings**: 50% reduction in code search time
 
 ---
 

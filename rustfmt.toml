@@ -1,5 +1,8 @@
 # Rust code formatting configuration
 
+# Edition must match Cargo.toml (2021)
+edition = "2021"
+
 # Maximum width of each line
 max_width = 100
 

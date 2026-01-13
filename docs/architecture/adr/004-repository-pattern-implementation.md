@@ -11,39 +11,43 @@ Accepted
 The MCP Context Browser needs a clean separation between business logic and data access. The current implementation has data access logic scattered across services, making testing difficult and creating tight coupling between business logic and storage mechanisms.
 
 Key requirements:
-1. **Testability**: Business logic should be testable without database/storage dependencies
-2. **Flexibility**: Easy switching between different storage implementations
-3. **Maintainability**: Clear separation of concerns
-4. **Consistency**: Uniform data access patterns across the application
+
+1.**Testability**: Business logic should be testable without database/storage dependencies
+2.**Flexibility**: Easy switching between different storage implementations
+3.**Maintainability**: Clear separation of concerns
+4.**Consistency**: Uniform data access patterns across the application
 
 ## Decision
 
 Implement the Repository pattern with trait-based interfaces for data access. Create repository implementations for different storage backends while maintaining a consistent interface for business logic.
 
 Key components:
-- **Repository Traits**: Define data access interfaces
-- **Concrete Implementations**: Vector store, database, and in-memory implementations
-- **Dependency Injection**: Services receive repositories through constructor injection
-- **Async Support**: All repository operations are async for scalability
+\1-  **Repository Traits**: Define data access interfaces
+\1-  **Concrete Implementations**: Vector store, database, and in-memory implementations
+\1-  **Dependency Injection**: Services receive repositories through constructor injection
+\1-  **Async Support**: All repository operations are async for scalability
 
 ## Consequences
 
 ### Positive
-- **Testability**: Easy mocking of data access for unit tests
-- **Flexibility**: Swap storage implementations without changing business logic
-- **Maintainability**: Clear separation of concerns
-- **Consistency**: Uniform data access patterns
-- **Performance**: Async operations support high concurrency
+
+\1-  **Testability**: Easy mocking of data access for unit tests
+\1-  **Flexibility**: Swap storage implementations without changing business logic
+\1-  **Maintainability**: Clear separation of concerns
+\1-  **Consistency**: Uniform data access patterns
+\1-  **Performance**: Async operations support high concurrency
 
 ### Negative
-- **Complexity**: Additional abstraction layer
-- **Boilerplate**: Repository trait implementations
-- **Learning Curve**: Understanding the pattern
+
+\1-  **Complexity**: Additional abstraction layer
+\1-  **Boilerplate**: Repository trait implementations
+\1-  **Learning Curve**: Understanding the pattern
 
 ### Risks
-- **Over-abstraction**: Repository pattern can be overkill for simple operations
-- **Performance Overhead**: Additional indirection
-- **Maintenance Burden**: Keeping repository interfaces in sync
+
+\1-  **Over-abstraction**: Repository pattern can be overkill for simple operations
+\1-  **Performance Overhead**: Additional indirection
+\1-  **Maintenance Burden**: Keeping repository interfaces in sync
 
 ## Implementation
 
@@ -101,34 +105,40 @@ where
 ## Alternatives Considered
 
 ### Option 1: Active Record Pattern
-- **Pros**: Simple, direct database operations
-- **Cons**: Tight coupling, hard to test, business logic in data layer
+
+\1-  **Pros**: Simple, direct database operations
+\1-  **Cons**: Tight coupling, hard to test, business logic in data layer
 
 ### Option 2: Data Access Objects (DAO)
-- **Pros**: Simple abstraction, easy to understand
-- **Cons**: Less flexible than Repository pattern
+
+\1-  **Pros**: Simple abstraction, easy to understand
+\1-  **Cons**: Less flexible than Repository pattern
 
 ### Option 3: Query Objects
-- **Pros**: Flexible querying
-- **Cons**: Complex for simple CRUD operations
+
+\1-  **Pros**: Flexible querying
+\1-  **Cons**: Complex for simple CRUD operations
 
 ## Repository Responsibilities
 
 ### Chunk Repository
-- **Storage**: Persist code chunks with embeddings
-- **Retrieval**: Find chunks by ID or collection
-- **Batch Operations**: Efficient bulk operations
-- **Statistics**: Provide storage and performance metrics
+
+\1-  **Storage**: Persist code chunks with embeddings
+\1-  **Retrieval**: Find chunks by ID or collection
+\1-  **Batch Operations**: Efficient bulk operations
+\1-  **Statistics**: Provide storage and performance metrics
 
 ### Search Repository
-- **Semantic Search**: Vector similarity search
-- **Hybrid Search**: Combine keyword and semantic search
-- **Indexing**: Prepare data for search operations
-- **Performance Monitoring**: Track search metrics
+
+\1-  **Semantic Search**: Vector similarity search
+\1-  **Hybrid Search**: Combine keyword and semantic search
+\1-  **Indexing**: Prepare data for search operations
+\1-  **Performance Monitoring**: Track search metrics
 
 ## Testing Strategy
 
 ### Unit Tests
+
 ```rust
 #[test]
 fn test_chunk_repository_save() {
@@ -143,6 +153,7 @@ fn test_chunk_repository_save() {
 ```
 
 ### Integration Tests
+
 ```rust
 #[test]
 fn test_repository_service_integration() {
@@ -159,6 +170,6 @@ fn test_repository_service_integration() {
 
 ## References
 
-- [Repository Pattern](https://martinfowler.com/eaaCatalog/repository.html)
-- [Domain-Driven Design](https://domainlanguage.com/ddd/)
-- [Clean Architecture](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)
+\1-   [Repository Pattern](https://martinfowler.com/eaaCatalog/repository.html)
+\1-   [Domain-Driven Design](https://domainlanguage.com/ddd/)
+\1-   [Clean Architecture](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)

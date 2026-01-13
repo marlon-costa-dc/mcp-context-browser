@@ -1,25 +1,29 @@
 # Configuration Guide
 
-**MCP Context Browser** uses environment variables and configuration files for security-first setup. This guide documents all configuration options for production deployment.
+**MCP Context Browser**uses environment variables and configuration files for security-first setup. This guide documents all configuration options for production deployment.
 
 ## Security Design Principles
 
-1. **No Hardcoded Credentials** - All secrets must come from environment or config files
-2. **Graceful Degradation** - Missing optional credentials disable features, never crash
-3. **Environment Variables First** - Configuration follows 12-factor app principles
-4. **Validation by Default** - All credentials validated at startup
-5. **Production Warnings** - Security issues logged at startup with clear guidance
+1.**No Hardcoded Credentials**- All secrets must come from environment or config files
+2.**Graceful Degradation**- Missing optional credentials disable features, never crash
+3.**Environment Variables First**- Configuration follows 12-factor app principles
+4.**Validation by Default**- All credentials validated at startup
+5.**Production Warnings**- Security issues logged at startup with clear guidance
 
 ## Quick Start
 
 ### Local Development (Auth Disabled)
+
 ```bash
+
 # Minimal setup - auth disabled, all services optional
 cargo run
 ```
 
 ### Production with Auth
+
 ```bash
+
 # Set required credentials
 export ADMIN_USERNAME=admin
 export ADMIN_PASSWORD="your-secure-password"
@@ -34,15 +38,15 @@ cargo run --release
 
 ## Configuration Priority
 
-1. **Environment Variables** - Highest priority (production)
-2. **Config File** - Secondary (optional `~/.config/mcp-context-browser/config.toml`)
-3. **Defaults** - Lowest priority (local development)
+1.**Environment Variables**- Highest priority (production)
+2.**Config File**- Secondary (optional `~/.config/mcp-context-browser/config.toml`)
+3.**Defaults**- Lowest priority (local development)
 
 ## Environment Variables Reference
 
 ### Admin Interface Configuration
 
-**Required for Production** (if enabling admin dashboard)
+**Required for Production**(if enabling admin dashboard)
 
 | Variable | Type | Min Length | Default | Purpose |
 |----------|------|-----------|---------|---------|
@@ -52,16 +56,17 @@ cargo run --release
 | `JWT_EXPIRATION` | u64 | 1+ | 3600 | Token expiration in seconds |
 
 **Behavior:**
-- If ALL THREE (`ADMIN_USERNAME`, `ADMIN_PASSWORD`, `JWT_SECRET`) are set and valid:
-  - ✅ Admin interface ENABLED
-  - Admin user created automatically
-  - Credentials stored securely
-- If ANY are missing or invalid:
-  - ✅ Server starts normally
-  - ❌ Admin interface DISABLED
-  - **No error or crash** - graceful degradation
+\1-   If ALL THREE (`ADMIN_USERNAME`, `ADMIN_PASSWORD`, `JWT_SECRET`) are set and valid:
+\1-   ✅ Admin interface ENABLED
+\1-   Admin user created automatically
+\1-   Credentials stored securely
+\1-   If ANY are missing or invalid:
+\1-   ✅ Server starts normally
+\1-   ❌ Admin interface DISABLED
+\1-  **No error or crash**- graceful degradation
 
 **Example:**
+
 ```bash
 export ADMIN_USERNAME="admin"
 export ADMIN_PASSWORD="secure-8-char-minimum-password"
@@ -71,7 +76,7 @@ export JWT_EXPIRATION="86400"  # 24 hours
 
 ### Authentication Configuration
 
-**Optional** (for API JWT authentication)
+**Optional**(for API JWT authentication)
 
 | Variable | Type | Min Length | Default | Purpose |
 |----------|------|-----------|---------|---------|
@@ -79,16 +84,17 @@ export JWT_EXPIRATION="86400"  # 24 hours
 | `ADMIN_PASSWORD` | String | 8 chars | Empty | Admin password (also used for admin) |
 
 **Behavior:**
-- If BOTH `JWT_SECRET` AND `ADMIN_PASSWORD` are set and valid:
-  - ✅ Authentication ENABLED
-  - Admin user created with hashed password
-  - JWT tokens required for API access
-- If either is missing:
-  - ✅ Authentication DISABLED
-  - API endpoints accessible without auth
-  - **No error or crash** - graceful degradation
+\1-   If BOTH `JWT_SECRET` AND `ADMIN_PASSWORD` are set and valid:
+\1-   ✅ Authentication ENABLED
+\1-   Admin user created with hashed password
+\1-   JWT tokens required for API access
+\1-   If either is missing:
+\1-   ✅ Authentication DISABLED
+\1-   API endpoints accessible without auth
+\1-  **No error or crash**- graceful degradation
 
 **Example:**
+
 ```bash
 export JWT_SECRET="minimum-32-char-jwt-secret-key"
 export ADMIN_PASSWORD="min-8-char-password"
@@ -96,11 +102,11 @@ export ADMIN_PASSWORD="min-8-char-password"
 
 ### Database Configuration
 
-**Optional** (PostgreSQL required only if database enabled)
+**Optional**(PostgreSQL required only if database enabled)
 
 | Variable | Type | Min | Default | Purpose |
 |----------|------|-----|---------|---------|
-| `DATABASE_URL` | String | 1 | Empty | PostgreSQL connection string (`postgresql://user:pass@host:5432/db`) |
+| `DATABASE_URL` | String | 1 | Empty | PostgreSQL connection String (`postgresql://user:pass@host:5432/db`) |
 | `DATABASE_MAX_CONNECTIONS` | u32 | 1 | 20 | Connection pool size |
 | `DATABASE_MIN_IDLE` | u32 | 0 | 5 | Minimum idle connections |
 | `DATABASE_MAX_LIFETIME_SECS` | u64 | 0 | 1800 | Max connection lifetime (seconds) |
@@ -108,16 +114,17 @@ export ADMIN_PASSWORD="min-8-char-password"
 | `DATABASE_CONNECTION_TIMEOUT_SECS` | u64 | 0 | 30 | Connection timeout (seconds) |
 
 **Behavior:**
-- If `DATABASE_URL` is set and valid:
-  - ✅ Database ENABLED
-  - Connection pool created with specified parameters
-  - Health checks performed at startup
-- If `DATABASE_URL` is empty or missing:
-  - ✅ Database DISABLED
-  - All database operations use in-memory fallbacks
-  - **No error or crash** - graceful degradation
+\1-   If `DATABASE_URL` is set and valid:
+\1-   ✅ Database ENABLED
+\1-   Connection pool created with specified parameters
+\1-   Health checks performed at startup
+\1-   If `DATABASE_URL` is empty or missing:
+\1-   ✅ Database DISABLED
+\1-   All database operations use in-memory fallbacks
+\1-  **No error or crash**- graceful degradation
 
 **Example:**
+
 ```bash
 export DATABASE_URL="postgresql://user:password@localhost:5432/mcp_context"
 export DATABASE_MAX_CONNECTIONS="30"
@@ -129,15 +136,16 @@ export DATABASE_CONNECTION_TIMEOUT_SECS="30"
 
 ### Vector Store Configuration
 
-**Optional** (defaults to in-memory if not configured)
+**Optional**(defaults to in-memory if not configured)
 
 | Variable | Type | Default | Purpose |
 |----------|------|---------|---------|
 | `VECTOR_STORE_PROVIDER` | String | `in-memory` | Vector store backend: `milvus`, `edgevec`, `in-memory`, `filesystem` |
-| `MILVUS_ADDRESS` | String | Empty | Milvus server address (required for milvus provider) |
+| `MILVUS_ADDRESS` | String | Empty | Milvus server address (required for Milvus provider) |
 | `MILVUS_TOKEN` | String | Empty | Milvus authentication token (optional) |
 
 **Example:**
+
 ```bash
 export VECTOR_STORE_PROVIDER="milvus"
 export MILVUS_ADDRESS="localhost:19530"
@@ -146,18 +154,19 @@ export MILVUS_TOKEN="your-milvus-token"
 
 ### Embedding Provider Configuration
 
-**Optional** (defaults to Ollama if not configured)
+**Optional**(defaults to Ollama if not configured)
 
 | Variable | Type | Default | Purpose |
 |----------|------|---------|---------|
 | `EMBEDDING_PROVIDER` | String | `ollama` | Embedding provider: `ollama`, `openai`, `voyageai`, `gemini` |
 | `OLLAMA_BASE_URL` | String | `http://localhost:11434` | Ollama server URL |
 | `OLLAMA_MODEL` | String | `nomic-embed-text` | Model name for Ollama |
-| `OPENAI_API_KEY` | String | Empty | OpenAI API key (required for openai provider) |
+| `OPENAI_API_KEY` | String | Empty | OpenAI API key (required for OpenAI provider) |
 | `VOYAGEAI_API_KEY` | String | Empty | VoyageAI API key (required for voyageai provider) |
 | `GEMINI_API_KEY` | String | Empty | Google Gemini API key (required for gemini provider) |
 
 **Example:**
+
 ```bash
 export EMBEDDING_PROVIDER="ollama"
 export OLLAMA_BASE_URL="http://localhost:11434"
@@ -166,7 +175,7 @@ export OLLAMA_MODEL="nomic-embed-text"
 
 ### Server Configuration
 
-**Optional** (defaults provided)
+**Optional**(defaults provided)
 
 | Variable | Type | Default | Purpose |
 |----------|------|---------|---------|
@@ -176,6 +185,7 @@ export OLLAMA_MODEL="nomic-embed-text"
 | `MCP__TRANSPORT__MODE` | String | `Hybrid` | Transport mode: `Stdio`, `Http`, `Hybrid` |
 
 **Example:**
+
 ```bash
 export SERVER_HOST="127.0.0.1"
 export SERVER_PORT="3000"
@@ -186,11 +196,13 @@ export MCP__TRANSPORT__MODE="Hybrid"
 ## Configuration Files
 
 ### Default Location
+
 ```
 ~/.config/mcp-context-browser/config.toml
 ```
 
 ### Example Configuration File
+
 ```toml
 [server]
 host = "0.0.0.0"
@@ -218,41 +230,44 @@ ttl_seconds = 3600
 At server startup, the following security validations occur:
 
 ### Admin Configuration
+
 ```
 ✅ If all credentials present and valid:
-   - Admin username: validated (non-empty)
-   - Admin password: validated (8+ chars)
-   - JWT secret: validated (32+ chars)
-   - Password: hashed with Argon2id
+\1-   Admin username: validated (non-empty)
+\1-   Admin password: validated (8+ chars)
+\1-   JWT secret: validated (32+ chars)
+\1-   Password: hashed with Argon2id
    → Admin interface ENABLED
 
 ❌ If any credential invalid:
-   - Error logged and ADMIN DISABLED
-   - Server continues normally
+\1-   Error logged and ADMIN DISABLED
+\1-   Server continues normally
 ```
 
 ### Authentication Configuration
+
 ```
 ✅ If JWT secret and admin password valid:
-   - JWT secret length: validated (32+ chars)
-   - Auth ENABLED for API endpoints
+\1-   JWT secret length: validated (32+ chars)
+\1-   Auth ENABLED for API endpoints
 
 ❌ If invalid:
-   - Auth DISABLED
-   - API endpoints accessible without auth
+\1-   Auth DISABLED
+\1-   API endpoints accessible without auth
 ```
 
 ### Database Configuration
+
 ```
 ✅ If DATABASE_URL is set:
-   - Connection string validated
-   - Pool created with configured parameters
-   - Health check performed
-   - Database ENABLED
+\1-   Connection string validated
+\1-   Pool created with configured parameters
+\1-   Health check performed
+\1-   Database ENABLED
 
 ❌ If DATABASE_URL is empty:
-   - Database DISABLED
-   - In-memory fallback used
+\1-   Database DISABLED
+\1-   In-memory fallback used
 ```
 
 ## Security Warnings
@@ -260,18 +275,21 @@ At server startup, the following security validations occur:
 The server logs security issues at startup. Common warnings:
 
 ### Critical (Application blocks)
+
 ```
 [SECURITY] ADMIN_INTERFACE_DISABLED: Admin credentials required
 [SECURITY] INSECURE_JWT_SECRET: JWT secret < 32 characters
 ```
 
 ### High (Should fix)
+
 ```
 [SECURITY] WEAK_PASSWORD: Admin password < 8 characters
 [SECURITY] MISSING_DATABASE_URL: Database not configured
 ```
 
 ### Info (Monitor)
+
 ```
 [SECURITY] AUTH_DISABLED: Authentication not configured
 [SECURITY] ADMIN_INTERFACE_DISABLED: Admin not configured
@@ -279,44 +297,47 @@ The server logs security issues at startup. Common warnings:
 
 ## Production Deployment Checklist
 
-- [ ] **Admin Credentials**
-  - [ ] Set `ADMIN_USERNAME` (non-empty)
-  - [ ] Set `ADMIN_PASSWORD` (8+ chars, complex)
-  - [ ] Set `JWT_SECRET` (32+ chars, random)
-  - [ ] Verify admin interface starts with `✅ Admin interface enabled`
+\1-   [ ]**Admin Credentials**
+\1-   [ ] Set `ADMIN_USERNAME` (non-empty)
+\1-   [ ] Set `ADMIN_PASSWORD` (8+ chars, complex)
+\1-   [ ] Set `JWT_SECRET` (32+ chars, random)
+\1-   [ ] Verify admin interface starts with `✅ Admin interface enabled`
 
-- [ ] **Authentication**
-  - [ ] JWT tokens working for API access
-  - [ ] Token expiration set appropriately
-  - [ ] Revocation working (if needed)
+\1-   [ ]**Authentication**
+\1-   [ ] JWT tokens working for API access
+\1-   [ ] Token expiration set appropriately
+\1-   [ ] Revocation working (if needed)
 
-- [ ] **Database** (if using PostgreSQL)
-  - [ ] Set `DATABASE_URL` with production credentials
-  - [ ] Connection pool parameters tuned
-  - [ ] Health checks passing
-  - [ ] Backups configured
+\1-   [ ]**Database**(if using PostgreSQL)
+\1-   [ ] Set `DATABASE_URL` with production credentials
+\1-   [ ] Connection pool parameters tuned
+\1-   [ ] Health checks passing
+\1-   [ ] Backups configured
 
-- [ ] **Embedding & Vector Stores**
-  - [ ] Embedding provider configured
-  - [ ] Vector store accessible
-  - [ ] Indexing working
+\1-   [ ]**Embedding & Vector Stores**
+\1-   [ ] Embedding provider configured
+\1-   [ ] Vector store accessible
+\1-   [ ] Indexing working
 
-- [ ] **Monitoring**
-  - [ ] Metrics endpoint accessible
-  - [ ] Logs configured
-  - [ ] Alerts set up
+\1-   [ ]**Monitoring**
+\1-   [ ] Metrics endpoint accessible
+\1-   [ ] Logs configured
+\1-   [ ] Alerts set up
 
-- [ ] **Security**
-  - [ ] No hardcoded credentials in code
-  - [ ] Environment variables validated
-  - [ ] Secrets stored securely
-  - [ ] HTTPS enabled (if exposed publicly)
+\1-   [ ]**Security**
+\1-   [ ] No hardcoded credentials in code
+\1-   [ ] Environment variables validated
+\1-   [ ] Secrets stored securely
+\1-   [ ] HTTPS enabled (if exposed publicly)
 
 ## Troubleshooting
 
 ### Admin Interface Not Appearing
-**Cause:** Missing or invalid credentials
+
+**Cause:**Missing or invalid credentials
+
 ```bash
+
 # Check what's configured
 echo "ADMIN_USERNAME: $ADMIN_USERNAME"
 echo "ADMIN_PASSWORD: ${ADMIN_PASSWORD:0:5}***"
@@ -334,9 +355,13 @@ fi
 ```
 
 ### Database Connection Failed
-**Cause:** Invalid `DATABASE_URL`
+
+**Cause:**Invalid `DATABASE_URL`
+
 ```bash
+
 # Verify connection string format
+
 # postgresql://username:password@hostname:5432/database
 
 # Test connection manually
@@ -344,8 +369,11 @@ psql "$DATABASE_URL" -c "SELECT version();"
 ```
 
 ### Authentication Not Working
-**Cause:** JWT_SECRET not set or too short
+
+**Cause:**JWT_SECRET not set or too short
+
 ```bash
+
 # Generate secure JWT secret (32+ chars)
 openssl rand -base64 32
 
@@ -354,8 +382,11 @@ export JWT_SECRET="$(openssl rand -base64 32)"
 ```
 
 ### High Memory Usage
-**Cause:** Connection pool or cache too large
+
+**Cause:**Connection pool or cache too large
+
 ```bash
+
 # Reduce connection pool
 export DATABASE_MAX_CONNECTIONS="10"
 
@@ -365,12 +396,12 @@ export CACHE_TTL_SECONDS="1800"
 
 ## Related Documentation
 
-- [Architecture Overview](./architecture/ARCHITECTURE.md)
-- [Security Guide](./security/SECURITY.md)
-- [Admin API Reference](./api/admin-api.md)
-- [Deployment Guide](./deployment/DEPLOYMENT.md)
+\1-   [Architecture Overview](./architecture/ARCHITECTURE.md)
+\1-   [Security Guide](./security/SECURITY.md)
+\1-   [Admin API Reference](./api/admin-api.md)
+\1-   [Deployment Guide](./deployment/DEPLOYMENT.md)
 
 ---
 
-**Last Updated:** 2026-01-12
-**Version:** 0.1.0
+**Last Updated:**2026-01-12
+**Version:**0.1.0

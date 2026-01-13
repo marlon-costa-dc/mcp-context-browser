@@ -4,11 +4,11 @@ The FastEmbed Provider offers high-quality local embeddings without external API
 
 ## Overview
 
--   **Type**: Local Embedding Provider
--   **Model**: AllMiniLML6V2 (384 dimensions)
--   **Dependencies**: Zero external APIs
--   **Performance**: Optimized ONNX inference
--   **Download**: Model downloaded automatically on first execution
+\1-  **Type**: Local Embedding Provider
+\1-  **Model**: AllMiniLML6V2 (384 dimensions)
+\1-  **Dependencies**: Zero external APIs
+\1-  **Performance**: Optimized ONNX inference
+\1-  **Download**: Model downloaded automatically on first execution
 
 ## Configuration
 
@@ -36,17 +36,17 @@ embedding:
 
 ### Advantages
 
-✅ **Completely Local**: No external APIs or API keys required
-✅ **High Performance**: Uses optimized ONNX inference
-✅ **Quality Models**: Based on sentence-transformers
-✅ **Intelligent Cache**: Model downloaded once and cached
-✅ **Compatibility**: Same output format as OpenAI/Gemini
+✅**Completely Local**: No external APIs or API keys required
+✅**High Performance**: Uses optimized ONNX inference
+✅**Quality Models**: Based on sentence-transformers
+✅**Intelligent Cache**: Model downloaded once and cached
+✅**Compatibility**: Same output format as OpenAI/Gemini
 
 ### Limitations
 
-⚠️ **Initial Download**: Requires internet to download the model on first execution (~23MB)
-⚠️ **Memory**: Model loaded in RAM
-⚠️ **CPU**: Inference on CPU (not GPU)
+⚠️**Initial Download**: Requires internet to download the model on first execution (~23MB)
+⚠️**Memory**: Model loaded in RAM
+⚠️**CPU**: Inference on CPU (not GPU)
 
 ## Supported Models
 
@@ -82,18 +82,18 @@ let embeddings = provider.embed_batch(&texts).await?;
 
 ### Expected Benchmarks
 
--   **Initialization**: ~2-5 seconds (model download)
--   **Single embedding**: ~10-50ms
--   **Batch of 100**: ~100-500ms
--   **Memory**: ~100-500MB (depending on model)
+\1-  **Initialization**: ~2-5 seconds (model download)
+\1-  **Single embedding**: ~10-50ms
+\1-  **Batch of 100**: ~100-500ms
+\1-  **Memory**: ~100-500MB (depending on model)
 
 ### Optimization
 
 For better performance:
 
--   Use batch embedding when possible
--   Cache embeddings when appropriate
--   Consider smaller models for applications with memory constraints
+\1-   Use batch embedding when possible
+\1-   Cache embeddings when appropriate
+\1-   Consider smaller models for applications with memory constraints
 
 ## Troubleshooting
 
@@ -134,7 +134,7 @@ The FastEmbed Provider:
 
 ## Next Steps
 
--   Support for more FastEmbed models
--   Configuration of execution providers (CPU/GPU)
--   Automatic quantization to reduce memory usage
--   Embedding cache for frequent texts
+\1-   Support for more FastEmbed models
+\1-   Configuration of execution providers (CPU/GPU)
+\1-   Automatic quantization to reduce memory usage
+\1-   Embedding cache for frequent texts

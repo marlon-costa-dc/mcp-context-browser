@@ -359,8 +359,7 @@ impl McpServer {
         String,
         crate::adapters::providers::routing::health::ProviderHealth,
     > {
-        use crate::adapters::providers::routing::health::{ProviderHealth, ProviderHealthStatus};
-        use std::time::Instant;
+        use crate::adapters::providers::routing::health::ProviderHealthStatus;
 
         let (embedding_providers, vector_store_providers) = self.list_providers();
         let registry = self.service_provider.registry();
@@ -372,28 +371,7 @@ impl McpServer {
                 Ok(_) => ProviderHealthStatus::Healthy,
                 Err(_) => ProviderHealthStatus::Unhealthy,
             };
-            health_map.insert(
-                name.clone(),
-                ProviderHealth {
-                    provider_id: name,
-                    status,
-                    last_check: Instant::now(),
-                    consecutive_failures: 0,
-                    total_checks: 1,
-                    response_time: None,
-                    history: std::collections::VecDeque::with_capacity(10),
-                    trend: crate::adapters::providers::routing::health::HealthTrend::Unknown,
-                    avg_response_time: std::time::Duration::ZERO,
-                    success_rate: if matches!(
-                        status,
-                        crate::adapters::providers::routing::health::ProviderHealthStatus::Healthy
-                    ) {
-                        1.0
-                    } else {
-                        0.0
-                    },
-                },
-            );
+            health_map.insert(name.clone(), Self::build_provider_health(name, status));
         }
 
         // Check vector store providers
@@ -402,31 +380,38 @@ impl McpServer {
                 Ok(_) => ProviderHealthStatus::Healthy,
                 Err(_) => ProviderHealthStatus::Unhealthy,
             };
-            health_map.insert(
-                name.clone(),
-                ProviderHealth {
-                    provider_id: name,
-                    status,
-                    last_check: Instant::now(),
-                    consecutive_failures: 0,
-                    total_checks: 1,
-                    response_time: None,
-                    history: std::collections::VecDeque::with_capacity(10),
-                    trend: crate::adapters::providers::routing::health::HealthTrend::Unknown,
-                    avg_response_time: std::time::Duration::ZERO,
-                    success_rate: if matches!(
-                        status,
-                        crate::adapters::providers::routing::health::ProviderHealthStatus::Healthy
-                    ) {
-                        1.0
-                    } else {
-                        0.0
-                    },
-                },
-            );
+            health_map.insert(name.clone(), Self::build_provider_health(name, status));
         }
 
         health_map
+    }
+
+    /// Build a ProviderHealth struct from provider name and status
+    fn build_provider_health(
+        name: String,
+        status: crate::adapters::providers::routing::health::ProviderHealthStatus,
+    ) -> crate::adapters::providers::routing::health::ProviderHealth {
+        use crate::adapters::providers::routing::health::{
+            HealthTrend, ProviderHealth, ProviderHealthStatus,
+        };
+        use std::time::Instant;
+
+        ProviderHealth {
+            provider_id: name,
+            status,
+            last_check: Instant::now(),
+            consecutive_failures: 0,
+            total_checks: 1,
+            response_time: None,
+            history: std::collections::VecDeque::with_capacity(10),
+            trend: HealthTrend::Unknown,
+            avg_response_time: std::time::Duration::ZERO,
+            success_rate: if matches!(status, ProviderHealthStatus::Healthy) {
+                1.0
+            } else {
+                0.0
+            },
+        }
     }
 
     /// Index a codebase directory for semantic search

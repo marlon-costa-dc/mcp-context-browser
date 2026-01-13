@@ -1,16 +1,13 @@
 //! Index management handlers
 
 use super::common::*;
+use crate::infrastructure::utils::IntoStatusCode;
 
 /// List all indexes
 pub async fn list_indexes_handler(
     State(state): State<AdminState>,
 ) -> Result<Json<ApiResponse<Vec<IndexInfo>>>, StatusCode> {
-    let indexing_status = state
-        .admin_service
-        .get_indexing_status()
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let indexing_status = state.admin_service.get_indexing_status().await.to_500()?;
 
     let indexes = vec![IndexInfo {
         id: "main-index".to_string(),

@@ -5,11 +5,11 @@
 [![MCP](https://img.shields.io/badge/MCP-2024--11--05-blue)](https://modelcontextprotocol.io/)
 [![Version](https://img.shields.io/badge/version-0.1.0-blue)](https://github.com/marlonsc/mcp-context-browser/releases)
 
-**Drop-in replacement for [claude-context](https://github.com/zilliztech/claude-context)** - AI-powered semantic code search as a single native binary. Same MCP tools, same environment variables, better performance.
+**Drop-in replacement for [Claude-context](https://github.com/zilliztech/claude-context)** - AI-powered semantic code search as a single native binary. Same MCP tools, same environment variables, better performance.
 
-## Why Switch from claude-context?
+## Why Switch from Claude-context?
 
-| | claude-context | mcp-context-browser |
+| | Claude-context | MCP-context-browser |
 |---|----------------|---------------------|
 | **Runtime** | Node.js 20-23 | Single binary |
 | **Startup** | npm/npx overhead | Instant |
@@ -54,7 +54,7 @@ export OPENAI_API_KEY=sk-...
 ./target/release/mcp-context-browser
 ```
 
-### Environment Variables (claude-context compatible)
+### Environment Variables (Claude-context compatible)
 
 ```bash
 # Embedding providers
@@ -143,7 +143,7 @@ Test coverage:
 
 ## Documentation
 
--   [**Migration Guide**](docs/migration/FROM_CLAUDE_CONTEXT.md) - Migrating from claude-context
+-   [**Migration Guide**](docs/migration/FROM_CLAUDE_CONTEXT.md) - Migrating from Claude-context
 -   [**QUICKSTART.md**](docs/user-guide/QUICKSTART.md) - Get started in 5 minutes
 -   [**Claude.md**](CLAUDE.md) - Development guide and project rules
 -   [**ARCHITECTURE.md**](docs/architecture/ARCHITECTURE.md) - Technical architecture
@@ -174,26 +174,27 @@ Test coverage:
 
 ## Current Status: v0.1.0 ✅ RELEASED
 
-First stable release - drop-in replacement for claude-context:
+First stable release - drop-in replacement for Claude-context:
 
 -   ✅ Full MCP protocol implementation (4 tools)
 -   ✅ 12 languages with AST parsing (Rust, Python, JS/TS, Go, Java, C, C++, C#, Ruby, PHP, Swift, Kotlin)
 -   ✅ 6 embedding providers (OpenAI, VoyageAI, Ollama, Gemini, FastEmbed, Null)
 -   ✅ 6 vector stores (Milvus, EdgeVec, In-Memory, Filesystem, Encrypted, Null)
--   ✅ claude-context environment variable compatibility
+-   ✅ Claude-context environment variable compatibility
 -   ✅ 493 tests with comprehensive coverage
 -   ✅ JWT authentication and rate limiting
 -   ✅ Clean architecture with trait-based DI
 -   ✅ HTTP transport foundation
 -   ✅ Systemd service integration
 
-**Migrating from claude-context?** See [Migration Guide](docs/migration/FROM_CLAUDE_CONTEXT.md)
+**Migrating from Claude-context?** See [Migration Guide](docs/migration/FROM_CLAUDE_CONTEXT.md)
 
 ## Coming in v0.2.0: Git-Aware Indexing + Persistent Session Memory
 
 Planning complete ([ADR-008](docs/adr/008-git-aware-semantic-indexing-v0.2.0.md), [ADR-009](docs/adr/009-persistent-session-memory-v0.2.0.md)):
 
 **Git Integration:**
+
 -   🚧 **Project-relative indexing**: Indexes remain valid if directory moves
 -   🚧 **Multi-branch support**: Search specific branches or across all branches
 -   🚧 **Commit history**: Index last 50 commits (configurable)
@@ -202,6 +203,7 @@ Planning complete ([ADR-008](docs/adr/008-git-aware-semantic-indexing-v0.2.0.md)
 -   🚧 **Impact analysis**: Understand change impact between commits/branches
 
 **Session Memory:**
+
 -   🚧 **Cross-session memory**: Persistent storage of tool observations and decisions
 -   🚧 **Session summaries**: Comprehensive tracking of work completed per session
 -   🚧 **Semantic search**: Search past work and decisions using natural language

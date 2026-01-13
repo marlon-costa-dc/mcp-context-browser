@@ -2,19 +2,20 @@
 
 ## Status
 
-**In Progress** (v0.1.0 → v0.2.0)
+**In Progress**(v0.1.0 → v0.2.0)
 
 > Backend infrastructure implemented in `src/admin/`:
-> - AdminService trait with 32 methods (traits.rs)
-> - AdminServiceImpl with full implementation (implementation.rs, helpers/)
-> - REST API routes for config, health, backup, maintenance (routes.rs, handlers.rs)
-> - JWT authentication integration
-> - **New (v0.2.0)**:
->   - Unified port architecture (MCP + Admin + Metrics on port 3001)
->   - Subsystem control via EventBus (6 new AdminService methods)
->   - Configuration persistence with explicit save pattern
->   - 14 SystemEvent variants for inter-subsystem communication
-> - **Pending**: Frontend HTML/CSS/JS refinement, WebSocket real-time updates
+>
+> -   AdminService trait with 32 methods (traits.rs)
+> -   AdminServiceImpl with full implementation (implementation.rs, helpers/)
+> -   REST API routes for config, health, backup, maintenance (routes.rs, handlers.rs)
+> -   JWT authentication integration
+> -**New (v0.2.0)**:
+>     -   Unified port architecture (MCP + Admin + Metrics on port 3001)
+>     -   Subsystem control via EventBus (6 new AdminService methods)
+>     -   Configuration persistence with explicit save pattern
+>     -   14 SystemEvent variants for inter-subsystem communication
+> -**Pending**: Frontend HTML/CSS/JS refinement, WebSocket real-time updates
 
 ## Context
 
@@ -27,18 +28,18 @@ MCP Context Browser provides comprehensive system monitoring and metrics through
 
 This creates barriers for non-technical users and makes it difficult to:
 
--   Monitor system health in real-time
--   Configure providers dynamically
--   Manage indexes and search operations
--   Troubleshoot issues without technical expertise
--   Visualize performance metrics and trends
+\1-   Monitor system health in real-time
+\1-   Configure providers dynamically
+\1-   Manage indexes and search operations
+\1-   Troubleshoot issues without technical expertise
+\1-   Visualize performance metrics and trends
 
 The existing infrastructure already includes:
 
--   HTTP metrics server on port 3001
--   Comprehensive metrics collection
--   Provider management capabilities
--   Configuration system
+\1-   HTTP metrics server on port 3001
+\1-   Comprehensive metrics collection
+\1-   Provider management capabilities
+\1-   Configuration system
 
 ## Decision
 
@@ -53,61 +54,61 @@ We will implement an integrated web administration interface that runs on the sa
 
 The interface will be implemented using:
 
--   **Backend**: Extend existing Axum HTTP server with new REST endpoints
--   **Frontend**: Modern HTML/CSS/JavaScript with responsive design
--   **Authentication**: JWT-based authentication for admin access
--   **Real-time**: WebSocket support for live metrics updates
--   **API**: RESTful JSON API for all administrative operations
+\1-  **Backend**: Extend existing Axum HTTP server with new REST endpoints
+\1-  **Frontend**: Modern HTML/CSS/JavaScript with responsive design
+\1-  **Authentication**: JWT-based authentication for admin access
+\1-  **Real-time**: WebSocket support for live metrics updates
+\1-  **API**: RESTful JSON API for all administrative operations
 
 ## Consequences
 
 ### Positive Consequences
 
--   **Improved User Experience**: Non-technical users can manage the system through a web interface
--   **Real-time Monitoring**: Live dashboards with interactive charts and alerts
--   **Operational Efficiency**: Faster troubleshooting and configuration changes
--   **Security Enhancement**: Authentication and authorization for administrative access
--   **Unified Interface**: Single port (3001) serves both metrics API and admin interface
--   **Extensibility**: Foundation for future web-based features
--   **Developer Productivity**: Easier testing and development workflows
+\1-  **Improved User Experience**: Non-technical users can manage the system through a web interface
+\1-  **Real-time Monitoring**: Live dashboards with interactive charts and alerts
+\1-  **Operational Efficiency**: Faster troubleshooting and configuration changes
+\1-  **Security Enhancement**: Authentication and authorization for administrative access
+\1-  **Unified Interface**: Single port (3001) serves both metrics API and admin interface
+\1-  **Extensibility**: Foundation for future web-based features
+\1-  **Developer Productivity**: Easier testing and development workflows
 
 ### Negative Consequences
 
--   **Increased Complexity**: Additional code and maintenance overhead
--   **Security Surface**: Web interface introduces new attack vectors
--   **Resource Usage**: Additional memory/CPU for serving static assets and WebSocket connections
--   **Deployment Complexity**: Web assets need to be bundled and served
--   **Browser Dependencies**: Interface requires modern browsers with JavaScript enabled
+\1-  **Increased Complexity**: Additional code and maintenance overhead
+\1-  **Security Surface**: Web interface introduces new attack vectors
+\1-  **Resource Usage**: Additional memory/CPU for serving static assets and WebSocket connections
+\1-  **Deployment Complexity**: Web assets need to be bundled and served
+\1-  **Browser Dependencies**: Interface requires modern browsers with JavaScript enabled
 
 ## Alternatives Considered
 
 ### Alternative 1: Separate Administration Service
 
--   **Description**: Create a standalone web service on a different port for administration
--   **Pros**: Clean separation, independent scaling, dedicated resources
--   **Cons**: Additional port management, deployment complexity, CORS issues
--   **Rejection Reason**: Increases operational complexity and goes against the requirement to run on the same port
+\1-  **Description**: Create a standalone web service on a different port for administration
+\1-  **Pros**: Clean separation, independent scaling, dedicated resources
+\1-  **Cons**: Additional port management, deployment complexity, CORS issues
+\1-  **Rejection Reason**: Increases operational complexity and goes against the requirement to run on the same port
 
 ### Alternative 2: Terminal-based Administration Only
 
--   **Description**: Enhance CLI tools and keep all administration terminal-based
--   **Pros**: Lower resource usage, simpler architecture, no web dependencies
--   **Cons**: Poor user experience, limited visualization, accessibility issues
--   **Rejection Reason**: Doesn't address the need for web-based administration and visualization
+\1-  **Description**: Enhance CLI tools and keep all administration terminal-based
+\1-  **Pros**: Lower resource usage, simpler architecture, no web dependencies
+\1-  **Cons**: Poor user experience, limited visualization, accessibility issues
+\1-  **Rejection Reason**: Doesn't address the need for web-based administration and visualization
 
 ### Alternative 3: Third-party Admin Interface
 
--   **Description**: Use existing tools like Grafana or custom dashboards
--   **Pros**: Leverage existing ecosystems, faster implementation
--   **Cons**: External dependencies, integration complexity, customization limitations
--   **Rejection Reason**: Doesn't provide integrated experience and requires additional setup
+\1-  **Description**: Use existing tools like Grafana or custom dashboards
+\1-  **Pros**: Leverage existing ecosystems, faster implementation
+\1-  **Cons**: External dependencies, integration complexity, customization limitations
+\1-  **Rejection Reason**: Doesn't provide integrated experience and requires additional setup
 
 ### Alternative 4: Desktop Application
 
--   **Description**: Native desktop app for administration
--   **Pros**: Better performance, native integrations
--   **Cons**: Platform-specific development, deployment challenges, additional maintenance
--   **Rejection Reason**: Web-based requirement and cross-platform needs
+\1-  **Description**: Native desktop app for administration
+\1-  **Pros**: Better performance, native integrations
+\1-  **Cons**: Platform-specific development, deployment challenges, additional maintenance
+\1-  **Rejection Reason**: Web-based requirement and cross-platform needs
 
 ## Implementation Notes
 
@@ -127,19 +128,19 @@ pub struct AdminApiServer {
 
 New REST endpoints under `/admin/` prefix:
 
--   `GET /admin/` - Serve main admin interface
--   `GET /admin/config` - Get current configuration
--   `PUT /admin/config` - Update configuration
--   `GET /admin/providers` - List providers
--   `POST /admin/providers` - Add provider
--   `DELETE /admin/providers/{id}` - Remove provider
--   `GET /admin/indexes` - List indexes
--   `POST /admin/indexes/{id}/clear` - Clear index
--   `POST /admin/auth/login` - Authentication
+\1-   `GET /admin/` - Serve main admin interface
+\1-   `GET /admin/config` - Get current configuration
+\1-   `PUT /admin/config` - Update configuration
+\1-   `GET /admin/providers` - List providers
+\1-   `POST /admin/providers` - Add provider
+\1-   `DELETE /admin/providers/{id}` - Remove provider
+\1-   `GET /admin/indexes` - List indexes
+\1-   `POST /admin/indexes/{id}/clear` - Clear index
+\1-   `POST /admin/auth/login` - Authentication
 
 ### Frontend Structure
 
-Templates are **embedded at compile time** using `include_str!` macro, making the binary self-contained:
+Templates are**embedded at compile time**using `include_str!` macro, making the binary self-contained:
 
 ```
 src/admin/web/templates/
@@ -166,18 +167,18 @@ src/admin/web/templates/
 
 ### Security Implementation
 
--   JWT authentication with configurable expiration
--   Role-based access (admin vs read-only)
--   CSRF protection for state-changing operations
--   HTTPS enforcement in production
--   Rate limiting for API endpoints
+\1-   JWT authentication with configurable expiration
+\1-   Role-based access (admin vs read-only)
+\1-   CSRF protection for state-changing operations
+\1-   HTTPS enforcement in production
+\1-   Rate limiting for API endpoints
 
 ### Testing Strategy
 
--   Unit tests for new API endpoints
--   Integration tests for web interface functionality
--   E2E tests for critical admin workflows
--   Security testing for authentication and authorization
+\1-   Unit tests for new API endpoints
+\1-   Integration tests for web interface functionality
+\1-   E2E tests for critical admin workflows
+\1-   Security testing for authentication and authorization
 
 ### Migration Path
 
@@ -189,17 +190,17 @@ src/admin/web/templates/
 
 ### Performance Considerations
 
--   Static asset compression and caching
--   Lazy loading for JavaScript modules
--   Efficient WebSocket connection management
--   Minimal impact on existing metrics endpoints
+\1-   Static asset compression and caching
+\1-   Lazy loading for JavaScript modules
+\1-   Efficient WebSocket connection management
+\1-   Minimal impact on existing metrics endpoints
 
 ### Rollback Plan
 
--   Feature flag to disable admin interface
--   Separate admin routes can be easily removed
--   Database migrations (if any) are reversible
--   Static assets can be excluded from builds
+\1-   Feature flag to disable admin interface
+\1-   Separate admin routes can be easily removed
+\1-   Database migrations (if any) are reversible
+\1-   Static assets can be excluded from builds
 
 ## Unified Port Architecture (v0.2.0)
 
@@ -228,10 +229,10 @@ Port 3001 (Unified: Admin + Metrics + MCP HTTP)
 ├── /data            - Data management UI
 ├── /login           - Authentication page
 ├── /admin.css       - Admin stylesheet
-├── /htmx/*          - HTMX partial endpoints
-├── /admin/*         - Admin REST API endpoints
-├── /api/*           - Metrics API endpoints
-└── /mcp/*           - MCP protocol HTTP transport
+├── /htmx*/         - HTMX partial endpoints
+├── /admin*/        - Admin REST API endpoints
+├── /api*/          - Metrics API endpoints
+└── /mcp*/          - MCP protocol HTTP transport
 ```
 
 **Note**: The root path `/` serves the admin dashboard directly, making it the default landing page.
@@ -258,10 +259,10 @@ let metrics_server = MetricsApiServer::with_limits(...)
 
 ### Benefits
 
-- Single port simplifies firewall/proxy configuration
-- Eliminates port 3002 (previously MCP HTTP transport)
-- Unified graceful shutdown via ConnectionTracker
-- Consistent rate limiting and CORS across all endpoints
+\1-   Single port simplifies firewall/proxy configuration
+\1-   Eliminates port 3002 (previously MCP HTTP transport)
+\1-   Unified graceful shutdown via ConnectionTracker
+\1-   Consistent rate limiting and CORS across all endpoints
 
 ## Subsystem Control Protocol (v0.2.0)
 
@@ -338,12 +339,14 @@ pub struct SubsystemInfo {
 ### Event Flow Example
 
 ```
+
 1. User clicks "Restart" on embedding subsystem
 2. POST /admin/subsystems/embedding:ollama/signal {"signal":"restart"}
 3. AdminService::send_subsystem_signal() called
 4. EventBus publishes SystemEvent::ProviderRestart
 5. Embedding provider's event listener receives and restarts
 6. Dashboard HTMX poll shows updated status
+
 ```
 
 ## Configuration Management (v0.2.0)
@@ -352,17 +355,19 @@ Implements explicit save pattern for configuration changes.
 
 ### Runtime vs Persisted Configuration
 
-- **Runtime**: Changes via `update_configuration()` apply immediately (ArcSwap)
-- **Persisted**: `persist_configuration()` writes to `~/.context/config.toml`
-- **Diff**: `get_config_diff()` shows runtime vs file differences
+\1-  **Runtime**: Changes via `update_configuration()` apply immediately (ArcSwap)
+\1-  **Persisted**: `persist_configuration()` writes to `~/.context/config.toml`
+\1-  **Diff**: `get_config_diff()` shows runtime vs file differences
 
 ### API Flow
 
 ```
+
 1. GET /admin/configuration         # View current config
 2. PUT /admin/configuration         # Update runtime only
 3. POST /admin/configuration/save   # Persist to file
 4. GET /admin/configuration/diff    # Compare runtime vs file
+
 ```
 
 ### Implementation Pattern
@@ -404,8 +409,8 @@ templates/
 
 ## References
 
--   [ADR 006: Code Audit and Improvements](006-code-audit-and-improvements.md)
--   [ADR 008: Git-Aware Semantic Indexing](008-git-aware-semantic-indexing-v0.2.0.md)
--   [Existing HTTP Server](../../src/infrastructure/metrics/http_server.rs)
--   [Server Initialization](../../src/server/init.rs)
--   [Admin Service](../../src/admin/service/)
+\1-   [ADR 006: Code Audit and Improvements](006-code-audit-and-improvements.md)
+\1-   [ADR 008: Git-Aware Semantic Indexing](008-git-aware-semantic-indexing-v0.2.0.md)
+\1-   [Existing HTTP Server](../../src/infrastructure/metrics/http_server.rs)
+\1-   [Server Initialization](../../src/server/init.rs)
+\1-   [Admin Service](../../src/admin/service/)

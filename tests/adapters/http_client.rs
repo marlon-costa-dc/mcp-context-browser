@@ -3,10 +3,10 @@
 //! Tests for the HTTP client adapter module including connection pooling,
 //! configuration, and the null HTTP client pool for testing.
 
+use mcp_context_browser::adapters::http_client::test_utils::NullHttpClientPool;
 use mcp_context_browser::adapters::http_client::{
     HttpClientConfig, HttpClientPool, HttpClientProvider,
 };
-use mcp_context_browser::adapters::http_client::test_utils::NullHttpClientPool;
 use std::time::Duration;
 
 #[test]

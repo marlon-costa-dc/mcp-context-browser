@@ -7,6 +7,7 @@ Get MCP Context Browser v0.1.0 running in 5 minutes.
 ### Pre-built Binary (Recommended)
 
 ```bash
+
 # Linux x86_64
 curl -LO https://github.com/marlonsc/mcp-context-browser/releases/latest/download/mcp-context-browser-linux-x86_64.tar.gz
 tar xzf mcp-context-browser-linux-x86_64.tar.gz
@@ -19,6 +20,7 @@ sudo mv mcp-context-browser /usr/local/bin/
 git clone https://github.com/marlonsc/mcp-context-browser.git
 cd mcp-context-browser
 make build-release
+
 # Binary at: ./target/release/mcp-context-browser
 ```
 
@@ -34,6 +36,7 @@ export OPENAI_API_KEY=sk-your-key-here
 ### Option B: Ollama (Local, Free)
 
 ```bash
+
 # Start Ollama
 ollama serve &
 ollama pull nomic-embed-text
@@ -47,6 +50,7 @@ export OLLAMA_BASE_URL=http://localhost:11434
 
 ```bash
 export EMBEDDING_PROVIDER=fastembed
+
 # No API key needed - uses local models
 ```
 
@@ -109,6 +113,7 @@ Rust, Python, JavaScript, TypeScript, Go, Java, C, C++, C#, Ruby, PHP, Swift, Ko
 ### Using Milvus
 
 ```bash
+
 # Start Milvus with Docker
 docker run -d --name milvus -p 19530:19530 milvusdb/milvus:latest
 
@@ -122,8 +127,10 @@ export MILVUS_ADDRESS=http://localhost:19530
 ### "API key required"
 
 Set the appropriate environment variable:
+
 ```bash
 export OPENAI_API_KEY=sk-...
+
 # or
 export VOYAGE_API_KEY=...
 ```
@@ -131,6 +138,7 @@ export VOYAGE_API_KEY=...
 ### "Connection refused"
 
 Check if Ollama/Milvus is running:
+
 ```bash
 curl http://localhost:11434/api/version  # Ollama
 curl http://localhost:19530/v1/vector/health  # Milvus
@@ -138,14 +146,14 @@ curl http://localhost:19530/v1/vector/health  # Milvus
 
 ### Claude doesn't see the tools
 
-1. Check config file location
-2. Restart Claude Desktop
-3. Look for errors in Claude's logs
+1.  Check config file location
+2.  Restart Claude Desktop
+3.  Look for errors in Claude's logs
 
 ## Next Steps
 
-- [Migration Guide](../migration/FROM_CLAUDE_CONTEXT.md) - If coming from claude-context
-- [Architecture](../architecture/ARCHITECTURE.md) - Understanding the system
-- [ADR Index](../adr/README.md) - Architectural decisions
-- [Version History](../VERSION_HISTORY.md) - Complete version history
-- [Roadmap](../developer/ROADMAP.md) - Upcoming features including v0.2.0 Git-Aware Indexing
+\1-   [Migration Guide](../migration/FROM_CLAUDE_CONTEXT.md) - If coming from Claude-context
+\1-   [Architecture](../architecture/ARCHITECTURE.md) - Understanding the system
+\1-   [ADR Index](../adr/README.md) - Architectural decisions
+\1-   [Version History](../VERSION_HISTORY.md) - Complete version history
+\1-   [Roadmap](../developer/ROADMAP.md) - Upcoming features including v0.2.0 Git-Aware Indexing

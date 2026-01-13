@@ -55,9 +55,9 @@ impl Default for SecurityConfig {
             // - Inline <script> blocks in admin templates (dashboard.html, logs.html, etc.)
             // - Tailwind CSS inline configuration
             // - Alpine.js reactive attributes
-            // SECURITY NOTE: This CSP is designed for the internal admin interface.
+            // Security: This CSP is designed for the internal admin interface.
             // API endpoints are protected by authentication and rate limiting.
-            // TODO: Consider extracting inline scripts to external files (Phase 3 refactoring)
+            // Future: Consider extracting inline scripts to external files (Phase 3 refactoring)
             content_security_policy: Some(concat!(
                 "default-src 'self'; ",
                 // Script sources: self + CDNs for Alpine/HTMX/Chart.js + unsafe-inline for inline scripts

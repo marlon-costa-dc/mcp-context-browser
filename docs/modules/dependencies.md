@@ -40,9 +40,9 @@ digraph {
 The dependency graph above shows estimated module relationships within the codebase. Higher-level modules depend on lower-level core modules, creating a clean layered architecture.
 
 Key dependency patterns:
-- **Entry point** (main) depends on library (lib)
-- **Business logic** (services) depends on providers and core
-- **HTTP server** depends on all major components
-- **Core modules** have minimal dependencies
+\1-  **Entry point**(main) depends on library (lib)
+\1-  **Business logic**(services) depends on providers and core
+\1-  **HTTP server**depends on all major components
+\1-  **Core modules**have minimal dependencies
 
 *Generated automatically on: 2026-01-11 21:51:42 UTC*

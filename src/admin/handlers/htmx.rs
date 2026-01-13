@@ -1,6 +1,7 @@
 //! HTMX partial response handlers
 
 use super::common::*;
+use crate::infrastructure::utils::css;
 
 /// HTMX partial for recovery status
 pub async fn htmx_recovery_status_handler(State(state): State<AdminState>) -> Html<String> {
@@ -120,18 +121,10 @@ pub async fn htmx_maintenance_history_handler(State(state): State<AdminState>) -
 
     for activity in activities {
         let level_class = match activity.level {
-            crate::admin::service::helpers::activity::ActivityLevel::Info => {
-                "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
-            }
-            crate::admin::service::helpers::activity::ActivityLevel::Warning => {
-                "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
-            }
-            crate::admin::service::helpers::activity::ActivityLevel::Error => {
-                "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
-            }
-            crate::admin::service::helpers::activity::ActivityLevel::Success => {
-                "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
-            }
+            crate::admin::service::helpers::activity::ActivityLevel::Info => css::badge::INFO,
+            crate::admin::service::helpers::activity::ActivityLevel::Warning => css::badge::WARNING,
+            crate::admin::service::helpers::activity::ActivityLevel::Error => css::badge::ERROR,
+            crate::admin::service::helpers::activity::ActivityLevel::Success => css::badge::SUCCESS,
         };
 
         let time_ago = chrono::Utc::now()

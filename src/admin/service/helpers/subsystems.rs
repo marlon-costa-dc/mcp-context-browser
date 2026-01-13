@@ -435,11 +435,7 @@ pub async fn dispatch_subsystem_signal(
         }
     }
 
-    tracing::info!(
-        "[ADMIN] Sent {} signal to subsystem {}",
-        name,
-        subsystem_id
-    );
+    tracing::info!("[ADMIN] Sent {} signal to subsystem {}", name, subsystem_id);
 
     SignalResult {
         success: true,

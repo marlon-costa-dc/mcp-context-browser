@@ -2,31 +2,20 @@
 
 use super::common::*;
 use super::SearchQuery;
+use crate::infrastructure::utils::{HealthUtils, IntoStatusCode};
 
 /// Get system status
 pub async fn get_status_handler(
     State(state): State<AdminState>,
 ) -> Result<Json<ApiResponse<serde_json::Value>>, StatusCode> {
-    let system_info = state
-        .admin_service
-        .get_system_info()
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let providers = state
-        .admin_service
-        .get_providers()
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let indexing_status = state
-        .admin_service
-        .get_indexing_status()
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let system_info = state.admin_service.get_system_info().await.to_500()?;
+    let providers = state.admin_service.get_providers().await.to_500()?;
+    let indexing_status = state.admin_service.get_indexing_status().await.to_500()?;
     let performance = state
         .admin_service
         .get_performance_metrics()
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .to_500()?;
 
     let mut embedding_providers = Vec::new();
     let mut vector_store_providers = Vec::new();
@@ -73,21 +62,13 @@ pub async fn get_status_handler(
 pub async fn get_dashboard_metrics_handler(
     State(state): State<AdminState>,
 ) -> Result<Json<ApiResponse<serde_json::Value>>, StatusCode> {
-    let indexing_status = state
-        .admin_service
-        .get_indexing_status()
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let indexing_status = state.admin_service.get_indexing_status().await.to_500()?;
     let performance = state
         .admin_service
         .get_performance_metrics()
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let providers = state
-        .admin_service
-        .get_providers()
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .to_500()?;
+    let providers = state.admin_service.get_providers().await.to_500()?;
 
     let active_providers = providers.iter().filter(|p| p.status == "available").count();
 
@@ -97,7 +78,7 @@ pub async fn get_dashboard_metrics_handler(
         .collect_cpu_metrics()
         .await
         .map(|m| m.usage)
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .to_500()?;
 
     let memory = state
         .mcp_server
@@ -105,19 +86,11 @@ pub async fn get_dashboard_metrics_handler(
         .collect_memory_metrics()
         .await
         .map(|m| m.usage_percent)
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .to_500()?;
 
-    let system_info = state
-        .admin_service
-        .get_system_info()
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let system_info = state.admin_service.get_system_info().await.to_500()?;
 
-    let health_status = match (cpu < 85.0, memory < 85.0) {
-        (true, true) => "healthy",
-        (false, false) => "critical",
-        _ => "degraded",
-    };
+    let health_status = HealthUtils::compute_status(cpu as f64, memory as f64);
 
     let metrics = serde_json::json!({
         "active_providers": active_providers,

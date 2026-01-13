@@ -9,18 +9,22 @@ This document explains how to run the comprehensive integration tests for Redis 
 Ensure Redis and NATS are running on your host machine:
 
 ```bash
+
 # Check Redis
 redis-cli ping
+
 # Expected: PONG
 
 # Check NATS (via monitoring port)
 curl -s http://localhost:8222/healthz
+
 # Expected: OK
 ```
 
 ### Run All Integration Tests
 
 ```bash
+
 # Option 1: Direct tests (fastest - tests connect directly to host services)
 make test-docker
 
@@ -35,6 +39,7 @@ docker-compose up
 **Option A: Manual startup**
 
 ```bash
+
 # Terminal 1: Redis
 redis-server --port 6379
 
@@ -45,6 +50,7 @@ nats-server --jetstream
 **Option B: Using Docker containers (recommended)**
 
 ```bash
+
 # Start with custom docker-compose
 docker-compose -f docker-compose.testing.yml up -d
 
@@ -55,6 +61,7 @@ docker-compose -f docker-compose.testing.yml ps
 **Option C: System services**
 
 ```bash
+
 # If installed via system package manager
 systemctl start redis
 systemctl start nats-server
@@ -65,6 +72,7 @@ systemctl start nats-server
 #### Method 1: Local Tests (Direct Connection)
 
 ```bash
+
 # Run only Redis tests
 cargo test redis_cache_integration -- --nocapture
 
@@ -85,6 +93,7 @@ cargo test redis_cache_integration nats_event_bus_integration -- --nocapture
 Uses Docker containers for OpenAI mock, Ollama, and Milvus while connecting to host Redis/NATS:
 
 ```bash
+
 # Full Docker integration test cycle
 make test-docker
 
@@ -101,6 +110,7 @@ make docker-down                         # Stop Docker services
 Test runner executes inside Docker container and connects to host services:
 
 ```bash
+
 # Full test cycle with test-runner container
 docker-compose up
 
@@ -113,40 +123,46 @@ docker-compose down -v        # Cleanup
 ## Test Files
 
 ### Redis Cache Provider Tests
-**File:** `tests/infrastructure/redis_cache_integration.rs`
+
+**File:**`tests/infrastructure/redis_cache_integration.rs`
 
 Tests include:
-- Provider creation and configuration
-- Set/Get operations
-- Delete operations
-- Namespace clearing
-- Key existence checks
-- TTL expiration
-- Health checks
-- Concurrent access
-- Connection pooling
-- Large payload handling
+
+\1-   Provider creation and configuration
+\1-   Set/Get operations
+\1-   Delete operations
+\1-   Namespace clearing
+\1-   Key existence checks
+\1-   TTL expiration
+\1-   Health checks
+\1-   Concurrent access
+\1-   Connection pooling
+\1-   Large payload handling
 
 Run:
+
 ```bash
 cargo test redis_cache_integration -- --nocapture
 ```
 
 ### NATS Event Bus Tests
-**File:** `tests/infrastructure/nats_event_bus_integration.rs`
+
+**File:**`tests/infrastructure/nats_event_bus_integration.rs`
 
 Tests include:
-- Provider creation and configuration
-- Publish/Subscribe operations
-- Multiple subscribers
-- Different event types
-- Concurrent publishing
-- Health checks
-- Message recovery
-- Large payload handling
-- Stream persistence
+
+\1-   Provider creation and configuration
+\1-   Publish/Subscribe operations
+\1-   Multiple subscribers
+\1-   Different event types
+\1-   Concurrent publishing
+\1-   Health checks
+\1-   Message recovery
+\1-   Large payload handling
+\1-   Stream persistence
 
 Run:
+
 ```bash
 cargo test nats_event_bus_integration -- --nocapture
 ```
@@ -156,17 +172,21 @@ cargo test nats_event_bus_integration -- --nocapture
 Tests automatically detect services using these environment variables (in order of priority):
 
 ### Redis
-1. `REDIS_URL` - Primary: `redis://host:port`
-2. `MCP_CACHE__URL` - Fallback: `redis://host:port`
-3. Default: `redis://127.0.0.1:6379`
+
+1.  `REDIS_URL` - Primary: `redis://host:port`
+2.  `MCP_CACHE__URL` - Fallback: `redis://host:port`
+3.  Default: `redis://127.0.0.1:6379`
 
 ### NATS
-1. `NATS_URL` - Primary: `nats://host:port`
-2. `MCP_NATS_URL` - Fallback: `nats://host:port`
-3. Default: `nats://127.0.0.1:4222`
+
+1.  `NATS_URL` - Primary: `nats://host:port`
+2.  `MCP_NATS_URL` - Fallback: `nats://host:port`
+3.  Default: `nats://127.0.0.1:4222`
 
 Example:
+
 ```bash
+
 # Use custom host services
 REDIS_URL=redis://custom-host:6379 \
 NATS_URL=nats://custom-host:4222 \
@@ -178,17 +198,21 @@ cargo test redis_cache_integration nats_event_bus_integration -- --nocapture
 ### docker-compose.yml
 
 The main Docker Compose file includes:
-- **openai-mock**: OpenAI API mock server (port 1080)
-- **ollama**: Ollama embedding service (port 11434)
-- **milvus-***: Milvus vector database (port 19530)
-- **test-runner**: Test execution container
+
+\1-  **OpenAI-mock**: OpenAI API mock server (port 1080)
+\1-  **Ollama**: Ollama embedding service (port 11434)
+\1-  **Milvus-***: Milvus vector database (port 19530)
+\1-  **test-runner**: Test execution container
 
 The test-runner connects to:
-- Docker services via internal network (`mcp-openai-mock:1080`, etc.)
-- Host services via `host.docker.internal:port` (macOS) or `172.17.0.1:port` (Linux)
+
+\1-   Docker services via internal network (`mcp-openai-mock:1080`, etc.)
+\1-   Host services via `host.docker.internal:port` (macOS) or `172.17.0.1:port` (Linux)
 
 **Usage:**
+
 ```bash
+
 # Start everything
 docker-compose up
 
@@ -204,7 +228,9 @@ docker-compose logs -f test-runner
 Lightweight compose with only Redis and NATS for quick testing:
 
 **Usage:**
+
 ```bash
+
 # Start only Redis and NATS
 docker-compose -f docker-compose.testing.yml up -d
 
@@ -225,6 +251,7 @@ skip_if_no_nats!();   // Skips if NATS not available
 ```
 
 Output:
+
 ```
 ⚠️  Skipping test: Redis not available on localhost:6379
     Start Redis with: docker-compose up -d redis
@@ -248,6 +275,7 @@ make docker-status             # Show service status
 ### Redis Connection Refused
 
 ```bash
+
 # Check if Redis is running
 redis-cli ping
 
@@ -261,6 +289,7 @@ docker-compose -f docker-compose.testing.yml up -d redis
 ### NATS Connection Refused
 
 ```bash
+
 # Check if NATS is running
 telnet localhost 4222
 
@@ -276,6 +305,7 @@ docker-compose -f docker-compose.testing.yml up -d nats
 The docker-compose.yml uses `extra_hosts` with `host-gateway` to automatically resolve `host.docker.internal` on Linux. If it still doesn't work:
 
 ```bash
+
 # Get host IP
 docker network inspect mcp-test
 
@@ -298,6 +328,7 @@ RUST_LOG=debug cargo test redis_cache_integration -- --nocapture --test-threads=
 Verify connectivity from container:
 
 ```bash
+
 # From host
 docker exec -it mcp-test-runner bash
 
@@ -335,9 +366,10 @@ test result: ok. 18 passed; 0 failed; 0 ignored
 ### Performance
 
 Typical execution times:
-- Redis tests: ~15-20 seconds (including TTL wait)
-- NATS tests: ~25-30 seconds (including persistence wait)
-- Total: ~45-50 seconds
+
+\1-   Redis tests: ~15-20 seconds (including TTL wait)
+\1-   NATS tests: ~25-30 seconds (including persistence wait)
+\1-   Total: ~45-50 seconds
 
 ## CI/CD Integration
 
@@ -361,7 +393,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
         ports:
-          - 6379:6379
+\1-   6379:6379
 
       nats:
         image: nats:latest
@@ -371,13 +403,13 @@ jobs:
           --health-timeout 5s
           --health-retries 5
         ports:
-          - 4222:4222
+\1-   4222:4222
 
     steps:
-      - uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@stable
+\1-   uses: actions/checkout@v3
+\1-   uses: dtolnay/rust-toolchain@stable
 
-      - name: Run integration tests
+\1-   name: Run integration tests
         run: |
           REDIS_URL=redis://127.0.0.1:6379 \
           NATS_URL=nats://127.0.0.1:4222 \
@@ -386,28 +418,28 @@ jobs:
 
 ## Additional Resources
 
-- [Redis Documentation](https://redis.io/documentation)
-- [NATS Documentation](https://docs.nats.io/)
-- [MCP Context Browser Architecture](./architecture/ARCHITECTURE.md)
-- [Provider Pattern Implementation](./adr/005-provider-pattern.md)
+\1-   [Redis Documentation](https://redis.io/documentation)
+\1-   [NATS Documentation](https://docs.nats.io/)
+\1-   [MCP Context Browser Architecture](./architecture/ARCHITECTURE.md)
+\1-   [Provider Pattern Implementation](./adr/005-provider-pattern.md)
 
 ## Contributing
 
 When adding new integration tests:
 
-1. Use the existing patterns in `redis_cache_integration.rs` and `nats_event_bus_integration.rs`
-2. Include environment variable support for flexible service locations
-3. Use `skip_if_no_service!()` macro for graceful skipping
-4. Add cleanup code to prevent test pollution
-5. Include both success and failure paths
-6. Document expected behavior in test comments
+1.  Use the existing patterns in `redis_cache_integration.rs` and `nats_event_bus_integration.rs`
+2.  Include environment variable support for flexible service locations
+3.  Use `skip_if_no_service!()` macro for graceful skipping
+4.  Add cleanup code to prevent test pollution
+5.  Include both success and failure paths
+6.  Document expected behavior in test comments
 
 ## Support
 
 For issues or questions:
 
-1. Check the Troubleshooting section above
-2. Review test output with `--nocapture` flag
-3. Check Docker logs: `docker-compose logs`
-4. Check service health: `make docker-status`
-5. Open an issue on GitHub with test output
+1.  Check the Troubleshooting section above
+2.  Review test output with `--nocapture` flag
+3.  Check Docker logs: `docker-compose logs`
+4.  Check service health: `make docker-status`
+5.  Open an issue on GitHub with test output

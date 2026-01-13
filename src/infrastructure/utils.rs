@@ -178,3 +178,483 @@ impl ConfigurableValidator {
         ValidationResult::Valid(s.to_string())
     }
 }
+
+// =============================================================================
+// Formatting Utilities - Centralized formatting functions (DRY)
+// =============================================================================
+
+/// Byte size constants for formatting
+pub mod size_constants {
+    pub const BYTES_KB: u64 = 1024;
+    pub const BYTES_MB: u64 = BYTES_KB * 1024;
+    pub const BYTES_GB: u64 = BYTES_MB * 1024;
+    pub const BYTES_TB: u64 = BYTES_GB * 1024;
+}
+
+/// Time constants for formatting
+pub mod time_constants {
+    pub const SECONDS_PER_MINUTE: u64 = 60;
+    pub const SECONDS_PER_HOUR: u64 = 3600;
+    pub const SECONDS_PER_DAY: u64 = 86400;
+}
+
+/// Formatting utilities - eliminates duplication across view_models.rs and builders.rs
+pub struct FormattingUtils;
+
+impl FormattingUtils {
+    /// Format a number with thousands separator (e.g., 1234567 -> "1,234,567")
+    pub fn format_number(n: u64) -> String {
+        let s = n.to_string();
+        let mut result = String::with_capacity(s.len() + s.len() / 3);
+        for (i, c) in s.chars().rev().enumerate() {
+            if i > 0 && i % 3 == 0 {
+                result.insert(0, ',');
+            }
+            result.insert(0, c);
+        }
+        result
+    }
+
+    /// Format bytes in human-readable form (e.g., 1536 -> "1.5 KB")
+    pub fn format_bytes(bytes: u64) -> String {
+        use size_constants::*;
+        if bytes >= BYTES_TB {
+            format!("{:.1} TB", bytes as f64 / BYTES_TB as f64)
+        } else if bytes >= BYTES_GB {
+            format!("{:.1} GB", bytes as f64 / BYTES_GB as f64)
+        } else if bytes >= BYTES_MB {
+            format!("{:.1} MB", bytes as f64 / BYTES_MB as f64)
+        } else if bytes >= BYTES_KB {
+            format!("{:.1} KB", bytes as f64 / BYTES_KB as f64)
+        } else {
+            format!("{} B", bytes)
+        }
+    }
+
+    /// Format duration in human-readable form (e.g., 3665 -> "1h 1m 5s")
+    pub fn format_duration(seconds: u64) -> String {
+        use time_constants::*;
+        if seconds < SECONDS_PER_MINUTE {
+            return format!("{}s", seconds);
+        }
+        let hours = seconds / SECONDS_PER_HOUR;
+        let minutes = (seconds % SECONDS_PER_HOUR) / SECONDS_PER_MINUTE;
+        let secs = seconds % SECONDS_PER_MINUTE;
+
+        if hours > 0 {
+            format!("{}h {}m {}s", hours, minutes, secs)
+        } else {
+            format!("{}m {}s", minutes, secs)
+        }
+    }
+
+    /// Format age from Unix timestamp (e.g., "2 days ago", "Today")
+    pub fn format_age(timestamp: u64) -> String {
+        let now = TimeUtils::now_unix_secs();
+        if timestamp == 0 {
+            return "Unknown".to_string();
+        }
+
+        let age_seconds = now.saturating_sub(timestamp);
+        let days = age_seconds / time_constants::SECONDS_PER_DAY;
+
+        if days == 0 {
+            "Today".to_string()
+        } else if days == 1 {
+            "1 day ago".to_string()
+        } else if days < 7 {
+            format!("{} days ago", days)
+        } else if days < 30 {
+            let weeks = days / 7;
+            format!("{} week{} ago", weeks, if weeks == 1 { "" } else { "s" })
+        } else if days < 365 {
+            let months = days / 30;
+            format!("{} month{} ago", months, if months == 1 { "" } else { "s" })
+        } else {
+            let years = days / 365;
+            format!("{} year{} ago", years, if years == 1 { "" } else { "s" })
+        }
+    }
+
+    /// Format percentage (e.g., 0.756 -> "75.6%")
+    pub fn format_percentage(value: f64) -> String {
+        format!("{:.1}%", value * 100.0)
+    }
+
+    /// Format percentage from pre-computed value (e.g., 75.6 -> "75.6%")
+    pub fn format_percentage_raw(value: f64) -> String {
+        format!("{:.1}%", value)
+    }
+}
+
+// =============================================================================
+// Time Utilities - Centralized time functions (DRY)
+// =============================================================================
+
+/// Time utilities - eliminates `SystemTime::now().duration_since(UNIX_EPOCH)` pattern
+pub struct TimeUtils;
+
+impl TimeUtils {
+    /// Get current Unix timestamp in seconds
+    #[inline]
+    pub fn now_unix_secs() -> u64 {
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0)
+    }
+
+    /// Get current Unix timestamp in milliseconds
+    #[inline]
+    pub fn now_unix_millis() -> u128 {
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis())
+            .unwrap_or(0)
+    }
+
+    /// Check if a timestamp has expired given a TTL in seconds
+    #[inline]
+    pub fn is_expired(timestamp: u64, ttl_secs: u64) -> bool {
+        Self::now_unix_secs().saturating_sub(timestamp) > ttl_secs
+    }
+
+    /// Calculate age in seconds from a timestamp
+    #[inline]
+    pub fn age_secs(timestamp: u64) -> u64 {
+        Self::now_unix_secs().saturating_sub(timestamp)
+    }
+}
+
+// =============================================================================
+// Status Constants - Centralized status strings (DRY)
+// =============================================================================
+
+/// Common status values used across admin interface
+pub mod status {
+    pub const HEALTHY: &str = "healthy";
+    pub const DEGRADED: &str = "degraded";
+    pub const CRITICAL: &str = "critical";
+    pub const ACTIVE: &str = "active";
+    pub const INACTIVE: &str = "inactive";
+    pub const INDEXING: &str = "indexing";
+    pub const IDLE: &str = "idle";
+    pub const BUSY: &str = "busy";
+    pub const UNKNOWN: &str = "unknown";
+}
+
+/// Activity level strings
+pub mod activity_level {
+    pub const SUCCESS: &str = "success";
+    pub const WARNING: &str = "warning";
+    pub const ERROR: &str = "error";
+    pub const INFO: &str = "info";
+}
+
+// =============================================================================
+// Health Check Utilities
+// =============================================================================
+
+/// Health check utilities for determining system status
+pub struct HealthUtils;
+
+impl HealthUtils {
+    /// Determine health status based on CPU and memory usage
+    pub fn compute_status(cpu_usage: f64, memory_usage: f64) -> &'static str {
+        const HEALTHY_THRESHOLD: f64 = 85.0;
+        match (
+            cpu_usage < HEALTHY_THRESHOLD,
+            memory_usage < HEALTHY_THRESHOLD,
+        ) {
+            (true, true) => status::HEALTHY,
+            (false, false) => status::CRITICAL,
+            _ => status::DEGRADED,
+        }
+    }
+}
+
+// =============================================================================
+// String Utilities - Common string operations (DRY)
+// =============================================================================
+
+/// String utilities - common string operations
+pub struct StringUtils;
+
+impl StringUtils {
+    /// Capitalize first letter of a string
+    #[inline]
+    pub fn capitalize_first(s: &str) -> String {
+        let mut chars = s.chars();
+        match chars.next() {
+            None => String::new(),
+            Some(first) => first.to_uppercase().chain(chars).collect(),
+        }
+    }
+
+    /// Format relative time from chrono DateTime (e.g., "Just now", "5m ago")
+    pub fn format_relative_time(timestamp: chrono::DateTime<chrono::Utc>) -> String {
+        let now = chrono::Utc::now();
+        let diff = now.signed_duration_since(timestamp);
+        let seconds = diff.num_seconds();
+
+        if seconds < 60 {
+            "Just now".to_string()
+        } else if seconds < time_constants::SECONDS_PER_HOUR as i64 {
+            format!("{}m ago", seconds / 60)
+        } else if seconds < time_constants::SECONDS_PER_DAY as i64 {
+            format!("{}h ago", seconds / time_constants::SECONDS_PER_HOUR as i64)
+        } else {
+            format!("{}d ago", seconds / time_constants::SECONDS_PER_DAY as i64)
+        }
+    }
+}
+
+// =============================================================================
+// Async File Utilities - Replaces 10+ lines per call across codebase
+// =============================================================================
+
+use crate::domain::error::{Error, Result};
+use std::path::Path;
+
+/// Async file utilities for common I/O patterns
+pub struct FileUtils;
+
+impl FileUtils {
+    /// Write JSON to file with proper error handling (replaces ~8 lines per use)
+    ///
+    /// Serializes value to JSON and writes atomically with descriptive error.
+    pub async fn write_json<T: serde::Serialize, P: AsRef<Path>>(
+        path: P,
+        value: &T,
+        context: &str,
+    ) -> Result<()> {
+        let content = serde_json::to_string_pretty(value)
+            .map_err(|e| Error::internal(format!("Failed to serialize {}: {}", context, e)))?;
+        tokio::fs::write(path.as_ref(), content)
+            .await
+            .map_err(|e| Error::io(format!("Failed to write {}: {}", context, e)))?;
+        Ok(())
+    }
+
+    /// Read JSON from file with proper error handling (replaces ~8 lines per use)
+    pub async fn read_json<T: serde::de::DeserializeOwned, P: AsRef<Path>>(
+        path: P,
+        context: &str,
+    ) -> Result<T> {
+        let content = tokio::fs::read_to_string(path.as_ref())
+            .await
+            .map_err(|e| Error::io(format!("Failed to read {}: {}", context, e)))?;
+        serde_json::from_str(&content)
+            .map_err(|e| Error::internal(format!("Failed to parse {}: {}", context, e)))
+    }
+
+    /// Ensure directory exists and write file (replaces ~12 lines per use)
+    pub async fn ensure_dir_write<P: AsRef<Path>>(
+        path: P,
+        content: &[u8],
+        context: &str,
+    ) -> Result<()> {
+        if let Some(parent) = path.as_ref().parent() {
+            tokio::fs::create_dir_all(parent).await.map_err(|e| {
+                Error::io(format!("Failed to create directory for {}: {}", context, e))
+            })?;
+        }
+        tokio::fs::write(path.as_ref(), content)
+            .await
+            .map_err(|e| Error::io(format!("Failed to write {}: {}", context, e)))?;
+        Ok(())
+    }
+
+    /// Ensure directory exists and write JSON (replaces ~15 lines per use)
+    pub async fn ensure_dir_write_json<T: serde::Serialize, P: AsRef<Path>>(
+        path: P,
+        value: &T,
+        context: &str,
+    ) -> Result<()> {
+        let content = serde_json::to_string_pretty(value)
+            .map_err(|e| Error::internal(format!("Failed to serialize {}: {}", context, e)))?;
+        Self::ensure_dir_write(path, content.as_bytes(), context).await
+    }
+
+    /// Check if path exists (async wrapper for std::path::Path::exists)
+    pub async fn exists<P: AsRef<Path>>(path: P) -> bool {
+        tokio::fs::metadata(path.as_ref()).await.is_ok()
+    }
+
+    /// Read file if exists, return None otherwise (replaces ~6 lines per use)
+    pub async fn read_if_exists<P: AsRef<Path>>(path: P) -> Result<Option<Vec<u8>>> {
+        match tokio::fs::read(path.as_ref()).await {
+            Ok(content) => Ok(Some(content)),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
+            Err(e) => Err(Error::io(format!("Failed to read file: {}", e))),
+        }
+    }
+}
+
+// =============================================================================
+// HTTP Handler Utilities - Replaces 46 occurrences of error mapping
+// =============================================================================
+
+/// Helper trait for converting Results to HTTP StatusCode errors
+///
+/// Replaces `.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?` pattern
+pub trait IntoStatusCode<T> {
+    /// Convert to StatusCode::INTERNAL_SERVER_ERROR on error
+    fn to_500(self) -> std::result::Result<T, axum::http::StatusCode>;
+
+    /// Convert to StatusCode::NOT_FOUND on error
+    fn to_404(self) -> std::result::Result<T, axum::http::StatusCode>;
+
+    /// Convert to StatusCode::BAD_REQUEST on error
+    fn to_400(self) -> std::result::Result<T, axum::http::StatusCode>;
+}
+
+impl<T, E> IntoStatusCode<T> for std::result::Result<T, E> {
+    #[inline]
+    fn to_500(self) -> std::result::Result<T, axum::http::StatusCode> {
+        self.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+    }
+
+    #[inline]
+    fn to_404(self) -> std::result::Result<T, axum::http::StatusCode> {
+        self.map_err(|_| axum::http::StatusCode::NOT_FOUND)
+    }
+
+    #[inline]
+    fn to_400(self) -> std::result::Result<T, axum::http::StatusCode> {
+        self.map_err(|_| axum::http::StatusCode::BAD_REQUEST)
+    }
+}
+
+// =============================================================================
+// HTTP Response Utilities - Replaces ~8 lines per call across embedding providers
+// =============================================================================
+
+/// HTTP response utilities for API clients (embedding providers, etc.)
+///
+/// Consolidates the common pattern of checking response status and extracting errors.
+pub struct HttpResponseUtils;
+
+impl HttpResponseUtils {
+    /// Check HTTP response and return error if not successful (saves ~8 lines per use)
+    ///
+    /// # Example
+    /// ```ignore
+    /// let response = client.post(url).send().await?;
+    /// HttpResponseUtils::check_response(response, "OpenAI").await?;
+    /// // vs. the old 8-line pattern:
+    /// // if !response.status().is_success() {
+    /// //     let status = response.status();
+    /// //     let error_text = response.text().await.unwrap_or_default();
+    /// //     return Err(Error::embedding(format!("API error {}: {}", status, error_text)));
+    /// // }
+    /// ```
+    pub async fn check_response(
+        response: reqwest::Response,
+        provider_name: &str,
+    ) -> Result<reqwest::Response> {
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            return Err(Error::embedding(format!(
+                "{} API error {}: {}",
+                provider_name, status, error_text
+            )));
+        }
+        Ok(response)
+    }
+
+    /// Parse JSON from response with provider-specific error (saves ~6 lines per use)
+    pub async fn json_response<T: serde::de::DeserializeOwned>(
+        response: reqwest::Response,
+        provider_name: &str,
+    ) -> Result<T> {
+        response.json().await.map_err(|e| {
+            Error::embedding(format!("{} response parse error: {}", provider_name, e))
+        })
+    }
+
+    /// Combined: check response status and parse JSON (saves ~12 lines per use)
+    pub async fn check_and_parse<T: serde::de::DeserializeOwned>(
+        response: reqwest::Response,
+        provider_name: &str,
+    ) -> Result<T> {
+        let response = Self::check_response(response, provider_name).await?;
+        Self::json_response(response, provider_name).await
+    }
+}
+
+// =============================================================================
+// CSS Class Constants - DRY badge classes (11 occurrences consolidated)
+// =============================================================================
+
+/// Tailwind CSS badge classes for consistent UI styling
+pub mod css {
+    /// Badge background + text classes for different states
+    pub mod badge {
+        pub const SUCCESS: &str =
+            "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
+        pub const ERROR: &str = "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
+        pub const WARNING: &str =
+            "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300";
+        pub const INFO: &str = "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
+        pub const DEFAULT: &str = "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300";
+    }
+
+    /// Indicator dot classes (single color)
+    pub mod indicator {
+        pub const SUCCESS: &str = "bg-green-500";
+        pub const ERROR: &str = "bg-red-500";
+        pub const WARNING: &str = "bg-yellow-500";
+        pub const INFO: &str = "bg-blue-500";
+        pub const DEFAULT: &str = "bg-gray-500";
+    }
+
+    /// Get badge class for status string (provider, index, health)
+    #[inline]
+    pub fn badge_for_status(status: &str) -> &'static str {
+        match status {
+            "available" | "active" | "healthy" | "success" | "ready" => badge::SUCCESS,
+            "unavailable" | "error" | "failed" | "critical" | "unhealthy" => badge::ERROR,
+            "starting" | "initializing" | "indexing" | "warning" | "degraded" => badge::WARNING,
+            "info" | "pending" => badge::INFO,
+            _ => badge::DEFAULT,
+        }
+    }
+
+    /// Get badge class for activity/log level
+    #[inline]
+    pub fn badge_for_level(level: &str) -> &'static str {
+        match level.to_lowercase().as_str() {
+            "success" => badge::SUCCESS,
+            "error" => badge::ERROR,
+            "warning" | "warn" => badge::WARNING,
+            "info" | "debug" => badge::INFO,
+            _ => badge::DEFAULT,
+        }
+    }
+
+    /// Get indicator dot class for status string
+    #[inline]
+    pub fn indicator_for_status(status: &str) -> &'static str {
+        match status {
+            "available" | "active" | "healthy" | "success" | "ready" => indicator::SUCCESS,
+            "unavailable" | "error" | "failed" | "critical" | "unhealthy" => indicator::ERROR,
+            "starting" | "initializing" | "indexing" | "warning" | "degraded" => indicator::WARNING,
+            "info" | "pending" => indicator::INFO,
+            _ => indicator::DEFAULT,
+        }
+    }
+
+    /// Get indicator dot class for activity/log level
+    #[inline]
+    pub fn indicator_for_level(level: &str) -> &'static str {
+        match level.to_lowercase().as_str() {
+            "success" => indicator::SUCCESS,
+            "error" => indicator::ERROR,
+            "warning" | "warn" => indicator::WARNING,
+            "info" | "debug" => indicator::INFO,
+            _ => indicator::DEFAULT,
+        }
+    }
+}

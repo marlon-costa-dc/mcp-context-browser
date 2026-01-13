@@ -5,6 +5,7 @@ use crate::domain::error::{Error, Result};
 use crate::domain::ports::EmbeddingProvider;
 use crate::domain::types::Embedding;
 use crate::infrastructure::cache::SharedCacheProvider;
+use crate::infrastructure::utils::HttpResponseUtils;
 use async_trait::async_trait;
 use std::sync::Arc;
 use std::time::Duration;
@@ -108,19 +109,8 @@ impl OpenAIEmbeddingProvider {
                 }
             })?;
 
-        if !response.status().is_success() {
-            let status = response.status();
-            let error_text = response.text().await.unwrap_or_default();
-            return Err(Error::embedding(format!(
-                "OpenAI API error {}: {}",
-                status, error_text
-            )));
-        }
-
-        let response_data: serde_json::Value = response
-            .json()
-            .await
-            .map_err(|e| Error::embedding(format!("Failed to parse response: {}", e)))?;
+        let response_data: serde_json::Value =
+            HttpResponseUtils::check_and_parse(response, "OpenAI").await?;
 
         // Parse embeddings from response
         let data = response_data["data"].as_array().ok_or_else(|| {

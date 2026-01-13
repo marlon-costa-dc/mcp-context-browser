@@ -11,16 +11,18 @@ Complete reference for all environment variables supported by MCP Context Browse
 
 MCP Context Browser uses a hierarchical configuration system:
 
-1. **Configuration Files**: `config/default.toml` and `config/local.toml`
-2. **Environment Variables**: Override config file settings with prefix `MCP_`
-3. **Defaults**: Built-in defaults when neither file nor env var is set
+1.**Configuration Files**: `config/default.toml` and `config/local.toml`
+2.**Environment Variables**: Override config file settings with prefix `MCP_`
+3.**Defaults**: Built-in defaults when neither file nor env var is set
 
 All environment variables use the pattern:
+
 ```
 MCP_<SUBSYSTEM>_<PARAMETER>
 ```
 
 For nested settings, use double underscores:
+
 ```
 MCP_CACHE__NAMESPACES__EMBEDDINGS__TTL_SECONDS=7200
 ```
@@ -38,6 +40,7 @@ MCP_CACHE__NAMESPACES__EMBEDDINGS__TTL_SECONDS=7200
 | `MCP_PORT` | `3001` | Integer | Unified port for Admin + Metrics APIs |
 
 **Usage**:
+
 ```bash
 export MCP_SERVER__HOST=0.0.0.0
 export MCP_SERVER__PORT=9000
@@ -58,11 +61,12 @@ export MCP_PORT=9001
 | `MCP_CACHE__MAX_SIZE` | `10000` | Integer | Max cache entries (for local Moka mode) |
 
 **Current Architecture Note**:
-- If `REDIS_URL` is **empty** → Uses Moka (local in-memory cache)
-- If `REDIS_URL` is **non-empty** → Uses Redis (distributed cache)
+\1-   If `REDIS_URL` is**empty**→ Uses Moka (local in-memory cache)
+\1-   If `REDIS_URL` is**non-empty**→ Uses Redis (distributed cache)
 
-**Migration Path** (Phase 2):
+**Migration Path**(Phase 2):
 This will be replaced with:
+
 ```
 MCP_CACHE__BACKEND=local|redis
 MCP_CACHE__TTL_SECONDS=<seconds>
@@ -74,6 +78,7 @@ MCP_REDIS_URL=<url>  (when backend=redis)
 Each namespace has its own TTL and size settings:
 
 #### Embeddings Cache
+
 ```
 MCP_CACHE__NAMESPACES__EMBEDDINGS__TTL_SECONDS=7200      # 2 hours
 MCP_CACHE__NAMESPACES__EMBEDDINGS__MAX_ENTRIES=5000
@@ -81,6 +86,7 @@ MCP_CACHE__NAMESPACES__EMBEDDINGS__COMPRESSION=true
 ```
 
 #### Search Results Cache
+
 ```
 MCP_CACHE__NAMESPACES__SEARCH_RESULTS__TTL_SECONDS=1800   # 30 minutes
 MCP_CACHE__NAMESPACES__SEARCH_RESULTS__MAX_ENTRIES=2000
@@ -88,6 +94,7 @@ MCP_CACHE__NAMESPACES__SEARCH_RESULTS__COMPRESSION=false
 ```
 
 #### Metadata Cache
+
 ```
 MCP_CACHE__NAMESPACES__METADATA__TTL_SECONDS=3600         # 1 hour
 MCP_CACHE__NAMESPACES__METADATA__MAX_ENTRIES=1000
@@ -95,6 +102,7 @@ MCP_CACHE__NAMESPACES__METADATA__COMPRESSION=false
 ```
 
 #### Provider Responses Cache
+
 ```
 MCP_CACHE__NAMESPACES__PROVIDER_RESPONSES__TTL_SECONDS=300  # 5 minutes
 MCP_CACHE__NAMESPACES__PROVIDER_RESPONSES__MAX_ENTRIES=3000
@@ -102,6 +110,7 @@ MCP_CACHE__NAMESPACES__PROVIDER_RESPONSES__COMPRESSION=true
 ```
 
 #### Sync Batches Cache
+
 ```
 MCP_CACHE__NAMESPACES__SYNC_BATCHES__TTL_SECONDS=86400    # 24 hours
 MCP_CACHE__NAMESPACES__SYNC_BATCHES__MAX_ENTRIES=1000
@@ -109,7 +118,9 @@ MCP_CACHE__NAMESPACES__SYNC_BATCHES__COMPRESSION=false
 ```
 
 **Usage Example**:
+
 ```bash
+
 # Use Redis instead of local Moka
 export MCP_CACHE__REDIS_URL=redis://localhost:6379
 
@@ -137,7 +148,9 @@ export MCP_CACHE__NAMESPACES__EMBEDDINGS__TTL_SECONDS=14400
 | `MCP_NATS_MAX_MSGS` | `10000` | Integer | Max messages per subject |
 
 **Usage**:
+
 ```bash
+
 # Use Tokio (default, single-node)
 export MCP_EVENT_BUS_TYPE=tokio
 export MCP_EVENT_BUS_CAPACITY=200
@@ -161,10 +174,11 @@ export MCP_NATS_RETENTION_HOURS=24
 | `ADMIN_PASSWORD` | `` (empty) | String | Admin account password (min 8 chars) |
 
 **Security Model**:
-- If **both** `JWT_SECRET` and `ADMIN_PASSWORD` are set → Auth **enabled**
-- If **either** is empty → Auth **disabled** (graceful degradation)
+\1-   If**both**`JWT_SECRET` and `ADMIN_PASSWORD` are set → Auth**enabled**
+\1-   If**either**is empty → Auth**disabled**(graceful degradation)
 
 **Production Setup**:
+
 ```bash
 export JWT_SECRET="your-32-character-secret-key-here-minimum"
 export ADMIN_PASSWORD="your-secure-admin-password"
@@ -184,7 +198,7 @@ export JWT_EXPIRATION="3600"  # 1 hour
 | `JWT_SECRET` | `` (empty) | String | JWT signing secret (shared with auth system) |
 | `JWT_EXPIRATION` | `3600` | Integer | JWT token expiration in seconds |
 
-**Note**: Admin interface is **optional**. It's only created if `ADMIN_USERNAME` and `ADMIN_PASSWORD` are provided.
+**Note**: Admin interface is**optional**. It's only created if `ADMIN_USERNAME` and `ADMIN_PASSWORD` are provided.
 
 ---
 
@@ -194,7 +208,7 @@ export JWT_EXPIRATION="3600"  # 1 hour
 
 | Variable | Default | Type | Description |
 |----------|---------|------|-------------|
-| `DATABASE_URL` | `` (empty) | String | PostgreSQL connection string; empty = disabled |
+| `DATABASE_URL` | `` (empty) | String | PostgreSQL connection String; empty = disabled |
 | `DATABASE_MAX_CONNECTIONS` | `20` | Integer | Connection pool size |
 | `DATABASE_MIN_IDLE` | `5` | Integer | Minimum idle connections |
 | `DATABASE_MAX_LIFETIME_SECS` | `1800` | Integer | Max connection lifetime (30 min) |
@@ -202,10 +216,11 @@ export JWT_EXPIRATION="3600"  # 1 hour
 | `DATABASE_CONNECTION_TIMEOUT_SECS` | `30` | Integer | Connection establishment timeout |
 
 **Security Model**:
-- If `DATABASE_URL` is empty → Database **disabled** (no storage)
-- If `DATABASE_URL` is set → Database **enabled** with connection pooling
+\1-   If `DATABASE_URL` is empty → Database**disabled**(no storage)
+\1-   If `DATABASE_URL` is set → Database**enabled**with connection pooling
 
 **Production Setup**:
+
 ```bash
 export DATABASE_URL="postgresql://user:password@localhost:5432/mcp_context_browser"
 export DATABASE_MAX_CONNECTIONS=30
@@ -225,7 +240,7 @@ export DATABASE_MIN_IDLE=10
 
 ### Rate Limiting for Metrics
 
-See **Rate Limiting** section below.
+See**Rate Limiting**section below.
 
 ---
 
@@ -244,12 +259,14 @@ See **Rate Limiting** section below.
 | `MCP_RATE_LIMIT__CACHE_TTL_SECONDS` | `1` | Integer | Rate limit cache TTL |
 
 ### Memory Backend (Single-Node)
+
 ```
 MCP_RATE_LIMIT__BACKEND__TYPE=memory
 MCP_RATE_LIMIT__BACKEND__MAX_ENTRIES=10000
 ```
 
 ### Redis Backend (Clustered)
+
 ```
 MCP_RATE_LIMIT__BACKEND__TYPE=redis
 MCP_RATE_LIMIT__BACKEND__URL=redis://localhost:6379
@@ -301,6 +318,7 @@ MCP_RATE_LIMIT__BACKEND__URL=redis://localhost:6379
 Select embedding provider and configure credentials:
 
 #### OpenAI
+
 ```bash
 export MCP_PROVIDERS__EMBEDDING__PROVIDER=openai
 export MCP_PROVIDERS__EMBEDDING__MODEL=text-embedding-3-small
@@ -309,6 +327,7 @@ export MCP_PROVIDERS__EMBEDDING__DIMENSIONS=1536
 ```
 
 #### Ollama (Local)
+
 ```bash
 export MCP_PROVIDERS__EMBEDDING__PROVIDER=ollama
 export MCP_PROVIDERS__EMBEDDING__MODEL=nomic-embed-text
@@ -317,6 +336,7 @@ export MCP_PROVIDERS__EMBEDDING__DIMENSIONS=768
 ```
 
 #### VoyageAI
+
 ```bash
 export MCP_PROVIDERS__EMBEDDING__PROVIDER=voyageai
 export MCP_PROVIDERS__EMBEDDING__MODEL=voyage-2
@@ -324,6 +344,7 @@ export MCP_PROVIDERS__EMBEDDING__API_KEY=pa-...
 ```
 
 #### Gemini
+
 ```bash
 export MCP_PROVIDERS__EMBEDDING__PROVIDER=gemini
 export MCP_PROVIDERS__EMBEDDING__MODEL=models/embedding-001
@@ -333,12 +354,14 @@ export MCP_PROVIDERS__EMBEDDING__API_KEY=...
 ### Vector Store Provider
 
 #### In-Memory (Default, Single-Node)
+
 ```bash
 export MCP_PROVIDERS__VECTOR_STORE__PROVIDER=in-memory
 export MCP_PROVIDERS__VECTOR_STORE__DIMENSIONS=768
 ```
 
 #### Milvus (Clustered)
+
 ```bash
 export MCP_PROVIDERS__VECTOR_STORE__PROVIDER=milvus
 export MCP_PROVIDERS__VECTOR_STORE__ADDRESS=milvus-server:19530
@@ -346,6 +369,7 @@ export MCP_PROVIDERS__VECTOR_STORE__DIMENSIONS=768
 ```
 
 #### EdgeVec
+
 ```bash
 export MCP_PROVIDERS__VECTOR_STORE__PROVIDER=edgevec
 export MCP_PROVIDERS__VECTOR_STORE__ADDRESS=localhost:7374
@@ -391,12 +415,13 @@ See [admin_defaults.rs](../../src/admin/service/helpers/admin_defaults.rs) for o
 
 Settings are loaded in this order (highest priority first):
 
-1. **Environment Variables** (prefix `MCP_`)
-2. **Local Config File** (`config/local.toml`)
-3. **Default Config File** (`config/default.toml`)
-4. **Built-in Defaults** (hardcoded in Rust)
+1.**Environment Variables**(prefix `MCP_`)
+2.**Local Config File**(`config/local.toml`)
+3.**Default Config File**(`config/default.toml`)
+4.**Built-in Defaults**(hardcoded in Rust)
 
 Example: To override default port:
+
 ```bash
 export MCP_SERVER__PORT=8080  # Environment takes precedence
 ```
@@ -406,7 +431,9 @@ export MCP_SERVER__PORT=8080  # Environment takes precedence
 ## Configuration Best Practices
 
 ### Development Environment
+
 ```bash
+
 # Enable all optional systems for local testing
 export MCP_EVENT_BUS_TYPE=tokio
 export MCP_CACHE__ENABLED=true
@@ -417,7 +444,9 @@ export JWT_SECRET=dev-secret-key-32-chars-minimum
 ```
 
 ### Single-Node Production
+
 ```bash
+
 # Local cache, Tokio events, no external dependencies
 export MCP_CACHE__REDIS_URL=""
 export MCP_EVENT_BUS_TYPE=tokio
@@ -427,7 +456,9 @@ export JWT_SECRET=<secure-32-char-key>
 ```
 
 ### Clustered Production
+
 ```bash
+
 # Distributed cache and events
 export MCP_CACHE__REDIS_URL=redis://redis-cluster:6379
 export MCP_EVENT_BUS_TYPE=nats
@@ -438,11 +469,17 @@ export MCP_RATE_LIMIT__BACKEND__URL=redis://redis-cluster:6379
 ```
 
 ### Minimal Setup (No Optional Systems)
+
 ```bash
+
 # Bare minimum for MCP protocol operation
+
 # - No database
+
 # - No admin interface
+
 # - No metrics
+
 # - Local cache and Tokio events
 unset DATABASE_URL
 unset ADMIN_USERNAME
@@ -467,18 +504,21 @@ All configuration is validated at startup:
 ### Common Validation Errors
 
 **Database Disabled**
+
 ```
 ⚠️  Warning: Database disabled (DATABASE_URL not set)
    System will operate without persistent storage
 ```
 
 **Auth Disabled**
+
 ```
 ⚠️  Warning: Authentication disabled
    Set JWT_SECRET and ADMIN_PASSWORD to enable auth
 ```
 
 **Weak JWT Secret**
+
 ```
 ❌ Error: JWT_SECRET too short (must be ≥ 32 characters)
 ```
@@ -489,12 +529,14 @@ All configuration is validated at startup:
 
 The configuration system will be refactored for better type safety:
 
-**Current** (Magic String Detection):
+**Current**(Magic String Detection):
+
 ```rust
 let backend = if config.redis_url.is_empty() { "Moka" } else { "Redis" };
 ```
 
-**Future** (Type-Safe Enum):
+**Future**(Type-Safe Enum):
+
 ```rust
 pub enum CacheBackendConfig {
     Local { max_entries: usize, ttl: Duration },
@@ -503,9 +545,9 @@ pub enum CacheBackendConfig {
 ```
 
 This will replace:
-- `MCP_CACHE__REDIS_URL` with `MCP_CACHE__BACKEND=local|redis`
-- `MCP_EVENT_BUS_TYPE` will be moved to `EventBusConfig::from_env()`
-- All config enums will support environment variable overrides
+\1-   `MCP_CACHE__REDIS_URL` with `MCP_CACHE__BACKEND=local|redis`
+\1-   `MCP_EVENT_BUS_TYPE` will be moved to `EventBusConfig::from_env()`
+\1-   All config enums will support environment variable overrides
 
 ---
 
@@ -513,14 +555,15 @@ This will replace:
 
 ### Configuration Not Being Applied
 
-1. **Check environment variable format**: Use `MCP_` prefix and `__` for nesting
-2. **Verify spacing**: No spaces around `=` in exports
-3. **Check precedence**: Environment variables override config files
-4. **Enable debug logging**: `RUST_LOG=debug` to see config loading
+1.**Check environment variable format**: Use `MCP_` prefix and `__` for nesting
+2.**Verify spacing**: No spaces around `=` in exports
+3.**Check precedence**: Environment variables override config files
+4.**Enable debug logging**: `RUST_LOG=debug` to see config loading
 
 ### Port Already in Use
 
 ```bash
+
 # Server port conflict
 export MCP_SERVER__PORT=9000
 
@@ -531,6 +574,7 @@ export MCP_PORT=9001
 ### Cache Not Working
 
 ```bash
+
 # Verify cache enabled
 export MCP_CACHE__ENABLED=true
 
@@ -543,6 +587,6 @@ redis-cli ping  # Should respond with PONG
 
 ## See Also
 
-- [Configuration Types](../../src/infrastructure/config/) - Source code
-- [Admin Defaults](../../src/admin/service/helpers/admin_defaults.rs) - Operational settings
-- [CONFIGURATION.md](../CONFIGURATION.md) - General configuration guide
+\1-   [Configuration Types](../../src/infrastructure/config/) - Source code
+\1-   [Admin Defaults](../../src/admin/service/helpers/admin_defaults.rs) - Operational settings
+\1-   [CONFIGURATION.md](../CONFIGURATION.md) - General configuration guide

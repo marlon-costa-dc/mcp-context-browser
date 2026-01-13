@@ -1,6 +1,7 @@
 //! Data management handlers (backup/restore)
 
 use super::common::*;
+use crate::infrastructure::utils::IntoStatusCode;
 
 /// Create system backup
 pub async fn create_backup_handler(
@@ -11,7 +12,7 @@ pub async fn create_backup_handler(
         .admin_service
         .create_backup(backup_config)
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .to_500()?;
 
     Ok(Json(ApiResponse::success(result)))
 }
@@ -20,11 +21,7 @@ pub async fn create_backup_handler(
 pub async fn list_backups_handler(
     State(state): State<AdminState>,
 ) -> Result<Json<ApiResponse<Vec<crate::admin::service::BackupInfo>>>, StatusCode> {
-    let backups = state
-        .admin_service
-        .list_backups()
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let backups = state.admin_service.list_backups().await.to_500()?;
 
     Ok(Json(ApiResponse::success(backups)))
 }
@@ -38,7 +35,7 @@ pub async fn restore_backup_handler(
         .admin_service
         .restore_backup(&backup_id)
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .to_500()?;
 
     Ok(Json(ApiResponse::success(result)))
 }

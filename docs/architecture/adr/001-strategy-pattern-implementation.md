@@ -16,37 +16,41 @@ The God Object pattern in `McpServer` with 15+ dependencies creates tight coupli
 
 Implement the Strategy pattern using Rust's trait bounds and generics instead of dynamic dispatch where appropriate. This provides:
 
-1. **Compile-time verification** of provider compatibility
-2. **Better performance** through monomorphization
-3. **Improved testability** with concrete types
-4. **Cleaner dependency injection** with trait bounds
+1.**Compile-time verification**of provider compatibility
+2.**Better performance**through monomorphization
+3.**Improved testability**with concrete types
+4.**Cleaner dependency injection**with trait bounds
 
 Key changes:
-- Generic service implementations: `GenericContextService<E, V>`
-- Repository pattern with trait bounds
-- Provider strategy composition at compile time
-- Maintain backward compatibility with existing dynamic dispatch interfaces
+\1-   Generic service implementations: `GenericContextService<E, V>`
+\1-   Repository pattern with trait bounds
+\1-   Provider strategy composition at compile time
+\1-   Maintain backward compatibility with existing dynamic dispatch interfaces
 
 ## Consequences
 
 ### Positive
-- **Performance**: Monomorphization eliminates dynamic dispatch overhead
-- **Safety**: Compile-time verification of provider compatibility
-- **Testability**: Concrete types enable easier unit testing
-- **Maintainability**: Clear separation of concerns with trait bounds
+
+\1-  **Performance**: Monomorphization eliminates dynamic dispatch overhead
+\1-  **Safety**: Compile-time verification of provider compatibility
+\1-  **Testability**: Concrete types enable easier unit testing
+\1-  **Maintainability**: Clear separation of concerns with trait bounds
 
 ### Negative
-- **Binary size**: Increased due to monomorphization
-- **Compilation time**: Longer compile times with generics
-- **Complexity**: More complex type signatures
+
+\1-  **Binary size**: Increased due to monomorphization
+\1-  **Compilation time**: Longer compile times with generics
+\1-  **Complexity**: More complex type signatures
 
 ### Risks
-- **Breaking changes**: Generic APIs may require different usage patterns
-- **Migration complexity**: Converting existing code to use generics
+
+\1-  **Breaking changes**: Generic APIs may require different usage patterns
+\1-  **Migration complexity**: Converting existing code to use generics
 
 ## Implementation
 
 ### Generic Service Layer
+
 ```rust
 pub struct GenericContextService<E, V>
 where
@@ -59,6 +63,7 @@ where
 ```
 
 ### Repository Pattern
+
 ```rust
 pub struct VectorStoreChunkRepository<E, V>
 where
@@ -70,6 +75,7 @@ where
 ```
 
 ### Usage Example
+
 ```rust
 let embedding_provider = Arc::new(MockEmbeddingProvider::new());
 let vector_store_provider = Arc::new(InMemoryVectorStoreProvider::new());
@@ -83,19 +89,22 @@ let service = GenericContextService::new(
 ## Alternatives Considered
 
 ### Option 1: Continue with Dynamic Dispatch
-- **Pros**: Simple, flexible, backward compatible
-- **Cons**: Runtime overhead, harder testing, less type safety
+
+\1-  **Pros**: Simple, flexible, backward compatible
+\1-  **Cons**: Runtime overhead, harder testing, less type safety
 
 ### Option 2: Hybrid Approach
-- **Pros**: Best of both worlds
-- **Cons**: Increased complexity, inconsistent API
+
+\1-  **Pros**: Best of both worlds
+\1-  **Cons**: Increased complexity, inconsistent API
 
 ### Option 3: Full Generic Rewrite
-- **Pros**: Maximum performance and safety
-- **Cons**: Breaking changes, migration effort
+
+\1-  **Pros**: Maximum performance and safety
+\1-  **Cons**: Breaking changes, migration effort
 
 ## References
 
-- [Strategy Pattern](https://en.wikipedia.org/wiki/Strategy_pattern)
-- [Rust Generics](https://doc.rust-lang.org/book/ch10-01-syntax.html)
-- [Monomorphization](https://doc.rust-lang.org/book/ch10-02-traits.html)
+\1-   [Strategy Pattern](https://en.wikipedia.org/wiki/Strategy_pattern)
+\1-   [Rust Generics](https://doc.rust-lang.org/book/ch10-01-syntax.html)
+\1-   [Monomorphization](https://doc.rust-lang.org/book/ch10-02-traits.html)

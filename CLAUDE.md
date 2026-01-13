@@ -34,11 +34,11 @@ Use `make` commands, never raw Cargo/git:
 
 ### Code Standards
 
-1. **No unwrap/expect** - Use `?` operator with proper error types
-2. **File size < 500 lines** - Split large files
-3. **Trait-based DI** - Use `Arc<dyn Trait>`, not `Arc<ConcreteType>`
-4. **Async-first** - All I/O operations async with Tokio
-5. **Error handling** - Custom types with `thiserror`, context with `anyhow`
+1.  **No unwrap/expect** - Use `?` operator with proper error types
+2.  **File size < 500 lines** - Split large files
+3.  **Trait-based DI** - Use `Arc<dyn Trait>`, not `Arc<ConcreteType>`
+4.  **Async-first** - All I/O operations async with Tokio
+5.  **Error handling** - Custom types with `thiserror`, context with `anyhow`
 
 ### Architecture Patterns
 
@@ -100,40 +100,42 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 ## Security
 
-- JWT authentication for API access
-- Rate limiting on all endpoints
-- AES-GCM encryption at rest
+-   JWT authentication for API access
+-   Rate limiting on all endpoints
+-   AES-GCM encryption at rest
 
 ## Current Version: v0.1.0
 
-**First stable release** - Drop-in replacement for claude-context:
+**First stable release** - Drop-in replacement for Claude-context:
 
-- 12 languages with AST parsing (Rust, Python, JS/TS, Go, Java, C, C++, C#, Ruby, PHP, Swift, Kotlin)
-- 6 embedding providers (OpenAI, VoyageAI, Ollama, Gemini, FastEmbed, Null)
-- 6 vector stores (Milvus, EdgeVec, In-Memory, Filesystem, Encrypted, Null)
-- 493 tests (100% pass rate, 2 ignored)
-- HTTP transport foundation
-- Systemd integration
+-   12 languages with AST parsing (Rust, Python, JS/TS, Go, Java, C, C++, C#, Ruby, PHP, Swift, Kotlin)
+-   6 embedding providers (OpenAI, VoyageAI, Ollama, Gemini, FastEmbed, Null)
+-   6 vector stores (Milvus, EdgeVec, In-Memory, Filesystem, Encrypted, Null)
+-   493 tests (100% pass rate, 2 ignored)
+-   HTTP transport foundation
+-   Systemd integration
 
 ## Next Version: v0.2.0 (Planned)
 
 **Git-Aware Indexing + Persistent Session Memory**:
 
 **Git Integration** - See [ADR-008](docs/adr/008-git-aware-semantic-indexing-v0.2.0.md):
-- Project-relative indexing (portable)
-- Multi-branch indexing
-- Commit history search
-- Submodule support
-- Monorepo detection
-- Impact analysis
+
+-   Project-relative indexing (portable)
+-   Multi-branch indexing
+-   Commit history search
+-   Submodule support
+-   Monorepo detection
+-   Impact analysis
 
 **Session Memory** - See [ADR-009](docs/adr/009-persistent-session-memory-v0.2.0.md):
-- Cross-session observation storage
-- Session summaries and tracking
-- Hybrid search (BM25 + vector)
-- Progressive disclosure (3-layer workflow)
-- Context injection for SessionStart hooks
-- Git-tagged memory entries
+
+-   Cross-session observation storage
+-   Session summaries and tracking
+-   Hybrid search (BM25 + vector)
+-   Progressive disclosure (3-layer workflow)
+-   Context injection for SessionStart hooks
+-   Git-tagged memory entries
 
 ## Troubleshooting
 
@@ -145,18 +147,18 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 ## Documentation
 
-- Architecture: `docs/architecture/ARCHITECTURE.md`
-- ADRs: `docs/adr/README.md`
-- Roadmap: `docs/developer/ROADMAP.md`
-- Version History: `docs/VERSION_HISTORY.md`
-- Detailed project info: `.claude/rules/custom/project.md`
+-   Architecture: `docs/architecture/ARCHITECTURE.md`
+-   ADRs: `docs/adr/README.md`
+-   Roadmap: `docs/developer/ROADMAP.md`
+-   Version History: `docs/VERSION_HISTORY.md`
+-   Detailed project info: `.claude/rules/custom/project.md`
 
 ## Quality Gates
 
 Before any commit:
 
-- [ ] `make test` - 0 failures
-- [ ] `make lint` - clean output
-- [ ] `make fmt` - no changes
-- [ ] No new `unwrap/expect`
-- [ ] Files < 500 lines
+-   [ ] `make test` - 0 failures
+-   [ ] `make lint` - clean output
+-   [ ] `make fmt` - no changes
+-   [ ] No new `unwrap/expect`
+-   [ ] Files < 500 lines

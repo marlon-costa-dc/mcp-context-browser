@@ -14,19 +14,19 @@ The metrics module provides comprehensive observability for the MCP Context Brow
 
 Collects system-level metrics using `sysinfo` crate.
 
--   CPU usage and load averages
--   Memory utilization (used/total/available)
--   Disk I/O and storage capacity
--   Network statistics
+\1-   CPU usage and load averages
+\1-   Memory utilization (used/total/available)
+\1-   Disk I/O and storage capacity
+\1-   Network statistics
 
 ### PerformanceMetrics (`performance.rs`)
 
 Tracks application performance.
 
--   Query latency (P50, P95, P99)
--   Cache hit/miss rates
--   Request throughput
--   Error rates
+\1-   Query latency (P50, P95, P99)
+\1-   Cache hit/miss rates
+\1-   Request throughput
+\1-   Error rates
 
 ### MetricsApiServer (`http_server.rs`)
 
@@ -44,9 +44,9 @@ HTTP API for metrics access (port 3001).
 
 Cache performance tracking.
 
--   Hit count / miss count
--   Hit rate percentage
--   Eviction statistics
+\1-   Hit count / miss count
+\1-   Hit rate percentage
+\1-   Eviction statistics
 
 ## File Structure
 
@@ -70,8 +70,8 @@ pub use performance::PERFORMANCE_METRICS;
 
 Environment variables:
 
--   `MCP_METRICS_ENABLED=true` - Enable metrics collection
--   `MCP_PORT=3001` - Unified HTTP port (Admin + Metrics + MCP)
+\1-   `MCP_METRICS_ENABLED=true` - Enable metrics collection
+\1-   `MCP_PORT=3001` - Unified HTTP port (Admin + Metrics + MCP)
 
 ## Testing
 
@@ -79,6 +79,6 @@ Environment variables:
 
 ## Cross-References
 
--   **Architecture**: [ARCHITECTURE.md](../architecture/ARCHITECTURE.md)
--   **Server**: [server.md](./server.md) (integrates metrics)
--   **Admin**: [admin.md](./admin.md) (metrics dashboard)
+\1-  **Architecture**: [ARCHITECTURE.md](../architecture/ARCHITECTURE.md)
+\1-  **Server**: [server.md](./server.md) (integrates metrics)
+\1-  **Admin**: [admin.md](./admin.md) (metrics dashboard)

@@ -1,16 +1,13 @@
 //! Provider management handlers
 
 use super::common::*;
+use crate::infrastructure::utils::IntoStatusCode;
 
 /// List all providers
 pub async fn list_providers_handler(
     State(state): State<AdminState>,
 ) -> Result<Json<ApiResponse<Vec<ProviderInfo>>>, StatusCode> {
-    let provider_statuses = state
-        .admin_service
-        .get_providers()
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let provider_statuses = state.admin_service.get_providers().await.to_500()?;
 
     let providers = provider_statuses
         .into_iter()
@@ -81,11 +78,7 @@ pub async fn remove_provider_handler(
     State(state): State<AdminState>,
     Path(provider_id): Path<String>,
 ) -> Result<Json<ApiResponse<String>>, StatusCode> {
-    let providers = state
-        .admin_service
-        .get_providers()
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let providers = state.admin_service.get_providers().await.to_500()?;
 
     if !providers.iter().any(|p| p.id == provider_id) {
         return Ok(Json(ApiResponse::error("Provider not found".to_string())));

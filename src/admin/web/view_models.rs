@@ -7,6 +7,8 @@
 
 use serde::Serialize;
 
+use crate::infrastructure::utils::{css, FormattingUtils, StringUtils};
+
 // =============================================================================
 // Dashboard View Models
 // =============================================================================
@@ -43,7 +45,7 @@ impl MetricsViewModel {
             memory_usage,
             memory_usage_formatted: format!("{:.1}%", memory_usage),
             total_queries,
-            total_queries_formatted: format_number(total_queries),
+            total_queries_formatted: FormattingUtils::format_number(total_queries),
             avg_latency_ms,
             avg_latency_formatted: format!("{:.1}ms", avg_latency_ms),
         }
@@ -92,18 +94,7 @@ pub struct ProviderViewModel {
 impl ProviderViewModel {
     pub fn new(id: String, name: String, provider_type: String, status: String) -> Self {
         let is_active = matches!(status.as_str(), "available" | "active" | "healthy");
-        let status_class = match status.as_str() {
-            "available" | "active" | "healthy" => {
-                "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
-            }
-            "unavailable" | "error" | "failed" => {
-                "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
-            }
-            "starting" | "initializing" => {
-                "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
-            }
-            _ => "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300",
-        };
+        let status_class = css::badge_for_status(&status);
         let provider_type_display = provider_type
             .replace('_', " ")
             .split_whitespace()
@@ -116,7 +107,7 @@ impl ProviderViewModel {
             })
             .collect::<Vec<_>>()
             .join(" ");
-        let status_display = capitalize_first(&status);
+        let status_display = StringUtils::capitalize_first(&status);
 
         Self {
             id,
@@ -152,7 +143,7 @@ impl IndexesViewModel {
             page: "indexes",
             indexes,
             total_documents,
-            total_documents_formatted: format_number(total_documents),
+            total_documents_formatted: FormattingUtils::format_number(total_documents),
             active_count,
         }
     }
@@ -195,26 +186,19 @@ impl IndexViewModel {
     ) -> Self {
         let is_indexing = status == "indexing";
         let is_active = matches!(status.as_str(), "active" | "ready");
-        let status_class = match status.as_str() {
-            "active" | "ready" => {
-                "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
-            }
-            "indexing" => "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300",
-            "error" | "failed" => "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300",
-            _ => "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300",
-        };
-        let age_display = format_age(created_at);
+        let status_class = css::badge_for_status(&status);
+        let age_display = FormattingUtils::format_age(created_at);
 
         Self {
             id,
             name,
-            status_display: capitalize_first(&status),
+            status_display: StringUtils::capitalize_first(&status),
             status,
             status_class,
             is_active,
             is_indexing,
             document_count,
-            document_count_formatted: format_number(document_count),
+            document_count_formatted: FormattingUtils::format_number(document_count),
             created_at,
             updated_at,
             age_display,
@@ -247,20 +231,10 @@ impl ActivityViewModel {
         level: &str,
         category: String,
     ) -> Self {
-        let level_class = match level {
-            "success" => "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
-            "warning" => "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300",
-            "error" => "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300",
-            _ => "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
-        };
-        let indicator_class = match level {
-            "success" => "bg-green-500",
-            "warning" => "bg-yellow-500",
-            "error" => "bg-red-500",
-            _ => "bg-blue-500",
-        };
+        let level_class = css::badge_for_level(level);
+        let indicator_class = css::indicator_for_level(level);
         let timestamp_str = timestamp.format("%H:%M:%S").to_string();
-        let timestamp_relative = format_relative_time(timestamp);
+        let timestamp_relative = StringUtils::format_relative_time(timestamp);
 
         Self {
             id,
@@ -293,26 +267,16 @@ pub struct HealthViewModel {
 
 impl HealthViewModel {
     pub fn new(status: &str, uptime_seconds: u64, pid: u32) -> Self {
-        let status_class = match status {
-            "healthy" => "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
-            "degraded" => "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300",
-            "critical" | "unhealthy" => "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300",
-            _ => "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300",
-        };
-        let indicator_class = match status {
-            "healthy" => "bg-green-500",
-            "degraded" => "bg-yellow-500",
-            "critical" | "unhealthy" => "bg-red-500",
-            _ => "bg-gray-500",
-        };
+        let status_class = css::badge_for_status(status);
+        let indicator_class = css::indicator_for_status(status);
 
         Self {
             status: status.to_string(),
-            status_display: capitalize_first(status),
+            status_display: StringUtils::capitalize_first(status),
             status_class,
             indicator_class,
             uptime_seconds,
-            uptime_formatted: format_duration(uptime_seconds),
+            uptime_formatted: FormattingUtils::format_duration(uptime_seconds),
             pid,
         }
     }
@@ -412,106 +376,9 @@ impl ErrorViewModel {
     }
 }
 
-// =============================================================================
-// Helper Functions
-// =============================================================================
-
-/// Format a number with thousands separator
-fn format_number(n: u64) -> String {
-    let s = n.to_string();
-    let mut result = String::new();
-    for (i, c) in s.chars().rev().enumerate() {
-        if i > 0 && i % 3 == 0 {
-            result.insert(0, ',');
-        }
-        result.insert(0, c);
-    }
-    result
-}
-
-/// Format duration in human-readable form
-fn format_duration(seconds: u64) -> String {
-    if seconds < 60 {
-        return format!("{}s", seconds);
-    }
-    let hours = seconds / 3600;
-    let minutes = (seconds % 3600) / 60;
-    let secs = seconds % 60;
-
-    if hours > 0 {
-        format!("{}h {}m {}s", hours, minutes, secs)
-    } else {
-        format!("{}m {}s", minutes, secs)
-    }
-}
-
-/// Format age from Unix timestamp
-fn format_age(timestamp: u64) -> String {
-    let now = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_secs())
-        .unwrap_or(0);
-
-    if timestamp == 0 {
-        return "Unknown".to_string();
-    }
-
-    let age_seconds = now.saturating_sub(timestamp);
-    let days = age_seconds / 86400;
-
-    if days == 0 {
-        "Today".to_string()
-    } else if days == 1 {
-        "1 day".to_string()
-    } else {
-        format!("{} days", days)
-    }
-}
-
-/// Format relative time from chrono DateTime
-fn format_relative_time(timestamp: chrono::DateTime<chrono::Utc>) -> String {
-    let now = chrono::Utc::now();
-    let diff = now.signed_duration_since(timestamp);
-    let seconds = diff.num_seconds();
-
-    if seconds < 60 {
-        "Just now".to_string()
-    } else if seconds < 3600 {
-        format!("{}m ago", seconds / 60)
-    } else if seconds < 86400 {
-        format!("{}h ago", seconds / 3600)
-    } else {
-        format!("{}d ago", seconds / 86400)
-    }
-}
-
-/// Capitalize first letter of a string
-fn capitalize_first(s: &str) -> String {
-    let mut chars = s.chars();
-    match chars.next() {
-        None => String::new(),
-        Some(first) => first.to_uppercase().chain(chars).collect(),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_format_number() {
-        assert_eq!(format_number(0), "0");
-        assert_eq!(format_number(123), "123");
-        assert_eq!(format_number(1234), "1,234");
-        assert_eq!(format_number(1234567), "1,234,567");
-    }
-
-    #[test]
-    fn test_format_duration() {
-        assert_eq!(format_duration(30), "30s");
-        assert_eq!(format_duration(90), "1m 30s");
-        assert_eq!(format_duration(3661), "1h 1m 1s");
-    }
 
     #[test]
     fn test_provider_view_model() {

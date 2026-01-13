@@ -22,23 +22,23 @@
 
 {Consider impacts on:
 
--   Development velocity
--   System performance
--   Maintainability
--   Testability
--   Deployment complexity
--   Operational overhead
--   Security implications
--   Cost implications
+\1-   Development velocity
+\1-   System performance
+\1-   Maintainability
+\1-   Testability
+\1-   Deployment complexity
+\1-   Operational overhead
+\1-   Security implications
+\1-   Cost implications
 }
 
 ### Positive Consequences
 
--   {List benefits and advantages}
+\1-   {List benefits and advantages}
 
 ### Negative Consequences
 
--   {List drawbacks and trade-offs}
+\1-   {List drawbacks and trade-offs}
 
 ## Alternatives Considered
 
@@ -46,20 +46,20 @@
 
 {For each alternative:
 
--   Describe the Option
--   Explain why it was not chosen
--   Note any circumstances where it might be reconsidered}
+\1-   Describe the Option
+\1-   Explain why it was not chosen
+\1-   Note any circumstances where it might be reconsidered}
 
 ### Alternative 1: {Name}
 
--   **Description**: {Brief description}
--   **Pros**: {Advantages}
--   **Cons**: {Disadvantages}
--   **Rejection Reason**: {Why this wasn't chosen}
+\1-  **Description**: {Brief description}
+\1-  **Pros**: {Advantages}
+\1-  **Cons**: {Disadvantages}
+\1-  **Rejection Reason**: {Why this wasn't chosen}
 
 ### Alternative 2: {Name}
 
--   {Similar structure as Alternative 1}
+\1-   {Similar structure as Alternative 1}
 
 ## Implementation Notes
 
@@ -67,19 +67,20 @@
 
 {Include:
 
--   Code changes required
--   Migration path
--   Testing strategy
--   Rollback plan
--   Performance considerations
--   Security considerations
+\1-   Code changes required
+\1-   Migration path
+\1-   Testing strategy
+\1-   Rollback plan
+\1-   Performance considerations
+\1-   Security considerations
 }
 
 ## References
 
 {Links to related documents, issues, or discussions}
 
--   [Issue/PR Link](URL)
--   [Related ADR](relative/path/to/adr.md)
--   [External Documentation](URL)
--   [RFC/Discussion](URL)
+\1-   [Issue/PR Link](URL)
+\1-   [Related ADR](relative/path/to/adr.md)
+\1-   [External Documentation](URL)
+\1-   [RFC/Discussion](URL)
+

@@ -11,42 +11,46 @@ Accepted
 The MCP Context Browser is a critical enterprise system that requires robust testing to ensure reliability, performance, and security. The current testing approach lacks comprehensive coverage and systematic testing strategies.
 
 Key requirements:
-1. **Reliability**: Zero runtime crashes in production
-2. **Performance**: Consistent response times under load
-3. **Security**: Input validation and sanitization
-4. **Maintainability**: Tests that support refactoring
-5. **Coverage**: >85% code coverage with meaningful tests
+
+1.**Reliability**: Zero runtime crashes in production
+2.**Performance**: Consistent response times under load
+3.**Security**: Input validation and sanitization
+4.**Maintainability**: Tests that support refactoring
+5.**Coverage**: >85% code coverage with meaningful tests
 
 ## Decision
 
 Implement a comprehensive testing strategy with multiple testing layers:
 
-1. **Unit Tests**: Individual component testing
-2. **Integration Tests**: Component interaction validation
-3. **Property-Based Tests**: Edge case and invariant verification
-4. **Performance Tests**: Benchmarking and regression detection
-5. **Security Tests**: Input validation and attack prevention
+1.**Unit Tests**: Individual component testing
+2.**Integration Tests**: Component interaction validation
+3.**Property-Based Tests**: Edge case and invariant verification
+4.**Performance Tests**: Benchmarking and regression detection
+5.**Security Tests**: Input validation and attack prevention
 
 Use Test-Driven Development (TDD) methodology for all new features.
 
 ## Consequences
 
 ### Positive
-- **Quality Assurance**: Comprehensive test coverage catches bugs early
-- **Refactoring Safety**: Tests enable confident code changes
-- **Documentation**: Tests serve as executable specifications
-- **Performance Monitoring**: Benchmarks detect performance regressions
-- **Security Validation**: Automated security testing
+
+\1-  **Quality Assurance**: Comprehensive test coverage catches bugs early
+\1-  **Refactoring Safety**: Tests enable confident code changes
+\1-  **Documentation**: Tests serve as executable specifications
+\1-  **Performance Monitoring**: Benchmarks detect performance regressions
+\1-  **Security Validation**: Automated security testing
 
 ### Negative
-- **Development Time**: Writing comprehensive tests takes time
-- **Maintenance Overhead**: Tests require updates during refactoring
-- **CI/CD Complexity**: Running comprehensive test suites
+
+\1-  **Development Time**: Writing comprehensive tests takes time
+\1-  **Maintenance Overhead**: Tests require updates during refactoring
+\1-  **CI/CD Complexity**: Running comprehensive test suites
 
 ### Risks
-- **Test Quality**: Poor test design can give false confidence
-- **Coverage Metrics**: High coverage doesn't guarantee quality
-- **Performance Impact**: Extensive testing slows development
+
+\1-  **Test Quality**: Poor test design can give false confidence
+\1-  **Coverage Metrics**: High coverage doesn't guarantee quality
+\1-  **Performance Impact**: Extensive testing slows development
 
 ## Implementation
 
@@ -163,32 +167,35 @@ tests/
 
 ## Coverage Goals
 
-- **Unit Tests**: 80%+ coverage of individual functions
-- **Integration Tests**: All component interactions tested
-- **Property Tests**: Edge cases and invariants verified
-- **Total Coverage**: >85% across all modules
+\1-  **Unit Tests**: 80%+ coverage of individual functions
+\1-  **Integration Tests**: All component interactions tested
+\1-  **Property Tests**: Edge cases and invariants verified
+\1-  **Total Coverage**: >85% across all modules
 
 ## CI/CD Integration
 
 ### Automated Testing Pipeline
+
 ```yaml
 test:
-  - cargo test --lib -- --nocapture
-  - cargo test --doc
-  - cargo bench -- --save-baseline
-  - cargo tarpaulin --out Xml -- --ignore-tests
+\1-   cargo test --lib -- --nocapture
+\1-   cargo test --doc
+\1-   cargo bench -- --save-baseline
+\1-   cargo tarpaulin --out Xml -- --ignore-tests
 ```
 
 ### Quality Gates
-- ✅ All tests pass (100% success rate)
-- ✅ Coverage >85%
-- ✅ No performance regressions
-- ✅ Security tests pass
-- ✅ Property tests pass
+
+\1-   ✅ All tests pass (100% success rate)
+\1-   ✅ Coverage >85%
+\1-   ✅ No performance regressions
+\1-   ✅ Security tests pass
+\1-   ✅ Property tests pass
 
 ## Testing Best Practices
 
 ### Test Naming
+
 ```rust
 #[test]
 fn test_subject_action_expected_result() {
@@ -197,6 +204,7 @@ fn test_subject_action_expected_result() {
 ```
 
 ### Test Structure
+
 ```rust
 #[test]
 fn test_feature_scenario() {
@@ -212,13 +220,14 @@ fn test_feature_scenario() {
 ```
 
 ### Mock Strategy
-- Use concrete implementations for unit tests
-- Mock external dependencies (HTTP, databases)
-- Avoid over-mocking that hides integration issues
+
+\1-   Use concrete implementations for unit tests
+\1-   Mock external dependencies (HTTP, databases)
+\1-   Avoid over-mocking that hides integration issues
 
 ## References
 
-- [Rust Testing](https://doc.rust-lang.org/book/ch11-00-testing.html)
-- [Property-Based Testing](https://proptest-rs.github.io/proptest/)
-- [Benchmarking](https://bheisler.github.io/criterion.rs/book/)
-- [TDD](https://martinfowler.com/bliki/TestDrivenDevelopment.html)
+\1-   [Rust Testing](https://doc.rust-lang.org/book/ch11-00-testing.html)
+\1-   [Property-Based Testing](https://proptest-rs.github.io/proptest/)
+\1-   [Benchmarking](https://bheisler.github.io/criterion.rs/book/)
+\1-   [TDD](https://martinfowler.com/bliki/TestDrivenDevelopment.html)

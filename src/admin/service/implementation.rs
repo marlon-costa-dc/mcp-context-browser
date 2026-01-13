@@ -672,7 +672,10 @@ impl AdminService for AdminServiceImpl {
         subsystem_id: &str,
         signal: SubsystemSignal,
     ) -> Result<SignalResult, AdminError> {
-        Ok(helpers::subsystems::dispatch_subsystem_signal(&self.event_bus, subsystem_id, signal).await)
+        Ok(
+            helpers::subsystems::dispatch_subsystem_signal(&self.event_bus, subsystem_id, signal)
+                .await,
+        )
     }
 
     async fn get_routes(&self) -> Result<Vec<RouteInfo>, AdminError> {

@@ -5,7 +5,6 @@
 //! data from AdminService via ViewModelBuilder.
 
 pub mod builders;
-pub mod formatters;
 pub mod html_helpers;
 pub mod view_models;
 
@@ -59,7 +58,7 @@ impl WebInterface {
         let mut tera = Tera::default();
 
         // Add all embedded templates
-        // NOTE: icons.html MUST be registered FIRST since base.html imports macros from it
+        // Important: icons.html MUST be registered FIRST since base.html imports macros from it
         tera.add_raw_template("icons.html", TPL_ICONS)?;
         tera.add_raw_template("base.html", TPL_BASE)?;
         tera.add_raw_template("dashboard.html", TPL_DASHBOARD)?;

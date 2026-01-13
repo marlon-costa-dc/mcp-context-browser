@@ -4,10 +4,10 @@ This document provides a comprehensive reference of the MCP Context Browser publ
 
 ## Table of Contents
 
-- [Core Types](#core-types)
-- [Providers](#providers)
-- [Services](#services)
-- [Utilities](#utilities)
+\1-   [Core Types](#core-types)
+\1-   [Providers](#providers)
+\1-   [Services](#services)
+\1-   [Utilities](#utilities)
 
 ## Core Types
 
@@ -37,7 +37,7 @@ pub struct SearchResult {
 }
 ```
 
-Search result with relevance score and source location.
+Search Result with relevance score and source location.
 
 ### CodeChunk
 

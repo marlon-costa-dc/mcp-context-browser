@@ -1,16 +1,13 @@
 //! Diagnostic operation handlers
 
 use super::common::*;
+use crate::infrastructure::utils::IntoStatusCode;
 
 /// Run comprehensive health check
 pub async fn health_check_handler(
     State(state): State<AdminState>,
 ) -> Result<Json<ApiResponse<crate::admin::service::HealthCheckResult>>, StatusCode> {
-    let result = state
-        .admin_service
-        .run_health_check()
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let result = state.admin_service.run_health_check().await.to_500()?;
 
     Ok(Json(ApiResponse::success(result)))
 }
@@ -24,7 +21,7 @@ pub async fn test_connectivity_handler(
         .admin_service
         .test_provider_connectivity(&provider_id)
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .to_500()?;
 
     Ok(Json(ApiResponse::success(result)))
 }
@@ -38,7 +35,7 @@ pub async fn performance_test_handler(
         .admin_service
         .run_performance_test(test_config)
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .to_500()?;
 
     Ok(Json(ApiResponse::success(result)))
 }

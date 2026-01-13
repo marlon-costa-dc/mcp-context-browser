@@ -14,55 +14,55 @@ The core module establishes fundamental domain types and shared utilities that f
 
 Core data structures for code intelligence.
 
--   `Embedding` - Vector representation of text/code
--   `CodeChunk` - Parsed code segment with metadata
--   `SearchResult` - Ranked search item with score
--   `Language` - Supported programming languages
+\1-   `Embedding` - Vector representation of text/code
+\1-   `CodeChunk` - Parsed code segment with metadata
+\1-   `SearchResult` - Ranked search item with score
+\1-   `Language` - Supported programming languages
 
 ### Error Handling (`error.rs`)
 
 Comprehensive error types with `thiserror`.
 
--   `Error` - Main error enum with variants
--   `Result<T>` - Type alias for `Result<T, Error>`
+\1-   `Error` - Main error enum with variants
+\1-   `Result<T>` - Type alias for `Result<T, Error>`
 
 ### Authentication (`auth.rs`)
 
 JWT-based identity and access management.
 
--   `AuthService` - Token validation and generation
--   `Claims` - JWT payload structure
--   `Permission` - Authorization controls
+\1-   `AuthService` - Token validation and generation
+\1-   `Claims` - JWT payload structure
+\1-   `Permission` - Authorization controls
 
 ### Caching (`cache.rs`)
 
 Multi-level caching with TTL and size limits.
 
--   `CacheManager` - Main cache interface
--   Configurable TTL and eviction policies
+\1-   `CacheManager` - Main cache interface
+\1-   Configurable TTL and eviction policies
 
 ### Rate Limiting (`rate_limit.rs`)
 
 Request throttling with multiple strategies.
 
--   `RateLimiter` - Token bucket implementation
--   Configurable limits per endpoint/user
+\1-   `RateLimiter` - Token bucket implementation
+\1-   Configurable limits per endpoint/user
 
 ### Hybrid Search (`hybrid_search.rs`)
 
 Combined BM25 + semantic search.
 
--   `HybridSearchEngine` - Orchestrates dual ranking
--   `BM25Scorer` - Term frequency ranking
--   Configurable weighting between methods
+\1-   `HybridSearchEngine` - Orchestrates dual ranking
+\1-   `BM25Scorer` - Term frequency ranking
+\1-   Configurable weighting between methods
 
 ### Other Utilities
 
--   `crypto.rs` - Encryption utilities (AES-GCM)
--   `database.rs` - Connection pooling
--   `http_client.rs` - HTTP client with retry
--   `limits.rs` - Resource quotas
--   `merkle.rs` - Data integrity verification
+\1-   `crypto.rs` - Encryption utilities (AES-GCM)
+\1-   `database.rs` - Connection pooling
+\1-   `http_client.rs` - HTTP client with retry
+\1-   `limits.rs` - Resource quotas
+\1-   `merkle.rs` - Data integrity verification
 
 ## Key Exports
 
@@ -105,7 +105,7 @@ Core types have 18 dedicated tests. See [tests/core_types.rs](../../tests/core_t
 
 ## Cross-References
 
--   **Architecture**: [ARCHITECTURE.md](../architecture/ARCHITECTURE.md)
--   **Services**: [services.md](./services.md) (uses core types)
--   **Providers**: [providers.md](./providers.md) (implements traits)
--   **Server**: [server.md](./server.md) (uses auth/rate limiting)
+\1-  **Architecture**: [ARCHITECTURE.md](../architecture/ARCHITECTURE.md)
+\1-  **Services**: [services.md](./services.md) (uses core types)
+\1-  **Providers**: [providers.md](./providers.md) (implements traits)
+\1-  **Server**: [server.md](./server.md) (uses auth/rate limiting)

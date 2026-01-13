@@ -6,12 +6,13 @@ Thank you for your interest in contributing! This guide helps you get started wi
 
 ### Prerequisites
 
--   **Rust 1.70+**: Install from [rustup.rs](https://rustup.rs/)
--   **Git**: Version control system
+\1-  **Rust 1.70+**: Install from [rustup.rs](https://rustup.rs/)
+\1-  **Git**: Version control system
 
 ### Setup Development Environment
 
 ```bash
+
 # Clone the repository
 git clone https://github.com/marlonsc/mcp-context-browser.git
 cd mcp-context-browser
@@ -48,10 +49,10 @@ cargo run
 
 ### Rust Guidelines
 
--   Follow [The Rust Programming Language](https://doc.rust-lang.org/book/) conventions
--   Use `rustfmt` for formatting: `cargo fmt`
--   Follow `clippy` suggestions: `cargo clippy`
--   Write idiomatic Rust code
+\1-   Follow [The Rust Programming Language](https://doc.rust-lang.org/book/) conventions
+\1-   Use `rustfmt` for formatting: `cargo fmt`
+\1-   Follow `clippy` suggestions: `cargo clippy`
+\1-   Write idiomatic Rust code
 
 ### Code Structure
 
@@ -79,6 +80,7 @@ docs: update API documentation
 ### Running Tests
 
 ```bash
+
 # Run all tests
 cargo test
 
@@ -108,20 +110,20 @@ mod tests {
 
 ### Before Submitting
 
--   [ ] Tests pass: `cargo test`
--   [ ] Code formats correctly: `cargo fmt --check`
--   [ ] No linting errors: `cargo clippy -- -D warnings`
--   [ ] CI checks pass: `make ci`
--   [ ] Documentation updated if needed
+\1-   [ ] Tests pass: `cargo test`
+\1-   [ ] Code formats correctly: `cargo fmt --check`
+\1-   [ ] No linting errors: `cargo clippy -- -D warnings`
+\1-   [ ] CI checks pass: `make ci`
+\1-   [ ] Documentation updated if needed
 
 ### PR Description
 
 Include:
 
--   What changes were made
--   Why the changes were needed
--   How to test the changes
--   Any breaking changes
+\1-   What changes were made
+\1-   Why the changes were needed
+\1-   How to test the changes
+\1-   Any breaking changes
 
 ### Review Process
 
@@ -136,19 +138,19 @@ Include:
 
 **Include:**
 
--   Steps to reproduce
--   Expected vs actual behavior
--   Environment details (Rust version, OS)
--   Error messages/logs
+\1-   Steps to reproduce
+\1-   Expected vs actual behavior
+\1-   Environment details (Rust version, OS)
+\1-   Error messages/logs
 
 ### Feature Requests
 
 **Include:**
 
--   Problem description
--   Proposed solution
--   Use cases
--   Alternative approaches considered
+\1-   Problem description
+\1-   Proposed solution
+\1-   Use cases
+\1-   Alternative approaches considered
 
 ## 🚀 Examples
 
@@ -156,7 +158,7 @@ The project includes several examples demonstrating different usage patterns:
 
 ### Configuration Examples
 
-**Basic Configuration** (`examples/config_demo.rs`):
+**Basic Configuration**(`examples/config_demo.rs`):
 
 ```rust
 // Demonstrates TOML configuration loading and validation
@@ -171,7 +173,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-**Advanced Routing** (`examples/advanced_routing.rs`):
+**Advanced Routing**(`examples/advanced_routing.rs`):
 
 ```rust
 // Demonstrates provider routing with circuit breakers and failover
@@ -194,6 +196,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Running Examples
 
 ```bash
+
 # Run a specific example
 cargo run --example config_demo
 
@@ -206,9 +209,9 @@ cargo run --bin mcp-context-browser -- --help
 
 ## 📞 Getting Help
 
--   **Issues**: Use GitHub Issues for bugs and features
--   **Discussions**: Use GitHub Discussions for questions
--   **Documentation**: Check docs/architecture/ARCHITECTURE.md for technical details
+\1-  **Issues**: Use GitHub Issues for bugs and features
+\1-  **Discussions**: Use GitHub Discussions for questions
+\1-  **Documentation**: Check docs/architecture/ARCHITECTURE.md for technical details
 
 ## Code of Conduct
 
@@ -218,8 +221,8 @@ Be respectful and constructive in all interactions. Focus on improving the proje
 
 ## Cross-References
 
--   **Architecture**: [ARCHITECTURE.md](../architecture/ARCHITECTURE.md)
--   **Deployment**: [DEPLOYMENT.md](../operations/DEPLOYMENT.md)
--   **Changelog**: [CHANGELOG.md](../operations/CHANGELOG.md)
--   **Roadmap**: [ROADMAP.md](./ROADMAP.md)
--   **Module Documentation**: [docs/modules/](../modules/)
+\1-  **Architecture**: [ARCHITECTURE.md](../architecture/ARCHITECTURE.md)
+\1-  **Deployment**: [DEPLOYMENT.md](../operations/DEPLOYMENT.md)
+\1-  **Changelog**: [CHANGELOG.md](../operations/CHANGELOG.md)
+\1-  **Roadmap**: [ROADMAP.md](./ROADMAP.md)
+\1-  **Module Documentation**: [docs/modules/](../modules/)

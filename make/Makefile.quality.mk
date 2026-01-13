@@ -16,8 +16,10 @@ check: ## Fast compilation check
 fmt: ## Format code (use FMT_CHECK=1 for CI mode)
 ifdef FMT_CHECK
 	@cargo fmt --all -- --check
+	@./scripts/docs/markdown.sh lint 2>/dev/null || true
 else
 	@cargo fmt
+	@./scripts/docs/markdown.sh autofix 2>/dev/null || true
 	@./scripts/docs/markdown.sh fix 2>/dev/null || true
 endif
 
@@ -25,9 +27,11 @@ lint: ## Lint code (Rust + Markdown)
 	@cargo clippy --all-targets --all-features -- -D warnings
 	@./scripts/docs/markdown.sh lint 2>/dev/null || true
 
-fix: ## Auto-fix all issues
+fix: ## Auto-fix all issues (Rust + Markdown)
 	@cargo fmt
+	@./scripts/docs/markdown.sh autofix 2>/dev/null || true
 	@cargo clippy --fix --allow-dirty --all-targets --all-features 2>/dev/null || true
+	@echo "✅ Auto-fix completed - run 'make fmt' to verify"
 
 # -----------------------------------------------------------------------------
 # Quality Gates

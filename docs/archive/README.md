@@ -11,6 +11,7 @@ An ADR is a document that captures an important architectural decision made alon
 Each ADR follows this template:
 
 ```
+
 # ADR {number}: {title}
 
 ## Status
@@ -37,11 +38,11 @@ Each ADR follows this template:
 
 ## ADR Status
 
--   **Proposed**: Under discussion and review
--   **Accepted**: Decision made and implemented
--   **Rejected**: Decision rejected with rationale
--   **Deprecated**: No longer relevant
--   **Superseded**: Replaced by a newer ADR
+\1-  **Proposed**: Under discussion and review
+\1-  **Accepted**: Decision made and implemented
+\1-  **Rejected**: Decision rejected with rationale
+\1-  **Deprecated**: No longer relevant
+\1-  **Superseded**: Replaced by a newer ADR
 
 ## Current ADRs
 
@@ -62,16 +63,17 @@ Each ADR follows this template:
 
 ## ADR Maintenance
 
--   ADRs are immutable once accepted
--   Update the README index when adding new ADRs
--   Reference superseded ADRs in new decisions
--   Review ADRs periodically for continued relevance
+\1-   ADRs are immutable once accepted
+\1-   Update the README index when adding new ADRs
+\1-   Reference superseded ADRs in new decisions
+\1-   Review ADRs periodically for continued relevance
 
 ## Tools and Automation
 
 The project includes tools for ADR management:
 
 ```bash
+
 # Create a new ADR draft
 cargo run --bin adr-tool -- create "New Feature Decision"
 

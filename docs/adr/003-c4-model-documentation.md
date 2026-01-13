@@ -2,10 +2,10 @@
 
 ## Status
 
-**Implemented** (v0.1.0)
+**Implemented**(v0.1.0)
 
 > C4 model documentation structure in place with 3 PlantUML diagrams in `docs/diagrams/`:
-> system-context.puml, container-architecture.puml, c4-template.puml.
+> system-context.puml, container-architecture.puml, C4-template.puml.
 > Structured Markdown documentation with ADR-driven architecture decisions.
 
 ## Context
@@ -14,11 +14,11 @@ The MCP Context Browser is a complex system with multiple architectural layers, 
 
 Current documentation challenges:
 
--   Architecture documentation was inconsistent and incomplete
--   Different audiences needed different levels of detail
--   Visual diagrams were missing or outdated
--   No standardized approach to documenting architectural decisions
--   Difficulty communicating system complexity to stakeholders
+\1-   Architecture documentation was inconsistent and incomplete
+\1-   Different audiences needed different levels of detail
+\1-   Visual diagrams were missing or outdated
+\1-   No standardized approach to documenting architectural decisions
+\1-   Difficulty communicating system complexity to stakeholders
 
 The team needed a structured approach to architecture documentation that would scale with the project and provide clear communication channels.
 
@@ -28,13 +28,13 @@ Adopt the C4 model for architecture documentation, using PlantUML for diagram ge
 
 Implementation approach:
 
--   **Context Diagrams**: System-level overview for non-technical stakeholders
--   **Container Diagrams**: High-level technical overview for technical stakeholders
--   **Component Diagrams**: Detailed design for developers
--   **Code Diagrams**: Implementation-level detail for maintainers
--   PlantUML for consistent, version-controlled diagram generation
--   Structured Markdown documentation with clear navigation
--   Automated diagram validation and generation
+\1-  **Context Diagrams**: System-level overview for non-technical stakeholders
+\1-  **Container Diagrams**: High-level technical overview for technical stakeholders
+\1-  **Component Diagrams**: Detailed design for developers
+\1-  **Code Diagrams**: Implementation-level detail for maintainers
+\1-   PlantUML for consistent, version-controlled diagram generation
+\1-   Structured Markdown documentation with clear navigation
+\1-   Automated diagram validation and generation
 
 ## Consequences
 
@@ -42,50 +42,50 @@ C4 model provides excellent structure and scalability but requires discipline in
 
 ### Positive Consequences
 
--   **Clear Structure**: Four well-defined levels of architectural detail
--   **Audience-Specific**: Different views for different stakeholders
--   **Consistency**: Standardized notation and format
--   **Maintainability**: Modular documentation that can evolve
--   **Tooling Support**: Rich ecosystem of tools and integrations
--   **Communication**: Better understanding across technical and non-technical teams
+\1-  **Clear Structure**: Four well-defined levels of architectural detail
+\1-  **Audience-Specific**: Different views for different stakeholders
+\1-  **Consistency**: Standardized notation and format
+\1-  **Maintainability**: Modular documentation that can evolve
+\1-  **Tooling Support**: Rich ecosystem of tools and integrations
+\1-  **Communication**: Better understanding across technical and non-technical teams
 
 ### Negative Consequences
 
--   **Documentation Overhead**: Multiple diagrams and documents to maintain
--   **Learning Curve**: Team needs to learn C4 notation and concepts
--   **Maintenance Burden**: Diagrams can become outdated if not maintained
--   **Tool Complexity**: PlantUML syntax has learning curve
--   **Scope Management**: Need to decide what belongs at each level
+\1-  **Documentation Overhead**: Multiple diagrams and documents to maintain
+\1-  **Learning Curve**: Team needs to learn C4 notation and concepts
+\1-  **Maintenance Burden**: Diagrams can become outdated if not maintained
+\1-  **Tool Complexity**: PlantUML syntax has learning curve
+\1-  **Scope Management**: Need to decide what belongs at each level
 
 ## Alternatives Considered
 
 ### Alternative 1: Free-Form Documentation
 
--   **Description**: Custom documentation structure without formal methodology
--   **Pros**: Flexible, no learning curve, quick to start
--   **Cons**: Inconsistent, hard to navigate, doesn't scale
--   **Rejection Reason**: Leads to poor documentation quality and maintenance issues
+\1-  **Description**: Custom documentation structure without formal methodology
+\1-  **Pros**: Flexible, no learning curve, quick to start
+\1-  **Cons**: Inconsistent, hard to navigate, doesn't scale
+\1-  **Rejection Reason**: Leads to poor documentation quality and maintenance issues
 
 ### Alternative 2: UML Only
 
--   **Description**: Traditional UML diagrams for all architectural views
--   **Pros**: Formal notation, detailed modeling capabilities
--   **Cons**: Too technical for non-technical audiences, complex to maintain
--   **Rejection Reason**: Overkill for our needs and doesn't serve diverse audiences well
+\1-  **Description**: Traditional UML diagrams for all architectural views
+\1-  **Pros**: Formal notation, detailed modeling capabilities
+\1-  **Cons**: Too technical for non-technical audiences, complex to maintain
+\1-  **Rejection Reason**: Overkill for our needs and doesn't serve diverse audiences well
 
 ### Alternative 3: Arc42 Template
 
--   **Description**: Comprehensive architecture documentation template
--   **Pros**: Very thorough, covers all aspects, proven methodology
--   **Cons**: Too heavyweight, would take too long to implement fully
--   **Rejection Reason**: Overkill for current team size and project stage
+\1-  **Description**: Comprehensive architecture documentation template
+\1-  **Pros**: Very thorough, covers all aspects, proven methodology
+\1-  **Cons**: Too heavyweight, would take too long to implement fully
+\1-  **Rejection Reason**: Overkill for current team size and project stage
 
 ### Alternative 4: 4+1 Architectural View Model
 
--   **Description**: Rational Unified Process architectural views
--   **Pros**: Formal methodology, comprehensive coverage
--   **Cons**: Complex to understand and maintain, academic focus
--   **Rejection Reason**: Too complex for practical use in agile development
+\1-  **Description**: Rational Unified Process architectural views
+\1-  **Pros**: Formal methodology, comprehensive coverage
+\1-  **Cons**: Complex to understand and maintain, academic focus
+\1-  **Rejection Reason**: Too complex for practical use in agile development
 
 ## Implementation Notes
 
@@ -132,6 +132,7 @@ Notation: UML class diagrams, sequence diagrams
 #### Diagram Generation Pipeline
 
 ```makefile
+
 # Makefile integration
 .PHONY: docs diagrams clean-docs
 
@@ -177,22 +178,23 @@ Rel(mcp, vector_db, "Stores and retrieves vectors")
 #### CI/CD Integration
 
 ```yaml
+
 # .github/workflows/docs.yml
 name: Documentation
 on:
   push:
     branches: [ main ]
     paths:
-      - 'docs/**'
-      - 'src/**'
-      - 'ARCHITECTURE.md'
+\1-   'docs/**'
+\1-   'src/**'
+\1-   'ARCHITECTURE.md'
 
 jobs:
   validate-diagrams:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Validate PlantUML
+\1-   uses: actions/checkout@v3
+\1-   name: Validate PlantUML
         uses: cloudbees/plantuml-github-action@master
         with:
           args: -v -checkmetadata docs/diagrams/*.puml
@@ -200,14 +202,14 @@ jobs:
   build-docs:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Setup Rust
+\1-   uses: actions/checkout@v3
+\1-   name: Setup Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
-      - name: Generate Diagrams
+\1-   name: Generate Diagrams
         run: make diagrams
-      - name: Build Documentation
+\1-   name: Build Documentation
         run: make docs
-      - name: Deploy to GitHub Pages
+\1-   name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -294,32 +296,32 @@ The v0.1.0 release will significantly enhance the C4 model documentation through
 
 #### 🤖 Automated Diagram Generation
 
--   **Code Analysis Integration**: `cargo-modules` and `rust-code-analysis` for automatic component discovery
--   **Dependency Graph Generation**: Interactive dependency graphs from source code analysis
--   **Real-time Updates**: Diagrams automatically updated when code changes
+\1-  **Code Analysis Integration**: `cargo-modules` and `rust-code-analysis` for automatic component discovery
+\1-  **Dependency Graph Generation**: Interactive dependency graphs from source code analysis
+\1-  **Real-time Updates**: Diagrams automatically updated when code changes
 
 #### 📊 Advanced Visualization
 
--   **Interactive Diagrams**: Web-based interactive C4 diagrams with drill-down capabilities
--   **Cross-References**: Links between diagrams, code, and documentation
--   **Search Integration**: Full-text search across all architectural documentation
+\1-  **Interactive Diagrams**: Web-based interactive C4 diagrams with drill-down capabilities
+\1-  **Cross-References**: Links between diagrams, code, and documentation
+\1-  **Search Integration**: Full-text search across all architectural documentation
 
 #### 🔍 Quality Assurance
 
--   **Automated Validation**: ADR compliance checking against architectural diagrams
--   **Consistency Checks**: Automated verification that diagrams match implementation
--   **Change Tracking**: Automated detection of architectural drift
+\1-  **Automated Validation**: ADR compliance checking against architectural diagrams
+\1-  **Consistency Checks**: Automated verification that diagrams match implementation
+\1-  **Change Tracking**: Automated detection of architectural drift
 
 #### 📈 Metrics and Analytics
 
--   **Documentation Coverage**: Automated tracking of architectural documentation completeness
--   **Quality Scoring**: A+ grade standards for architectural documentation
--   **Maintenance Analytics**: Tracking documentation maintenance burden reduction
+\1-  **Documentation Coverage**: Automated tracking of architectural documentation completeness
+\1-  **Quality Scoring**: A+ grade standards for architectural documentation
+\1-  **Maintenance Analytics**: Tracking documentation maintenance burden reduction
 
 ## References
 
--   [C4 Model Website](https://c4model.com/)
--   [PlantUML Documentation](https://plantuml.com/)
--   [Structurizr - C4 Tooling](https://structurizr.com/)
--   [The C4 model for visualising software architecture](https://www.infoq.com/articles/C4-architecture-model/)
--   [Documentation Automation Plan (v0.1.0)](../archive/2025-01-07-documentation-automation-improvement.md)
+\1-   [C4 Model Website](https://c4model.com/)
+\1-   [PlantUML Documentation](https://plantuml.com/)
+\1-   [Structurizr - C4 Tooling](https://structurizr.com/)
+\1-   [The C4 model for visualising software architecture](https://www.infoq.com/articles/C4-architecture-model/)
+\1-   [Documentation Automation Plan (v0.1.0)](../archive/2025-01-07-documentation-automation-improvement.md)

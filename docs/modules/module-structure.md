@@ -40,6 +40,6 @@ mcp-context-browser/
 
 ## Analysis
 
-This is a simplified module structure generated as fallback when cargo-modules analysis is not available. The actual structure may be more complex with additional submodules and dependencies.
+This is a simplified module structure generated as fallback when Cargo-modules analysis is not available. The actual structure may be more complex with additional submodules and dependencies.
 
 *Generated automatically on: 2026-01-11 21:51:42 UTC*

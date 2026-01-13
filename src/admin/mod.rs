@@ -19,8 +19,5 @@ pub mod service;
 pub mod web;
 
 // Re-export commonly used types
-pub use api::AdminApi;
-pub use auth::{AuthConfig, User};
-pub use config::AdminConfig;
-pub use models::{AdminState, ApiResponse, SystemConfig};
-pub use service::AdminService;
+pub use config::{AdminApi, AdminConfig};
+pub use routes::create_admin_router;

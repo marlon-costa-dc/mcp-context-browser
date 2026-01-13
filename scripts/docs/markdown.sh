@@ -2,8 +2,8 @@
 # =============================================================================
 # MCP Context Browser - Unified Markdown Operations
 # =============================================================================
-# Combined lint and fix operations for markdown files
-# Usage: ./markdown.sh [lint|fix|check] [--dry-run]
+# Comprehensive lint and fix operations for markdown files
+# Usage: ./markdown.sh [lint|fix|autofix|check] [--dry-run]
 # =============================================================================
 
 set -e
@@ -14,6 +14,50 @@ source "$SCRIPT_DIR/lib/common.sh"
 
 # Fix counter
 FIXED=0
+DRY_RUN=false
+
+# =============================================================================
+# Comprehensive Markdown Fixing (Autofix Mode)
+# =============================================================================
+
+# Comprehensive fix_markdown_file with aggressive corrections
+fix_markdown_file_comprehensive() {
+    local file="$1"
+    local tmp="${file}.tmp"
+
+    if is_dry_run; then
+        echo "[DRY-RUN] Would fix: $(basename "$file")"
+        return
+    fi
+
+    # 1. Remove trailing whitespace
+    sed -i 's/[[:space:]]*$//' "$file"
+
+    # 2. Fix list marker spacing (convert to 3 spaces after dash)
+    sed -i 's/^\(\s*\)[-*+][[:space:]]\+/\1-   /g' "$file"
+
+    # 3. Remove multiple consecutive blank lines (reduce to 1)
+    cat "$file" | cat -s > "$tmp" && mv "$tmp" "$file"
+
+    # 4. Add blank lines around headings (before)
+    awk '
+    /^#{1,6} / && NR > 1 && prev != "" {
+        print ""
+        print $0
+        prev = $0
+        next
+    }
+    {
+        print
+        prev = $0
+    }
+    ' "$file" > "$tmp" && mv "$tmp" "$file"
+
+    # 5. Ensure trailing newline
+    if [[ -s "$file" ]] && [[ $(tail -c 1 "$file" | wc -l) -eq 0 ]]; then
+        echo '' >> "$file"
+    fi
+}
 
 # =============================================================================
 # Shared Markdown Checks
@@ -81,7 +125,8 @@ lint_fallback() {
         check_trailing_whitespace "$file" && { log_error "Trailing whitespace in $filename"; inc_errors; }
         check_multiple_blanks "$file" && { log_warning "Multiple blank lines in $filename"; inc_warnings; }
         check_mixed_lists "$file" && { log_warning "Mixed list markers in $filename"; inc_warnings; }
-        check_unlabeled_codeblocks "$file" && { log_warning "Code blocks without language in $filename"; inc_warnings; }
+        # MD040 disabled in .markdownlint.json - code blocks without language tags allowed
+        # check_unlabeled_codeblocks "$file" && { log_warning "Code blocks without language in $filename"; inc_warnings; }
     done
 
     echo
@@ -136,10 +181,11 @@ fix_mode() {
             ((FIXED++)) || true
         fi
 
+        # MD040 disabled in .markdownlint.json - code blocks without language tags allowed
         # Warn about code blocks (can't auto-fix)
-        if check_unlabeled_codeblocks "$file"; then
-            log_warning "Found code blocks without language tags in: $filename (manual fix needed)"
-        fi
+        # if check_unlabeled_codeblocks "$file"; then
+        #     log_warning "Found code blocks without language tags in: $filename (manual fix needed)"
+        # fi
     done
 
     echo
@@ -151,6 +197,45 @@ fix_mode() {
 }
 
 # =============================================================================
+# Comprehensive Autofix Mode
+# =============================================================================
+
+autofix_mode() {
+    log_info "MCP Context Browser - Comprehensive Markdown Auto-Fix"
+    log_info "====================================================="
+
+    is_dry_run && log_warning "Running in DRY-RUN mode (no changes will be made)"
+
+    local files
+    files=$(find_markdown_files "$DOCS_DIR")
+
+    if [[ -z "$files" ]]; then
+        log_warning "No markdown files found in $DOCS_DIR"
+        return 0
+    fi
+
+    local file_count=0
+    for file in $files; do
+        fix_markdown_file_comprehensive "$file"
+        ((file_count++)) || true
+        ((FIXED++)) || true
+    done
+
+    echo
+    log_info "Comprehensive Auto-fix Summary:"
+    echo "  Files processed: $file_count"
+    echo "  Fixes applied: $FIXED"
+
+    if is_dry_run; then
+        log_warning "DRY-RUN: No changes were made"
+    elif [[ $FIXED -gt 0 ]]; then
+        log_success "Comprehensive auto-fix completed!"
+    else
+        log_success "All files checked"
+    fi
+}
+
+# =============================================================================
 # Main
 # =============================================================================
 
@@ -159,15 +244,25 @@ show_usage() {
 MCP Context Browser - Unified Markdown Tool
 
 USAGE:
-    $0 lint              # Check markdown files for issues
-    $0 fix               # Auto-fix markdown issues
-    $0 fix --dry-run     # Show what would be fixed
-    $0 check             # Alias for lint
+    $0 lint                 # Check markdown files for issues
+    $0 fix                  # Auto-fix markdown issues
+    $0 autofix              # Comprehensive markdown auto-fix (all issues)
+    $0 autofix --dry-run    # Preview comprehensive fixes
+    $0 fix --dry-run        # Show what would be fixed
+    $0 check                # Alias for lint
+
+MODES:
+    lint                    Uses markdownlint-cli for standards compliance
+    fix                     Fixes basic issues (trailing whitespace, blank lines, list markers)
+    autofix                 Comprehensive fixes (list spacing, heading blanks, trailing newlines)
+    check                   Alias for lint
 
 EXAMPLES:
-    $0 lint              # Run linting
-    $0 fix --dry-run     # Preview fixes
-    $0 fix               # Apply fixes
+    $0 lint                 # Run linting
+    $0 fix --dry-run        # Preview basic fixes
+    $0 fix                  # Apply basic fixes
+    $0 autofix --dry-run    # Preview comprehensive fixes
+    $0 autofix              # Apply comprehensive fixes
 
 EOF
 }
@@ -189,6 +284,9 @@ main() {
             ;;
         fix)
             fix_mode
+            ;;
+        autofix)
+            autofix_mode
             ;;
         help|--help|-h)
             show_usage

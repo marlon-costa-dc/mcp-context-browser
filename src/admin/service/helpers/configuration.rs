@@ -414,10 +414,7 @@ pub fn apply_configuration_updates(
             // Indexing configuration
             "indexing.enabled" => {
                 if let Some(enabled) = value.as_bool() {
-                    tracing::info!(
-                        "Indexing: {}",
-                        if enabled { "enabled" } else { "disabled" }
-                    );
+                    tracing::info!("Indexing: {}", if enabled { "enabled" } else { "disabled" });
                     changes_applied.push(format!("indexing.enabled = {}", enabled));
                 }
             }

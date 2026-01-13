@@ -351,6 +351,20 @@ mod null_provider_tests {
 mod milvus_provider_tests {
     use super::*;
     use mcp_context_browser::adapters::providers::vector_store::MilvusVectorStoreProvider;
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    // Atomic counter for unique collection names across parallel tests
+    static COLLECTION_COUNTER: AtomicU64 = AtomicU64::new(0);
+
+    /// Generate unique collection name to avoid conflicts between parallel tests
+    fn unique_collection(prefix: &str) -> String {
+        let count = COLLECTION_COUNTER.fetch_add(1, Ordering::SeqCst);
+        let timestamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis();
+        format!("{}_{}_{}", prefix, timestamp, count)
+    }
 
     // Test helper to check if Milvus is available
     async fn is_milvus_available() -> bool {
@@ -387,27 +401,27 @@ mod milvus_provider_tests {
         let provider =
             MilvusVectorStoreProvider::new("http://localhost:19531".to_string(), None, None)
                 .await?;
-        let collection = "test_milvus_basic";
+        let collection = unique_collection("milvus_basic");
         let dimensions = 128;
 
-        // Clean up any existing collection
-        let _ = provider.delete_collection(collection).await;
+        // Clean up any existing collection (shouldn't exist with unique name, but just in case)
+        let _ = provider.delete_collection(&collection).await;
 
         // Test collection creation
-        provider.create_collection(collection, dimensions).await?;
+        provider.create_collection(&collection, dimensions).await?;
 
         // Test collection existence
-        let exists = provider.collection_exists(collection).await?;
+        let exists = provider.collection_exists(&collection).await?;
         assert!(exists, "Collection should exist after creation");
 
         // Test stats for empty collection
-        let stats = provider.get_stats(collection).await?;
-        assert_eq!(stats["collection"], collection);
+        let stats = provider.get_stats(&collection).await?;
+        assert_eq!(stats["collection"], collection.as_str());
         assert_eq!(stats["status"], "active");
         assert_eq!(stats["provider"], "milvus");
 
         // Clean up
-        let _ = provider.delete_collection(collection).await;
+        let _ = provider.delete_collection(&collection).await;
         Ok(())
     }
 
@@ -421,14 +435,14 @@ mod milvus_provider_tests {
         let provider =
             MilvusVectorStoreProvider::new("http://localhost:19531".to_string(), None, None)
                 .await?;
-        let collection = "test_milvus_vectors";
+        let collection = unique_collection("milvus_vectors");
         let dimensions = 128;
 
         // Clean up any existing collection
-        let _ = provider.delete_collection(collection).await;
+        let _ = provider.delete_collection(&collection).await;
 
         // Create collection
-        provider.create_collection(collection, dimensions).await?;
+        provider.create_collection(&collection, dimensions).await?;
 
         // Create test data
         let embeddings = vec![
@@ -442,20 +456,20 @@ mod milvus_provider_tests {
 
         // Insert vectors
         let ids = provider
-            .insert_vectors(collection, &embeddings, metadata)
+            .insert_vectors(&collection, &embeddings, metadata)
             .await?;
         assert_eq!(ids.len(), 3, "Should return 3 IDs");
 
         // Wait a bit for indexing
-        tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
 
         // Flush to ensure persistence
-        provider.flush(collection).await?;
+        provider.flush(&collection).await?;
 
         // Search for similar vectors
         let query_vector = test_utils::create_test_embedding(1, dimensions).vector;
         let results = provider
-            .search_similar(collection, &query_vector, 5, None)
+            .search_similar(&collection, &query_vector, 5, None)
             .await?;
 
         // Should find results
@@ -473,10 +487,10 @@ mod milvus_provider_tests {
         );
 
         // Test deletion
-        provider.delete_vectors(collection, &ids).await?;
+        provider.delete_vectors(&collection, &ids).await?;
 
         // Clean up
-        let _ = provider.delete_collection(collection).await;
+        let _ = provider.delete_collection(&collection).await;
         Ok(())
     }
 
@@ -490,12 +504,12 @@ mod milvus_provider_tests {
         let provider =
             MilvusVectorStoreProvider::new("http://localhost:19531".to_string(), None, None)
                 .await?;
-        let collection = "test_milvus_limits";
+        let collection = unique_collection("milvus_limits");
         let dimensions = 128;
 
         // Clean up and setup
-        let _ = provider.delete_collection(collection).await;
-        provider.create_collection(collection, dimensions).await?;
+        let _ = provider.delete_collection(&collection).await;
+        provider.create_collection(&collection, dimensions).await?;
 
         // Add multiple vectors
         let embeddings: Vec<Embedding> = (1..=10)
@@ -505,30 +519,33 @@ mod milvus_provider_tests {
             (1..=10).map(test_utils::create_test_metadata).collect();
 
         provider
-            .insert_vectors(collection, &embeddings, metadata)
+            .insert_vectors(&collection, &embeddings, metadata)
             .await?;
-        provider.flush(collection).await?;
+
+        // Wait for indexing before flush
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+        provider.flush(&collection).await?;
 
         // Test different search limits
         let query_vector = test_utils::create_test_embedding(1, dimensions).vector;
 
         let results_1 = provider
-            .search_similar(collection, &query_vector, 1, None)
+            .search_similar(&collection, &query_vector, 1, None)
             .await?;
         assert_eq!(results_1.len(), 1);
 
         let results_3 = provider
-            .search_similar(collection, &query_vector, 3, None)
+            .search_similar(&collection, &query_vector, 3, None)
             .await?;
         assert_eq!(results_3.len(), 3);
 
         let results_10 = provider
-            .search_similar(collection, &query_vector, 10, None)
+            .search_similar(&collection, &query_vector, 10, None)
             .await?;
         assert_eq!(results_10.len(), 10);
 
         // Clean up
-        let _ = provider.delete_collection(collection).await;
+        let _ = provider.delete_collection(&collection).await;
         Ok(())
     }
 
@@ -542,16 +559,16 @@ mod milvus_provider_tests {
         let provider =
             MilvusVectorStoreProvider::new("http://localhost:19531".to_string(), None, None)
                 .await?;
-        let collection = "test_milvus_empty";
+        let collection = unique_collection("milvus_empty");
 
         // Clean up and setup
-        let _ = provider.delete_collection(collection).await;
-        provider.create_collection(collection, 128).await?;
+        let _ = provider.delete_collection(&collection).await;
+        provider.create_collection(&collection, 128).await?;
 
         // Search in empty collection
         let query_vector = vec![0.1; 128];
         let results = provider
-            .search_similar(collection, &query_vector, 5, None)
+            .search_similar(&collection, &query_vector, 5, None)
             .await?;
         assert!(
             results.is_empty(),
@@ -559,7 +576,7 @@ mod milvus_provider_tests {
         );
 
         // Clean up
-        let _ = provider.delete_collection(collection).await;
+        let _ = provider.delete_collection(&collection).await;
         Ok(())
     }
 
@@ -574,10 +591,13 @@ mod milvus_provider_tests {
         let provider =
             MilvusVectorStoreProvider::new("http://localhost:19531".to_string(), None, None)
                 .await?;
-        let collections = vec!["test_milvus_multi_1", "test_milvus_multi_2"];
+        let collections = vec![
+            unique_collection("milvus_multi_1"),
+            unique_collection("milvus_multi_2"),
+        ];
         let dimensions = 128;
 
-        // Clean up existing collections
+        // Clean up existing collections (shouldn't exist with unique names)
         for collection in &collections {
             let _ = provider.delete_collection(collection).await;
         }
@@ -597,6 +617,8 @@ mod milvus_provider_tests {
                 .await?;
             assert_eq!(ids.len(), 1);
 
+            // Wait for indexing
+            tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
             provider.flush(collection).await?;
         }
 

@@ -63,11 +63,11 @@ pub trait VectorStoreProvider: Send + Sync {
 
 Intelligent provider selection and management.
 
--   **ProviderRouter** - Main routing orchestration
--   **CircuitBreaker** - Failure detection and recovery
--   **HealthMonitor** - Continuous health checking
--   **CostTracker** - Usage and cost monitoring
--   **FailoverManager** - Automatic provider switching
+\1-  **ProviderRouter**- Main routing orchestration
+\1-  **CircuitBreaker**- Failure detection and recovery
+\1-  **HealthMonitor**- Continuous health checking
+\1-  **CostTracker**- Usage and cost monitoring
+\1-  **FailoverManager**- Automatic provider switching
 
 ## File Structure
 
@@ -121,7 +121,7 @@ pub use routing::{ProviderRouter, CircuitBreaker, HealthMonitor};
 
 ## Cross-References
 
--   **Architecture**: [ARCHITECTURE.md](../architecture/ARCHITECTURE.md)
--   **Core Types**: [core.md](./core.md) (Embedding, SearchResult)
--   **Services**: [services.md](./services.md) (uses providers)
--   **Configuration**: [Claude.md](../../CLAUDE.md) (environment setup)
+\1-  **Architecture**: [ARCHITECTURE.md](../architecture/ARCHITECTURE.md)
+\1-  **Core Types**: [core.md](./core.md) (Embedding, SearchResult)
+\1-  **Services**: [services.md](./services.md) (uses providers)
+\1-  **Configuration**: [Claude.md](../../CLAUDE.md) (environment setup)

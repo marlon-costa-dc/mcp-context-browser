@@ -10,12 +10,12 @@ The MCP Context Browser depends on external AI and storage services that have va
 
 External dependencies and risks:
 
--   **AI Providers**: OpenAI (expensive, reliable), Ollama (free, local), Anthropic (premium)
--   **Vector Databases**: Milvus (scalable, complex), Pinecone (managed, expensive), Qdrant (simple, limited scale)
--   **Service Outages**: Any provider can experience downtime
--   **API Limits**: Rate limits, quotas, and cost controls needed
--   **Performance Variation**: Different providers have different latency characteristics
--   **Cost Optimization**: Need to balance cost vs. quality vs. speed
+\1-  **AI Providers**: OpenAI (expensive, reliable), Ollama (free, local), Anthropic (premium)
+\1-  **Vector Databases**: Milvus (scalable, complex), Pinecone (managed, expensive), Qdrant (simple, limited scale)
+\1-  **Service Outages**: Any provider can experience downtime
+\1-  **API Limits**: Rate limits, quotas, and cost controls needed
+\1-  **Performance Variation**: Different providers have different latency characteristics
+\1-  **Cost Optimization**: Need to balance cost vs. quality vs. speed
 
 The system needs to be resilient, cost-effective, and performant while avoiding vendor lock-in.
 
@@ -25,12 +25,12 @@ Implement a multi-provider strategy with automatic failover, load balancing, and
 
 Key architectural elements:
 
--   **Provider Health Monitoring**: Continuous monitoring of provider availability and performance
--   **Intelligent Routing**: Context-aware provider selection (cost, speed, quality)
--   **Automatic Failover**: Seamless fallback to alternative providers
--   **Load Balancing**: Distribute load across multiple provider instances
--   **Cost Tracking**: Monitor and optimize provider usage costs
--   **Configuration Flexibility**: Runtime provider switching and reconfiguration
+\1-  **Provider Health Monitoring**: Continuous monitoring of provider availability and performance
+\1-  **Intelligent Routing**: Context-aware provider selection (cost, speed, quality)
+\1-  **Automatic Failover**: Seamless fallback to alternative providers
+\1-  **Load Balancing**: Distribute load across multiple provider instances
+\1-  **Cost Tracking**: Monitor and optimize provider usage costs
+\1-  **Configuration Flexibility**: Runtime provider switching and reconfiguration
 
 ## Consequences
 
@@ -38,44 +38,44 @@ Multi-provider strategy provides excellent resilience and flexibility but adds s
 
 ### Positive Consequences
 
--   **High Availability**: No single points of failure for external services
--   **Cost Optimization**: Choose providers based on cost/performance trade-offs
--   **Performance Optimization**: Route to fastest available provider
--   **Future-Proofing**: Easy to add new providers as they emerge
--   **Resilience**: Automatic failover during provider outages
--   **Quality Control**: Select providers based on use case requirements
+\1-  **High Availability**: No single points of failure for external services
+\1-  **Cost Optimization**: Choose providers based on cost/performance trade-offs
+\1-  **Performance Optimization**: Route to fastest available provider
+\1-  **Future-Proofing**: Easy to add new providers as they emerge
+\1-  **Resilience**: Automatic failover during provider outages
+\1-  **Quality Control**: Select providers based on use case requirements
 
 ### Negative Consequences
 
--   **Operational Complexity**: Managing multiple provider configurations
--   **Development Overhead**: Additional abstraction layers and error handling
--   **Testing Complexity**: Need to test with multiple provider combinations
--   **Cost Management**: Additional complexity in tracking and optimizing costs
--   **Configuration Complexity**: More configuration options and potential misconfigurations
--   **Performance Overhead**: Routing and monitoring add latency
+\1-  **Operational Complexity**: Managing multiple provider configurations
+\1-  **Development Overhead**: Additional abstraction layers and error handling
+\1-  **Testing Complexity**: Need to test with multiple provider combinations
+\1-  **Cost Management**: Additional complexity in tracking and optimizing costs
+\1-  **Configuration Complexity**: More configuration options and potential misconfigurations
+\1-  **Performance Overhead**: Routing and monitoring add latency
 
 ## Alternatives Considered
 
 ### Alternative 1: Single Provider Architecture
 
--   **Description**: Use one primary provider for each service type
--   **Pros**: Simpler implementation, easier configuration, predictable costs
--   **Cons**: Vendor lock-in, single point of failure, limited flexibility
--   **Rejection Reason**: Creates unacceptable availability and cost risks
+\1-  **Description**: Use one primary provider for each service type
+\1-  **Pros**: Simpler implementation, easier configuration, predictable costs
+\1-  **Cons**: Vendor lock-in, single point of failure, limited flexibility
+\1-  **Rejection Reason**: Creates unacceptable availability and cost risks
 
 ### Alternative 2: Provider Abstraction Only
 
--   **Description**: Abstract providers but still use single provider at runtime
--   **Pros**: Ready for multi-provider, simpler initial implementation
--   **Cons**: Doesn't solve availability issues, still vendor-dependent
--   **Rejection Reason**: Doesn't provide the resilience and flexibility needed
+\1-  **Description**: Abstract providers but still use single provider at runtime
+\1-  **Pros**: Ready for multi-provider, simpler initial implementation
+\1-  **Cons**: Doesn't solve availability issues, still vendor-dependent
+\1-  **Rejection Reason**: Doesn't provide the resilience and flexibility needed
 
 ### Alternative 3: Provider Mesh with Manual Failover
 
--   **Description**: Support multiple providers but require manual intervention for failover
--   **Pros**: Simpler than automatic failover, still provides flexibility
--   **Cons**: Slow recovery from outages, requires on-call intervention
--   **Rejection Reason**: Doesn't meet availability requirements for production system
+\1-  **Description**: Support multiple providers but require manual intervention for failover
+\1-  **Pros**: Simpler than automatic failover, still provides flexibility
+\1-  **Cons**: Slow recovery from outages, requires on-call intervention
+\1-  **Rejection Reason**: Doesn't meet availability requirements for production system
 
 ## Implementation Notes
 
@@ -225,7 +225,7 @@ impl CostTracker {
         // Check budget limits
         if let Some(budget_limit) = self.budget_limits.get(provider_id) {
             let current_usage = self.get_current_monthly_cost(provider_id).await?;
-            if current_usage + total_cost > *budget_limit {
+            if current_usage + total_cost >*budget_limit {
                 return Err(Error::budget_exceeded(format!(
                     "Budget limit exceeded for provider: {}", provider_id
                 )));
@@ -243,6 +243,7 @@ impl CostTracker {
 ### Configuration Management
 
 ```toml
+
 # config/providers.toml
 [providers]
 
@@ -309,7 +310,7 @@ impl ProviderCircuitBreaker {
             CircuitBreakerState::Open { opened_at } => {
                 if opened_at.elapsed() > self.config.timeout_duration {
                     // Try again in half-open state
-                    *self.state.write().await = CircuitBreakerState::HalfOpen;
+                   *self.state.write().await = CircuitBreakerState::HalfOpen;
                 } else {
                     return Err(Error::circuit_breaker_open(&self.provider_id));
                 }
@@ -330,16 +331,16 @@ impl ProviderCircuitBreaker {
     }
 
     async fn on_success(&self) {
-        *self.state.write().await = CircuitBreakerState::Closed;
+       *self.state.write().await = CircuitBreakerState::Closed;
         self.metrics.record_circuit_breaker_success(&self.provider_id);
     }
 
     async fn on_failure(&self) {
         let mut failures = self.failure_count.write().await;
-        *failures += 1;
+       *failures += 1;
 
-        if *failures >= self.config.failure_threshold {
-            *self.state.write().await = CircuitBreakerState::Open {
+        if*failures >= self.config.failure_threshold {
+           *self.state.write().await = CircuitBreakerState::Open {
                 opened_at: Instant::now(),
             };
         }
@@ -351,4 +352,4 @@ impl ProviderCircuitBreaker {
 
 ## References
 
--   [Circuit Breaker Pattern](https://microservices.io/patterns/reliability/circuit-breaker.html)
+\1-   [Circuit Breaker Pattern](https://microservices.io/patterns/reliability/circuit-breaker.html)

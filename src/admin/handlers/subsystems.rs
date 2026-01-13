@@ -2,16 +2,13 @@
 
 use super::common::*;
 use super::SubsystemSignalRequest;
+use crate::infrastructure::utils::IntoStatusCode;
 
 /// Get all subsystems and their status
 pub async fn get_subsystems_handler(
     State(state): State<AdminState>,
 ) -> Result<Json<ApiResponse<Vec<crate::admin::service::SubsystemInfo>>>, StatusCode> {
-    let subsystems = state
-        .admin_service
-        .get_subsystems()
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let subsystems = state.admin_service.get_subsystems().await.to_500()?;
 
     Ok(Json(ApiResponse::success(subsystems)))
 }
@@ -26,7 +23,7 @@ pub async fn send_subsystem_signal_handler(
         .admin_service
         .send_subsystem_signal(&subsystem_id, request.signal)
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .to_500()?;
 
     Ok(Json(ApiResponse::success(result)))
 }
@@ -35,11 +32,7 @@ pub async fn send_subsystem_signal_handler(
 pub async fn get_routes_handler(
     State(state): State<AdminState>,
 ) -> Result<Json<ApiResponse<Vec<crate::admin::service::RouteInfo>>>, StatusCode> {
-    let routes = state
-        .admin_service
-        .get_routes()
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let routes = state.admin_service.get_routes().await.to_500()?;
 
     Ok(Json(ApiResponse::success(routes)))
 }
@@ -48,11 +41,7 @@ pub async fn get_routes_handler(
 pub async fn reload_routes_handler(
     State(state): State<AdminState>,
 ) -> Result<Json<ApiResponse<crate::admin::service::MaintenanceResult>>, StatusCode> {
-    let result = state
-        .admin_service
-        .reload_routes()
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let result = state.admin_service.reload_routes().await.to_500()?;
 
     Ok(Json(ApiResponse::success(result)))
 }
@@ -81,7 +70,7 @@ pub async fn reset_recovery_state_handler(
     if let Some(recovery_manager) = &state.recovery_manager {
         recovery_manager
             .reset_recovery_state(&subsystem_id)
-            .map_err(|_| StatusCode::NOT_FOUND)?;
+            .to_404()?;
 
         Ok(Json(ApiResponse::success(
             crate::admin::service::SignalResult {
@@ -107,7 +96,7 @@ pub async fn trigger_recovery_handler(
         recovery_manager
             .trigger_recovery(&subsystem_id)
             .await
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            .to_500()?;
 
         Ok(Json(ApiResponse::success(
             crate::admin::service::SignalResult {

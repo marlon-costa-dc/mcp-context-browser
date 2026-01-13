@@ -8,12 +8,13 @@ MCP Context Browser currently supports local deployment for development and test
 
 ### Prerequisites
 
--   **Rust 1.70+**: Install from [rustup.rs](https://rustup.rs/)
--   **Git**: For cloning the repository
+\1-  **Rust 1.70+**: Install from [rustup.rs](https://rustup.rs/)
+\1-  **Git**: For cloning the repository
 
 ### Build from Source
 
 ```bash
+
 # Clone the repository
 git clone https://github.com/marlonsc/mcp-context-browser.git
 cd mcp-context-browser
@@ -28,6 +29,7 @@ cargo build --release
 ### Run the Server
 
 ```bash
+
 # Run in debug mode (shows more output)
 cargo run
 
@@ -44,6 +46,7 @@ The server will start and listen for MCP protocol messages on stdin/stdout. It c
 Create a `config.toml` file in the project root:
 
 ```toml
+
 # Embedding provider configuration
 [embedding_provider]
 provider = "mock"  # Options: mock, openai, ollama, gemini, voyageai
@@ -65,6 +68,7 @@ provider = "memory"  # Options: memory, milvus, filesystem, encrypted
 ### Verify Installation
 
 ```bash
+
 # Check if binary was built
 ls -la target/debug/mcp-context-browser
 
@@ -77,13 +81,14 @@ ls -la target/debug/mcp-context-browser
 The server communicates via the MCP protocol over stdin/stdout. To test manually:
 
 ```bash
+
 # Send a simple MCP initialize message
 echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' | ./target/debug/mcp-context-browser
 ```
 
 ## 🐳 Docker Development (Future)
 
-> **Note**: Docker support is planned for future releases. Currently, only local Rust builds are supported.
+>**Note**: Docker support is planned for future releases. Currently, only local Rust builds are supported.
 
 ## 🔧 Troubleshooting
 
@@ -92,6 +97,7 @@ echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' | ./target/deb
 #### Build Failures
 
 ```bash
+
 # Clean and rebuild
 cargo clean
 cargo build
@@ -104,6 +110,7 @@ cargo --version
 #### Runtime Issues
 
 ```bash
+
 # Enable debug logging (when implemented)
 RUST_LOG=debug cargo run
 
@@ -114,18 +121,18 @@ free -h  # Memory
 
 ### Getting Help
 
--   Check existing [GitHub Issues](https://github.com/marlonsc/mcp-context-browser/issues)
--   Review the [ARCHITECTURE.md](../architecture/ARCHITECTURE.md) for technical details
--   See [CONTRIBUTING.md](../developer/CONTRIBUTING.md) for development setup
+\1-   Check existing [GitHub Issues](https://github.com/marlonsc/mcp-context-browser/issues)
+\1-   Review the [ARCHITECTURE.md](../architecture/ARCHITECTURE.md) for technical details
+\1-   See [CONTRIBUTING.md](../developer/CONTRIBUTING.md) for development setup
 
 ## 🚀 Future Deployment Options
 
 The following deployment configurations are planned for future releases:
 
--   **Docker containerization**
--   **Kubernetes orchestration**
--   **Multi-user support**
--   **Cloud-native deployments**
+\1-  **Docker containerization**
+\1-  **Kubernetes orchestration**
+\1-  **Multi-user support**
+\1-  **Cloud-native deployments**
 
 These will be documented as they become available.
 
@@ -138,6 +145,7 @@ These will be documented as they become available.
 ### Kubernetes Deployment
 
 ```yaml
+
 # k8s/deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -156,20 +164,20 @@ spec:
         app: mcp-context-browser
     spec:
       containers:
-      - name: mcp-context-browser
+\1-   name: mcp-context-browser
         image: mcp-context-browser:latest
         ports:
-        - containerPort: 3000
+\1-   containerPort: 3000
         env:
-        - name: MCP_MODE
+\1-   name: MCP_MODE
           value: "distributed"
-        - name: STORAGE_PROVIDER
+\1-   name: STORAGE_PROVIDER
           value: "milvus"
-        - name: MILVUS_URI
+\1-   name: MILVUS_URI
           value: "milvus-service:19530"
-        - name: DATABASE_URL
+\1-   name: DATABASE_URL
           value: "postgresql://user:password@db:5432/mcp_db"
-        - name: REDIS_URL
+\1-   name: REDIS_URL
           value: "redis://redis:6379"
         resources:
           requests:
@@ -183,36 +191,37 @@ spec:
 ### Docker Compose (Development)
 
 ```yaml
+
 # docker-compose.yml
 version: '3.8'
 services:
   mcp-context-browser:
     build: .
     ports:
-      - "3000:3000"
-      - "9090:9090"  # Metrics endpoint
+\1-   "3000:3000"
+\1-   "9090:9090"  # Metrics endpoint
     environment:
-      - MCP_MODE=distributed
-      - STORAGE_PROVIDER=milvus
-      - MILVUS_URI=milvus:19530
-      - DATABASE_URL=postgresql://user:password@postgres:5432/mcp_db
-      - REDIS_URL=redis://redis:6379
-      - JWT_SECRET=your-secret-key
+\1-   MCP_MODE=distributed
+\1-   STORAGE_PROVIDER=milvus
+\1-   MILVUS_URI=milvus:19530
+\1-   DATABASE_URL=postgresql://user:password@postgres:5432/mcp_db
+\1-   REDIS_URL=redis://redis:6379
+\1-   JWT_SECRET=your-secret-key
     depends_on:
-      - milvus
-      - postgres
-      - redis
+\1-   milvus
+\1-   postgres
+\1-   redis
     volumes:
-      - ./config:/app/config:ro
-      - ./data:/app/data
+\1-   ./config:/app/config:ro
+\1-   ./data:/app/data
 
   milvus:
     image: milvusdb/milvus:latest
     ports:
-      - "19530:19530"
-      - "9091:9091"
+\1-   "19530:19530"
+\1-   "9091:9091"
     volumes:
-      - milvus_data:/var/lib/milvus
+\1-   milvus_data:/var/lib/milvus
     command: milvus run standalone
 
   postgres:
@@ -222,16 +231,16 @@ services:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+\1-   postgres_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+\1-   "5432:5432"
 
   redis:
     image: redis:7-alpine
     ports:
-      - "6379:6379"
+\1-   "6379:6379"
     volumes:
-      - redis_data:/data
+\1-   redis_data:/data
 
 volumes:
   milvus_data:
@@ -242,6 +251,7 @@ volumes:
 ### Enterprise Configuration
 
 ```toml
+
 # config/enterprise.toml
 [server]
 host = "0.0.0.0"
@@ -290,6 +300,7 @@ data_retention_days = 2555
 ### Load Balancing
 
 ```yaml
+
 # k8s/service.yaml
 apiVersion: v1
 kind: Service
@@ -299,7 +310,7 @@ spec:
   selector:
     app: mcp-context-browser
   ports:
-    - port: 80
+\1-   port: 80
       targetPort: 3000
   type: LoadBalancer
 
@@ -313,14 +324,14 @@ metadata:
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
 spec:
   tls:
-    - hosts:
-        - mcp.yourcompany.com
+\1-   hosts:
+\1-   mcp.yourcompany.com
       secretName: mcp-tls
   rules:
-    - host: mcp.yourcompany.com
+\1-   host: mcp.yourcompany.com
       http:
         paths:
-          - path: /
+\1-   path: /
             pathType: Prefix
             backend:
               service:
@@ -354,6 +365,7 @@ spec:
 ### Edge Node Configuration
 
 ```toml
+
 # config/edge.toml
 [deployment]
 mode = "edge"
@@ -380,6 +392,7 @@ prefetch_intelligence = true
 ### Cloud Service Configuration
 
 ```toml
+
 # config/cloud.toml
 [deployment]
 mode = "cloud"
@@ -407,6 +420,7 @@ memory_threshold = 80
 ### Synchronization Configuration
 
 ```toml
+
 # config/sync.toml
 [sync]
 enabled = true
@@ -437,6 +451,7 @@ retry_policy = "exponential_backoff"
 ### Milvus (Primary Vector Database)
 
 ```yaml
+
 # milvus-config.yaml
 apiVersion: v1
 kind: ConfigMap
@@ -447,7 +462,7 @@ data:
     # Milvus configuration
     etcd:
       endpoints:
-        - etcd-service:2379
+\1-   etcd-service:2379
     minio:
       address: minio-service
       port: 9000
@@ -515,6 +530,7 @@ CREATE INDEX idx_code_embeddings_embedding ON code_embeddings USING ivfflat (emb
 ### Redis (Caching & Sessions)
 
 ```yaml
+
 # redis-config.yaml
 apiVersion: v1
 kind: ConfigMap
@@ -540,6 +556,7 @@ data:
 ### Environment Variables
 
 ```bash
+
 # Core settings
 export MCP_MODE=distributed
 export MCP_HOST=0.0.0.0
@@ -574,6 +591,7 @@ export LOG_LEVEL=info
 ### Configuration Validation
 
 ```bash
+
 # Validate configuration
 cargo run --bin config-validator -- config.toml
 
@@ -591,6 +609,7 @@ cargo run --bin connectivity-test
 ### Metrics Endpoints
 
 ```bash
+
 # Prometheus metrics
 curl http://localhost:9090/metrics
 
@@ -683,6 +702,7 @@ ciphers = ["ECDHE-RSA-AES256-GCM-SHA384", "ECDHE-RSA-AES128-GCM-SHA256"]
 ### Auto-Scaling Rules
 
 ```yaml
+
 # k8s/hpa.yaml
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
@@ -696,19 +716,19 @@ spec:
   minReplicas: 3
   maxReplicas: 50
   metrics:
-  - type: Resource
+\1-   type: Resource
     resource:
       name: cpu
       target:
         type: Utilization
         averageUtilization: 70
-  - type: Resource
+\1-   type: Resource
     resource:
       name: memory
       target:
         type: Utilization
         averageUtilization: 80
-  - type: Pods
+\1-   type: Pods
     pods:
       metric:
         name: http_requests_per_second
@@ -743,8 +763,8 @@ This deployment guide provides comprehensive instructions for deploying MCP Cont
 
 ## Cross-References
 
--   **Architecture**: [ARCHITECTURE.md](../architecture/ARCHITECTURE.md)
--   **Contributing**: [CONTRIBUTING.md](../developer/CONTRIBUTING.md)
--   **Changelog**: [CHANGELOG.md](./CHANGELOG.md)
--   **Roadmap**: [ROADMAP.md](../developer/ROADMAP.md)
--   **Module Documentation**: [docs/modules/](../modules/)
+\1-  **Architecture**: [ARCHITECTURE.md](../architecture/ARCHITECTURE.md)
+\1-  **Contributing**: [CONTRIBUTING.md](../developer/CONTRIBUTING.md)
+\1-  **Changelog**: [CHANGELOG.md](./CHANGELOG.md)
+\1-  **Roadmap**: [ROADMAP.md](../developer/ROADMAP.md)
+\1-  **Module Documentation**: [docs/modules/](../modules/)

@@ -10,11 +10,11 @@ The MCP Context Browser needs to support multiple AI providers (OpenAI, Anthropi
 
 Current requirements:
 
--   Support for multiple embedding providers with different APIs
--   Multiple vector storage backends with varying capabilities
--   Ability to switch providers at runtime
--   Testability with mock implementations
--   Clean separation between business logic and external dependencies
+\1-   Support for multiple embedding providers with different APIs
+\1-   Multiple vector storage backends with varying capabilities
+\1-   Ability to switch providers at runtime
+\1-   Testability with mock implementations
+\1-   Clean separation between business logic and external dependencies
 
 ## Decision
 
@@ -22,11 +22,11 @@ Implement a provider pattern using Rust traits for abstraction, with a registry 
 
 Key architectural elements:
 
--   `EmbeddingProvider` trait for text-to-vector conversion
--   `VectorStoreProvider` trait for vector storage and retrieval
--   `ProviderRegistry` for runtime provider registration and lookup
--   `ServiceProvider` factory for dependency injection
--   Trait-based dependency injection in service constructors
+\1-   `EmbeddingProvider` trait for text-to-vector conversion
+\1-   `VectorStoreProvider` trait for vector storage and retrieval
+\1-   `ProviderRegistry` for runtime provider registration and lookup
+\1-   `ServiceProvider` factory for dependency injection
+\1-   Trait-based dependency injection in service constructors
 
 ## Consequences
 
@@ -34,41 +34,41 @@ The provider pattern provides excellent separation of concerns and extensibility
 
 ### Positive Consequences
 
--   **High Extensibility**: New providers can be added without modifying existing code
--   **Clean Architecture**: Clear separation between business logic and external services
--   **Testability**: Easy mocking and testing through dependency injection
--   **Runtime Flexibility**: Providers can be switched without recompilation
--   **Type Safety**: Rust traits ensure compile-time interface compliance
+\1-  **High Extensibility**: New providers can be added without modifying existing code
+\1-  **Clean Architecture**: Clear separation between business logic and external services
+\1-  **Testability**: Easy mocking and testing through dependency injection
+\1-  **Runtime Flexibility**: Providers can be switched without recompilation
+\1-  **Type Safety**: Rust traits ensure compile-time interface compliance
 
 ### Negative Consequences
 
--   **Increased Complexity**: Additional abstraction layers and indirection
--   **Provider Management**: Need for registry and factory patterns
--   **Trait Bounds**: Generic constraints can complicate service implementations
--   **Testing Overhead**: More setup required for unit testing with mocks
+\1-  **Increased Complexity**: Additional abstraction layers and indirection
+\1-  **Provider Management**: Need for registry and factory patterns
+\1-  **Trait Bounds**: Generic constraints can complicate service implementations
+\1-  **Testing Overhead**: More setup required for unit testing with mocks
 
 ## Alternatives Considered
 
 ### Alternative 1: Direct Provider Usage
 
--   **Description**: Services directly instantiate and use specific provider implementations
--   **Pros**: Simpler code, fewer abstractions
--   **Cons**: Tight coupling, difficult to test, hard to add new providers
--   **Rejection Reason**: Violates SOLID principles and makes the system inflexible
+\1-  **Description**: Services directly instantiate and use specific provider implementations
+\1-  **Pros**: Simpler code, fewer abstractions
+\1-  **Cons**: Tight coupling, difficult to test, hard to add new providers
+\1-  **Rejection Reason**: Violates SOLID principles and makes the system inflexible
 
 ### Alternative 2: Configuration-Based Factory
 
--   **Description**: Simple factory pattern with configuration strings to select providers
--   **Pros**: Less complex than full registry system
--   **Cons**: Limited runtime flexibility, still requires recompilation for new providers
--   **Rejection Reason**: Doesn't provide the same level of testability and runtime flexibility
+\1-  **Description**: Simple factory pattern with configuration strings to select providers
+\1-  **Pros**: Less complex than full registry system
+\1-  **Cons**: Limited runtime flexibility, still requires recompilation for new providers
+\1-  **Rejection Reason**: Doesn't provide the same level of testability and runtime flexibility
 
 ### Alternative 3: Plugin Architecture
 
--   **Description**: Dynamic loading of provider implementations as plugins
--   **Pros**: True runtime extensibility without recompilation
--   **Cons**: Significant complexity, stability concerns, platform limitations
--   **Rejection Reason**: Overkill for current requirements, adds operational complexity
+\1-  **Description**: Dynamic loading of provider implementations as plugins
+\1-  **Pros**: True runtime extensibility without recompilation
+\1-  **Cons**: Significant complexity, stability concerns, platform limitations
+\1-  **Rejection Reason**: Overkill for current requirements, adds operational complexity
 
 ## Implementation Notes
 
@@ -154,6 +154,6 @@ mod tests {
 
 ## References
 
--   [Provider Pattern](https://en.wikipedia.org/wiki/Provider_model)
--   [Dependency Injection patterns in Rust](https://docs.rs/shaku/latest/shaku/)
--   [SOLID Principles](https://en.wikipedia.org/wiki/SOLID)
+\1-   [Provider Pattern](https://en.wikipedia.org/wiki/Provider_model)
+\1-   [Dependency Injection patterns in Rust](https://docs.rs/shaku/latest/shaku/)
+\1-   [SOLID Principles](https://en.wikipedia.org/wiki/SOLID)

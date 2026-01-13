@@ -2,7 +2,7 @@
 
 ## Overview
 
-This roadmap outlines the development of MCP Context Browser, a drop-in replacement for claude-context with enhanced capabilities for semantic code search.
+This roadmap outlines the development of MCP Context Browser, a drop-in replacement for Claude-context with enhanced capabilities for semantic code search.
 
 ---
 
@@ -13,21 +13,21 @@ This roadmap outlines the development of MCP Context Browser, a drop-in replacem
 **Status**: Production-Ready
 **Release Date**: January 2026
 
-MCP Context Browser v0.1.0 is the first stable release, providing a complete drop-in replacement for claude-context with superior performance and expanded capabilities.
+MCP Context Browser v0.1.0 is the first stable release, providing a complete drop-in replacement for Claude-context with superior performance and expanded capabilities.
 
 #### Achievements
 
-- ✅ Full MCP protocol implementation (4 tools)
-- ✅ 12 languages with AST parsing (Rust, Python, JS/TS, Go, Java, C, C++, C#, Ruby, PHP, Swift, Kotlin)
-- ✅ 6 embedding providers (OpenAI, VoyageAI, Ollama, Gemini, FastEmbed, Null)
-- ✅ 6 vector stores (Milvus, EdgeVec, In-Memory, Filesystem, Encrypted, Null)
-- ✅ claude-context environment variable compatibility
-- ✅ 493 tests with comprehensive coverage (100% pass rate, 2 ignored)
-- ✅ JWT authentication and rate limiting
-- ✅ Clean architecture with trait-based dependency injection
-- ✅ HTTP transport foundation for future enhancements
-- ✅ Systemd service integration
-- ✅ Binary auto-respawn mechanism
+\1-   ✅ Full MCP protocol implementation (4 tools)
+\1-   ✅ 12 languages with AST parsing (Rust, Python, JS/TS, Go, Java, C, C++, C#, Ruby, PHP, Swift, Kotlin)
+\1-   ✅ 6 embedding providers (OpenAI, VoyageAI, Ollama, Gemini, FastEmbed, Null)
+\1-   ✅ 6 vector stores (Milvus, EdgeVec, In-Memory, Filesystem, Encrypted, Null)
+\1-   ✅ Claude-context environment variable compatibility
+\1-   ✅ 493 tests with comprehensive coverage (100% pass rate, 2 ignored)
+\1-   ✅ JWT authentication and rate limiting
+\1-   ✅ Clean architecture with trait-based dependency injection
+\1-   ✅ HTTP transport foundation for future enhancements
+\1-   ✅ Systemd service integration
+\1-   ✅ Binary auto-respawn mechanism
 
 ---
 
@@ -45,17 +45,19 @@ Transform MCP Context Browser into a comprehensive development platform combinin
 
 #### Objectives
 
-1. **Git-Aware Semantic Indexing** (ADR-008)
-   - Project-relative indexing (portable)
-   - Multi-branch support with commit history
-   - Change impact analysis
-   - Monorepo and submodule support
+1.**Git-Aware Semantic Indexing**(ADR-008)
 
-2. **Persistent Session Memory** (ADR-009)
-   - Cross-session observation storage
-   - Semantic search over past decisions and work
-   - Token-efficient progressive disclosure (3-layer workflow)
-   - Context injection for session continuity
+\1-   Project-relative indexing (portable)
+\1-   Multi-branch support with commit history
+\1-   Change impact analysis
+\1-   Monorepo and submodule support
+
+2.**Persistent Session Memory**(ADR-009)
+
+\1-   Cross-session observation storage
+\1-   Semantic search over past decisions and work
+\1-   Token-efficient progressive disclosure (3-layer workflow)
+\1-   Context injection for session continuity
 
 #### New Capabilities - Git Integration
 
@@ -102,20 +104,21 @@ Transform MCP Context Browser into a comprehensive development platform combinin
 #### Technical Details
 
 **Git Integration:**
-- **New Dependency**: git2 (libgit2 bindings)
-- **New Files**: ~12 source files
-- **Estimated LOC**: ~2500
-- **ADR**: [008-git-aware-semantic-indexing-v0.2.0](../adr/008-git-aware-semantic-indexing-v0.2.0.md)
+\1-  **New Dependency**: git2 (libgit2 bindings)
+\1-  **New Files**: ~12 source files
+\1-  **Estimated LOC**: ~2500
+\1-  **ADR**: [008-git-aware-semantic-indexing-v0.2.0](../adr/008-git-aware-semantic-indexing-v0.2.0.md)
 
 **Session Memory:**
-- **New Dependency**: sqlx (SQLite support)
-- **New Files**: ~15 source files
-- **Estimated LOC**: ~3000
-- **ADR**: [009-persistent-session-memory-v0.2.0](../adr/009-persistent-session-memory-v0.2.0.md)
+\1-  **New Dependency**: sqlx (SQLite support)
+\1-  **New Files**: ~15 source files
+\1-  **Estimated LOC**: ~3000
+\1-  **ADR**: [009-persistent-session-memory-v0.2.0](../adr/009-persistent-session-memory-v0.2.0.md)
 
 #### Configuration Defaults
 
 **Git Settings:**
+
 | Setting | Default | Override |
 |---------|---------|----------|
 | Branches | main, HEAD, current | Per-repo via `.mcp-context.toml` |
@@ -123,9 +126,10 @@ Transform MCP Context Browser into a comprehensive development platform combinin
 | Submodules | Recursive indexing | Per-repo |
 
 **Memory Settings:**
+
 | Setting | Default | Override |
 |---------|---------|----------|
-| Database | ~/.mcp-context-browser/memory.db | Global config |
+| Database | ~/.MCP-context-browser/memory.db | Global config |
 | Observation types | decision, bugfix, feature | Per-project |
 | Observation limit | 20 | Per-request |
 | Date range | 30 days | Per-request |
@@ -147,26 +151,26 @@ Enhance semantic code search with deep code intelligence features, enabling adva
 
 | Feature | Description | Benefit |
 |---------|-------------|---------|
-| **Symbol Extraction** | Extract and index all symbols (functions, classes, variables) | Navigate code by symbols, not just files |
-| **Cross-Referencing** | Build symbol usage graph across codebase | "Find all usages" with precision |
-| **Call Graph Analysis** | Map function call relationships | Understand execution paths |
-| **Dependency Mapping** | Visualize module and package dependencies | Identify refactoring opportunities |
-| **Code Similarity** | Detect duplicate or similar code patterns | Reduce code duplication |
-| **Refactoring Suggestions** | AI-powered refactoring recommendations | Improve code quality |
+|**Symbol Extraction**| Extract and index all symbols (functions, classes, variables) | Navigate code by symbols, not just files |
+|**Cross-Referencing**| Build symbol usage graph across codebase | "Find all usages" with precision |
+|**Call Graph Analysis**| Map function call relationships | Understand execution paths |
+|**Dependency Mapping**| Visualize module and package dependencies | Identify refactoring opportunities |
+|**Code Similarity**| Detect duplicate or similar code patterns | Reduce code duplication |
+|**Refactoring Suggestions**| AI-powered refactoring recommendations | Improve code quality |
 
 #### Technical Approach
 
-- **AST Enhancement**: Extend existing tree-sitter integration with symbol extraction
-- **Graph Database**: Consider Neo4j or in-memory graph for relationships
-- **Incremental Updates**: Update graph on file changes (not full reindex)
-- **MCP Tools**: New tools for symbol search, call graph queries, similarity detection
+\1-  **AST Enhancement**: Extend existing tree-sitter integration with symbol extraction
+\1-  **Graph Database**: Consider Neo4j or in-memory graph for relationships
+\1-  **Incremental Updates**: Update graph on file changes (not full reindex)
+\1-  **MCP Tools**: New tools for symbol search, call graph queries, similarity detection
 
 #### Success Metrics
 
-- Symbol extraction: <1s for 10,000 LOC
-- Cross-reference lookup: <100ms
-- Call graph generation: <5s for large projects
-- Similarity detection: >90% accuracy
+\1-   Symbol extraction: <1s for 10,000 LOC
+\1-   Cross-reference lookup: <100ms
+\1-   Call graph generation: <5s for large projects
+\1-   Similarity detection: >90% accuracy
 
 ---
 
@@ -184,27 +188,27 @@ Transform MCP Context Browser into an enterprise-ready platform with multi-tenan
 
 | Feature | Description | Benefit |
 |---------|-------------|---------|
-| **Multi-Tenant Support** | Isolated workspaces with resource quotas | Support multiple teams/projects |
-| **Advanced RBAC** | Role-based access control with team permissions | Granular security control |
-| **SSO Integration** | SAML 2.0, OIDC, Active Directory support | Enterprise authentication |
-| **Enhanced Audit Logging** | Comprehensive activity tracking with retention | Compliance and security |
-| **Cost Tracking** | Per-tenant API usage and cost allocation | Budget management |
-| **Admin Dashboard** | Web-based administrative interface | Centralized management |
+|**Multi-Tenant Support**| Isolated workspaces with resource quotas | Support multiple teams/projects |
+|**Advanced RBAC**| Role-based access control with team permissions | Granular security control |
+|**SSO Integration**| SAML 2.0, OIDC, Active Directory support | Enterprise authentication |
+|**Enhanced Audit Logging**| Comprehensive activity tracking with retention | Compliance and security |
+|**Cost Tracking**| Per-tenant API usage and cost allocation | Budget management |
+|**Admin Dashboard**| Web-based administrative interface | Centralized management |
 
 #### Technical Approach
 
-- **Multi-Tenancy Architecture**: Tenant isolation at database and provider level
-- **Authentication Layer**: OAuth2/OIDC integration with configurable providers
-- **Audit System**: Structured logging with tamper-proof audit trail
-- **Metrics per Tenant**: Prometheus labels for tenant-specific monitoring
-- **Web Admin UI**: Expand ADR-007 admin interface with tenant management
+\1-  **Multi-Tenancy Architecture**: Tenant isolation at database and provider level
+\1-  **Authentication Layer**: OAuth2/OIDC integration with configurable providers
+\1-  **Audit System**: Structured logging with tamper-proof audit trail
+\1-  **Metrics per Tenant**: Prometheus labels for tenant-specific monitoring
+\1-  **Web Admin UI**: Expand ADR-007 admin interface with tenant management
 
 #### Success Metrics
 
-- Tenant isolation: 100% (no cross-tenant data leakage)
-- SSO integration: <5 min setup time
-- Audit completeness: 100% of API calls logged
-- Admin UI availability: 99.9% uptime
+\1-   Tenant isolation: 100% (no cross-tenant data leakage)
+\1-   SSO integration: <5 min setup time
+\1-   Audit completeness: 100% of API calls logged
+\1-   Admin UI availability: 99.9% uptime
 
 ---
 
@@ -222,30 +226,30 @@ Deliver a fully production-ready enterprise platform with SLA guarantees, profes
 
 | Feature | Description | Benefit |
 |---------|-------------|---------|
-| **Full Enterprise Feature Set** | All v0.2.0-v0.4.0 features polished and hardened | Production-grade reliability |
-| **SLA Guarantees** | 99.9% uptime commitment with monitoring | Business continuity |
-| **Professional Support** | 24/7 support with response time SLAs | Enterprise peace of mind |
-| **Compliance Certifications** | SOC 2 Type II, ISO 27001, GDPR | Regulatory compliance |
-| **High Availability** | Multi-region deployment with automatic failover | Zero downtime |
-| **Disaster Recovery** | Backup/restore with point-in-time recovery | Data protection |
+|**Full Enterprise Feature Set**| All v0.2.0-v0.4.0 features polished and hardened | Production-grade reliability |
+|**SLA Guarantees**| 99.9% uptime commitment with monitoring | Business continuity |
+|**Professional Support**| 24/7 support with response time SLAs | Enterprise peace of mind |
+|**Compliance Certifications**| SOC 2 Type II, ISO 27001, GDPR | Regulatory compliance |
+|**High Availability**| Multi-region deployment with automatic failover | Zero downtime |
+|**Disaster Recovery**| Backup/restore with point-in-time recovery | Data protection |
 
 #### Technical Approach
 
-- **HA Architecture**: Active-active deployment across multiple regions
-- **Automated Backup**: Continuous backup with 99.999% durability
-- **Monitoring & Alerting**: Comprehensive observability with PagerDuty integration
-- **Compliance Framework**: Automated compliance checking and reporting
-- **Documentation**: Professional documentation with support portal
-- **Certification Process**: Third-party security audits and certifications
+\1-  **HA Architecture**: Active-active deployment across multiple regions
+\1-  **Automated Backup**: Continuous backup with 99.999% durability
+\1-  **Monitoring & Alerting**: Comprehensive observability with PagerDuty integration
+\1-  **Compliance Framework**: Automated compliance checking and reporting
+\1-  **Documentation**: Professional documentation with support portal
+\1-  **Certification Process**: Third-party security audits and certifications
 
 #### Success Metrics
 
-- Uptime: 99.9% (measured monthly)
-- Response time: P95 <200ms for search queries
-- Support SLA: <15 min for critical issues
-- Compliance: 100% audit pass rate
-- Recovery Time Objective (RTO): <1 hour
-- Recovery Point Objective (RPO): <15 minutes
+\1-   Uptime: 99.9% (measured monthly)
+\1-   Response time: P95 <200ms for search queries
+\1-   Support SLA: <15 min for critical issues
+\1-   Compliance: 100% audit pass rate
+\1-   Recovery Time Objective (RTO): <1 hour
+\1-   Recovery Point Objective (RPO): <15 minutes
 
 #### Certification Timeline
 
@@ -265,7 +269,7 @@ Deliver a fully production-ready enterprise platform with SLA guarantees, profes
 | v0.0.1 | Released | Initial prototype |
 | v0.0.2 | Released | Core architecture |
 | v0.0.3 | Released | Production foundation |
-| v0.1.0 | **Current** | Documentation excellence, clean architecture, first stable release |
+| v0.1.0 |**Current**| Documentation excellence, clean architecture, first stable release |
 | v0.2.0 | Planned | Git-aware semantic indexing, persistent session memory |
 | v0.3.0 | Future | Advanced code intelligence |
 | v0.4.0 | Future | Enterprise features |
@@ -277,29 +281,29 @@ Deliver a fully production-ready enterprise platform with SLA guarantees, profes
 
 ### Development Practices
 
-1. **ADR-Driven Development**: Architectural decisions documented before implementation
-2. **Test-First**: Core functionality developed with comprehensive tests
-3. **Clean Architecture**: Separation of concerns with trait-based DI
-4. **Documentation First**: Documentation updated with each code change
-5. **Security by Design**: Security considerations in every component
+1.**ADR-Driven Development**: Architectural decisions documented before implementation
+2.**Test-First**: Core functionality developed with comprehensive tests
+3.**Clean Architecture**: Separation of concerns with trait-based DI
+4.**Documentation First**: Documentation updated with each code change
+5.**Security by Design**: Security considerations in every component
 
 ### Quality Gates
 
 All releases must pass:
 
-- [ ] All tests pass (unit, integration, e2e)
-- [ ] Code coverage meets targets (>85%)
-- [ ] Clippy lint clean
-- [ ] Security audit clean
-- [ ] Performance benchmarks maintained
-- [ ] Documentation complete and accurate
+\1-   [ ] All tests pass (unit, integration, e2e)
+\1-   [ ] Code coverage meets targets (>85%)
+\1-   [ ] Clippy lint clean
+\1-   [ ] Security audit clean
+\1-   [ ] Performance benchmarks maintained
+\1-   [ ] Documentation complete and accurate
 
 ---
 
 ## Cross-References
 
-- **Architecture**: [ARCHITECTURE.md](../architecture/ARCHITECTURE.md)
-- **Contributing**: [CONTRIBUTING.md](./CONTRIBUTING.md)
-- **ADR Index**: [docs/adr/README.md](../adr/README.md)
-- **Version History**: [VERSION_HISTORY.md](../VERSION_HISTORY.md)
-- **Deployment**: [DEPLOYMENT.md](../operations/DEPLOYMENT.md)
+\1-  **Architecture**: [ARCHITECTURE.md](../architecture/ARCHITECTURE.md)
+\1-  **Contributing**: [CONTRIBUTING.md](./CONTRIBUTING.md)
+\1-  **ADR Index**: [docs/ADR/README.md](../adr/README.md)
+\1-  **Version History**: [VERSION_HISTORY.md](../VERSION_HISTORY.md)
+\1-  **Deployment**: [DEPLOYMENT.md](../operations/DEPLOYMENT.md)
