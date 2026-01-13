@@ -7,19 +7,7 @@ use crate::infrastructure::utils::IntoStatusCode;
 pub async fn list_providers_handler(
     State(state): State<AdminState>,
 ) -> Result<Json<ApiResponse<Vec<ProviderInfo>>>, StatusCode> {
-    let provider_statuses = state.admin_service.get_providers().await.to_500()?;
-
-    let providers = provider_statuses
-        .into_iter()
-        .map(|status| ProviderInfo {
-            id: status.id,
-            name: status.name,
-            provider_type: status.provider_type,
-            status: status.status,
-            config: status.config,
-        })
-        .collect();
-
+    let providers = state.admin_service.get_providers().await.to_500()?;
     Ok(Json(ApiResponse::success(providers)))
 }
 
@@ -56,16 +44,7 @@ pub async fn add_provider_handler(
         .add_provider(&provider_config.provider_type, provider_config.config)
         .await
     {
-        Ok(svc_info) => {
-            let provider_info = ProviderInfo {
-                id: svc_info.id,
-                name: svc_info.name,
-                provider_type: svc_info.provider_type,
-                status: svc_info.status,
-                config: svc_info.config,
-            };
-            Ok(Json(ApiResponse::success(provider_info)))
-        }
+        Ok(provider_info) => Ok(Json(ApiResponse::success(provider_info))),
         Err(e) => Ok(Json(ApiResponse::error(format!(
             "Failed to add provider: {}",
             e

@@ -12,17 +12,7 @@ pub async fn get_config_handler(
     let config_data = state.admin_service.get_configuration().await.to_500()?;
 
     let config = SystemConfig {
-        providers: config_data
-            .providers
-            .into_iter()
-            .map(|p| ProviderInfo {
-                id: p.id,
-                name: p.name,
-                provider_type: p.provider_type,
-                status: p.status,
-                config: p.config,
-            })
-            .collect(),
+        providers: config_data.providers,
         indexing: crate::admin::models::IndexingConfig {
             chunk_size: config_data.indexing.chunk_size,
             chunk_overlap: config_data.indexing.chunk_overlap,
@@ -111,17 +101,7 @@ pub async fn update_config_handler(
             let updated_config = state.admin_service.get_configuration().await.to_500()?;
 
             let response_config = SystemConfig {
-                providers: updated_config
-                    .providers
-                    .into_iter()
-                    .map(|p| ProviderInfo {
-                        id: p.id,
-                        name: p.name,
-                        provider_type: p.provider_type,
-                        status: p.status,
-                        config: p.config,
-                    })
-                    .collect(),
+                providers: updated_config.providers,
                 indexing: crate::admin::models::IndexingConfig {
                     chunk_size: updated_config.indexing.chunk_size,
                     chunk_overlap: updated_config.indexing.chunk_overlap,
