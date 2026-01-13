@@ -18,7 +18,7 @@ mod config_structure_tests {
     #[test]
     fn test_config_default_values() {
         let config = Config::default();
-        assert_eq!(config.server.host, "127.0.0.1");
+        assert_eq!(config.server.host, "0.0.0.0");
         assert_eq!(config.server.port, 3000);
     }
 

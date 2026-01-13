@@ -299,7 +299,7 @@ impl RepositoryManager {
 
 ### Phase 4: Git-Aware Snapshot Manager
 
-**Create**: `src/snapshot/git_snapshot.rs`
+**Create**: `src/infrastructure/snapshot/git_snapshot.rs`
 
 ```rust
 use std::path::Path;
@@ -578,7 +578,7 @@ git2 = "0.20"
 | `src/application/repository.rs` | Repository manager |
 | `src/application/git_indexing.rs` | Git-aware indexing |
 | `src/application/impact.rs` | Impact analysis |
-| `src/snapshot/git_snapshot.rs` | Git-based change detection |
+| `src/infrastructure/snapshot/git_snapshot.rs` | Git-based change detection |
 | `src/server/handlers/git_tools.rs` | MCP git tools |
 | `src/infrastructure/config/git.rs` | Git configuration |
 
@@ -593,7 +593,7 @@ git2 = "0.20"
 | `src/adapters/providers/mod.rs` | Export git provider |
 | `src/application/mod.rs` | Export repository, git_indexing, impact |
 | `src/application/indexing.rs` | Integrate with GitIndexingService |
-| `src/snapshot/mod.rs` | Export git_snapshot |
+| `src/infrastructure/snapshot/mod.rs` | Export git_snapshot |
 | `src/server/mcp_server.rs` | Register new tools |
 | `src/infrastructure/config/mod.rs` | Export git config |
 

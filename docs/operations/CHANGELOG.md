@@ -121,8 +121,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 \1-  **Startup Time**: Instant (from npm/npx overhead)
 \1-  **Memory Usage**: Native efficiency (reduced by ~60% vs Node.js)
-\1-  **Provider Support**: 7 embedding providers, 6 vector stores
-\1-  **Language Support**: 0 languages with AST parsing (from 13)
+\1-  **Provider Support**: 6 embedding providers, 6 vector stores
+\1-  **Language Support**: 12 languages with AST parsing
 \1-  **Test Coverage**: 564 tests (from 150+)
 
 ---
@@ -278,7 +278,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Provider Framework
 
-\1-   Provider Traits: EmbeddingProvider and VectorStoreProvider traits for extensibility
+\1-   Provider Traits: 14 port traits for complete dependency injection (EmbeddingProvider, VectorStoreProvider, HybridSearchProvider, CodeChunker, EventPublisher, etc.)
 \1-   Mock Implementation: MockEmbeddingProvider generating fixed 128-dimension vectors
 \1-   In-Memory Storage: InMemoryVectorStoreProvider with cosine similarity search
 \1-   Registry System: Thread-safe ProviderRegistry for provider management

@@ -1,6 +1,7 @@
 //! Tests for the server module
 
-// Note: handlers tests are in handlers.bak/ pending API updates
+#[path = "server/handlers_test.rs"]
+mod handlers_test;
 
 #[path = "server/rate_limit_middleware.rs"]
 mod rate_limit_middleware;

@@ -5,17 +5,17 @@
 //! IMPORTANT: Tests that spawn the server binary must use `#[serial(mcp_binary)]`
 //! because the server binds to a unified port (default: 3001).
 
-#[path = "integration/docker.rs"]
+#[path = "e2e/docker.rs"]
 mod docker;
-#[path = "integration/integration_docker.rs"]
+#[path = "e2e/integration_docker.rs"]
 mod integration_docker;
-#[path = "integration/mcp_e2e.rs"]
+#[path = "e2e/mcp_e2e.rs"]
 mod mcp_e2e;
-#[path = "integration/mcp_full_integration_test.rs"]
+#[path = "e2e/mcp_full_integration_test.rs"]
 mod mcp_full_integration_test;
-#[path = "integration/mcp_protocol.rs"]
+#[path = "e2e/mcp_protocol.rs"]
 mod mcp_protocol;
-#[path = "integration/ollama_integration.rs"]
+#[path = "e2e/ollama_integration.rs"]
 mod ollama_integration;
 
 use serde_json::json;

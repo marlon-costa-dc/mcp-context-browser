@@ -8,7 +8,7 @@ Foundational types, traits, and utilities used throughout the system.
 
 The core module functionality is now split across Clean Architecture layers:
 - **Domain types** (`src/domain/types.rs`): Embedding, CodeChunk, SearchResult, Language
-- **Port traits** (`src/domain/ports/`): EmbeddingProvider, VectorStoreProvider, etc.
+- **Port traits** (`src/domain/ports/`): 14 interfaces including EmbeddingProvider, VectorStoreProvider, HybridSearchProvider, CodeChunker, EventPublisher, SyncCoordinator, SnapshotProvider, ChunkRepository, SearchRepository, and service interfaces
 - **Infrastructure utilities** (`src/infrastructure/`): auth, cache, crypto, rate_limit
 
 ## Submodules

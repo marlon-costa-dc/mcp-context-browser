@@ -1,4 +1,4 @@
 //! Benchmark tests
 
-#[path = "benchmark/benchmark_logic.rs"]
+#[path = "perf/benchmark_logic.rs"]
 mod benchmark;

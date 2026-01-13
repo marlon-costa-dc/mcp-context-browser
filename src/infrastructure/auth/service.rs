@@ -11,6 +11,41 @@ use crate::infrastructure::utils::RwLockExt;
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use std::sync::RwLock;
 
+/// Authentication service interface for dependency injection
+///
+/// This trait enables AuthService to be resolved from Shaku DI container.
+pub trait AuthServiceInterface: shaku::Interface + Send + Sync {
+    /// Authenticate user with email and password
+    fn authenticate(&self, email: &str, password: &str) -> Result<String>;
+
+    /// Validate JWT token and extract claims
+    fn validate_token(&self, token: &str) -> Result<Claims>;
+
+    /// Check if user has permission
+    fn check_permission(&self, claims: &Claims, permission: &Permission) -> bool;
+
+    /// Generate a new token for existing claims (refresh)
+    fn refresh_token(&self, claims: &Claims) -> Result<String>;
+
+    /// Get user by email
+    fn get_user(&self, email: &str) -> Option<User>;
+
+    /// Alias for get_user for semantic clarity
+    fn get_user_by_email(&self, email: &str) -> Option<User>;
+
+    /// Check if authentication is enabled
+    fn is_enabled(&self) -> bool;
+
+    /// Check if a path should bypass authentication
+    fn should_bypass(&self, path: &str) -> bool;
+
+    /// Get a copy of the current configuration
+    fn config(&self) -> Option<AuthConfig>;
+
+    /// Validate authentication configuration for production use
+    fn validate_config(&self) -> Vec<super::config::SecurityWarning>;
+}
+
 /// Authentication and authorization service
 ///
 /// Handles JWT-based authentication with role-based access control.
@@ -23,8 +58,11 @@ use std::sync::RwLock;
 /// - Automatic bcrypt to Argon2id migration
 /// - Role-based permission checking
 /// - Token expiration handling
+#[derive(shaku::Component)]
+#[shaku(interface = AuthServiceInterface)]
 pub struct AuthService {
     /// Authentication configuration (RwLock for password hash migration)
+    #[shaku(default = RwLock::new(AuthConfig::default()))]
     config: RwLock<AuthConfig>,
 }
 
@@ -207,6 +245,48 @@ impl AuthService {
 impl Default for AuthService {
     fn default() -> Self {
         Self::with_default_config()
+    }
+}
+
+impl AuthServiceInterface for AuthService {
+    fn authenticate(&self, email: &str, password: &str) -> Result<String> {
+        AuthService::authenticate(self, email, password)
+    }
+
+    fn validate_token(&self, token: &str) -> Result<Claims> {
+        AuthService::validate_token(self, token)
+    }
+
+    fn check_permission(&self, claims: &Claims, permission: &Permission) -> bool {
+        AuthService::check_permission(self, claims, permission)
+    }
+
+    fn refresh_token(&self, claims: &Claims) -> Result<String> {
+        AuthService::refresh_token(self, claims)
+    }
+
+    fn get_user(&self, email: &str) -> Option<User> {
+        AuthService::get_user(self, email)
+    }
+
+    fn get_user_by_email(&self, email: &str) -> Option<User> {
+        AuthService::get_user_by_email(self, email)
+    }
+
+    fn is_enabled(&self) -> bool {
+        AuthService::is_enabled(self)
+    }
+
+    fn should_bypass(&self, path: &str) -> bool {
+        AuthService::should_bypass(self, path)
+    }
+
+    fn config(&self) -> Option<AuthConfig> {
+        AuthService::config(self)
+    }
+
+    fn validate_config(&self) -> Vec<super::config::SecurityWarning> {
+        AuthService::validate_config(self)
     }
 }
 

@@ -6,44 +6,58 @@ This test suite provides comprehensive coverage for the MCP Context Browser, imp
 
 ## Test Organization
 
-Tests are organized in a structure that mirrors the source code modules:
+Tests are organized in a structure that mirrors the `src/` directory (Clean Architecture layers):
 
 ```text
-testes/
-├── admin/              # Admin module tests
-├── benchmark/          # Performance benchmarks
-├── chunking/           # Intelligent chunking tests
-├── config/             # Configuration system tests
-├── core/               # Core functionality tests
-├── integration/        # Integration and end-to-end tests
-├── metrics/            # Metrics and monitoring tests
-├── providers/          # Provider implementations tests
-├── repository/         # Repository pattern tests
-├── services/           # Service layer tests
-├── sync/               # Synchronization tests
-├── unit/               # General unit tests
+tests/
+├── server/             # Tests for src/server/
+│   ├── admin/          # Admin web interface tests
+│   ├── transport/      # HTTP transport tests
+│   └── handlers_test.rs
+├── domain/             # Tests for src/domain/
+│   ├── chunking/       # Code chunking tests
+│   ├── core_types.rs   # Domain types
+│   ├── error_handling.rs
+│   └── validation_tests.rs
+├── infrastructure/     # Tests for src/infrastructure/
+│   ├── config/         # Configuration tests
+│   ├── di/             # DI/Shaku tests
+│   ├── metrics/        # Metrics tests
+│   ├── snapshot/       # Snapshot tests
+│   └── sync/           # Sync manager tests
+├── adapters/           # Tests for src/adapters/
+│   ├── providers/      # Embedding, vector store, routing
+│   ├── repository/     # Repository tests
+│   └── hybrid_search/  # Hybrid search tests
+├── application/        # Tests for src/application/
+│   └── services_logic.rs
+├── e2e/                # End-to-end integration tests
+│   └── docker/         # Docker-based tests
+├── perf/               # Performance benchmarks
+├── fixtures/           # Test data and helpers
+│   ├── artifacts/      # Test data files
+│   └── test_helpers.rs # Shared utilities
 ├── validation/         # Validation system tests
-└── README.md          # This documentation
+└── README.md           # This documentation
 ```
+
+**Naming Convention**: `{source_file}_test.rs` for test files that correspond to source files.
 
 ## Test Categories
 
-### 1. Module-Specific Tests
+### 1. Layer-Specific Tests
 
-Each source module has its corresponding test directory:
+Tests mirror the Clean Architecture layers:
 
--   **admin/**: Admin interface and authentication tests
--   **chunking/**: Intelligent code chunking and language parsing tests
--   **config/**: Configuration loading, validation, and providers tests
--   **core/**: Core types, error handling, and fundamental functionality tests
--   **metrics/**: Metrics collection and system monitoring tests
--   **providers/**: Embedding and vector store provider implementations tests
--   **repository/**: Data repository and search functionality tests
--   **services/**: Business logic service layer tests
--   **sync/**: Synchronization and state management tests
--   **validation/**: Data validation and business rules tests
+-   **domain/**: Domain types, validation, and error handling tests
+-   **application/**: Business service layer tests (indexing, search, context)
+-   **adapters/**: Provider and repository implementation tests
+-   **infrastructure/**: Auth, cache, events, and daemon tests
+-   **server/**: MCP handlers, admin, and protocol tests
+-   **core/**: Legacy core type tests
+-   **validation/**: Input validation and business rules tests
 
-### 2. Integration Tests (`testes/integration/`)
+### 2. Integration Tests (`tests/e2e/`)
 
 Component interaction and end-to-end testing:
 
@@ -54,7 +68,7 @@ Component interaction and end-to-end testing:
 -   Concurrent access patterns
 -   System boundary testing
 
-### 3. Benchmark Tests (`testes/benchmark/`)
+### 3. Benchmark Tests (`tests/perf/`)
 
 Performance measurement with Criterion:
 
@@ -65,7 +79,7 @@ Performance measurement with Criterion:
 -   Concurrent operation performance
 -   System throughput measurements
 
-### 4. Unit Tests (`testes/unit/`)
+### 4. Unit Tests (`tests/unit/`)
 
 General unit tests that don't fit specific modules:
 
@@ -164,58 +178,42 @@ PROPTEST_CASES=1000 cargo test unit::property_based
 
 ### Directory Structure
 
-Tests follow a hierarchical structure matching source modules:
+Tests follow Clean Architecture layers matching the source structure:
 
 ```text
-testes/
-├── mod.rs                 # Root test module declaration
-├── admin/
-│   ├── mod.rs            # Admin module tests
-│   └── service/          # Admin service specific tests
-├── benchmark/
-│   ├── mod.rs            # Benchmark tests module
-│   └── benchmark.rs      # Performance benchmarks
-├── chunking/
-│   ├── mod.rs            # Chunking tests module
-│   └── chunking.rs       # Intelligent chunking tests
-├── config/
-│   ├── mod.rs            # Config tests module
-│   ├── config.rs         # General config tests
-│   ├── config_tests.rs   # Specific config validation tests
-│   ├── config_unit.rs    # Config unit tests
-│   └── providers/        # Config provider tests
-├── core/
-│   ├── mod.rs            # Core tests module
-│   ├── core_types.rs     # Core type tests
-│   └── error_handling.rs # Error handling tests (temporarily disabled)
-├── integration/
-│   ├── mod.rs            # Integration tests module
+tests/
+├── domain/                # Domain layer tests
+│   └── mod.rs            # Domain type and validation tests
+├── application/          # Application service tests
+│   └── mod.rs            # Service layer tests
+├── adapters/             # Adapter tests
+│   ├── mod.rs            # Adapter aggregator
+│   └── database.rs       # Database adapter tests
+├── infrastructure/       # Infrastructure tests
+│   ├── mod.rs            # Infrastructure aggregator
+│   ├── auth.rs           # Authentication tests
+│   ├── events.rs         # Event bus tests
+│   ├── nats_event_bus_integration.rs  # NATS integration
+│   └── daemon/           # Daemon tests
+├── server/               # Server tests
+│   ├── mod.rs            # Server aggregator
+│   ├── handlers/         # Handler tests
+│   └── admin/            # Admin tests
+├── integration/          # Integration tests
+│   ├── mod.rs            # Integration aggregator
 │   ├── docker/           # Docker integration tests
-│   ├── integration*.rs   # Various integration test files
-│   └── mcp*.rs           # MCP protocol integration tests
-├── providers/
-│   ├── mod.rs            # Provider tests module
-│   ├── embedding_providers.rs    # Embedding provider tests
-│   └── vector_store_providers.rs # Vector store provider tests
-├── repository/
-│   ├── mod.rs            # Repository tests module
-│   └── repository_unit.rs # Repository unit tests
-├── services/
-│   ├── mod.rs            # Service tests module
-│   └── services.rs       # Service layer tests
-├── sync/
-│   ├── mod.rs            # Sync tests module
-│   └── sync_manager.rs   # Sync manager tests
-├── unit/
-│   ├── mod.rs            # Unit tests module
-│   ├── property_based.rs # Property-based tests
-│   ├── rate_limiting.rs  # Rate limiting tests
-│   ├── security.rs       # Security tests
-│   └── unit_tests.rs     # General unit tests
-├── validation/
-│   ├── mod.rs            # Validation tests module
-│   ├── validation*.rs    # Various validation tests
-│   └── comprehensive.rs  # Comprehensive validation tests
+│   └── mcp*.rs           # MCP protocol tests
+├── benchmark/            # Performance benchmarks
+│   └── mod.rs            # Benchmark tests
+├── core/                 # Legacy core tests
+│   ├── mod.rs            # Core aggregator
+│   └── core_types.rs     # Type tests
+├── unit/                 # General unit tests
+│   ├── mod.rs            # Unit test aggregator
+│   └── property_based.rs # Property-based tests
+├── validation/           # Validation tests
+│   ├── mod.rs            # Validation aggregator
+│   └── comprehensive.rs  # Comprehensive validation
 └── README.md             # This documentation
 ```
 

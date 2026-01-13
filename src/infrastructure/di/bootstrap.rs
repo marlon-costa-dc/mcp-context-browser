@@ -31,9 +31,8 @@ use super::modules::{
 /// point for resolving registered components.
 ///
 /// Note: AdminModule is currently excluded because AdminServiceImpl has
-/// dependencies (EventBus) that require runtime configuration and cannot
-/// be resolved with defaults. AdminService is manually constructed in
-/// builder.rs until Phase 3 completes the dependency wiring.
+/// complex dependencies that require runtime configuration. AdminService
+/// is manually constructed in builder.rs.
 pub struct DiContainer {
     /// Adapters module (HTTP clients, providers)
     pub adapters_module: Arc<dyn AdaptersModule>,
@@ -48,10 +47,10 @@ impl DiContainer {
     ///
     /// Currently builds:
     /// - AdaptersModule (HTTP client)
-    /// - InfrastructureModule (SystemMetricsCollector, ServiceProvider)
+    /// - InfrastructureModule (SystemMetricsCollector, ServiceProvider, EventBus, AuthService)
     /// - ServerModule (PerformanceMetrics, IndexingOperations)
     ///
-    /// AdminModule is excluded until EventBus dependency is properly wired.
+    /// AdminModule is excluded due to complex runtime dependencies.
     pub fn build() -> Result<Self> {
         // Build leaf modules (those without dependencies)
         let adapters_module: Arc<dyn AdaptersModule> =
@@ -119,11 +118,24 @@ impl ComponentResolver<dyn crate::server::operations::IndexingOperationsInterfac
     }
 }
 
+impl ComponentResolver<dyn crate::infrastructure::events::EventBusProvider> for DiContainer {
+    fn resolve(&self) -> Arc<dyn crate::infrastructure::events::EventBusProvider> {
+        self.infrastructure_module.resolve()
+    }
+}
+
+impl ComponentResolver<dyn crate::infrastructure::auth::AuthServiceInterface> for DiContainer {
+    fn resolve(&self) -> Arc<dyn crate::infrastructure::auth::AuthServiceInterface> {
+        self.infrastructure_module.resolve()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::adapters::http_client::HttpClientProvider;
     use crate::infrastructure::di::factory::ServiceProviderInterface;
+    use crate::infrastructure::events::EventBusProvider;
     use crate::infrastructure::metrics::system::SystemMetricsCollectorInterface;
     use crate::server::metrics::PerformanceMetricsInterface;
     use crate::server::operations::IndexingOperationsInterface;
@@ -163,7 +175,22 @@ mod tests {
         assert!(Arc::strong_count(&collector) >= 1);
     }
 
-    // NOTE: AdminService resolution requires properly wired EventBus dependency
+    #[tokio::test]
+    async fn test_di_container_resolves_event_bus() {
+        let container = DiContainer::build().expect("DiContainer should build");
+        let event_bus: Arc<dyn EventBusProvider> = container.resolve();
+        assert!(Arc::strong_count(&event_bus) >= 1);
+    }
+
+    #[tokio::test]
+    async fn test_di_container_resolves_auth_service() {
+        use crate::infrastructure::auth::AuthServiceInterface;
+        let container = DiContainer::build().expect("DiContainer should build");
+        let auth_service: Arc<dyn AuthServiceInterface> = container.resolve();
+        assert!(Arc::strong_count(&auth_service) >= 1);
+    }
+
+    // NOTE: AdminService resolution requires complex runtime dependencies
     // which is not yet complete. This will be enabled in Phase 3.
     // #[tokio::test]
     // async fn test_di_container_resolves_admin_service() {

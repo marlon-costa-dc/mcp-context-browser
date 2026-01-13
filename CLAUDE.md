@@ -55,19 +55,34 @@ pub struct Service {
 }
 ```
 
-## Directory Structure
+## Directory Structure (Clean Architecture)
 
 ```text
 src/
-├── domain/         # Domain types, validation, error, ports (traits)
-├── application/    # Business services (indexing, search, context)
-├── adapters/       # Infrastructure implementations (providers, db, repositories)
-├── infrastructure/ # Shared systems (cache, auth, config, metrics, events)
-├── server/         # MCP protocol implementation
-├── chunking/       # Code chunking logic (0 languages processors)
-├── daemon/         # Background processes
-├── snapshot/       # Snapshot management
-└── sync/           # Codebase synchronization
+├── domain/            # Core business logic, ports (traits), types
+│   ├── ports/         # 14 port traits (interfaces)
+│   ├── chunking/      # AST-based code chunking (12 languages)
+│   ├── types.rs       # Domain types (CodeChunk, Embedding, etc.)
+│   └── error.rs       # Domain errors
+├── application/       # Business services
+│   ├── context.rs     # ContextService
+│   ├── search.rs      # SearchService
+│   └── indexing/      # IndexingService, ChunkingOrchestrator
+├── adapters/          # External integrations
+│   ├── providers/     # Embedding (6), VectorStore (6), Routing
+│   ├── hybrid_search/ # BM25 + semantic search
+│   └── repository/    # Chunk and search repositories
+├── infrastructure/    # Shared technical services
+│   ├── di/            # Shaku dependency injection
+│   ├── auth/          # JWT, rate limiting
+│   ├── config/        # Configuration management
+│   ├── events/        # Event bus (Tokio, NATS)
+│   ├── sync/          # File synchronization
+│   ├── snapshot/      # Change tracking
+│   └── daemon/        # Background processes
+└── server/            # MCP protocol server
+    ├── handlers/      # Tool handlers
+    └── admin/         # Admin service
 ```
 
 ## Testing
@@ -108,8 +123,8 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 **First stable release** - Drop-in replacement for Claude-context:
 
--   0 languages with AST parsing (Rust, Python, JS/TS, Go, Java, C, C++, C#, Ruby, PHP, Swift, Kotlin)
--   7 embedding providers (OpenAI, VoyageAI, Ollama, Gemini, FastEmbed, Null)
+-   12 languages with AST parsing (Rust, Python, JS/TS, Go, Java, C, C++, C#, Ruby, PHP, Swift, Kotlin)
+-   6 embedding providers (OpenAI, VoyageAI, Ollama, Gemini, FastEmbed, Null)
 -   6 vector stores (Milvus, EdgeVec, In-Memory, Filesystem, Encrypted, Null)
 -   493 tests (100% pass rate, 2 ignored)
 -   HTTP transport foundation

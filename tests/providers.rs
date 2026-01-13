@@ -1,10 +1,10 @@
 //! Tests for providers
 
-#[path = "providers/embedding_providers.rs"]
+#[path = "adapters/providers/embedding_providers.rs"]
 mod embedding_providers;
 
-#[path = "providers/vector_store_providers.rs"]
+#[path = "adapters/providers/vector_store_providers.rs"]
 mod vector_store_providers;
 
-#[path = "providers/strategy_pattern.rs"]
+#[path = "adapters/providers/strategy_pattern.rs"]
 mod strategy_pattern;

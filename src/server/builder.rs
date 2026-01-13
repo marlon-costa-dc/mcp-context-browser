@@ -109,10 +109,10 @@ impl McpServerBuilder {
         let container = DiContainer::build()
             .map_err(|e| anyhow::anyhow!("Failed to build DI container: {}", e))?;
 
-        // EventBus not yet in DI modules - use default
-        let event_bus = self
+        // Resolve EventBus from DI container if not explicitly provided
+        let event_bus: crate::infrastructure::events::SharedEventBusProvider = self
             .event_bus
-            .unwrap_or_else(|| Arc::new(crate::infrastructure::events::EventBus::default()));
+            .unwrap_or_else(|| container.resolve());
         let log_buffer = self
             .log_buffer
             .unwrap_or_else(|| crate::infrastructure::logging::create_shared_log_buffer(1000));

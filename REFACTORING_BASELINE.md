@@ -40,7 +40,7 @@
 ### Target Patterns
 
 #### High Priority
-1. **src/daemon/service.rs** - Already using TimeUtils (verify consistency)
+1. **src/infrastructure/daemon/service.rs** - Already using TimeUtils (verify consistency)
 2. **src/infrastructure/snapshot/manager.rs** - 2 calls to `SystemTime::now().duration_since(UNIX_EPOCH)`
    - Lines 63-66, 267-270
 

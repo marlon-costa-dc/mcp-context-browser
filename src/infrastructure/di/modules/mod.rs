@@ -45,7 +45,9 @@ pub use traits::{AdaptersModule, AdminModule, InfrastructureModule, ServerModule
 use shaku::module;
 
 use crate::adapters::http_client::HttpClientProvider;
+use crate::infrastructure::auth::AuthServiceInterface;
 use crate::infrastructure::di::factory::ServiceProviderInterface;
+use crate::infrastructure::events::EventBusProvider;
 use crate::infrastructure::metrics::system::SystemMetricsCollectorInterface;
 use crate::server::admin::service::AdminService;
 use crate::server::metrics::PerformanceMetricsInterface;
@@ -66,7 +68,7 @@ module! {
         },
 
         use dyn InfrastructureModule {
-            components = [dyn SystemMetricsCollectorInterface, dyn ServiceProviderInterface],
+            components = [dyn SystemMetricsCollectorInterface, dyn ServiceProviderInterface, dyn EventBusProvider, dyn AuthServiceInterface],
             providers = []
         },
 

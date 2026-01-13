@@ -319,7 +319,7 @@ Self-documenting, ADR-driven development
 
 ```text
 Complete drop-in claude-context replacement
-├── 0 languages processors (modular)
+├── 12 language processors (modular)
 ├── HTTP transport foundation
 ├── Binary auto-respawn
 ├── Systemd integration
@@ -383,7 +383,7 @@ Comprehensive development platform
 ### v0.1.0: First Stable Release
 
 \1-   Claude-context compatibility: 100%
-\1-   Language processors: 0 languages
+\1-   Language processors: 12 languages
 \1-   Test coverage: 493 tests
 \1-   HTTP transport foundation: Complete
 \1-   Systemd integration: Complete

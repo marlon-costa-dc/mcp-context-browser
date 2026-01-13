@@ -56,7 +56,7 @@ pub use middleware::{
     RequirePermission,
 };
 pub use roles::{Permission, UserRole};
-pub use service::AuthService;
+pub use service::{AuthService, AuthServiceInterface};
 
 // Re-export API key types
 pub use api_keys::{ApiKey, ApiKeyStore, API_KEY_PREFIX};
