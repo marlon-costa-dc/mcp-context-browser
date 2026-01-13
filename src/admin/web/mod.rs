@@ -22,7 +22,7 @@ use tera::{Context, Tera};
 
 use crate::admin::auth::web_auth_middleware;
 use crate::admin::models::AdminState;
-use crate::admin::web::html_helpers::{htmx_error, htmx_loading, htmx_success};
+use crate::admin::web::html_helpers::htmx_error;
 
 use self::builders::ViewModelBuilder;
 
