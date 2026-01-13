@@ -12,8 +12,10 @@ use tokio::sync::broadcast::{self, Receiver, Sender};
 use tracing::debug;
 
 /// Event Bus for publishing and subscribing to system events using tokio broadcast
-#[derive(Clone)]
+#[derive(Clone, shaku::Component)]
+#[shaku(interface = super::EventBusProvider)]
 pub struct EventBus {
+    #[shaku(default = broadcast::channel(crate::infrastructure::constants::EVENT_BUS_TOKIO_CAPACITY).0)]
     sender: Sender<SystemEvent>,
 }
 

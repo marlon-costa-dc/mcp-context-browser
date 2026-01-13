@@ -10,6 +10,7 @@ use shaku::HasComponent;
 
 use crate::adapters::http_client::HttpClientProvider;
 use crate::infrastructure::di::factory::ServiceProviderInterface;
+use crate::infrastructure::events::EventBusProvider;
 use crate::infrastructure::metrics::system::SystemMetricsCollectorInterface;
 use crate::server::admin::service::AdminService;
 use crate::server::metrics::PerformanceMetricsInterface;
@@ -20,7 +21,9 @@ pub trait AdaptersModule: HasComponent<dyn HttpClientProvider> {}
 
 /// Infrastructure module trait - core infrastructure services
 pub trait InfrastructureModule:
-    HasComponent<dyn SystemMetricsCollectorInterface> + HasComponent<dyn ServiceProviderInterface>
+    HasComponent<dyn SystemMetricsCollectorInterface>
+    + HasComponent<dyn ServiceProviderInterface>
+    + HasComponent<dyn EventBusProvider>
 {
 }
 

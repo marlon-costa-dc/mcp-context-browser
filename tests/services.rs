@@ -1,4 +1,4 @@
 //! Service tests
 
-#[path = "services/services_logic.rs"]
+#[path = "application/services_logic.rs"]
 mod services;

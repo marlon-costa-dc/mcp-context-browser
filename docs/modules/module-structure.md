@@ -2,44 +2,65 @@
 
 This document shows the hierarchical structure of modules in the MCP Context Browser.
 
-## Module Tree
+## Module Tree (Clean Architecture)
 
 ```
-mcp-context-browser/
+mcp-context-browser/src/
 ├── main.rs (entry point)
 ├── lib.rs (library exports)
-├── core/ (core types and utilities)
-│   ├── error.rs
+├── domain/ (core business logic)
+│   ├── ports/ (14 port traits)
+│   │   ├── embedding.rs
+│   │   ├── vector_store.rs
+│   │   ├── hybrid_search.rs
+│   │   ├── chunking.rs
+│   │   ├── repository.rs
+│   │   ├── services.rs
+│   │   ├── sync.rs
+│   │   ├── events.rs
+│   │   └── infrastructure.rs
+│   ├── chunking/ (12 language processors)
+│   │   └── languages/
 │   ├── types.rs
-│   ├── cache.rs
-│   ├── limits.rs
-│   └── rate_limit.rs
-├── config.rs (configuration)
-├── providers/ (provider implementations)
-│   ├── mod.rs
-│   ├── embedding/
-│   └── vector_store/
-├── services/ (business logic)
-│   ├── mod.rs
+│   ├── error.rs
+│   └── validation.rs
+├── application/ (business services)
 │   ├── context.rs
-│   ├── indexing.rs
-│   └── search.rs
-├── server/ (MCP protocol server)
-│   └── mod.rs
-├── metrics/ (monitoring)
-│   ├── mod.rs
-│   ├── http_server.rs
-│   └── system.rs
-├── sync/ (cross-process coordination)
-│   └── mod.rs
-├── daemon/ (background processes)
-│   └── mod.rs
-└── snapshot/ (change tracking)
-    └── mod.rs
+│   ├── search.rs
+│   └── indexing/
+│       ├── service.rs
+│       └── chunking_orchestrator.rs
+├── adapters/ (external integrations)
+│   ├── providers/
+│   │   ├── embedding/ (6 providers)
+│   │   ├── vector_store/ (6 providers)
+│   │   └── routing/ (circuit breaker, health, failover)
+│   ├── hybrid_search/
+│   └── repository/
+├── infrastructure/ (shared systems)
+│   ├── di/ (Shaku dependency injection)
+│   ├── auth/ (JWT, rate limiting)
+│   ├── config/
+│   ├── cache.rs
+│   ├── events/ (Tokio, NATS)
+│   ├── sync/ (file synchronization)
+│   ├── snapshot/ (change tracking)
+│   ├── daemon/
+│   └── metrics/
+└── server/ (MCP protocol)
+    ├── mcp_server.rs
+    ├── handlers/
+    └── admin/
 ```
 
-## Analysis
+## Architecture Layers
 
-This is a simplified module structure generated as fallback when Cargo-modules analysis is not available. The actual structure may be more complex with additional submodules and dependencies.
+| Layer | Purpose | Key Components |
+|-------|---------|----------------|
+| **Domain** | Business entities and rules | Ports, types, validation |
+| **Application** | Use case orchestration | ContextService, IndexingService, SearchService |
+| **Adapters** | External service integration | Embedding providers, vector stores, repositories |
+| **Infrastructure** | Technical services | DI, auth, cache, events, sync |
+| **Server** | Protocol implementation | MCP handlers, admin API |
 
-*Generated automatically on: 2026-01-11 21:51:42 UTC*
+*Updated: 2026-01-13 - Reflects Clean Architecture refactoring*

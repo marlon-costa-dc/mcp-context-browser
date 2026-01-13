@@ -7,4 +7,5 @@
 //! - Security tests
 //! - Web interface tests
 
+#[path = "server/admin/mod.rs"]
 mod admin;

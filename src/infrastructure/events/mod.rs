@@ -152,7 +152,7 @@ pub trait EventReceiver: Send {
 /// - Async subscribe with event receiver
 /// - Subscriber count tracking
 #[async_trait::async_trait]
-pub trait EventBusProvider: Send + Sync {
+pub trait EventBusProvider: shaku::Interface + Send + Sync {
     /// Publish an event to all subscribers
     ///
     /// Returns the number of subscribers that received the event
