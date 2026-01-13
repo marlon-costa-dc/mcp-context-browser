@@ -1,3 +1,3 @@
 //! Embedding provider unit tests
 
-mod fastembed;
+mod fastembed_test;

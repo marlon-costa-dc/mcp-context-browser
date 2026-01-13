@@ -64,12 +64,10 @@ impl DiContainer {
             Arc::new(AdaptersModuleImpl::builder().build());
         let infrastructure_module: Arc<dyn InfrastructureModule> =
             Arc::new(InfrastructureModuleImpl::builder().build());
-        let server_module: Arc<dyn ServerModule> =
-            Arc::new(ServerModuleImpl::builder().build());
+        let server_module: Arc<dyn ServerModule> = Arc::new(ServerModuleImpl::builder().build());
         // Application module depends on adapters module for repositories
-        let application_module: Arc<dyn ApplicationModule> = Arc::new(
-            ApplicationModuleImpl::builder(Arc::clone(&adapters_module)).build(),
-        );
+        let application_module: Arc<dyn ApplicationModule> =
+            Arc::new(ApplicationModuleImpl::builder(Arc::clone(&adapters_module)).build());
 
         Ok(Self {
             adapters_module,
@@ -101,32 +99,28 @@ impl DiContainer {
         http_client: Arc<dyn HttpClientProvider>,
     ) -> Result<Self> {
         // Create providers based on config (returns Box for Shaku override)
-        let embedding_provider = create_embedding_provider_boxed(
-            &config.providers.embedding,
-            Arc::clone(&http_client),
-        ).await?;
+        let embedding_provider =
+            create_embedding_provider_boxed(&config.providers.embedding, Arc::clone(&http_client))
+                .await?;
 
-        let vector_store_provider = create_vector_store_provider_boxed(
-            &config.providers.vector_store,
-        ).await?;
+        let vector_store_provider =
+            create_vector_store_provider_boxed(&config.providers.vector_store).await?;
 
         // Build adapters module with config-based provider overrides
         let adapters_module: Arc<dyn AdaptersModule> = Arc::new(
             AdaptersModuleImpl::builder()
                 .with_component_override::<dyn EmbeddingProvider>(embedding_provider)
                 .with_component_override::<dyn VectorStoreProvider>(vector_store_provider)
-                .build()
+                .build(),
         );
 
         // Build other modules normally
         let infrastructure_module: Arc<dyn InfrastructureModule> =
             Arc::new(InfrastructureModuleImpl::builder().build());
-        let server_module: Arc<dyn ServerModule> =
-            Arc::new(ServerModuleImpl::builder().build());
+        let server_module: Arc<dyn ServerModule> = Arc::new(ServerModuleImpl::builder().build());
         // Application module depends on adapters module for repositories
-        let application_module: Arc<dyn ApplicationModule> = Arc::new(
-            ApplicationModuleImpl::builder(Arc::clone(&adapters_module)).build(),
-        );
+        let application_module: Arc<dyn ApplicationModule> =
+            Arc::new(ApplicationModuleImpl::builder(Arc::clone(&adapters_module)).build());
 
         Ok(Self {
             adapters_module,
@@ -162,7 +156,9 @@ impl ComponentResolver<dyn crate::adapters::http_client::HttpClientProvider> for
 impl ComponentResolver<dyn crate::infrastructure::metrics::system::SystemMetricsCollectorInterface>
     for DiContainer
 {
-    fn resolve(&self) -> Arc<dyn crate::infrastructure::metrics::system::SystemMetricsCollectorInterface> {
+    fn resolve(
+        &self,
+    ) -> Arc<dyn crate::infrastructure::metrics::system::SystemMetricsCollectorInterface> {
         self.infrastructure_module.resolve()
     }
 }

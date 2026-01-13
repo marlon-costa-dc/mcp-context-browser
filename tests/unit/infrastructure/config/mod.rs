@@ -1,7 +1,6 @@
 //! Configuration unit tests
 
-// mod config_example_test; // Disabled - API incompatibility
-mod config_loading;
-mod config_logic;
+mod config_loading_test;
+mod config_logic_test;
 mod config_test;
-mod config_unit;
+mod config_unit_test;

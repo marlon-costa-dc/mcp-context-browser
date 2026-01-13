@@ -20,8 +20,8 @@ fn create_test_auth_config(enabled: bool) -> AuthConfig {
     let jwt_secret = "test-jwt-secret-that-is-long-enough".to_string();
 
     // Create admin user with hashed "admin" password (only for tests)
-    let admin_password_hash = password::hash_password("admin")
-        .expect("Failed to hash test password");
+    let admin_password_hash =
+        password::hash_password("admin").expect("Failed to hash test password");
 
     let admin_user = User {
         id: "admin".to_string(),

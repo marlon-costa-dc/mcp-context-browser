@@ -1,8 +1,8 @@
 //! Provider adapter unit tests
 
 mod embedding;
-mod embedding_providers;
+mod embedding_providers_test;
 mod routing;
-mod strategy_pattern;
+mod strategy_pattern_test;
 mod vector_store;
-mod vector_store_providers;
+mod vector_store_providers_test;

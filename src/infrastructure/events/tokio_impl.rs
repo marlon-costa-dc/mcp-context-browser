@@ -115,7 +115,9 @@ impl EventPublisher for EventBus {
     async fn publish(&self, event: DomainEvent) -> Result<()> {
         // Map DomainEvent to SystemEvent where applicable
         let system_event = match event {
-            DomainEvent::CacheInvalidate { namespace } => Some(SystemEvent::CacheClear { namespace }),
+            DomainEvent::CacheInvalidate { namespace } => {
+                Some(SystemEvent::CacheClear { namespace })
+            }
             DomainEvent::IndexRebuild { collection: _ } => {
                 debug!("IndexRebuild event received - no SystemEvent mapping");
                 None

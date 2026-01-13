@@ -20,8 +20,6 @@
 
 ## Language Support
 
-
-
 ## Embedding Providers
 
 FastEmbed, Gemini, helpers, Null, Ollama, OpenAI, VoyageAI

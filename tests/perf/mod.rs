@@ -1,4 +1,4 @@
 //! Performance benchmarks
 
-mod benchmark_logic;
+mod benchmark_test;
 mod performance_test;

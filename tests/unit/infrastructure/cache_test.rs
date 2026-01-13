@@ -4,8 +4,7 @@
 //! Tests use MokaCacheProvider (local) which is the default
 
 use mcp_context_browser::infrastructure::cache::{
-    CacheConfig, CacheBackendConfig, CacheNamespacesConfig, create_cache_provider,
-    CacheProvider,
+    create_cache_provider, CacheBackendConfig, CacheConfig, CacheNamespacesConfig,
 };
 use std::time::Duration;
 
@@ -25,7 +24,8 @@ fn test_cache_backend_local_default() {
 }
 
 #[tokio::test]
-async fn test_moka_cache_provider_creation() -> std::result::Result<(), Box<dyn std::error::Error>> {
+async fn test_moka_cache_provider_creation() -> std::result::Result<(), Box<dyn std::error::Error>>
+{
     let config = CacheConfig {
         enabled: true,
         backend: CacheBackendConfig::Local {
@@ -41,7 +41,8 @@ async fn test_moka_cache_provider_creation() -> std::result::Result<(), Box<dyn 
 }
 
 #[tokio::test]
-async fn test_null_cache_provider_when_disabled() -> std::result::Result<(), Box<dyn std::error::Error>> {
+async fn test_null_cache_provider_when_disabled(
+) -> std::result::Result<(), Box<dyn std::error::Error>> {
     let config = CacheConfig {
         enabled: false,
         ..Default::default()
@@ -85,7 +86,10 @@ async fn test_cache_miss() -> std::result::Result<(), Box<dyn std::error::Error>
 
     // Try to get a key that doesn't exist
     let retrieved = cache.get("nonexistent_ns", "nonexistent_key").await?;
-    assert!(retrieved.is_none(), "Expected cache miss for non-existent key");
+    assert!(
+        retrieved.is_none(),
+        "Expected cache miss for non-existent key"
+    );
 
     Ok(())
 }
@@ -121,9 +125,15 @@ async fn test_cache_clear_namespace() -> std::result::Result<(), Box<dyn std::er
     let ttl = Duration::from_secs(3600);
 
     // Set values in two namespaces
-    cache.set("ns1", "key1", "value1".as_bytes().to_vec(), ttl).await?;
-    cache.set("ns1", "key2", "value2".as_bytes().to_vec(), ttl).await?;
-    cache.set("ns2", "key1", "value3".as_bytes().to_vec(), ttl).await?;
+    cache
+        .set("ns1", "key1", "value1".as_bytes().to_vec(), ttl)
+        .await?;
+    cache
+        .set("ns1", "key2", "value2".as_bytes().to_vec(), ttl)
+        .await?;
+    cache
+        .set("ns2", "key1", "value3".as_bytes().to_vec(), ttl)
+        .await?;
 
     // Clear ns1
     cache.clear(Some("ns1")).await?;
@@ -143,7 +153,9 @@ async fn test_cache_exists() -> std::result::Result<(), Box<dyn std::error::Erro
     let ttl = Duration::from_secs(3600);
 
     // Set a value
-    cache.set("test_ns", "exists_key", "data".as_bytes().to_vec(), ttl).await?;
+    cache
+        .set("test_ns", "exists_key", "data".as_bytes().to_vec(), ttl)
+        .await?;
 
     // Test exists
     assert!(cache.exists("test_ns", "exists_key").await?);
@@ -180,7 +192,10 @@ async fn test_cache_health_check() -> std::result::Result<(), Box<dyn std::error
 
     // Test health check
     let health = cache.health_check().await?;
-    assert_eq!(health, mcp_context_browser::infrastructure::cache::HealthStatus::Healthy);
+    assert_eq!(
+        health,
+        mcp_context_browser::infrastructure::cache::HealthStatus::Healthy
+    );
 
     Ok(())
 }

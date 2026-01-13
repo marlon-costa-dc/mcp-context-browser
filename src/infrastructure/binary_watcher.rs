@@ -78,8 +78,7 @@ impl BinaryWatcher {
 
     /// Check if the watcher is running
     pub fn is_running(&self) -> bool {
-        self.started.load(std::sync::atomic::Ordering::SeqCst)
-            && !self.cancel_token.is_cancelled()
+        self.started.load(std::sync::atomic::Ordering::SeqCst) && !self.cancel_token.is_cancelled()
     }
 
     /// Start watching the binary file

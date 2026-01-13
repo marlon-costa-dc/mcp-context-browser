@@ -3,12 +3,12 @@
 //! This module contains server initialization logic extracted from the main
 //! server implementation to improve code organization and testability.
 
-use crate::infrastructure::di::DiContainer;
 use crate::adapters::providers::routing::health::HealthMonitor;
 use crate::infrastructure::cache::{create_cache_provider, SharedCacheProvider};
 use crate::infrastructure::config::ConfigLoader;
 use crate::infrastructure::connection_tracker::{ConnectionTracker, ConnectionTrackerConfig};
 use crate::infrastructure::daemon::types::RecoveryConfig;
+use crate::infrastructure::di::DiContainer;
 use crate::infrastructure::health::ActiveHealthMonitor;
 use crate::infrastructure::limits::ResourceLimits;
 use crate::infrastructure::metrics::MetricsApiServer;
@@ -108,8 +108,8 @@ async fn initialize_server_components(
 
     // Build DI container for component resolution
     tracing::info!("🔧 Building DI container...");
-    let container = DiContainer::build()
-        .map_err(|e| format!("Failed to build DI container: {}", e))?;
+    let container =
+        DiContainer::build().map_err(|e| format!("Failed to build DI container: {}", e))?;
 
     // Resolve HTTP client from DI container
     tracing::info!("🌐 Resolving HTTP client pool from DI container...");

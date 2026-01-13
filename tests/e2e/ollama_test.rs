@@ -8,7 +8,6 @@ use mcp_context_browser::domain::ports::{EmbeddingProvider, VectorStoreProvider}
 use mcp_context_browser::domain::types::Embedding;
 use std::sync::Arc;
 
-
 /// Test utilities for Ollama integration tests
 mod test_utils {
     use super::*;

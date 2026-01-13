@@ -104,15 +104,23 @@ impl McpServerBuilder {
             Arc::new(ArcSwap::from_pointee(config))
         };
 
-        // Build DI container for component resolution
-        // Components provided via builder take precedence over DI resolution
-        let container = DiContainer::build()
-            .map_err(|e| anyhow::anyhow!("Failed to build DI container: {}", e))?;
+        // Resolve HTTP client first (needed for build_with_config)
+        // Use a temporary container to get the default HTTP client if not provided
+        let temp_container = DiContainer::build()
+            .map_err(|e| anyhow::anyhow!("Failed to build temp DI container: {}", e))?;
+        let http_client: Arc<dyn crate::adapters::http_client::HttpClientProvider> =
+            self.http_client.unwrap_or_else(|| temp_container.resolve());
+
+        // Build DI container with config-based providers (production mode)
+        // This uses actual providers based on configuration instead of null providers
+        let current_config = config_arc.load();
+        let container = DiContainer::build_with_config(&current_config, Arc::clone(&http_client))
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to build DI container with config: {}", e))?;
 
         // Resolve EventBus from DI container if not explicitly provided
-        let event_bus: crate::infrastructure::events::SharedEventBusProvider = self
-            .event_bus
-            .unwrap_or_else(|| container.resolve());
+        let event_bus: crate::infrastructure::events::SharedEventBusProvider =
+            self.event_bus.unwrap_or_else(|| container.resolve());
         let log_buffer = self
             .log_buffer
             .unwrap_or_else(|| crate::infrastructure::logging::create_shared_log_buffer(1000));
@@ -126,13 +134,11 @@ impl McpServerBuilder {
             .indexing_operations
             .unwrap_or_else(|| container.resolve());
 
-        let service_provider: Arc<dyn ServiceProviderInterface> = self
-            .service_provider
-            .unwrap_or_else(|| container.resolve());
+        let service_provider: Arc<dyn ServiceProviderInterface> =
+            self.service_provider.unwrap_or_else(|| container.resolve());
 
-        let system_collector: Arc<dyn SystemMetricsCollectorInterface> = self
-            .system_collector
-            .unwrap_or_else(|| container.resolve());
+        let system_collector: Arc<dyn SystemMetricsCollectorInterface> =
+            self.system_collector.unwrap_or_else(|| container.resolve());
 
         // Initialize resource limits from config if not provided
         // ResourceLimits not yet in DI modules
@@ -143,9 +149,8 @@ impl McpServerBuilder {
             Arc::new(ResourceLimits::new(config.resource_limits.clone()))
         };
 
-        // Resolve HTTP client from DI container if not provided
-        let http_client: Arc<dyn crate::adapters::http_client::HttpClientProvider> =
-            self.http_client.unwrap_or_else(|| container.resolve());
+        // HTTP client was already resolved above for build_with_config
+        // No need to resolve again
 
         // Initialize cache provider if not provided
         let cache_provider = match self.cache_provider {
@@ -173,7 +178,13 @@ impl McpServerBuilder {
         let admin_service: Arc<dyn AdminService> =
             Arc::new(crate::server::admin::service::AdminServiceImpl::new(deps));
 
-        // Use from_components to assemble the server
+        // Resolve application services from DI container
+        let indexing_service: Arc<dyn crate::domain::ports::IndexingServiceInterface> =
+            container.resolve();
+        let search_service: Arc<dyn crate::domain::ports::SearchServiceInterface> =
+            container.resolve();
+
+        // Use from_components to assemble the server with DI-resolved services
         McpServer::from_components(crate::server::mcp_server::ServerComponents {
             config: config_arc,
             cache_provider: Some(cache_provider),
@@ -186,6 +197,8 @@ impl McpServerBuilder {
             event_bus,
             log_buffer,
             system_collector,
+            indexing_service: Some(indexing_service),
+            search_service: Some(search_service),
         })
         .await
     }

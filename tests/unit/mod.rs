@@ -13,9 +13,7 @@ mod domain;
 mod infrastructure;
 mod server;
 
-// Legacy unit tests at root level
-mod property_based;
-mod rate_limiting;
-mod reproduce_freeze;
-mod security;
+// Cross-cutting tests at root level
+mod property_based_test;
+mod security_test;
 mod unit_test;

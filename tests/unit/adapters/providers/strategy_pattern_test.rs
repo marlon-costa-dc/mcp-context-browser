@@ -21,23 +21,20 @@ mod generic_context_service_tests {
         let vector_store_provider = Arc::new(InMemoryVectorStoreProvider::new());
 
         // Create generic context service with compile-time strategy types
-        let context_service = ContextService::new_with_providers(
-            embedding_provider,
-            vector_store_provider,
-        );
+        let context_service =
+            ContextService::new_with_providers(embedding_provider, vector_store_provider);
 
         assert_eq!(context_service.embedding_dimensions(), 384); // Mock provider dimensions
     }
 
     #[test]
-    fn test_generic_context_service_operations() -> std::result::Result<(), Box<dyn std::error::Error>> {
+    fn test_generic_context_service_operations(
+    ) -> std::result::Result<(), Box<dyn std::error::Error>> {
         let embedding_provider = Arc::new(NullEmbeddingProvider::new());
         let vector_store_provider = Arc::new(InMemoryVectorStoreProvider::new());
 
-        let context_service = ContextService::new_with_providers(
-            embedding_provider,
-            vector_store_provider,
-        );
+        let context_service =
+            ContextService::new_with_providers(embedding_provider, vector_store_provider);
 
         // Test that we can embed text
         let text = "fn hello() { println!(\"Hello, world!\"); }";
@@ -58,10 +55,8 @@ mod generic_context_service_tests {
         let embedding_provider = Arc::new(NullEmbeddingProvider::new());
         let vector_store_provider = Arc::new(InMemoryVectorStoreProvider::new());
 
-        let context_service = ContextService::new_with_providers(
-            embedding_provider,
-            vector_store_provider,
-        );
+        let context_service =
+            ContextService::new_with_providers(embedding_provider, vector_store_provider);
 
         // Verify the service is properly constructed
         assert!(context_service.embedding_dimensions() > 0);
@@ -80,7 +75,8 @@ mod strategy_pattern_tests {
         fn accepts_vector_store_provider<V: VectorStoreProvider>(_provider: Arc<V>) {}
 
         let embedding_provider: Arc<NullEmbeddingProvider> = Arc::new(NullEmbeddingProvider::new());
-        let vector_store_provider: Arc<InMemoryVectorStoreProvider> = Arc::new(InMemoryVectorStoreProvider::new());
+        let vector_store_provider: Arc<InMemoryVectorStoreProvider> =
+            Arc::new(InMemoryVectorStoreProvider::new());
 
         // These should compile without trait bound errors
         accepts_embedding_provider(embedding_provider);
@@ -94,10 +90,7 @@ mod strategy_pattern_tests {
         let vector_store_provider = Arc::new(InMemoryVectorStoreProvider::new());
 
         // Create a service that composes these strategies
-        let service = ContextService::new_with_providers(
-            embedding_provider,
-            vector_store_provider,
-        );
+        let service = ContextService::new_with_providers(embedding_provider, vector_store_provider);
 
         // The service should be able to perform operations using both strategies
         assert_eq!(service.embedding_dimensions(), 384);
@@ -157,7 +150,8 @@ mod integration_tests {
     use super::*;
 
     #[test]
-    fn test_full_strategy_pattern_workflow() -> std::result::Result<(), Box<dyn std::error::Error>> {
+    fn test_full_strategy_pattern_workflow() -> std::result::Result<(), Box<dyn std::error::Error>>
+    {
         // Test a complete workflow using the strategy pattern:
         // 1. Create providers (strategies)
         // 2. Compose them into a service
@@ -167,10 +161,8 @@ mod integration_tests {
         let embedding_provider = Arc::new(NullEmbeddingProvider::new());
         let vector_store_provider = Arc::new(InMemoryVectorStoreProvider::new());
 
-        let context_service = ContextService::new_with_providers(
-            embedding_provider,
-            vector_store_provider,
-        );
+        let context_service =
+            ContextService::new_with_providers(embedding_provider, vector_store_provider);
 
         // Test basic functionality
         assert_eq!(context_service.embedding_dimensions(), 384);
@@ -191,10 +183,7 @@ mod integration_tests {
         let embedding_provider = Arc::new(NullEmbeddingProvider::new());
         let vector_store_provider = Arc::new(InMemoryVectorStoreProvider::new());
 
-        let service = ContextService::new_with_providers(
-            embedding_provider,
-            vector_store_provider,
-        );
+        let service = ContextService::new_with_providers(embedding_provider, vector_store_provider);
 
         // Performance should be consistent (no dynamic dispatch overhead)
         let start = std::time::Instant::now();

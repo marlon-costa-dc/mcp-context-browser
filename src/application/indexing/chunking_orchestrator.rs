@@ -3,14 +3,14 @@
 //! Single Responsibility: Orchestrate code chunking across multiple files.
 
 use crate::domain::chunking::IntelligentChunker;
-use crate::domain::error::{Error, Result};
-use crate::domain::ports::ChunkingOrchestratorInterface;
-use crate::domain::types::{CodeChunk, Language};
-use async_trait::async_trait;
 use crate::domain::constants::{
     INDEXING_BATCH_SIZE, INDEXING_CHUNKS_MAX_PER_FILE, INDEXING_CHUNK_MIN_LENGTH,
     INDEXING_CHUNK_MIN_LINES,
 };
+use crate::domain::error::{Error, Result};
+use crate::domain::ports::ChunkingOrchestratorInterface;
+use crate::domain::types::{CodeChunk, Language};
+use async_trait::async_trait;
 use futures::future::join_all;
 use std::path::Path;
 use tokio::fs;

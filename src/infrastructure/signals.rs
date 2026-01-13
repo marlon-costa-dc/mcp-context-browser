@@ -64,8 +64,7 @@ impl SignalHandler {
 
     /// Check if the handler is running
     pub fn is_running(&self) -> bool {
-        self.started.load(std::sync::atomic::Ordering::SeqCst)
-            && !self.cancel_token.is_cancelled()
+        self.started.load(std::sync::atomic::Ordering::SeqCst) && !self.cancel_token.is_cancelled()
     }
 
     /// Start listening for signals

@@ -1,6 +1,6 @@
 //! Transport layer unit tests
 
-mod config;
-mod http;
-mod session;
-mod versioning;
+mod config_test;
+mod http_test;
+mod session_test;
+mod versioning_test;

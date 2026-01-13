@@ -92,6 +92,10 @@ pub struct ServerComponents {
     pub log_buffer: crate::infrastructure::logging::SharedLogBuffer,
     pub system_collector:
         Arc<dyn crate::infrastructure::metrics::system::SystemMetricsCollectorInterface>,
+    /// Optional DI-resolved indexing service (skips manual construction if provided)
+    pub indexing_service: Option<Arc<dyn crate::domain::ports::IndexingServiceInterface>>,
+    /// Optional DI-resolved search service (skips manual construction if provided)
+    pub search_service: Option<Arc<dyn crate::domain::ports::SearchServiceInterface>>,
 }
 
 impl McpServer {
@@ -173,21 +177,16 @@ impl McpServer {
         Ok((auth_handler, indexing_service, search_service))
     }
 
-    /// Initialize all MCP tool handlers
-    fn initialize_handlers(
+    /// Initialize handlers with trait objects (for DI-resolved services)
+    fn initialize_handlers_with_traits(
         _service_provider: Arc<dyn ServiceProviderInterface>,
-        indexing_service: Arc<IndexingService>,
-        search_service: Arc<SearchService>,
+        indexing_service: Arc<dyn crate::domain::ports::IndexingServiceInterface>,
+        search_service: Arc<dyn crate::domain::ports::SearchServiceInterface>,
         auth_handler: Arc<AuthHandler>,
         resource_limits: Arc<ResourceLimits>,
         cache_provider: Option<SharedCacheProvider>,
         admin_service: Arc<dyn crate::server::admin::service::AdminService>,
     ) -> Result<InitializedHandlers, Box<dyn std::error::Error>> {
-        // Cast concrete types to trait objects for DI
-        let indexing_service: Arc<dyn crate::domain::ports::IndexingServiceInterface> =
-            indexing_service;
-        let search_service: Arc<dyn crate::domain::ports::SearchServiceInterface> = search_service;
-
         Ok((
             Arc::new(IndexCodebaseHandler::new(
                 Arc::clone(&indexing_service),
@@ -211,34 +210,61 @@ impl McpServer {
     ) -> Result<Self, Box<dyn std::error::Error>> {
         let current_config = components.config.load();
 
-        // Initialize core services
-        let (auth_handler, indexing_service, search_service) = Self::initialize_services(
-            Arc::clone(&components.service_provider),
-            &current_config,
-            Arc::clone(&components.http_client),
-            components.cache_provider.clone(),
-            components.event_bus.clone(),
-        )
-        .await?;
+        // Check if DI-resolved services are provided
+        let (auth_handler, indexing_service, search_service): (
+            Arc<AuthHandler>,
+            Arc<dyn crate::domain::ports::IndexingServiceInterface>,
+            Arc<dyn crate::domain::ports::SearchServiceInterface>,
+        ) = if let (Some(indexing), Some(search)) = (
+            components.indexing_service.clone(),
+            components.search_service.clone(),
+        ) {
+            // Use DI-resolved services - just need to create auth_handler
+            let auth_service =
+                crate::infrastructure::auth::AuthService::new(current_config.auth.clone());
+            let auth_handler = Arc::new(AuthHandler::new(auth_service));
 
-        // Create handlers
+            // Note: DI-resolved services don't need start_event_listener
+            // since event setup is handled during DI construction
+
+            (auth_handler, indexing, search)
+        } else {
+            // Fallback to manual service creation
+            let (auth_handler, indexing_service, search_service) = Self::initialize_services(
+                Arc::clone(&components.service_provider),
+                &current_config,
+                Arc::clone(&components.http_client),
+                components.cache_provider.clone(),
+                components.event_bus.clone(),
+            )
+            .await?;
+
+            // Start event listener
+            indexing_service.start_event_listener(components.event_bus.clone());
+
+            // Cast to trait objects for uniform handling
+            let indexing: Arc<dyn crate::domain::ports::IndexingServiceInterface> =
+                indexing_service;
+            let search: Arc<dyn crate::domain::ports::SearchServiceInterface> = search_service;
+
+            (auth_handler, indexing, search)
+        };
+
+        // Create handlers with trait objects
         let (
             index_codebase_handler,
             search_code_handler,
             get_indexing_status_handler,
             clear_index_handler,
-        ) = Self::initialize_handlers(
+        ) = Self::initialize_handlers_with_traits(
             Arc::clone(&components.service_provider),
             Arc::clone(&indexing_service),
-            search_service,
+            Arc::clone(&search_service),
             Arc::clone(&auth_handler),
             Arc::clone(&components.resource_limits),
             components.cache_provider.clone(),
             Arc::clone(&components.admin_service),
         )?;
-
-        // Start event listeners
-        indexing_service.start_event_listener(components.event_bus.clone());
 
         Ok(Self {
             index_codebase_handler,

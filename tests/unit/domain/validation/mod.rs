@@ -1,5 +1,4 @@
 //! Validation unit tests
 
-// mod comprehensive; // Disabled - API incompatibility
-mod validation_logic;
-mod validation_unit;
+mod validation_logic_test;
+mod validation_unit_test;

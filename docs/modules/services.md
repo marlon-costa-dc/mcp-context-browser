@@ -149,11 +149,11 @@ See [tests/services/](../../tests/services/) for service-specific tests.
 
 ## Cross-References
 
--  **Architecture**: [ARCHITECTURE.md](../architecture/ARCHITECTURE.md)
--  **Core Types**: [core.md](./core.md)
--  **Providers**: [providers.md](./providers.md)
--  **Server**: [server.md](./server.md)
--  **Domain Ports**: [domain.md](./domain.md)
+-   **Architecture**: [ARCHITECTURE.md](../architecture/ARCHITECTURE.md)
+-   **Core Types**: [core.md](./core.md)
+-   **Providers**: [providers.md](./providers.md)
+-   **Server**: [server.md](./server.md)
+-   **Domain Ports**: [domain.md](./domain.md)
 
 ---
 

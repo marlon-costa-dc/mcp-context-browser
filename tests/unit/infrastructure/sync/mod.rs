@@ -1,3 +1,3 @@
 //! Sync manager unit tests
 
-mod sync_manager;
+mod sync_manager_test;

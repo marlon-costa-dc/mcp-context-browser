@@ -279,8 +279,7 @@ impl ContextDaemon {
     ///
     /// Returns true if the daemon was started and has not been stopped.
     pub fn is_running(&self) -> bool {
-        self.started.load(std::sync::atomic::Ordering::SeqCst)
-            && !self.cancel_token.is_cancelled()
+        self.started.load(std::sync::atomic::Ordering::SeqCst) && !self.cancel_token.is_cancelled()
     }
 }
 

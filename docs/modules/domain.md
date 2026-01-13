@@ -18,35 +18,35 @@ The domain module defines the core business entities and port interfaces followi
 All traits extend `shaku::Interface` for DI compatibility:
 
 **Provider Ports:**
-- `EmbeddingProvider` - Text-to-vector conversion
-- `VectorStoreProvider` - Vector storage and retrieval
-- `HybridSearchProvider` - Combined BM25 + semantic search
-- `CodeChunker` - AST-based code chunking
+-   `EmbeddingProvider` - Text-to-vector conversion
+-   `VectorStoreProvider` - Vector storage and retrieval
+-   `HybridSearchProvider` - Combined BM25 + semantic search
+-   `CodeChunker` - AST-based code chunking
 
 **Infrastructure Ports:**
-- `SyncProvider` - Low-level sync operations
-- `SnapshotProvider` - Codebase snapshot management
-- `SyncCoordinator` - File synchronization with debouncing
-- `EventPublisher` - Domain event publishing
+-   `SyncProvider` - Low-level sync operations
+-   `SnapshotProvider` - Codebase snapshot management
+-   `SyncCoordinator` - File synchronization with debouncing
+-   `EventPublisher` - Domain event publishing
 
 **Repository Ports:**
-- `ChunkRepository` - Code chunk persistence
-- `SearchRepository` - Search operations
+-   `ChunkRepository` - Code chunk persistence
+-   `SearchRepository` - Search operations
 
 **Service Ports:**
-- `ContextServiceInterface` - High-level code intelligence
-- `SearchServiceInterface` - Semantic search
-- `IndexingServiceInterface` - Codebase indexing
-- `ChunkingOrchestratorInterface` - Batch chunking coordination
+-   `ContextServiceInterface` - High-level code intelligence
+-   `SearchServiceInterface` - Semantic search
+-   `IndexingServiceInterface` - Codebase indexing
+-   `ChunkingOrchestratorInterface` - Batch chunking coordination
 
 ### Core Types
-- `CodeChunk` - Semantic code unit
-- `Embedding` - Vector representation
-- `SearchResult` - Search result with score
-- `Language` - Programming language enum
+-   `CodeChunk` - Semantic code unit
+-   `Embedding` - Vector representation
+-   `SearchResult` - Search result with score
+-   `Language` - Programming language enum
 
 ### Events
-- `DomainEvent` - Domain-level events (IndexRebuild, SyncCompleted, etc.)
+-   `DomainEvent` - Domain-level events (IndexRebuild, SyncCompleted, etc.)
 
 ## File Structure
 

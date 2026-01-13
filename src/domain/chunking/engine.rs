@@ -137,10 +137,7 @@ impl CodeChunker for IntelligentChunker {
             .map_err(|e| crate::domain::error::Error::io(e.to_string()))?;
 
         let file_name = file_path.to_string_lossy().to_string();
-        let ext = file_path
-            .extension()
-            .and_then(|e| e.to_str())
-            .unwrap_or("");
+        let ext = file_path.extension().and_then(|e| e.to_str()).unwrap_or("");
         let language = Language::from_extension(ext);
 
         self.chunk_content(&content, &file_name, language, _options)

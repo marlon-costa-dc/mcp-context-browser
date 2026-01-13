@@ -1,3 +1,3 @@
 //! Application layer unit tests
 
-mod services_logic;
+mod services_test;

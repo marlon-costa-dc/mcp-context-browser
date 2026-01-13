@@ -1,3 +1,3 @@
 //! Metrics unit tests
 
-mod metrics;
+mod metrics_test;

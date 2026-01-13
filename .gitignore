@@ -52,6 +52,7 @@ archive/
 # Temporary files
 *.tmp
 *.temp
+data/
 
 # Test coverage
 *.profraw

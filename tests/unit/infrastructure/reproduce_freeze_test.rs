@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod reproduction_test {
     use mcp_context_browser::infrastructure::cache::{
-        CacheBackendConfig, CacheConfig, CacheNamespacesConfig, create_cache_provider,
+        create_cache_provider, CacheBackendConfig, CacheConfig, CacheNamespacesConfig,
     };
     use std::sync::Arc;
     use std::time::Duration;

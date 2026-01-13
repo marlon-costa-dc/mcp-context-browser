@@ -101,8 +101,11 @@ pub trait CodeChunker: Interface + Send + Sync {
     /// # Returns
     ///
     /// Chunking result containing the extracted chunks and metadata
-    async fn chunk_file(&self, file_path: &Path, options: ChunkingOptions)
-        -> Result<ChunkingResult>;
+    async fn chunk_file(
+        &self,
+        file_path: &Path,
+        options: ChunkingOptions,
+    ) -> Result<ChunkingResult>;
 
     /// Chunk code content directly (without reading from file)
     ///
@@ -189,10 +192,7 @@ mod tests {
             options: ChunkingOptions,
         ) -> Result<ChunkingResult> {
             let file_name = file_path.to_string_lossy().to_string();
-            let ext = file_path
-                .extension()
-                .and_then(|e| e.to_str())
-                .unwrap_or("");
+            let ext = file_path.extension().and_then(|e| e.to_str()).unwrap_or("");
             let language = Language::from_extension(ext);
 
             self.chunk_content("// mock content", &file_name, language, options)
@@ -319,7 +319,8 @@ mod tests {
 
     #[test]
     fn test_chunking_result_from_fallback() {
-        let result = ChunkingResult::from_fallback("test.txt".to_string(), Language::Unknown, vec![]);
+        let result =
+            ChunkingResult::from_fallback("test.txt".to_string(), Language::Unknown, vec![]);
 
         assert!(!result.used_ast);
     }

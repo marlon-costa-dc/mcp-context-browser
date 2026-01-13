@@ -89,7 +89,8 @@ fn create_test_providers() -> (Arc<dyn EmbeddingProvider>, Arc<dyn VectorStorePr
         mcp_context_browser::adapters::providers::embedding::null::NullEmbeddingProvider::new(),
     );
     let vector_store_provider = Arc::new(
-        mcp_context_browser::adapters::providers::vector_store::null::NullVectorStoreProvider::new(),
+        mcp_context_browser::adapters::providers::vector_store::null::NullVectorStoreProvider::new(
+        ),
     );
     (embedding_provider, vector_store_provider)
 }
