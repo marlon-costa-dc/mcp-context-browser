@@ -3,7 +3,6 @@
 //! Defines the token payload structure for authentication.
 
 use super::roles::UserRole;
-use crate::infrastructure::constants::JWT_EXPIRATION_SECS;
 use crate::infrastructure::utils::TimeUtils;
 use serde::{Deserialize, Serialize};
 

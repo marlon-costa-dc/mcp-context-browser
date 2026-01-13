@@ -9,6 +9,7 @@
 
 use super::{CodebaseSnapshot, FileSnapshot, SnapshotChanges};
 use crate::domain::error::{Error, Result};
+use crate::infrastructure::utils::FileUtils;
 use ignore::WalkBuilder;
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
@@ -83,11 +84,7 @@ impl SnapshotManager {
             return Ok(None);
         }
 
-        let content = fs::read_to_string(&snapshot_path)
-            .map_err(|e| Error::internal(format!("Failed to read snapshot: {}", e)))?;
-
-        let snapshot: CodebaseSnapshot = serde_json::from_str(&content)
-            .map_err(|e| Error::internal(format!("Failed to parse snapshot: {}", e)))?;
+        let snapshot: CodebaseSnapshot = FileUtils::read_json(&snapshot_path, "snapshot").await?;
 
         Ok(Some(snapshot))
     }
@@ -307,13 +304,6 @@ impl SnapshotManager {
     /// Save snapshot to disk
     async fn save_snapshot(&self, snapshot: &CodebaseSnapshot) -> Result<()> {
         let snapshot_path = self.get_snapshot_path(Path::new(&snapshot.root_path));
-
-        let content = serde_json::to_string_pretty(snapshot)
-            .map_err(|e| Error::internal(format!("Failed to serialize snapshot: {}", e)))?;
-
-        fs::write(&snapshot_path, content)
-            .map_err(|e| Error::internal(format!("Failed to write snapshot: {}", e)))?;
-
-        Ok(())
+        FileUtils::write_json(&snapshot_path, snapshot, "snapshot").await
     }
 }

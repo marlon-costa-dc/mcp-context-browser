@@ -129,21 +129,46 @@ impl WebInterface {
     }
 }
 
+// --- Context Creation Helpers ---
+
+/// Create Tera context for a page with view model
+/// Automatically inserts "page" and "vm" keys.
+///
+/// Reduces boilerplate from 3 lines to 1 line per handler.
+#[inline]
+fn create_page_context<T: serde::Serialize>(page: &str, view_model: &T) -> Context {
+    let mut context = Context::new();
+    context.insert("page", page);
+    context.insert("vm", view_model);
+    context
+}
+
+/// Create Tera context with JSON-serialized view model
+/// Useful for pages that need client-side JavaScript access to data.
+///
+/// Automatically inserts "page", "vm", and "vm_json" keys.
+/// Reduces boilerplate from 5-6 lines to 2 lines per handler.
+#[inline]
+fn create_page_context_with_json<T: serde::Serialize>(page: &str, view_model: &T) -> Context {
+    let vm_json = serde_json::to_string(view_model).unwrap_or_else(|_| "{}".to_string());
+    let mut context = Context::new();
+    context.insert("page", page);
+    context.insert("vm", view_model);
+    context.insert("vm_json", &vm_json);
+    context
+}
+
 // --- Handlers ---
 
 async fn dashboard_handler(State(state): State<AdminState>) -> impl IntoResponse {
     let builder = ViewModelBuilder::new(&state);
 
     match builder.build_dashboard().await {
-        Ok(view_model) => {
-            // Pre-serialize to JSON for Alpine.js initialization
-            let vm_json = serde_json::to_string(&view_model).unwrap_or_else(|_| "{}".to_string());
-            let mut context = Context::new();
-            context.insert("page", &view_model.page);
-            context.insert("vm", &view_model);
-            context.insert("vm_json", &vm_json);
-            render_template(&state.templates, "dashboard.html", &context)
-        }
+        Ok(view_model) => render_template(
+            &state.templates,
+            "dashboard.html",
+            &create_page_context_with_json(&view_model.page, &view_model),
+        ),
         Err(e) => {
             tracing::error!("Failed to build dashboard view model: {}", e);
             render_error_page(&state.templates, "Dashboard Error", &e.to_string())
@@ -156,10 +181,11 @@ async fn providers_handler(State(state): State<AdminState>) -> impl IntoResponse
 
     match builder.build_providers_page().await {
         Ok(view_model) => {
-            let mut context = Context::new();
-            context.insert("page", &view_model.page);
-            context.insert("vm", &view_model);
-            render_template(&state.templates, "providers.html", &context)
+            render_template(
+                &state.templates,
+                "providers.html",
+                &create_page_context(&view_model.page, &view_model),
+            )
         }
         Err(e) => {
             tracing::error!("Failed to build providers view model: {}", e);
@@ -173,10 +199,11 @@ async fn indexes_handler(State(state): State<AdminState>) -> impl IntoResponse {
 
     match builder.build_indexes_page().await {
         Ok(view_model) => {
-            let mut context = Context::new();
-            context.insert("page", &view_model.page);
-            context.insert("vm", &view_model);
-            render_template(&state.templates, "indexes.html", &context)
+            render_template(
+                &state.templates,
+                "indexes.html",
+                &create_page_context(&view_model.page, &view_model),
+            )
         }
         Err(e) => {
             tracing::error!("Failed to build indexes view model: {}", e);

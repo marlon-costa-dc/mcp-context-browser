@@ -25,13 +25,6 @@ impl Default for NullEmbeddingProvider {
 
 #[async_trait]
 impl EmbeddingProvider for NullEmbeddingProvider {
-    async fn embed(&self, text: &str) -> Result<Embedding> {
-        let embeddings = self.embed_batch(&[text.to_string()]).await?;
-        embeddings.into_iter().next().ok_or_else(|| {
-            crate::domain::error::Error::embedding("No embedding returned".to_string())
-        })
-    }
-
     async fn embed_batch(&self, texts: &[String]) -> Result<Vec<Embedding>> {
         let embeddings = texts
             .iter()

@@ -71,14 +71,6 @@ impl FastEmbedProvider {
 
 #[async_trait]
 impl EmbeddingProvider for FastEmbedProvider {
-    async fn embed(&self, text: &str) -> Result<Embedding> {
-        let embeddings = self.embed_batch(&[text.to_string()]).await?;
-        embeddings
-            .into_iter()
-            .next()
-            .ok_or_else(|| Error::embedding("No embedding returned from FastEmbed".to_string()))
-    }
-
     async fn embed_batch(&self, texts: &[String]) -> Result<Vec<Embedding>> {
         let (tx, rx) = oneshot::channel();
         let _ = self

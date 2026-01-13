@@ -5,7 +5,6 @@
 use super::claims::Claims;
 use super::rate_limit::{extract_client_id, AuthRateLimiter, RateLimitError};
 use super::service::AuthService;
-use crate::infrastructure::constants::JWT_EXPIRATION_SECS;
 use axum::{
     extract::{ConnectInfo, Request},
     http::{header, StatusCode},
