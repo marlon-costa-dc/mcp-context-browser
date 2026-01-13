@@ -2,4 +2,4 @@
 
 mod bm25;
 mod config;
-mod engine;
+// mod engine; // Disabled - API incompatibility

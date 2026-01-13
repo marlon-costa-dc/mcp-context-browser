@@ -10,7 +10,8 @@ use shaku::HasComponent;
 
 use crate::adapters::http_client::HttpClientProvider;
 use crate::domain::ports::{
-    ChunkRepository, EmbeddingProvider, SearchRepository, VectorStoreProvider,
+    ChunkRepository, ContextServiceInterface, EmbeddingProvider, IndexingServiceInterface,
+    SearchRepository, SearchServiceInterface, VectorStoreProvider,
 };
 use crate::infrastructure::auth::AuthServiceInterface;
 use crate::infrastructure::di::factory::ServiceProviderInterface;
@@ -47,3 +48,11 @@ pub trait ServerModule:
 
 /// Admin module trait - admin service with dependencies
 pub trait AdminModule: HasComponent<dyn AdminService> {}
+
+/// Application module trait - business logic services
+pub trait ApplicationModule:
+    HasComponent<dyn ContextServiceInterface>
+    + HasComponent<dyn SearchServiceInterface>
+    + HasComponent<dyn IndexingServiceInterface>
+{
+}

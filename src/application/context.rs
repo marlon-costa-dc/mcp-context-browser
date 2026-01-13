@@ -17,9 +17,14 @@ use std::sync::Arc;
 ///
 /// This service orchestrates the high-level business logic for code intelligence,
 /// delegating data access and specialized search operations to repositories.
+#[derive(shaku::Component)]
+#[shaku(interface = ContextServiceInterface)]
 pub struct ContextService {
+    #[shaku(inject)]
     chunk_repository: Arc<dyn ChunkRepository>,
+    #[shaku(inject)]
     search_repository: Arc<dyn SearchRepository>,
+    #[shaku(inject)]
     embedding_provider: Arc<dyn EmbeddingProvider>,
 }
 

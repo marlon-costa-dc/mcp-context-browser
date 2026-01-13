@@ -66,6 +66,7 @@ pub struct ContextDaemon {
     cache_manager: Option<SharedCacheProvider>,
     stats: Arc<AtomicDaemonStats>,
     cancel_token: CancellationToken,
+    started: std::sync::atomic::AtomicBool,
 }
 
 impl ContextDaemon {
@@ -81,6 +82,7 @@ impl ContextDaemon {
             cache_manager,
             stats: Arc::new(AtomicDaemonStats::new()),
             cancel_token: CancellationToken::new(),
+            started: std::sync::atomic::AtomicBool::new(false),
         }
     }
 
@@ -95,6 +97,9 @@ impl ContextDaemon {
                 "Daemon was already stopped. Create a new instance to restart.",
             ));
         }
+
+        self.started
+            .store(true, std::sync::atomic::Ordering::SeqCst);
 
         tracing::info!("[DAEMON] Starting background daemon...");
         tracing::debug!(
@@ -272,9 +277,10 @@ impl ContextDaemon {
 
     /// Check if daemon is running
     ///
-    /// Returns true if the daemon has not been stopped (cancellation not signaled).
+    /// Returns true if the daemon was started and has not been stopped.
     pub fn is_running(&self) -> bool {
-        !self.cancel_token.is_cancelled()
+        self.started.load(std::sync::atomic::Ordering::SeqCst)
+            && !self.cancel_token.is_cancelled()
     }
 }
 

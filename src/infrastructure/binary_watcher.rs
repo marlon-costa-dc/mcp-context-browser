@@ -42,6 +42,7 @@ pub struct BinaryWatcher {
     event_bus: SharedEventBusProvider,
     cancel_token: CancellationToken,
     binary_path: PathBuf,
+    started: std::sync::atomic::AtomicBool,
 }
 
 impl BinaryWatcher {
@@ -61,6 +62,7 @@ impl BinaryWatcher {
             event_bus,
             cancel_token: CancellationToken::new(),
             binary_path,
+            started: std::sync::atomic::AtomicBool::new(false),
         })
     }
 
@@ -76,7 +78,8 @@ impl BinaryWatcher {
 
     /// Check if the watcher is running
     pub fn is_running(&self) -> bool {
-        !self.cancel_token.is_cancelled()
+        self.started.load(std::sync::atomic::Ordering::SeqCst)
+            && !self.cancel_token.is_cancelled()
     }
 
     /// Start watching the binary file
@@ -99,6 +102,9 @@ impl BinaryWatcher {
                 warn!("Binary watcher error: {}", e);
             }
         });
+
+        self.started
+            .store(true, std::sync::atomic::Ordering::SeqCst);
 
         info!(
             "Binary watcher started with {}s debounce",

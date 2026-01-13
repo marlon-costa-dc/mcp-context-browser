@@ -7,7 +7,10 @@ use async_trait::async_trait;
 use std::sync::Arc;
 
 /// Simple search service for MVP
+#[derive(shaku::Component)]
+#[shaku(interface = SearchServiceInterface)]
 pub struct SearchService {
+    #[shaku(inject)]
     context_service: Arc<dyn ContextServiceInterface>,
 }
 

@@ -43,6 +43,7 @@ pub struct SignalHandler {
     event_bus: SharedEventBusProvider,
     config: SignalConfig,
     cancel_token: CancellationToken,
+    started: std::sync::atomic::AtomicBool,
 }
 
 impl SignalHandler {
@@ -52,6 +53,7 @@ impl SignalHandler {
             event_bus,
             config,
             cancel_token: CancellationToken::new(),
+            started: std::sync::atomic::AtomicBool::new(false),
         }
     }
 
@@ -62,7 +64,8 @@ impl SignalHandler {
 
     /// Check if the handler is running
     pub fn is_running(&self) -> bool {
-        !self.cancel_token.is_cancelled()
+        self.started.load(std::sync::atomic::Ordering::SeqCst)
+            && !self.cancel_token.is_cancelled()
     }
 
     /// Start listening for signals
@@ -84,6 +87,9 @@ impl SignalHandler {
                 warn!("Signal handler error: {}", e);
             }
         });
+
+        self.started
+            .store(true, std::sync::atomic::Ordering::SeqCst);
 
         info!("Signal handlers registered (SIGHUP, SIGTERM, SIGUSR1)");
         Ok(())

@@ -25,17 +25,26 @@ use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::Arc;
 
 /// Advanced indexing service with snapshot-based incremental processing
+#[derive(shaku::Component)]
+#[shaku(interface = IndexingServiceInterface)]
 pub struct IndexingService {
+    #[shaku(inject)]
     context_service: Arc<dyn ContextServiceInterface>,
+    #[shaku(default = SnapshotManager::new().unwrap_or_else(|_| SnapshotManager::new_disabled()))]
     snapshot_manager: SnapshotManager,
+    #[shaku(default = None)]
     sync_manager: Option<Arc<SyncManager>>,
     /// Chunking orchestrator service for code chunking
+    #[shaku(default = Arc::new(ChunkingOrchestrator::default()))]
     chunking_orchestrator: Arc<ChunkingOrchestrator>,
     /// Whether indexing is in progress
+    #[shaku(default = AtomicBool::new(false))]
     is_indexing: AtomicBool,
     /// Total files to process
+    #[shaku(default = AtomicUsize::new(0))]
     total_files: AtomicUsize,
     /// Files processed so far
+    #[shaku(default = AtomicUsize::new(0))]
     processed_files: AtomicUsize,
 }
 

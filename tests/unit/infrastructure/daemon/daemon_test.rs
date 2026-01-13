@@ -25,7 +25,7 @@ fn test_daemon_config_from_env() {
 #[tokio::test]
 async fn test_daemon_creation() {
     let daemon = ContextDaemon::new();
-    assert!(!daemon.is_running().await);
+    assert!(!daemon.is_running()); // is_running() is sync, not async
 
     let stats = daemon.get_stats().await;
     assert_eq!(stats.cleanup_cycles, 0);
@@ -38,7 +38,7 @@ async fn test_daemon_creation() {
 async fn test_daemon_stop_before_start() {
     let daemon = ContextDaemon::new();
     assert!(daemon.stop().await.is_ok());
-    assert!(!daemon.is_running().await);
+    assert!(!daemon.is_running()); // is_running() is sync
 }
 
 #[tokio::test]
@@ -87,7 +87,7 @@ fn test_daemon_config_validation_minimum_intervals() {
 #[tokio::test]
 async fn test_daemon_default_implementation() {
     let daemon = ContextDaemon::default();
-    assert!(!daemon.is_running().await);
+    assert!(!daemon.is_running()); // is_running() is sync
 
     let config = daemon.config();
     assert_eq!(config.cleanup_interval_secs, 30);

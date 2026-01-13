@@ -32,21 +32,26 @@
 
 mod adapters;
 mod admin;
+mod application;
 mod infrastructure;
 mod server;
 pub mod traits;
 
 pub use adapters::AdaptersModuleImpl;
 pub use admin::AdminModuleImpl;
+pub use application::ApplicationModuleImpl;
 pub use infrastructure::InfrastructureModuleImpl;
 pub use server::ServerModuleImpl;
-pub use traits::{AdaptersModule, AdminModule, InfrastructureModule, ServerModule};
+pub use traits::{
+    AdaptersModule, AdminModule, ApplicationModule, InfrastructureModule, ServerModule,
+};
 
 use shaku::module;
 
 use crate::adapters::http_client::HttpClientProvider;
 use crate::domain::ports::{
-    ChunkRepository, EmbeddingProvider, SearchRepository, VectorStoreProvider,
+    ChunkRepository, ContextServiceInterface, EmbeddingProvider, IndexingServiceInterface,
+    SearchRepository, SearchServiceInterface, VectorStoreProvider,
 };
 use crate::infrastructure::auth::AuthServiceInterface;
 use crate::infrastructure::di::factory::ServiceProviderInterface;
@@ -88,6 +93,11 @@ module! {
 
         use dyn AdminModule {
             components = [dyn AdminService],
+            providers = []
+        },
+
+        use dyn ApplicationModule {
+            components = [dyn ContextServiceInterface, dyn SearchServiceInterface, dyn IndexingServiceInterface],
             providers = []
         }
     }

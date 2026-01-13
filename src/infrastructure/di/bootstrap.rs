@@ -29,8 +29,8 @@ use shaku::Interface;
 
 use super::dispatch::{create_embedding_provider_boxed, create_vector_store_provider_boxed};
 use super::modules::{
-    AdaptersModule, AdaptersModuleImpl, InfrastructureModule,
-    InfrastructureModuleImpl, ServerModule, ServerModuleImpl,
+    AdaptersModule, AdaptersModuleImpl, ApplicationModule, ApplicationModuleImpl,
+    InfrastructureModule, InfrastructureModuleImpl, ServerModule, ServerModuleImpl,
 };
 
 /// DI Container holding the module hierarchy
@@ -49,6 +49,8 @@ pub struct DiContainer {
     pub infrastructure_module: Arc<dyn InfrastructureModule>,
     /// Server module (performance, indexing operations)
     pub server_module: Arc<dyn ServerModule>,
+    /// Application module (business logic services)
+    pub application_module: Arc<dyn ApplicationModule>,
 }
 
 impl DiContainer {
@@ -64,11 +66,16 @@ impl DiContainer {
             Arc::new(InfrastructureModuleImpl::builder().build());
         let server_module: Arc<dyn ServerModule> =
             Arc::new(ServerModuleImpl::builder().build());
+        // Application module depends on adapters module for repositories
+        let application_module: Arc<dyn ApplicationModule> = Arc::new(
+            ApplicationModuleImpl::builder(Arc::clone(&adapters_module)).build(),
+        );
 
         Ok(Self {
             adapters_module,
             infrastructure_module,
             server_module,
+            application_module,
         })
     }
 
@@ -116,11 +123,16 @@ impl DiContainer {
             Arc::new(InfrastructureModuleImpl::builder().build());
         let server_module: Arc<dyn ServerModule> =
             Arc::new(ServerModuleImpl::builder().build());
+        // Application module depends on adapters module for repositories
+        let application_module: Arc<dyn ApplicationModule> = Arc::new(
+            ApplicationModuleImpl::builder(Arc::clone(&adapters_module)).build(),
+        );
 
         Ok(Self {
             adapters_module,
             infrastructure_module,
             server_module,
+            application_module,
         })
     }
 
@@ -208,6 +220,24 @@ impl ComponentResolver<dyn crate::domain::ports::ChunkRepository> for DiContaine
 impl ComponentResolver<dyn crate::domain::ports::SearchRepository> for DiContainer {
     fn resolve(&self) -> Arc<dyn crate::domain::ports::SearchRepository> {
         self.adapters_module.resolve()
+    }
+}
+
+impl ComponentResolver<dyn crate::domain::ports::ContextServiceInterface> for DiContainer {
+    fn resolve(&self) -> Arc<dyn crate::domain::ports::ContextServiceInterface> {
+        self.application_module.resolve()
+    }
+}
+
+impl ComponentResolver<dyn crate::domain::ports::SearchServiceInterface> for DiContainer {
+    fn resolve(&self) -> Arc<dyn crate::domain::ports::SearchServiceInterface> {
+        self.application_module.resolve()
+    }
+}
+
+impl ComponentResolver<dyn crate::domain::ports::IndexingServiceInterface> for DiContainer {
+    fn resolve(&self) -> Arc<dyn crate::domain::ports::IndexingServiceInterface> {
+        self.application_module.resolve()
     }
 }
 
