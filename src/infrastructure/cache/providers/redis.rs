@@ -85,6 +85,39 @@ impl RedisCacheProvider {
             ))
         })
     }
+
+    /// Scan Redis keys matching a pattern using SCAN command for better performance
+    /// This replaces KEYS command which can block Redis server on large keyspaces
+    async fn scan_keys(
+        conn: &mut MultiplexedConnection,
+        pattern: &str,
+    ) -> Result<Vec<String>> {
+        let mut cursor: u64 = 0;
+        let mut all_keys: Vec<String> = Vec::new();
+
+        loop {
+            let (new_cursor, keys): (u64, Vec<String>) = redis::cmd("SCAN")
+                .arg(cursor)
+                .arg("MATCH")
+                .arg(pattern)
+                .arg("COUNT")
+                .arg(100)
+                .query_async(conn)
+                .await
+                .map_err(|e| {
+                    Error::generic(format!("redis scan failed for pattern '{}': {}", pattern, e))
+                })?;
+
+            all_keys.extend(keys);
+
+            if new_cursor == 0 {
+                break;
+            }
+            cursor = new_cursor;
+        }
+
+        Ok(all_keys)
+    }
 }
 
 #[async_trait]
@@ -145,11 +178,7 @@ impl CacheProvider for RedisCacheProvider {
         match namespace {
             Some(ns) => {
                 let pattern = format!("cache:{}:*", ns);
-                let keys: Vec<String> = redis::cmd("KEYS")
-                    .arg(&pattern)
-                    .query_async(&mut conn)
-                    .await
-                    .map_err(|e| Error::generic(format!("redis keys scan failed: {}", e)))?;
+                let keys = Self::scan_keys(&mut conn, &pattern).await?;
 
                 if !keys.is_empty() {
                     redis::cmd("DEL")
