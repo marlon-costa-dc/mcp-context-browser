@@ -22,34 +22,48 @@ pub struct ResourceStats {
 /// Memory usage statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MemoryStats {
+    /// Total
     pub total: u64,
+    /// Used
     pub used: u64,
+    /// Available
     pub available: u64,
+    /// Usage Percent
     pub usage_percent: f32,
 }
 
 /// CPU usage statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CpuStats {
+    /// Usage Percent
     pub usage_percent: f32,
+    /// Cores
     pub cores: usize,
 }
 
 /// Disk usage statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DiskStats {
+    /// Total
     pub total: u64,
+    /// Used
     pub used: u64,
+    /// Available
     pub available: u64,
+    /// Usage Percent
     pub usage_percent: f32,
 }
 
 /// Operation statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OperationStats {
+    /// Active Indexing
     pub active_indexing: usize,
+    /// Active Search
     pub active_search: usize,
+    /// Active Embedding
     pub active_embedding: usize,
+    /// Queued Operations
     pub queued_operations: usize,
 }
 

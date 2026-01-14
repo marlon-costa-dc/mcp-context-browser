@@ -14,20 +14,30 @@ use super::engine::{HybridSearchEngine, HybridSearchResult};
 pub enum HybridSearchMessage {
     /// Index documents for a collection
     Index {
+        /// The collection name to index documents into
         collection: String,
+        /// The code chunks to be indexed
         chunks: Vec<CodeChunk>,
     },
     /// Perform hybrid search
     Search {
+        /// The search query string
         query: String,
+        /// Semantic search results to combine with BM25
         semantic_results: Vec<crate::domain::types::SearchResult>,
+        /// Maximum number of results to return
         limit: usize,
+        /// Channel to send the search results back to the caller
         respond_to: oneshot::Sender<Result<Vec<HybridSearchResult>>>,
     },
     /// Clear a collection
-    Clear { collection: String },
+    Clear {
+        /// The collection name to clear
+        collection: String
+    },
     /// Get statistics
     GetStats {
+        /// Channel to send the statistics back to the caller
         respond_to: oneshot::Sender<HashMap<String, serde_json::Value>>,
     },
 }

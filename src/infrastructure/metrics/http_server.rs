@@ -40,25 +40,38 @@ use crate::server::metrics::PerformanceMetricsInterface;
 /// Comprehensive metrics response
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ComprehensiveMetrics {
+    /// Timestamp
     pub timestamp: u64,
+    /// Cpu
     pub cpu: CpuMetrics,
+    /// Memory
     pub memory: MemoryMetrics,
+    /// Query Performance
     pub query_performance: crate::server::admin::service::PerformanceMetricsData, // Updated to match interface
+    /// Cache
     pub cache: crate::infrastructure::metrics::CacheMetrics,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// Optional resource_limits value
     pub resource_limits: Option<crate::infrastructure::limits::ResourceStats>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// Optional advanced_cache_stats value
     pub advanced_cache_stats: Option<CacheStats>,
 }
 
 /// Health check response
 #[derive(Debug, Serialize, Deserialize)]
 pub struct HealthResponse {
+    /// Timestamp
     pub timestamp: u64,
+    /// Service
     pub service: String,
+    /// Version
     pub version: String,
+    /// Uptime
     pub uptime: u64,
+    /// Pid
     pub pid: u32,
+    /// Status
     pub status: String,
 }
 

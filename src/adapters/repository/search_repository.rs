@@ -16,10 +16,13 @@ use tokio::sync::RwLock;
 #[derive(shaku::Component)]
 #[shaku(interface = SearchRepository)]
 pub struct VectorStoreSearchRepository {
+    /// Provider for vector storage operations
     #[shaku(inject)]
     vector_store_provider: Arc<dyn VectorStoreProvider>,
+    /// Hybrid search engine for BM25 + semantic search
     #[shaku(default = Arc::new(RwLock::new(HybridSearchEngine::new(0.3, 0.7))))]
     hybrid_engine: Arc<RwLock<HybridSearchEngine>>,
+    /// Search statistics tracker
     #[shaku(default)]
     stats: SearchStatsTracker,
 }
@@ -44,6 +47,13 @@ impl Default for SearchStatsTracker {
 }
 
 impl VectorStoreSearchRepository {
+    /// Create a new vector store search repository
+    ///
+    /// # Arguments
+    /// * `vector_store_provider` - Provider for vector storage operations
+    ///
+    /// # Returns
+    /// A new instance of the search repository
     pub fn new(vector_store_provider: Arc<dyn VectorStoreProvider>) -> Self {
         Self {
             vector_store_provider,

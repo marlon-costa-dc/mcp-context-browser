@@ -80,15 +80,25 @@ type InitializedHandlers = (
 
 /// Components required to initialize McpServer
 pub struct ServerComponents {
+    /// Config
     pub config: Arc<ArcSwap<crate::infrastructure::config::Config>>,
+    /// Optional cache_provider value
     pub cache_provider: Option<SharedCacheProvider>,
+    /// Performance Metrics
     pub performance_metrics: Arc<dyn PerformanceMetricsInterface>,
+    /// Indexing Operations
     pub indexing_operations: Arc<dyn IndexingOperationsInterface>,
+    /// Admin Service
     pub admin_service: Arc<dyn crate::server::admin::service::AdminService>,
+    /// Service Provider
     pub service_provider: Arc<dyn ServiceProviderInterface>,
+    /// Resource Limits
     pub resource_limits: Arc<ResourceLimits>,
+    /// Http Client
     pub http_client: Arc<dyn crate::adapters::http_client::HttpClientProvider>,
+    /// Event Bus
     pub event_bus: SharedEventBusProvider,
+    /// Log Buffer
     pub log_buffer: crate::infrastructure::logging::SharedLogBuffer,
     pub system_collector:
         Arc<dyn crate::infrastructure::metrics::system::SystemMetricsCollectorInterface>,

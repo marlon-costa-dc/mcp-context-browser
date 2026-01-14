@@ -8,50 +8,86 @@ pub type Result<T> = std::result::Result<T, Error>;
 /// Main error type for the MCP Context Browser
 #[derive(Error, Debug)]
 pub enum Error {
+    /// I/O operation error
     #[error("I/O error: {source}")]
     Io {
+        /// The underlying I/O error
         #[from]
         source: std::io::Error,
     },
 
+    /// JSON parsing or serialization error
     #[error("JSON parsing error: {source}")]
     Json {
+        /// The underlying JSON error
         #[from]
         source: serde_json::Error,
     },
 
+    /// Generic error from external sources
     #[error("Generic error: {0}")]
     Generic(#[from] Box<dyn std::error::Error + Send + Sync>),
 
+    /// UTF-8 encoding/decoding error
     #[error("UTF-8 encoding error: {0}")]
     Utf8(#[from] std::string::FromUtf8Error),
 
+    /// Base64 decoding error
     #[error("Base64 decode error: {0}")]
     Base64(#[from] base64::DecodeError),
 
+    /// Generic string-based error
     #[error("String error: {0}")]
     String(String),
 
+    /// Resource not found error
     #[error("Not found: {resource}")]
-    NotFound { resource: String },
+    NotFound {
+        /// The resource that was not found
+        resource: String
+    },
 
+    /// Invalid argument provided to a function
     #[error("Invalid argument: {message}")]
-    InvalidArgument { message: String },
+    InvalidArgument {
+        /// Description of the invalid argument
+        message: String
+    },
 
+    /// Vector database operation error
     #[error("Vector database error: {message}")]
-    VectorDb { message: String },
+    VectorDb {
+        /// Description of the vector database error
+        message: String
+    },
 
+    /// Embedding provider operation error
     #[error("Embedding provider error: {message}")]
-    Embedding { message: String },
+    Embedding {
+        /// Description of the embedding provider error
+        message: String
+    },
 
+    /// Configuration-related error
     #[error("Configuration error: {message}")]
-    Config { message: String },
+    Config {
+        /// Description of the configuration error
+        message: String
+    },
 
+    /// Internal system error
     #[error("Internal error: {message}")]
-    Internal { message: String },
+    Internal {
+        /// Description of the internal error
+        message: String
+    },
 
+    /// Cache operation error
     #[error("Cache error: {message}")]
-    Cache { message: String },
+    Cache {
+        /// Description of the cache error
+        message: String
+    },
 }
 
 impl Error {

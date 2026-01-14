@@ -258,9 +258,13 @@ impl ProviderHealth {
 /// Health check result
 #[derive(Debug, Clone)]
 pub struct HealthCheckResult {
+    /// The ID of the provider that was checked
     pub provider_id: String,
+    /// The health status result of the check
     pub status: ProviderHealthStatus,
+    /// Time taken to perform the health check
     pub response_time: Duration,
+    /// Error message if the check failed, None if successful
     pub error_message: Option<String>,
 }
 
@@ -274,10 +278,43 @@ pub trait ProviderHealthChecker: Send + Sync {
 /// Trait for health monitoring
 #[async_trait]
 pub trait HealthMonitorTrait: Interface + Send + Sync {
+    /// Check if a provider is currently healthy
+    ///
+    /// # Arguments
+    /// * `provider_id` - The ID of the provider to check
+    ///
+    /// # Returns
+    /// `true` if the provider is healthy, `false` otherwise
     async fn is_healthy(&self, provider_id: &str) -> bool;
+
+    /// Get detailed health information for a provider
+    ///
+    /// # Arguments
+    /// * `provider_id` - The ID of the provider
+    ///
+    /// # Returns
+    /// The health information if available, None if the provider is not tracked
     async fn get_health(&self, provider_id: &str) -> Option<ProviderHealth>;
+
+    /// Record a health check result
+    ///
+    /// # Arguments
+    /// * `result` - The result of a health check to record
     async fn record_result(&self, result: HealthCheckResult);
+
+    /// Get a list of all currently healthy providers
+    ///
+    /// # Returns
+    /// A vector of provider IDs that are currently healthy
     async fn list_healthy_providers(&self) -> Vec<String>;
+
+    /// Perform a health check on a specific provider
+    ///
+    /// # Arguments
+    /// * `provider_id` - The ID of the provider to check
+    ///
+    /// # Returns
+    /// Ok(()) if the check completed (regardless of result), Error if the check failed
     async fn check_provider(&self, provider_id: &str) -> Result<()>;
 }
 

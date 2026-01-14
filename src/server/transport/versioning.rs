@@ -37,8 +37,11 @@ impl CompatibilityResult {
 /// Parsed semantic version
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SemVer {
+    /// Major
     pub major: u32,
+    /// Minor
     pub minor: u32,
+    /// Patch
     pub patch: u32,
 }
 
@@ -194,8 +197,11 @@ impl VersionChecker {
 /// Version information for API responses
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VersionInfo {
+    /// Server Version
     pub server_version: String,
+    /// Version Tolerance
     pub version_tolerance: u32,
+    /// Warn Only
     pub warn_only: bool,
 }
 

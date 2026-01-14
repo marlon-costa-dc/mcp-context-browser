@@ -39,12 +39,19 @@ pub struct UserStore {
 /// User data for storage (includes password_hash unlike the skip-serialized User)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StoredUser {
+    /// Id
     pub id: String,
+    /// Email
     pub email: String,
+    /// Role
     pub role: UserRole,
+    /// Password Hash
     pub password_hash: String,
+    /// Hash Version
     pub hash_version: String,
+    /// Created At
     pub created_at: u64,
+    /// Last Active
     pub last_active: u64,
 }
 

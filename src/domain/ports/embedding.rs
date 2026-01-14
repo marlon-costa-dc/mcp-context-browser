@@ -29,7 +29,17 @@ pub trait EmbeddingProvider: Interface + Send + Sync {
 
     /// Get embeddings for multiple texts (must be implemented by provider)
     async fn embed_batch(&self, texts: &[String]) -> Result<Vec<Embedding>>;
+
+    /// Get the dimensionality of embeddings produced by this provider
+    ///
+    /// # Returns
+    /// The number of dimensions in each embedding vector
     fn dimensions(&self) -> usize;
+
+    /// Get the name/identifier of this provider implementation
+    ///
+    /// # Returns
+    /// A string identifier for the provider (e.g., "openai", "ollama", "anthropic")
     fn provider_name(&self) -> &str;
 
     /// Health check for the provider (default implementation provided)

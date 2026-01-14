@@ -15,6 +15,7 @@ type CollectionEntry = (Embedding, HashMap<String, serde_json::Value>);
 #[derive(shaku::Component)]
 #[shaku(interface = VectorStoreProvider)]
 pub struct NullVectorStoreProvider {
+    /// In-memory collection storage for testing purposes
     #[shaku(default = Arc::new(DashMap::new()))]
     collections: Arc<DashMap<String, Vec<CollectionEntry>>>,
 }

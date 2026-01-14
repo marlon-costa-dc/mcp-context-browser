@@ -97,8 +97,11 @@ impl Default for HealthThresholds {
 /// Indexing subsystem runtime configuration
 #[derive(Debug, Clone)]
 pub struct IndexingConfig {
+    /// Enabled
     pub enabled: bool,
+    /// Pending Operations
     pub pending_operations: u64,
+    /// Last Index Time
     pub last_index_time: chrono::DateTime<chrono::Utc>,
 }
 
@@ -115,10 +118,15 @@ impl Default for IndexingConfig {
 /// Cache subsystem runtime configuration
 #[derive(Debug, Clone)]
 pub struct CacheConfig {
+    /// Enabled
     pub enabled: bool,
+    /// Entries Count
     pub entries_count: u64,
+    /// Hit Rate
     pub hit_rate: f64,
+    /// Size Bytes
     pub size_bytes: u64,
+    /// Max Size Bytes
     pub max_size_bytes: u64,
 }
 
@@ -137,9 +145,13 @@ impl Default for CacheConfig {
 /// Database subsystem runtime configuration
 #[derive(Debug, Clone)]
 pub struct DatabaseConfig {
+    /// Connected
     pub connected: bool,
+    /// Active Connections
     pub active_connections: u32,
+    /// Idle Connections
     pub idle_connections: u32,
+    /// Total Pool Size
     pub total_pool_size: u32,
 }
 

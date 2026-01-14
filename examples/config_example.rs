@@ -75,7 +75,9 @@ pub struct GlobalConfig {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServerConfigExample {
+    /// Host
     pub host: String,
+    /// Port
     pub port: u16,
 }
 
@@ -90,7 +92,9 @@ impl Default for ServerConfigExample {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GlobalProviderConfig {
+    /// Embedding
     pub embedding: EmbeddingProviderConfig,
+    /// Vector Store
     pub vector_store: VectorStoreProviderConfig,
 }
 

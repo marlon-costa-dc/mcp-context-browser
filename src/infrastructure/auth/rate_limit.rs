@@ -249,6 +249,7 @@ pub enum RateLimitStatus {
 
 /// Rate limit error response
 pub struct RateLimitError {
+    /// Retry After
     pub retry_after: Duration,
 }
 

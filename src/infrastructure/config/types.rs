@@ -47,8 +47,10 @@ pub struct GlobalConfig {
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct GlobalProviderConfig {
     #[validate(nested)]
+    /// Embedding
     pub embedding: EmbeddingProviderConfig,
     #[validate(nested)]
+    /// Vector Store
     pub vector_store: VectorStoreProviderConfig,
 }
 
@@ -56,8 +58,10 @@ pub struct GlobalProviderConfig {
 #[derive(Debug, Clone, Serialize, Deserialize, Validate, Default)]
 pub struct ProviderConfig {
     #[validate(nested)]
+    /// Embedding
     pub embedding: crate::domain::types::EmbeddingConfig,
     #[validate(nested)]
+    /// Vector Store
     pub vector_store: crate::domain::types::VectorStoreConfig,
 }
 
@@ -103,6 +107,7 @@ pub struct Config {
     /// Advanced caching configuration
     pub cache: CacheConfig,
     #[validate(nested)]
+    /// Hybrid Search
     pub hybrid_search: HybridSearchConfig,
 
     /// Data directory configuration (XDG standard locations)

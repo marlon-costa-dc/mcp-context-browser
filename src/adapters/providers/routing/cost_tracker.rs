@@ -12,11 +12,17 @@ use tracing::{debug, info, warn};
 /// Cost information for a provider operation
 #[derive(Debug, Clone)]
 pub struct ProviderCost {
+    /// Unique identifier for the provider
     pub provider_id: String,
+    /// Type of operation (e.g., "embedding", "search", "storage")
     pub operation_type: String,
+    /// Cost per unit of consumption
     pub cost_per_unit: f64,
-    pub unit_type: String, // "token", "request", "GB", etc.
+    /// Type of unit being charged (e.g., "token", "request", "GB")
+    pub unit_type: String,
+    /// Optional free tier limit before charges apply
     pub free_tier_limit: Option<u64>,
+    /// Currency code for the cost (e.g., "USD", "EUR")
     pub currency: String,
 }
 
@@ -51,19 +57,28 @@ impl ProviderCost {
 /// Usage metrics for tracking consumption
 #[derive(Debug, Clone, Default)]
 pub struct UsageMetrics {
+    /// Total units consumed across all periods
     pub total_units: u64,
+    /// Total cost incurred across all periods
     pub total_cost: f64,
+    /// Units consumed in the current billing period
     pub current_period_units: u64,
+    /// Cost incurred in the current billing period
     pub current_period_cost: f64,
+    /// Average cost per unit across all usage
     pub avg_cost_per_unit: f64,
+    /// Number of operations performed
     pub operation_count: u64,
+    /// Timestamp of the last usage
     pub last_usage: Option<chrono::DateTime<chrono::Utc>>,
 }
 
 /// Cost tracking configuration
 #[derive(Debug, Clone)]
 pub struct CostTrackerConfig {
+    /// Whether to enable budget limit checking
     pub enable_budget_limits: bool,
+    /// Default currency for cost calculations
     pub default_currency: String,
 }
 
@@ -87,25 +102,33 @@ impl CostTrackerConfig {
 
 /// Trait for cost tracking
 pub trait CostTrackerTrait: Interface + Send + Sync {
+    /// Record usage for a provider and return the calculated cost
     fn record_usage(&self, provider_id: &str, units: u64) -> Result<f64>;
+    /// Get usage metrics for a specific provider
     fn get_usage_metrics(&self, provider_id: &str) -> Option<UsageMetrics>;
+    /// Set budget limit for a provider
     fn set_budget(&self, provider_id: &str, budget: f64);
+    /// Check if provider is within budget limits
     fn check_budget(&self, provider_id: &str) -> bool;
+    /// Get efficiency score for a provider (0.0 = expensive, 1.0 = cheap)
     fn get_efficiency_score(&self, provider_id: &str) -> Option<f64>;
+    /// Register cost information for a provider
     fn register_provider_cost(&self, cost: ProviderCost);
+    /// Get total cost across all providers
     fn get_total_cost(&self) -> f64;
+    /// Get current period cost across all providers
     fn get_current_period_cost(&self) -> f64;
 }
 
 /// Cost tracker for providers with thread-safe operations
 pub struct CostTracker {
-    /// Cost information for providers
+    /// Cost information for each provider, keyed by provider ID
     costs: Arc<DashMap<String, ProviderCost>>,
-    /// Usage metrics for providers
+    /// Usage metrics for each provider, keyed by provider ID
     usage_metrics: Arc<DashMap<String, UsageMetrics>>,
-    /// Budget limits for providers
+    /// Budget limits for each provider, keyed by provider ID
     budgets: Arc<DashMap<String, f64>>,
-    /// Configuration
+    /// Configuration settings for cost tracking
     config: CostTrackerConfig,
 }
 

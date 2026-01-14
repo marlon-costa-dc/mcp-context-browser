@@ -12,9 +12,13 @@ use std::collections::HashMap;
 /// Result of a hybrid search operation
 #[derive(Debug, Clone)]
 pub struct HybridSearchResult {
+    /// The underlying search result with code chunk and metadata
     pub result: SearchResult,
+    /// BM25 lexical matching score (0.0 to 1.0)
     pub bm25_score: f32,
+    /// Semantic similarity score from vector search (0.0 to 1.0)
     pub semantic_score: f32,
+    /// Combined hybrid score from both BM25 and semantic components
     pub hybrid_score: f32,
 }
 

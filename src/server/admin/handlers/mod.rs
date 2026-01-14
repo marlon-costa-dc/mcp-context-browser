@@ -55,30 +55,36 @@ use serde::Deserialize;
 /// Query parameters for search
 #[derive(Deserialize)]
 pub struct SearchQuery {
+    /// Q
     pub q: String,
+    /// Optional limit value
     pub limit: Option<usize>,
 }
 
 /// Query parameters for history endpoints
 #[derive(Deserialize)]
 pub struct HistoryQuery {
+    /// Optional limit value
     pub limit: Option<usize>,
 }
 
 /// Query parameters for log export
 #[derive(Deserialize)]
 pub struct ExportQuery {
+    /// Format
     pub format: crate::server::admin::service::LogExportFormat,
 }
 
 /// Request body for sending signals to subsystems
 #[derive(Deserialize)]
 pub struct SubsystemSignalRequest {
+    /// Signal
     pub signal: crate::server::admin::service::SubsystemSignal,
 }
 
 /// Request for cleanup operation
 #[derive(Debug, Deserialize)]
 pub struct CleanupRequest {
+    /// Optional older_than_days value
     pub older_than_days: Option<u32>,
 }

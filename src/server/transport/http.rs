@@ -30,10 +30,15 @@ use rmcp::ServerHandler;
 /// HTTP transport state shared across handlers
 #[derive(Clone)]
 pub struct HttpTransportState {
+    /// Server
     pub server: Arc<McpServer>,
+    /// Session Manager
     pub session_manager: Arc<SessionManager>,
+    /// Version Checker
     pub version_checker: Arc<VersionChecker>,
+    /// Connection Tracker
     pub connection_tracker: Arc<ConnectionTracker>,
+    /// Config
     pub config: TransportConfig,
 }
 

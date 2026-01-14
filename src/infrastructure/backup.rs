@@ -28,8 +28,11 @@ pub enum BackupMessage {
 /// Information about a backup
 #[derive(Debug, Clone)]
 pub struct BackupInfo {
+    /// Path
     pub path: String,
+    /// Size Bytes
     pub size_bytes: u64,
+    /// Created At
     pub created_at: chrono::DateTime<chrono::Utc>,
 }
 

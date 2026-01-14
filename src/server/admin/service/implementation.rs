@@ -30,13 +30,21 @@ use std::sync::Arc;
 /// Groups all dependencies needed to construct AdminServiceImpl.
 /// This reduces parameter count and improves readability.
 pub struct AdminServiceDependencies {
+    /// Performance Metrics
     pub performance_metrics: Arc<dyn PerformanceMetricsInterface>,
+    /// Indexing Operations
     pub indexing_operations: Arc<dyn IndexingOperationsInterface>,
+    /// Service Provider
     pub service_provider: Arc<dyn ServiceProviderInterface>,
+    /// System Collector
     pub system_collector: Arc<dyn SystemMetricsCollectorInterface>,
+    /// Http Client
     pub http_client: Arc<dyn crate::adapters::http_client::HttpClientProvider>,
+    /// Event Bus
     pub event_bus: crate::infrastructure::events::SharedEventBusProvider,
+    /// Log Buffer
     pub log_buffer: crate::infrastructure::logging::SharedLogBuffer,
+    /// Config
     pub config: Arc<arc_swap::ArcSwap<crate::infrastructure::config::Config>>,
     /// Cache provider for real cache statistics
     pub cache_provider: Option<crate::infrastructure::cache::SharedCacheProvider>,

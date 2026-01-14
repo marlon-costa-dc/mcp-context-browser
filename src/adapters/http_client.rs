@@ -70,9 +70,11 @@ impl Default for HttpClientConfig {
 #[derive(Clone, shaku::Component)]
 #[shaku(interface = HttpClientProvider)]
 pub struct HttpClientPool {
+    /// The underlying reqwest HTTP client with connection pooling
     #[shaku(default = Client::new())]
     // This is just for shaku, will be overwritten in new() or used defaults
     client: Client,
+    /// Configuration for the HTTP client pool
     #[shaku(default = HttpClientConfig::default())]
     config: HttpClientConfig,
 }
@@ -150,6 +152,8 @@ impl HttpClientProvider for HttpClientPool {
 // Note: NullHttpClientPool in test_utils module (Phase 5 DI audit)
 // Public for external test access but NOT re-exported at parent level
 // Tests import via: mcp_context_browser::adapters::http_client::test_utils::NullHttpClientPool
+
+/// Test utilities for HTTP client mocking and testing
 pub mod test_utils {
     use super::*;
 

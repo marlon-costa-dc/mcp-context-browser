@@ -10,6 +10,7 @@ pub use processor::LanguageProcessor;
 
 // Module declarations
 pub mod config;
+pub mod constants;
 pub mod engine;
 pub mod fallback;
 pub mod languages;

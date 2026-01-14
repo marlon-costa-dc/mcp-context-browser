@@ -157,10 +157,15 @@ pub type SharedRouteRegistry = Arc<RouteRegistry>;
 /// Discovery statistics
 #[derive(Debug, Clone)]
 pub struct DiscoveryStats {
+    /// Total Routes
     pub total_routes: usize,
+    /// Public Routes
     pub public_routes: usize,
+    /// Protected Routes
     pub protected_routes: usize,
+    /// Rate Limited Routes
     pub rate_limited_routes: usize,
+    /// Map of routes_by_method entries
     pub routes_by_method: HashMap<String, usize>,
 }
 

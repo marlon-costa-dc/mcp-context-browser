@@ -73,12 +73,16 @@ impl ProviderContext {
     }
 }
 
-/// Load levels for operations
+/// Load levels for operations indicating expected resource usage and performance requirements
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LoadLevel {
+    /// Low load - minimal resource usage, suitable for background tasks
     Low,
+    /// Medium load - moderate resource usage, typical for regular operations
     Medium,
+    /// High load - significant resource usage, for important operations
     High,
+    /// Critical load - maximum resource usage, for time-sensitive operations requiring best performance
     Critical,
 }
 

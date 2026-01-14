@@ -183,21 +183,44 @@ impl FailoverStrategy for RoundRobinStrategy {
 /// Failover strategy types for configuration
 #[derive(Debug, Clone)]
 pub enum FailoverStrategyType {
-    /// Priority-based strategy with configurable priorities
-    PriorityBased { priorities: HashMap<String, u32> },
-    /// Round-robin strategy
+    /// Priority-based strategy with configurable priorities where lower numbers indicate higher priority
+    PriorityBased {
+        /// Map of provider IDs to their priority values (lower = higher priority)
+        priorities: HashMap<String, u32>
+    },
+    /// Round-robin strategy that distributes requests evenly across available providers
     RoundRobin,
 }
 
-/// Failover manager trait
+/// Failover manager trait defining the interface for provider selection and failover execution
 #[async_trait]
 pub trait FailoverManagerTrait: Interface + Send + Sync {
+    /// Select the best available provider from the given candidates based on current strategy and health
+    ///
+    /// # Arguments
+    /// * `candidates` - List of provider IDs to choose from
+    /// * `context` - Failover context containing operation details and constraints
+    ///
+    /// # Returns
+    /// The selected provider ID or an error if no suitable provider is available
     async fn select_provider(
         &self,
         candidates: &[String],
         context: &FailoverContext,
     ) -> Result<String>;
 
+    /// Execute an operation with automatic failover across multiple providers
+    ///
+    /// This method will attempt to execute the operation with different providers
+    /// in order of preference until one succeeds or all attempts are exhausted.
+    ///
+    /// # Arguments
+    /// * `candidates` - List of provider IDs to try in order
+    /// * `context` - Failover context with operation details and attempt limits
+    /// * `operation` - Async function that takes a provider ID and returns a future
+    ///
+    /// # Returns
+    /// The result of the successful operation or an error if all attempts failed
     async fn execute_with_failover<F, Fut, T>(
         &self,
         candidates: &[String],

@@ -16,24 +16,38 @@ use crate::infrastructure::utils::{css, FormattingUtils, StatusUtils, StringUtil
 /// Complete dashboard view model - aggregates data from multiple service calls
 #[derive(Debug, Clone, Serialize)]
 pub struct DashboardViewModel {
+    /// Page
     pub page: &'static str,
+    /// Metrics
     pub metrics: MetricsViewModel,
+    /// Providers
     pub providers: ProvidersViewModel,
+    /// Indexes
     pub indexes: IndexesSummaryViewModel,
+    /// Collection of activities items
     pub activities: Vec<ActivityViewModel>,
+    /// System Health
     pub system_health: HealthViewModel,
 }
 
 /// System performance metrics
 #[derive(Debug, Clone, Serialize)]
 pub struct MetricsViewModel {
+    /// Cpu Usage
     pub cpu_usage: f64,
+    /// Cpu Usage Formatted
     pub cpu_usage_formatted: String,
+    /// Memory Usage
     pub memory_usage: f64,
+    /// Memory Usage Formatted
     pub memory_usage_formatted: String,
+    /// Total Queries
     pub total_queries: u64,
+    /// Total Queries Formatted
     pub total_queries_formatted: String,
+    /// Avg Latency Ms
     pub avg_latency_ms: f64,
+    /// Avg Latency Formatted
     pub avg_latency_formatted: String,
 }
 
@@ -59,9 +73,13 @@ impl MetricsViewModel {
 /// Provider list view model with summary counts
 #[derive(Debug, Clone, Serialize)]
 pub struct ProvidersViewModel {
+    /// Page
     pub page: &'static str,
+    /// Active Count
     pub active_count: usize,
+    /// Total Count
     pub total_count: usize,
+    /// Collection of providers items
     pub providers: Vec<ProviderViewModel>,
 }
 
@@ -81,13 +99,21 @@ impl ProvidersViewModel {
 /// Individual provider view model
 #[derive(Debug, Clone, Serialize)]
 pub struct ProviderViewModel {
+    /// Id
     pub id: String,
+    /// Name
     pub name: String,
+    /// Provider Type
     pub provider_type: String,
+    /// Provider Type Display
     pub provider_type_display: String,
+    /// Status
     pub status: String,
+    /// Status Display
     pub status_display: String,
+    /// Status Class
     pub status_class: &'static str,
+    /// Is Active
     pub is_active: bool,
 }
 
@@ -118,10 +144,15 @@ impl ProviderViewModel {
 /// Index list view model for indexes page
 #[derive(Debug, Clone, Serialize)]
 pub struct IndexesViewModel {
+    /// Page
     pub page: &'static str,
+    /// Collection of indexes items
     pub indexes: Vec<IndexViewModel>,
+    /// Total Documents
     pub total_documents: u64,
+    /// Total Documents Formatted
     pub total_documents_formatted: String,
+    /// Active Count
     pub active_count: usize,
 }
 
@@ -141,26 +172,42 @@ impl IndexesViewModel {
 /// Summary view model for dashboard
 #[derive(Debug, Clone, Serialize)]
 pub struct IndexesSummaryViewModel {
+    /// Active Count
     pub active_count: usize,
+    /// Total Documents
     pub total_documents: u64,
+    /// Total Documents Formatted
     pub total_documents_formatted: String,
+    /// Is Indexing
     pub is_indexing: bool,
 }
 
 /// Individual index view model
 #[derive(Debug, Clone, Serialize)]
 pub struct IndexViewModel {
+    /// Id
     pub id: String,
+    /// Name
     pub name: String,
+    /// Status
     pub status: String,
+    /// Status Display
     pub status_display: String,
+    /// Status Class
     pub status_class: &'static str,
+    /// Is Active
     pub is_active: bool,
+    /// Is Indexing
     pub is_indexing: bool,
+    /// Document Count
     pub document_count: u64,
+    /// Document Count Formatted
     pub document_count_formatted: String,
+    /// Created At
     pub created_at: u64,
+    /// Updated At
     pub updated_at: u64,
+    /// Age Display
     pub age_display: String,
 }
 
@@ -202,13 +249,21 @@ impl IndexViewModel {
 /// Activity item view model for activity feed
 #[derive(Debug, Clone, Serialize)]
 pub struct ActivityViewModel {
+    /// Id
     pub id: String,
+    /// Message
     pub message: String,
+    /// Timestamp
     pub timestamp: String,
+    /// Timestamp Relative
     pub timestamp_relative: String,
+    /// Level
     pub level: String,
+    /// Level Class
     pub level_class: &'static str,
+    /// Indicator Class
     pub indicator_class: &'static str,
+    /// Category
     pub category: String,
 }
 
@@ -245,12 +300,19 @@ impl ActivityViewModel {
 /// System health view model
 #[derive(Debug, Clone, Serialize)]
 pub struct HealthViewModel {
+    /// Status
     pub status: String,
+    /// Status Display
     pub status_display: String,
+    /// Status Class
     pub status_class: &'static str,
+    /// Indicator Class
     pub indicator_class: &'static str,
+    /// Uptime Seconds
     pub uptime_seconds: u64,
+    /// Uptime Formatted
     pub uptime_formatted: String,
+    /// Pid
     pub pid: u32,
 }
 
@@ -278,28 +340,41 @@ impl HealthViewModel {
 /// Configuration page view model
 #[derive(Debug, Clone, Serialize)]
 pub struct ConfigurationViewModel {
+    /// Page
     pub page: &'static str,
+    /// Page Description
     pub page_description: &'static str,
+    /// Collection of categories items
     pub categories: Vec<ConfigCategoryViewModel>,
 }
 
 /// Configuration category view model
 #[derive(Debug, Clone, Serialize)]
 pub struct ConfigCategoryViewModel {
+    /// Name
     pub name: String,
+    /// Description
     pub description: String,
+    /// Collection of settings items
     pub settings: Vec<ConfigSettingViewModel>,
 }
 
 /// Individual configuration setting view model
 #[derive(Debug, Clone, Serialize)]
 pub struct ConfigSettingViewModel {
+    /// Key
     pub key: String,
+    /// Label
     pub label: String,
+    /// Value
     pub value: serde_json::Value,
+    /// Value Display
     pub value_display: String,
+    /// Setting Type
     pub setting_type: &'static str,
+    /// Description
     pub description: String,
+    /// Editable
     pub editable: bool,
 }
 
@@ -310,29 +385,43 @@ pub struct ConfigSettingViewModel {
 /// Logs page view model
 #[derive(Debug, Clone, Serialize)]
 pub struct LogsViewModel {
+    /// Page
     pub page: &'static str,
+    /// Page Description
     pub page_description: &'static str,
+    /// Collection of entries items
     pub entries: Vec<LogEntryViewModel>,
+    /// Total Count
     pub total_count: u64,
+    /// Stats
     pub stats: LogStatsViewModel,
 }
 
 /// Log entry view model
 #[derive(Debug, Clone, Serialize)]
 pub struct LogEntryViewModel {
+    /// Timestamp
     pub timestamp: String,
+    /// Level
     pub level: String,
+    /// Level Class
     pub level_class: &'static str,
+    /// Message
     pub message: String,
+    /// Source
     pub source: String,
 }
 
 /// Log statistics view model
 #[derive(Debug, Clone, Serialize)]
 pub struct LogStatsViewModel {
+    /// Total
     pub total: u64,
+    /// Errors
     pub errors: u64,
+    /// Warnings
     pub warnings: u64,
+    /// Info
     pub info: u64,
 }
 
@@ -343,9 +432,13 @@ pub struct LogStatsViewModel {
 /// Error page view model
 #[derive(Debug, Clone, Serialize)]
 pub struct ErrorViewModel {
+    /// Title
     pub title: String,
+    /// Message
     pub message: String,
+    /// Optional details value
     pub details: Option<String>,
+    /// Back Url
     pub back_url: &'static str,
 }
 

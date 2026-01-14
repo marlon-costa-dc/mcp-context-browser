@@ -11,14 +11,70 @@ use tracing::{debug, info};
 
 /// Trait for provider metrics collection
 pub trait ProviderMetricsCollectorTrait: Interface + Send + Sync {
+    /// Record a provider selection event with the chosen strategy
+    ///
+    /// # Arguments
+    /// * `provider_id` - The ID of the selected provider
+    /// * `strategy` - The selection strategy used (e.g., "priority", "round-robin")
     fn record_provider_selection(&self, provider_id: &str, strategy: &str);
+
+    /// Record the response time for a provider operation
+    ///
+    /// # Arguments
+    /// * `provider_id` - The ID of the provider
+    /// * `operation` - The operation type (e.g., "embedding", "search")
+    /// * `duration_seconds` - Time taken for the operation in seconds
     fn record_response_time(&self, provider_id: &str, operation: &str, duration_seconds: f64);
+
+    /// Record a request with its outcome status
+    ///
+    /// # Arguments
+    /// * `provider_id` - The ID of the provider
+    /// * `operation` - The operation type
+    /// * `status` - The outcome status (e.g., "success", "error", "timeout")
     fn record_request(&self, provider_id: &str, operation: &str, status: &str);
+
+    /// Record an error occurrence
+    ///
+    /// # Arguments
+    /// * `provider_id` - The ID of the provider where the error occurred
+    /// * `error_type` - The type of error (e.g., "timeout", "rate_limit", "internal")
     fn record_error(&self, provider_id: &str, error_type: &str);
+
+    /// Record cost incurred for provider usage
+    ///
+    /// # Arguments
+    /// * `provider_id` - The ID of the provider
+    /// * `amount` - The cost amount
+    /// * `currency` - The currency code (e.g., "USD", "EUR")
     fn record_cost(&self, provider_id: &str, amount: f64, currency: &str);
+
+    /// Update the count of active connections for a provider
+    ///
+    /// # Arguments
+    /// * `provider_id` - The ID of the provider
+    /// * `count` - Current number of active connections
     fn update_active_connections(&self, provider_id: &str, count: i64);
+
+    /// Record a circuit breaker state change
+    ///
+    /// # Arguments
+    /// * `provider_id` - The ID of the provider
+    /// * `state` - New circuit breaker state ("closed", "open", "half-open")
     fn record_circuit_breaker_state(&self, provider_id: &str, state: &str);
+
+    /// Record provider health status and score
+    ///
+    /// # Arguments
+    /// * `provider_id` - The ID of the provider
+    /// * `status` - Health status ("healthy", "unhealthy", "unknown")
+    /// * `score` - Health score between 0.0 and 1.0
     fn record_provider_health(&self, provider_id: &str, status: &str, score: f64);
+
+    /// Get a summary of all collected metrics
+    ///
+    /// # Returns
+    /// A summary containing aggregated metrics data
     fn get_summary(&self) -> MetricsSummary;
 }
 
@@ -126,9 +182,14 @@ impl ProviderMetricsCollectorTrait for ProviderMetricsCollector {
 /// Summary of collected metrics
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct MetricsSummary {
+    /// Total number of requests processed across all providers
     pub total_requests: u64,
+    /// Error rate as a fraction (0.0 to 1.0) of total requests
     pub error_rate: f64,
+    /// Average response latency in seconds
     pub average_latency: f64,
+    /// Total cost incurred across all providers
     pub total_cost: f64,
+    /// Distribution of requests per provider (provider_id -> request_count)
     pub provider_distribution: HashMap<String, u64>,
 }

@@ -31,6 +31,14 @@ pub struct VectorStoreChunkRepository {
 }
 
 impl VectorStoreChunkRepository {
+    /// Create a new vector store backed chunk repository
+    ///
+    /// # Arguments
+    /// * `embedding_provider` - Provider for generating vector embeddings
+    /// * `vector_store_provider` - Provider for vector storage operations
+    ///
+    /// # Returns
+    /// A new instance of the chunk repository
     pub fn new(
         embedding_provider: Arc<dyn EmbeddingProvider>,
         vector_store_provider: Arc<dyn VectorStoreProvider>,
