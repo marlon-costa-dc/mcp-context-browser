@@ -33,7 +33,7 @@ pub enum HybridSearchMessage {
     /// Clear a collection
     Clear {
         /// The collection name to clear
-        collection: String
+        collection: String,
     },
     /// Get statistics
     GetStats {

@@ -8,7 +8,9 @@ use rmcp::ErrorData as McpError;
 use std::borrow::Cow;
 use std::sync::Arc;
 
-use crate::server::args::{ClearIndexArgs, GetIndexingStatusArgs, IndexCodebaseArgs, SearchCodeArgs};
+use crate::server::args::{
+    ClearIndexArgs, GetIndexingStatusArgs, IndexCodebaseArgs, SearchCodeArgs,
+};
 
 /// Tool definitions for MCP protocol
 pub struct ToolDefinitions;
@@ -54,10 +56,10 @@ impl ToolDefinitions {
     fn create_tool(
         name: &'static str,
         description: &'static str,
-        schema: schemars::schema::RootSchema,
+        schema: schemars::Schema,
     ) -> Result<Tool, McpError> {
-        let schema_value =
-            serde_json::to_value(schema).map_err(|e| McpError::internal_error(e.to_string(), None))?;
+        let schema_value = serde_json::to_value(schema)
+            .map_err(|e| McpError::internal_error(e.to_string(), None))?;
 
         let input_schema = schema_value
             .as_object()
@@ -111,7 +113,11 @@ mod tests {
     fn test_each_tool_has_description() {
         let tools = create_tool_list().expect("should create tool list");
         for tool in tools {
-            assert!(tool.description.is_some(), "Tool {} should have description", tool.name);
+            assert!(
+                tool.description.is_some(),
+                "Tool {} should have description",
+                tool.name
+            );
         }
     }
 }

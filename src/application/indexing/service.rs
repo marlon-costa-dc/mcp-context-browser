@@ -9,11 +9,11 @@
 
 use super::chunking_orchestrator::ChunkingOrchestrator;
 use crate::domain::error::{Error, Result};
+use crate::domain::ports::infrastructure::{SnapshotProvider, SyncProvider};
 use crate::domain::ports::{
     ChunkingOrchestratorInterface, ContextServiceInterface, IndexingResult,
     IndexingServiceInterface, IndexingStatus,
 };
-use crate::domain::ports::infrastructure::{SnapshotProvider, SyncProvider};
 use crate::domain::types::CodeChunk;
 // Cross-cutting concern: Event bus for decoupled notifications (infrastructure-specific subscribe)
 use crate::domain::constants::INDEXING_BATCH_SIZE;
@@ -181,7 +181,9 @@ impl IndexingService {
             .map_err(|e| Error::io(format!("Failed to read file {}: {}", path.display(), e)))?;
 
         // Delegate to ChunkingOrchestrator service
-        self.chunking_orchestrator.process_file(path, &content).await
+        self.chunking_orchestrator
+            .process_file(path, &content)
+            .await
     }
 
     /// Process files in parallel batches for better performance

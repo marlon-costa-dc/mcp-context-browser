@@ -184,17 +184,22 @@ apply_changes_to_file() {
     done
 
     if [[ $changes_made -gt 0 ]]; then
-        if ! validate_change "$file" "$original_content" "$new_content"; then
-            log_error "Validation failed for $file"
-            return 1
+        # Only validate in apply mode since dry-run mode doesn't modify content
+        if ! $DRY_RUN; then
+            if ! validate_change "$file" "$original_content" "$new_content"; then
+                log_error "Validation failed for $file"
+                return 1
+            fi
         fi
 
-        if $BACKUP; then
+        if $BACKUP && ! $DRY_RUN; then
             backup_file "$file"
         fi
 
-        echo "$new_content" > "$file"
-        log_success "Updated $file ($changes_made changes)"
+        if ! $DRY_RUN; then
+            echo "$new_content" > "$file"
+            log_success "Updated $file ($changes_made changes)"
+        fi
         return 0
     fi
 
@@ -228,10 +233,24 @@ handle_special_files() {
 }
 
 process_files() {
+    if $VERBOSE; then
+        log_info "Starting file processing..."
+    fi
     local total_files=0
     local changed_files=0
 
-    # Process regular files
+    # Process regular files using a temporary file to avoid process substitution issues
+    local temp_file=$(mktemp)
+    if $VERBOSE; then
+        log_info "Finding files to process..."
+    fi
+    find "$PROJECT_ROOT" -type f \( -name "*.rs" -o -name "*.toml" -o -name "*.md" -o -name "*.yml" -o -name "*.yaml" -o -name "*.sh" -o -name "*.service" -o -name "*.mk" -o -name "Makefile" -o -name "*.json" \) -print0 > "$temp_file"
+    if $VERBOSE; then
+        # Count null-delimited entries
+        local file_count=$(tr -cd '\0' < "$temp_file" | wc -c)
+        log_info "Found $file_count files to process"
+    fi
+
     while IFS= read -r -d '' file; do
         ((total_files++))
         if should_exclude_file "$file"; then
@@ -250,7 +269,10 @@ process_files() {
                 ((changed_files++))
             fi
         fi
-    done < <(find "$PROJECT_ROOT" -type f \( -name "*.rs" -o -name "*.toml" -o -name "*.md" -o -name "*.yml" -o -name "*.yaml" -o -name "*.sh" -o -name "*.service" -o -name "*.mk" -o -name "Makefile" -o -name "*.json" \) -print0)
+    done < "$temp_file"
+
+    # Clean up temp file
+    rm -f "$temp_file"
 
     # Special handling for book.toml
     if [[ -f "book.toml" ]]; then
@@ -260,7 +282,9 @@ process_files() {
         fi
     fi
 
-    log_success "Processed $total_files files, changed $changed_files files"
+    if $VERBOSE; then
+        log_info "Processed $total_files files, $changed_files would be changed"
+    fi
 }
 
 validate_changes() {

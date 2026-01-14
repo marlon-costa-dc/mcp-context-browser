@@ -180,7 +180,7 @@ fn validate_search_query(query: &str) -> Result<(), validator::ValidationError> 
         ));
     }
 
-    // Basic XSS protection
+    // Input validation to prevent injection attacks
     let dangerous_patterns = ["<script", "javascript:", "onload=", "onerror="];
     for pattern in &dangerous_patterns {
         if query.to_lowercase().contains(pattern) {

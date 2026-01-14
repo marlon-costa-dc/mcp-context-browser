@@ -6,7 +6,9 @@
 use rmcp::model::{CallToolRequestParam, CallToolResult};
 use rmcp::ErrorData as McpError;
 
-use crate::server::args::{ClearIndexArgs, GetIndexingStatusArgs, IndexCodebaseArgs, SearchCodeArgs};
+use crate::server::args::{
+    ClearIndexArgs, GetIndexingStatusArgs, IndexCodebaseArgs, SearchCodeArgs,
+};
 use crate::server::handlers::{
     ClearIndexHandler, GetIndexingStatusHandler, IndexCodebaseHandler, SearchCodeHandler,
 };
@@ -93,16 +95,15 @@ mod tests {
                 .cloned()
                 .unwrap(),
             ),
-            meta: None,
         };
 
         let args: SearchCodeArgs = parse_args(&request).expect("should parse args");
         assert_eq!(args.query, "test query");
-        assert_eq!(args.limit, Some(10));
+        assert_eq!(args.limit, 10);
     }
 
     #[test]
-    fn test_parse_args_missing_optional() {
+    fn test_parse_args_default_limit() {
         let request = CallToolRequestParam {
             name: Cow::Borrowed("search_code"),
             arguments: Some(
@@ -113,11 +114,11 @@ mod tests {
                 .cloned()
                 .unwrap(),
             ),
-            meta: None,
         };
 
         let args: SearchCodeArgs = parse_args(&request).expect("should parse args");
         assert_eq!(args.query, "test query");
-        assert!(args.limit.is_none());
+        // limit has a default value defined in args.rs
+        assert!(args.limit > 0);
     }
 }

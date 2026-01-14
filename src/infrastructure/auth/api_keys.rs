@@ -208,7 +208,7 @@ impl ApiKeyPersistence for FileApiKeyPersistence {
         let content = serde_json::to_string_pretty(&stored)
             .map_err(|e| Error::config(format!("Failed to serialize API keys: {}", e)))?;
 
-        // Write atomically using temp file + rename
+        // Atomic file write using temp file + rename for consistency
         let temp_path = self.path.with_extension("json.tmp");
         tokio::fs::write(&temp_path, &content)
             .await

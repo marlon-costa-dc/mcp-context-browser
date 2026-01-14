@@ -25,6 +25,11 @@ pub struct MilvusVectorStoreProvider {
 const DEFAULT_TIMEOUT_SECS: u64 = 10;
 
 impl MilvusVectorStoreProvider {
+    /// Helper method to convert Milvus errors to domain errors
+    fn map_milvus_error<T, E: std::fmt::Display>(result: std::result::Result<T, E>, operation: &str) -> crate::domain::error::Result<T> {
+        result.map_err(|e| Error::vector_db(format!("Failed to {}: {}", operation, e)))
+    }
+
     /// Create a new Milvus vector store provider
     ///
     /// # Arguments
@@ -94,10 +99,10 @@ impl VectorStoreProvider for MilvusVectorStoreProvider {
             .build()
             .map_err(|e| Error::vector_db(format!("Failed to create schema: {}", e)))?;
 
-        self.client
-            .create_collection(schema, None)
-            .await
-            .map_err(|e| Error::vector_db(format!("Failed to create collection: {}", e)))?;
+        Self::map_milvus_error(
+            self.client.create_collection(schema, None).await,
+            "create collection"
+        )?;
 
         // Wait for Milvus to sync collection metadata before index creation
         // Milvus needs time to propagate collection metadata across nodes
@@ -159,19 +164,19 @@ impl VectorStoreProvider for MilvusVectorStoreProvider {
     }
 
     async fn delete_collection(&self, name: &str) -> Result<()> {
-        self.client
-            .drop_collection(name)
-            .await
-            .map_err(|e| Error::vector_db(format!("Failed to delete collection: {}", e)))?;
+        Self::map_milvus_error(
+            self.client.drop_collection(name).await,
+            "delete collection"
+        )?;
 
         Ok(())
     }
 
     async fn collection_exists(&self, name: &str) -> Result<bool> {
-        self.client
-            .has_collection(name)
-            .await
-            .map_err(|e| Error::vector_db(format!("Failed to check collection: {}", e)))
+        Self::map_milvus_error(
+            self.client.has_collection(name).await,
+            "check collection"
+        )
     }
 
     async fn insert_vectors(
@@ -271,11 +276,10 @@ impl VectorStoreProvider for MilvusVectorStoreProvider {
         ];
 
         // Insert directly using client
-        let res = self
-            .client
-            .insert(collection, columns, None)
-            .await
-            .map_err(|e| Error::vector_db(format!("Failed to insert vectors: {}", e)))?;
+        let res = Self::map_milvus_error(
+            self.client.insert(collection, columns, None).await,
+            "insert vectors"
+        )?;
 
         // Return IDs as strings from the result
         let ids = match res.i_ds {
@@ -441,10 +445,10 @@ impl VectorStoreProvider for MilvusVectorStoreProvider {
         let options = DeleteOptions::with_ids(ValueVec::Long(id_numbers));
 
         // Delete using client
-        self.client
-            .delete(collection, &options)
-            .await
-            .map_err(|e| Error::vector_db(format!("Failed to delete vectors: {}", e)))?;
+        Self::map_milvus_error(
+            self.client.delete(collection, &options).await,
+            "delete vectors"
+        )?;
 
         Ok(())
     }
@@ -478,11 +482,10 @@ impl VectorStoreProvider for MilvusVectorStoreProvider {
             "content".to_string(),
         ]);
 
-        let query_results = self
-            .client
-            .query(collection, &expr, &query_options)
-            .await
-            .map_err(|e| Error::vector_db(format!("Failed to query by IDs: {}", e)))?;
+        let query_results = Self::map_milvus_error(
+            self.client.query(collection, &expr, &query_options).await,
+            "query by IDs"
+        )?;
 
         // Convert results to our format
         let mut results = Vec::new();
@@ -577,11 +580,10 @@ impl VectorStoreProvider for MilvusVectorStoreProvider {
             "content".to_string(),
         ]);
 
-        let query_results = self
-            .client
-            .query(collection, &expr, &query_options)
-            .await
-            .map_err(|e| Error::vector_db(format!("Failed to list vectors: {}", e)))?;
+        let query_results = Self::map_milvus_error(
+            self.client.query(collection, &expr, &query_options).await,
+            "list vectors"
+        )?;
 
         // Convert results to our format
         let mut results = Vec::new();

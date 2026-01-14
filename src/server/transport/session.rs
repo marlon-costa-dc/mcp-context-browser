@@ -297,13 +297,18 @@ fn generate_session_id() -> String {
 
 /// Session manager errors
 #[derive(Debug, thiserror::Error)]
+/// Session management errors
 pub enum SessionError {
+    /// Maximum number of concurrent sessions has been reached
     #[error("Maximum concurrent sessions reached")]
     MaxSessionsReached,
+    /// Session was not found or has expired
     #[error("Session not found or expired")]
     SessionNotFound,
+    /// Session has already been terminated
     #[error("Session already terminated")]
     SessionTerminated,
+    /// Invalid session state for the requested operation
     #[error("Invalid session state for operation")]
     InvalidState,
 }

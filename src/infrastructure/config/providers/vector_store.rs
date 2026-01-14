@@ -10,66 +10,97 @@ use validator::Validate;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "provider")]
 pub enum VectorStoreProviderConfig {
+    /// EdgeVec in-memory vector store configuration
     #[serde(rename = "edgevec")]
     EdgeVec {
+        /// Maximum number of vectors to store
         #[serde(default)]
         max_vectors: Option<usize>,
+        /// Default collection name
         #[serde(default)]
         collection: Option<String>,
+        /// HNSW M parameter (neighbors per layer)
         #[serde(default)]
         hnsw_m: Option<usize>,
+        /// HNSW ef_construction parameter (search candidates during build)
         #[serde(default)]
         hnsw_ef_construction: Option<usize>,
+        /// Distance metric (cosine, euclidean, dot)
         #[serde(default)]
         distance_metric: Option<String>,
+        /// Whether to use quantization for memory efficiency
         #[serde(default)]
         use_quantization: Option<bool>,
     },
+    /// Milvus vector database configuration
     #[serde(rename = "milvus")]
     Milvus {
+        /// Milvus server address (host:port)
         address: String,
+        /// Authentication token (optional)
         #[serde(default)]
         token: Option<String>,
+        /// Default collection name
         #[serde(default)]
         collection: Option<String>,
+        /// Expected vector dimensions
         #[serde(default)]
         dimensions: Option<usize>,
     },
+    /// Pinecone vector database configuration
     #[serde(rename = "pinecone")]
     Pinecone {
+        /// Pinecone API key for authentication
         api_key: String,
+        /// Pinecone environment name
         environment: String,
+        /// Pinecone index name
         index_name: String,
+        /// Expected vector dimensions
         #[serde(default)]
         dimensions: Option<usize>,
     },
+    /// Qdrant vector database configuration
     #[serde(rename = "qdrant")]
     Qdrant {
+        /// Qdrant server URL
         url: String,
+        /// API key for authentication (optional)
         #[serde(default)]
         api_key: Option<String>,
+        /// Default collection name
         #[serde(default)]
         collection: Option<String>,
+        /// Expected vector dimensions
         #[serde(default)]
         dimensions: Option<usize>,
     },
+    /// In-memory vector store for development and testing
     #[serde(rename = "in-memory")]
     InMemory {
+        /// Expected vector dimensions
         #[serde(default)]
         dimensions: Option<usize>,
     },
+    /// Filesystem-based vector store configuration
     #[serde(rename = "filesystem")]
     Filesystem {
+        /// Base directory path for storing vectors
         #[serde(default)]
         base_path: Option<String>,
+        /// Maximum vectors per shard file
         #[serde(default)]
         max_vectors_per_shard: Option<usize>,
+        /// Expected vector dimensions
         #[serde(default)]
         dimensions: Option<usize>,
+        /// Whether to enable data compression
         #[serde(default)]
         compression_enabled: Option<bool>,
+        /// Size of the index cache in bytes
         #[serde(default)]
         index_cache_size: Option<usize>,
+        /// Whether to use memory mapping for performance
         #[serde(default)]
         memory_mapping_enabled: Option<bool>,
     },

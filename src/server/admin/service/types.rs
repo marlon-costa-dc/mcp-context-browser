@@ -137,9 +137,13 @@ pub struct LogEntries {
 
 /// Log export format
 #[derive(Debug, Clone, Serialize, Deserialize)]
+/// Supported log export formats
 pub enum LogExportFormat {
+    /// Export logs in JSON format
     Json,
+    /// Export logs in CSV format
     Csv,
+    /// Export logs in plain text format
     PlainText,
 }
 
@@ -161,9 +165,13 @@ pub struct LogStats {
 /// Cache types for maintenance operations
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum CacheType {
+    /// Clear all cache types
     All,
+    /// Clear cached query results
     QueryResults,
+    /// Clear cached embeddings
     Embeddings,
+    /// Clear cached indexes
     Indexes,
 }
 

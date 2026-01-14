@@ -1,25 +1,9 @@
-//! Indexing operations tracking for MCP server
+//! Server-level operations
 //!
-//! Provides implementations for tracking ongoing indexing operations
-//! in the MCP server.
-//!
-//! The trait and types are defined in `domain::ports::admin` to avoid circular dependencies.
+//! Re-exports operations implementations from the infrastructure layer
+//! to maintain Clean Architecture boundaries.
 
-use dashmap::DashMap;
-
-// Re-export from domain for backward compatibility
-pub use crate::domain::ports::admin::{IndexingOperation, IndexingOperationsInterface};
-
-/// Concrete implementation of indexing operations tracking
-#[derive(Debug, Default, shaku::Component)]
-#[shaku(interface = IndexingOperationsInterface)]
-pub struct McpIndexingOperations {
-    #[shaku(default)]
-    pub map: DashMap<String, IndexingOperation>,
-}
-
-impl IndexingOperationsInterface for McpIndexingOperations {
-    fn get_map(&self) -> &DashMap<String, IndexingOperation> {
-        &self.map
-    }
-}
+// Re-export operations from infrastructure layer
+pub use crate::infrastructure::operations::tracking::{
+    IndexingOperation, IndexingOperationsInterface, McpIndexingOperations,
+};

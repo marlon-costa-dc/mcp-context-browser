@@ -13,9 +13,10 @@ use std::path::PathBuf;
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
-/// Configuration history store
+/// Configuration history store for tracking changes
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ConfigHistory {
+    /// Chronological list of configuration changes
     pub entries: Vec<ConfigurationChange>,
 }
 

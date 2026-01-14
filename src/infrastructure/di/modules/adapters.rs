@@ -22,6 +22,13 @@ use crate::adapters::providers::embedding::NullEmbeddingProvider;
 use crate::adapters::providers::vector_store::NullVectorStoreProvider;
 use crate::adapters::repository::{VectorStoreChunkRepository, VectorStoreSearchRepository};
 
+/// Implementation of the AdaptersModule trait providing external service integrations.
+///
+/// This module contains concrete implementations of adapters for:
+/// - HTTP client pools for external API communication
+/// - Embedding providers (with null fallback for testing)
+/// - Vector storage providers (with null fallback for testing)
+/// - Repository implementations using vector stores
 module! {
     pub AdaptersModuleImpl: AdaptersModule {
         components = [

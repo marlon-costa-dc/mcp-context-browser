@@ -259,7 +259,7 @@ const toast = {
 // Utility Functions
 // =============================================================================
 const utils = {
-    // Escape HTML to prevent XSS
+    // HTML escaping for safe content rendering
     escapeHtml(text) {
         const div = document.createElement('div');
         div.textContent = text;

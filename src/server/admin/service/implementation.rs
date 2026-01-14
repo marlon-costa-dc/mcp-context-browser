@@ -15,11 +15,10 @@ use super::types::{
     SecurityConfig, SignalResult, SubsystemInfo, SubsystemSignal, SystemInfo,
 };
 use crate::application::search::SearchService;
+use crate::domain::ports::{IndexingOperationsInterface, PerformanceMetricsInterface};
 use crate::infrastructure::di::factory::ServiceProviderInterface;
 use crate::infrastructure::metrics::system::SystemMetricsCollectorInterface;
 use crate::infrastructure::service_helpers::{TimedOperation, ValidationBuilder};
-use crate::server::metrics::PerformanceMetricsInterface;
-use crate::server::operations::IndexingOperationsInterface;
 use arc_swap::ArcSwap;
 use async_trait::async_trait;
 use std::collections::HashMap;

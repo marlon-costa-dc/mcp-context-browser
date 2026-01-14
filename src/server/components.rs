@@ -7,6 +7,7 @@ use arc_swap::ArcSwap;
 use std::sync::Arc;
 
 use crate::adapters::http_client::HttpClientProvider;
+use crate::domain::ports::{IndexingOperationsInterface, PerformanceMetricsInterface};
 use crate::domain::ports::{IndexingServiceInterface, SearchServiceInterface};
 use crate::infrastructure::cache::SharedCacheProvider;
 use crate::infrastructure::di::factory::ServiceProviderInterface;
@@ -15,8 +16,6 @@ use crate::infrastructure::limits::ResourceLimits;
 use crate::infrastructure::logging::SharedLogBuffer;
 use crate::infrastructure::metrics::system::SystemMetricsCollectorInterface;
 use crate::server::admin::service::AdminService;
-use crate::server::metrics::PerformanceMetricsInterface;
-use crate::server::operations::IndexingOperationsInterface;
 
 /// Components required to initialize McpServer
 ///
@@ -116,10 +115,7 @@ impl ServerComponentsBuilder {
     }
 
     /// Set the service provider
-    pub fn service_provider(
-        mut self,
-        service_provider: Arc<dyn ServiceProviderInterface>,
-    ) -> Self {
+    pub fn service_provider(mut self, service_provider: Arc<dyn ServiceProviderInterface>) -> Self {
         self.service_provider = Some(service_provider);
         self
     }
@@ -158,10 +154,7 @@ impl ServerComponentsBuilder {
     }
 
     /// Set the DI-resolved indexing service
-    pub fn indexing_service(
-        mut self,
-        indexing_service: Arc<dyn IndexingServiceInterface>,
-    ) -> Self {
+    pub fn indexing_service(mut self, indexing_service: Arc<dyn IndexingServiceInterface>) -> Self {
         self.indexing_service = Some(indexing_service);
         self
     }

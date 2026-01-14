@@ -13,8 +13,8 @@ use mcp_context_browser::infrastructure::di::bootstrap::DiContainer;
 use mcp_context_browser::infrastructure::di::factory::ServiceProviderInterface;
 use mcp_context_browser::infrastructure::events::EventBusProvider;
 use mcp_context_browser::infrastructure::metrics::system::SystemMetricsCollectorInterface;
+use mcp_context_browser::infrastructure::operations::IndexingOperationsInterface;
 use mcp_context_browser::server::metrics::PerformanceMetricsInterface;
-use mcp_context_browser::server::operations::IndexingOperationsInterface;
 
 #[tokio::test]
 async fn test_di_container_resolves_http_client() {

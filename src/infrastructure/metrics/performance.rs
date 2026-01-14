@@ -9,7 +9,13 @@ use tokio::sync::{mpsc, oneshot};
 
 /// Performance metrics messages
 pub enum PerformanceMessage {
-    RecordQuery { latency: Duration, success: bool },
+    /// Record a query execution with latency and success status
+    RecordQuery {
+        /// Query execution time
+        latency: Duration,
+        /// Whether the query was successful
+        success: bool
+    },
     RecordCacheHit,
     RecordCacheMiss,
     UpdateCacheSize(u64),

@@ -86,15 +86,8 @@ pub fn list_backups() -> Result<Vec<BackupInfo>, AdminError> {
 }
 
 /// Restore from a backup with automated process
-pub async fn restore_backup(
-    event_bus: &SharedEventBusProvider,
-    backup_id: &str,
-) -> Result<RestoreResult, AdminError> {
-    let timer = TimedOperation::start();
-    let backups_dir = std::path::PathBuf::from(admin_defaults::DEFAULT_BACKUPS_DIR);
-    let backup_path = backups_dir.join(format!("{}.tar.gz", backup_id));
-
-    // Validate backup exists
+/// Validate backup file exists and is accessible
+fn validate_backup_file(backup_id: &str, backup_path: &std::path::Path) -> Result<(), AdminError> {
     if !backup_path.exists() {
         return Err(AdminError::ConfigError(format!(
             "Backup not found: {}",
@@ -102,64 +95,58 @@ pub async fn restore_backup(
         )));
     }
 
-    // Validate backup file is readable and not empty
-    match std::fs::metadata(&backup_path) {
-        Ok(metadata) => {
-            if metadata.len() == 0 {
-                return Err(AdminError::ConfigError(format!(
-                    "Backup file is empty: {}",
-                    backup_id
-                )));
-            }
-        }
-        Err(e) => {
-            return Err(AdminError::ConfigError(format!(
-                "Cannot read backup file {}: {}",
-                backup_id, e
-            )));
-        }
+    let metadata = std::fs::metadata(backup_path).map_err(|e| {
+        AdminError::ConfigError(format!("Cannot read backup file {}: {}", backup_id, e))
+    })?;
+
+    if metadata.len() == 0 {
+        return Err(AdminError::ConfigError(format!(
+            "Backup file is empty: {}",
+            backup_id
+        )));
     }
 
-    // Create rollback backup before restore
-    let rollback_id = format!("rollback_{}", chrono::Utc::now().format("%Y%m%d_%H%M%S"));
-    let rollback_path = backups_dir.join(format!("{}.tar.gz", rollback_id));
+    Ok(())
+}
 
-    tracing::info!(
-        "[ADMIN] Creating rollback backup before restore: {}",
-        rollback_id
-    );
+/// Create a rollback backup before performing restore
+fn create_rollback_backup_if_needed(
+    rollback_path: &std::path::Path,
+    rollback_id: &str,
+) -> Result<(), String> {
+    let has_data_files = std::fs::read_dir(admin_defaults::DEFAULT_DATA_DIR)
+        .ok()
+        .and_then(|entries| {
+            entries
+                .flatten()
+                .any(|entry| entry.path().is_file())
+                .then_some(())
+        })
+        .is_some();
 
-    // Attempt to create a rollback backup of current data
-    if let Ok(data_dir) = std::fs::read_dir(admin_defaults::DEFAULT_DATA_DIR) {
-        let mut found_files = false;
-        for entry in data_dir.flatten() {
-            if entry.path().is_file() {
-                found_files = true;
-                break;
-            }
-        }
-
-        if found_files {
-            match create_rollback_backup(&rollback_path) {
-                Ok(_) => {
-                    tracing::info!("[ADMIN] Rollback backup created: {}", rollback_id);
-                }
-                Err(e) => {
-                    tracing::warn!("[ADMIN] Failed to create rollback backup: {}", e);
-                    // Continue anyway, but log the failure
-                }
-            }
-        }
+    if has_data_files {
+        create_rollback_backup(rollback_path)?;
+        tracing::info!("[ADMIN] Rollback backup created: {}", rollback_id);
     }
 
-    // Perform the restore
+    Ok(())
+}
+
+/// Perform the actual restore operation and handle rollback if needed
+async fn perform_restore_with_rollback(
+    event_bus: &SharedEventBusProvider,
+    backup_id: &str,
+    backup_path: &std::path::Path,
+    rollback_path: &std::path::Path,
+    rollback_id: &str,
+) -> Result<RestoreResult, AdminError> {
     tracing::info!(
         "[ADMIN] Starting restore from backup: {} -> {}",
         backup_id,
         admin_defaults::DEFAULT_DATA_DIR
     );
 
-    match extract_backup(&backup_path, admin_defaults::DEFAULT_DATA_DIR) {
+    match extract_backup(backup_path, admin_defaults::DEFAULT_DATA_DIR) {
         Ok(_) => {
             // Publish restore event
             let _ = event_bus
@@ -178,53 +165,92 @@ pub async fn restore_backup(
                 backup_id: backup_id.to_string(),
                 restored_at: chrono::Utc::now(),
                 items_restored: count_restored_files(admin_defaults::DEFAULT_DATA_DIR),
-                rollback_id: Some(rollback_id.clone()),
+                rollback_id: Some(rollback_id.to_string()),
                 message: format!(
-                    "Backup '{}' restored successfully. \
-                     Rollback backup saved as '{}'",
+                    "Backup '{}' restored successfully. Rollback backup saved as '{}'",
                     backup_id, rollback_id
                 ),
-                execution_time_ms: timer.elapsed_ms(),
+                execution_time_ms: 0, // Will be set by caller
             })
         }
         Err(e) => {
             tracing::error!("[ADMIN] Backup restore failed for {}: {}", backup_id, e);
-
-            // Attempt to restore from rollback if restore failed
-            if rollback_path.exists() {
-                tracing::warn!("[ADMIN] Attempting rollback restoration");
-                match extract_backup(&rollback_path, admin_defaults::DEFAULT_DATA_DIR) {
-                    Ok(_) => {
-                        tracing::info!("[ADMIN] Rollback restoration completed");
-                        return Ok(RestoreResult {
-                            success: false,
-                            backup_id: backup_id.to_string(),
-                            restored_at: chrono::Utc::now(),
-                            items_restored: 0,
-                            rollback_id: Some(rollback_id),
-                            message: format!(
-                                "Failed to restore backup '{}': {}. \
-                                 Rolled back to previous state.",
-                                backup_id, e
-                            ),
-                            execution_time_ms: timer.elapsed_ms(),
-                        });
-                    }
-                    Err(rollback_err) => {
-                        tracing::error!(
-                            "[ADMIN] Rollback restoration also failed: {}",
-                            rollback_err
-                        );
-                    }
-                }
-            }
-
-            Err(AdminError::ConfigError(format!(
-                "Failed to restore backup '{}': {}",
-                backup_id, e
-            )))
+            handle_restore_failure(backup_id, &e, rollback_path, rollback_id).await
         }
     }
+}
+
+/// Handle restore failure by attempting rollback
+async fn handle_restore_failure(
+    backup_id: &str,
+    error: &str,
+    rollback_path: &std::path::Path,
+    rollback_id: &str,
+) -> Result<RestoreResult, AdminError> {
+    if rollback_path.exists() {
+        tracing::warn!("[ADMIN] Attempting rollback restoration");
+        if extract_backup(rollback_path, admin_defaults::DEFAULT_DATA_DIR).is_ok() {
+            tracing::info!("[ADMIN] Rollback restoration completed");
+            return Ok(RestoreResult {
+                success: false,
+                backup_id: backup_id.to_string(),
+                restored_at: chrono::Utc::now(),
+                items_restored: 0,
+                rollback_id: Some(rollback_id.to_string()),
+                message: format!(
+                    "Failed to restore backup '{}': {}. Rolled back to previous state.",
+                    backup_id, error
+                ),
+                execution_time_ms: 0, // Will be set by caller
+            });
+        } else {
+            tracing::error!("[ADMIN] Rollback restoration also failed");
+        }
+    }
+
+    Err(AdminError::ConfigError(format!(
+        "Failed to restore backup '{}': {}",
+        backup_id, error
+    )))
+}
+
+pub async fn restore_backup(
+    event_bus: &SharedEventBusProvider,
+    backup_id: &str,
+) -> Result<RestoreResult, AdminError> {
+    let timer = TimedOperation::start();
+    let backups_dir = std::path::PathBuf::from(admin_defaults::DEFAULT_BACKUPS_DIR);
+    let backup_path = backups_dir.join(format!("{}.tar.gz", backup_id));
+
+    // Validate backup file
+    validate_backup_file(backup_id, &backup_path)?;
+
+    // Create rollback backup before restore
+    let rollback_id = format!("rollback_{}", chrono::Utc::now().format("%Y%m%d_%H%M%S"));
+    let rollback_path = backups_dir.join(format!("{}.tar.gz", rollback_id));
+
+    tracing::info!(
+        "[ADMIN] Creating rollback backup before restore: {}",
+        rollback_id
+    );
+
+    // Create rollback backup if data exists
+    let _ = create_rollback_backup_if_needed(&rollback_path, &rollback_id);
+
+    // Perform restore with rollback capability
+    let mut result = perform_restore_with_rollback(
+        event_bus,
+        backup_id,
+        &backup_path,
+        &rollback_path,
+        &rollback_id,
+    )
+    .await?;
+
+    // Set execution time
+    result.execution_time_ms = timer.elapsed_ms();
+
+    Ok(result)
 }
 
 /// Helper function to extract backup archive

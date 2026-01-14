@@ -9,13 +9,22 @@ use tracing::{error, info};
 use super::loader::ConfigLoader;
 use super::types::Config;
 
+/// Configuration file watcher for hot-reload functionality
 pub struct ConfigWatcher {
+    /// Shared configuration that gets updated on file changes
     config: Arc<ArcSwap<Config>>,
+    /// Configuration loader for reloading files
     loader: ConfigLoader,
+    /// Path to the configuration file being watched
     path: PathBuf,
 }
 
 impl ConfigWatcher {
+    /// Create a new configuration file watcher
+    ///
+    /// # Arguments
+    /// * `config` - Shared configuration that will be updated when file changes
+    /// * `path` - Path to the configuration file to watch
     pub fn new(config: Arc<ArcSwap<Config>>, path: PathBuf) -> Self {
         Self {
             config,

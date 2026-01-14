@@ -52,6 +52,7 @@ pub struct MetricsViewModel {
 }
 
 impl MetricsViewModel {
+    /// Create a new metrics view model with formatted display values
     pub fn new(cpu_usage: f64, memory_usage: f64, total_queries: u64, avg_latency_ms: f64) -> Self {
         Self {
             cpu_usage,
@@ -84,6 +85,7 @@ pub struct ProvidersViewModel {
 }
 
 impl ProvidersViewModel {
+    /// Create a new providers view model with summary statistics
     pub fn new(providers: Vec<ProviderViewModel>) -> Self {
         let active_count = providers.iter().filter(|p| p.is_active).count();
         let total_count = providers.len();
@@ -118,6 +120,7 @@ pub struct ProviderViewModel {
 }
 
 impl ProviderViewModel {
+    /// Create a new provider view model with display formatting
     pub fn new(id: String, name: String, provider_type: String, status: String) -> Self {
         let is_active = StatusUtils::is_healthy(&status);
         let status_class = css::badge_for_status(&status);
@@ -157,6 +160,7 @@ pub struct IndexesViewModel {
 }
 
 impl IndexesViewModel {
+    /// Create a new indexes view model with summary statistics
     pub fn new(indexes: Vec<IndexViewModel>, total_documents: u64) -> Self {
         let active_count = indexes.iter().filter(|i| i.is_active).count();
         Self {
@@ -212,6 +216,7 @@ pub struct IndexViewModel {
 }
 
 impl IndexViewModel {
+    /// Create a new index view model with display formatting
     pub fn new(
         id: String,
         name: String,
@@ -268,6 +273,7 @@ pub struct ActivityViewModel {
 }
 
 impl ActivityViewModel {
+    /// Create a new activity view model with display formatting
     pub fn new(
         id: String,
         message: String,
@@ -317,6 +323,7 @@ pub struct HealthViewModel {
 }
 
 impl HealthViewModel {
+    /// Create a new health view model with formatted uptime and status
     pub fn new(status: &str, uptime_seconds: u64, pid: u32) -> Self {
         let status_class = css::badge_for_status(status);
         let indicator_class = css::indicator_for_status(status);
@@ -423,6 +430,86 @@ pub struct LogStatsViewModel {
     pub warnings: u64,
     /// Info
     pub info: u64,
+}
+
+// =============================================================================
+// Data Management View Model
+// =============================================================================
+
+/// Data management page view model
+#[derive(Debug, Clone, Serialize)]
+pub struct DataManagementViewModel {
+    /// Page
+    pub page: &'static str,
+    /// Page description
+    pub page_description: String,
+    /// List of available backups
+    pub backups: Vec<BackupViewModel>,
+    /// Total backup size in bytes
+    pub total_backup_size: u64,
+    /// Total backup size formatted
+    pub total_backup_size_formatted: String,
+    /// Number of available backups
+    pub backup_count: usize,
+}
+
+/// Individual backup view model
+#[derive(Debug, Clone, Serialize)]
+pub struct BackupViewModel {
+    /// Backup ID
+    pub id: String,
+    /// Backup name
+    pub name: String,
+    /// Created at timestamp
+    pub created_at: String,
+    /// Size in bytes
+    pub size_bytes: u64,
+    /// Size formatted for display
+    pub size_formatted: String,
+    /// Status
+    pub status: String,
+    /// Status CSS class
+    pub status_class: String,
+}
+
+impl DataManagementViewModel {
+    /// Create a new data management view model
+    pub fn new(backups: Vec<BackupViewModel>) -> Self {
+        let total_backup_size = backups.iter().map(|b| b.size_bytes).sum();
+        let backup_count = backups.len();
+
+        Self {
+            page: "data",
+            page_description: "Manage system backups and data restoration".to_string(),
+            backups,
+            total_backup_size,
+            total_backup_size_formatted: FormattingUtils::format_bytes(total_backup_size),
+            backup_count,
+        }
+    }
+}
+
+impl BackupViewModel {
+    /// Create a backup view model from BackupInfo
+    ///
+    /// Transforms a BackupInfo service struct into a view model with
+    /// pre-formatted display values for the template.
+    pub fn from_backup_info(backup: &crate::server::admin::service::BackupInfo) -> Self {
+        Self {
+            id: backup.id.clone(),
+            name: backup.name.clone(),
+            created_at: backup.created_at.format("%Y-%m-%d %H:%M").to_string(),
+            size_bytes: backup.size_bytes,
+            size_formatted: FormattingUtils::format_bytes(backup.size_bytes),
+            status: backup.status.clone(),
+            status_class: match backup.status.as_str() {
+                "completed" => "badge-success",
+                "failed" => "badge-error",
+                "in_progress" => "badge-warning",
+                _ => "badge-info",
+            }.to_string(),
+        }
+    }
 }
 
 // =============================================================================

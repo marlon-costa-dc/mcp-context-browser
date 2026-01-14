@@ -203,7 +203,7 @@ impl Default for HybridSearchEngine {
         Self {
             bm25_scorer: None,
             documents: Vec::new(),
-            bm25_weight: 0.4,    // 40% BM25
+            bm25_weight: 0.4,     // 40% BM25
             semantic_weight: 0.6, // 60% semantic
             document_index: HashMap::new(),
         }

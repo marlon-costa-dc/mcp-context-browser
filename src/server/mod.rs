@@ -73,6 +73,9 @@ pub mod tools;
 pub mod transport;
 
 // Re-exports for public API
+pub use crate::infrastructure::operations::{
+    IndexingOperation, IndexingOperationsInterface, McpIndexingOperations,
+};
 pub use args::*;
 pub use auth::AuthHandler;
 pub use builder::McpServerBuilder;
@@ -82,5 +85,4 @@ pub use handlers::*;
 pub use init::run_server;
 pub use mcp_server::McpServer;
 pub use metrics::{McpPerformanceMetrics, PerformanceMetricsInterface};
-pub use operations::{IndexingOperation, IndexingOperationsInterface, McpIndexingOperations};
 pub use tools::{create_tool_list, route_tool_call, ToolDefinitions, ToolHandlers};

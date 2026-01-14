@@ -46,6 +46,14 @@ pub use traits::{
     AdaptersModule, AdminModule, ApplicationModule, InfrastructureModule, ServerModule,
 };
 
+// Future module trait exports (v0.3.0+)
+#[cfg(feature = "analysis")]
+pub use traits::AnalysisModule;
+#[cfg(feature = "git")]
+pub use traits::GitModule;
+#[cfg(feature = "quality")]
+pub use traits::QualityModule;
+
 use shaku::module;
 
 use crate::adapters::http_client::HttpClientProvider;
@@ -64,6 +72,19 @@ use crate::server::admin::service::AdminService;
 //
 // Use this module for production initialization. Submodules can be used
 // independently for testing or partial initialization.
+///
+/// This module provides the complete dependency injection container
+/// for the MCP Context Browser application, composing adapters,
+/// infrastructure, server, and admin modules.
+///
+/// # Usage
+/// ```rust
+/// let adapters = Arc::new(AdaptersModuleImpl::builder().build());
+/// let infrastructure = Arc::new(InfrastructureModuleImpl::builder().build());
+/// let server = Arc::new(ServerModuleImpl::builder().build());
+/// let admin = Arc::new(AdminModuleImpl::builder().build());
+/// let module = McpModule::builder(adapters, infrastructure, server, admin).build();
+/// ```
 module! {
     pub McpModule {
         components = [],

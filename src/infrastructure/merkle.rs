@@ -13,14 +13,20 @@ use std::collections::HashMap;
 pub enum MerkleNode {
     /// Leaf node representing a file with its hash
     File {
+        /// File name
         name: String,
+        /// Content hash for integrity verification
         hash: String,
+        /// File size in bytes
         size: u64,
     },
     /// Internal node representing a directory with child nodes
     Directory {
+        /// Directory name
         name: String,
+        /// Combined hash of all children for integrity verification
         hash: String,
+        /// Child nodes (files and subdirectories)
         children: HashMap<String, MerkleNode>,
     },
 }

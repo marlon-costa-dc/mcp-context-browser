@@ -3,10 +3,10 @@
 //! This module provides the main IntelligentChunker that orchestrates
 //! language-specific chunking using tree-sitter and fallback methods.
 
+use crate::domain::chunking::constants::CHUNK_SIZE_GENERIC;
 use crate::domain::error::Result;
 use crate::domain::ports::chunking::{ChunkingOptions, ChunkingResult, CodeChunker};
 use crate::domain::types::{CodeChunk, Language};
-use crate::domain::chunking::constants::CHUNK_SIZE_GENERIC;
 use async_trait::async_trait;
 use std::collections::HashMap;
 use std::path::Path;

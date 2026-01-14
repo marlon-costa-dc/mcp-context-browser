@@ -54,8 +54,11 @@ impl StringValidator {
 /// Configuration utilities - demonstrates parameter object pattern
 #[derive(Debug, Clone)]
 pub struct ValidationConfig {
+    /// Minimum allowed length for validated strings
     pub min_length: usize,
+    /// Maximum allowed length for validated strings
     pub max_length: usize,
+    /// Whether special characters are allowed in validated strings
     pub allow_special_chars: bool,
 }
 
@@ -97,6 +100,10 @@ pub struct ConfigurableValidator {
 }
 
 impl ConfigurableValidator {
+    /// Create a new configurable validator with specified settings
+    ///
+    /// # Arguments
+    /// * `config` - Validation configuration specifying length limits and character restrictions
     pub fn new(config: ValidationConfig) -> Self {
         Self { config }
     }

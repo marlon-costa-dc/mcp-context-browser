@@ -15,6 +15,7 @@ use tracing::debug;
 #[derive(Clone, shaku::Component)]
 #[shaku(interface = super::EventBusProvider)]
 pub struct EventBus {
+    /// Broadcast sender for publishing system events to subscribers
     #[shaku(default = broadcast::channel(crate::infrastructure::constants::EVENT_BUS_TOKIO_CAPACITY).0)]
     sender: Sender<SystemEvent>,
 }

@@ -17,8 +17,10 @@ use mcp_context_browser::infrastructure::logging::SharedLogBuffer;
 use mcp_context_browser::infrastructure::metrics::system::{
     SystemMetricsCollector, SystemMetricsCollectorInterface,
 };
+use mcp_context_browser::infrastructure::operations::{
+    IndexingOperationsInterface, McpIndexingOperations,
+};
 use mcp_context_browser::server::metrics::{McpPerformanceMetrics, PerformanceMetricsInterface};
-use mcp_context_browser::server::operations::{IndexingOperationsInterface, McpIndexingOperations};
 use std::sync::Arc;
 
 pub struct TestInfrastructure {

@@ -106,6 +106,7 @@ pub trait SystemMetricsCollectorInterface: shaku::Interface + Send + Sync {
 #[derive(Component)]
 #[shaku(interface = SystemMetricsCollectorInterface)]
 pub struct SystemMetricsCollector {
+    /// Channel sender for sending metrics collection requests to the actor
     #[shaku(default = SystemMetricsCollector::new().sender)]
     sender: mpsc::Sender<SystemMetricsMessage>,
 }

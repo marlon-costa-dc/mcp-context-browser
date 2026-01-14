@@ -249,7 +249,7 @@ pub enum RateLimitStatus {
     /// Client is locked out due to too many failed attempts
     LockedOut {
         /// Seconds remaining until lockout expires
-        remaining_secs: u64
+        remaining_secs: u64,
     },
 }
 

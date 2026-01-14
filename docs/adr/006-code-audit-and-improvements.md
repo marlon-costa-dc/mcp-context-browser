@@ -276,7 +276,7 @@ config = "0.13"
 | Memory usage | Baseline | <10% increase | Valgrind massif |
 | Error handling coverage | Partial | Complete | Manual review |
 
-## Update for v0.2.0: Multi-Domain Architecture Preparation
+## Update for v0.3.0: Multi-Domain Architecture Preparation
 
 **Date**: 2026-01-14
 
@@ -289,7 +289,7 @@ The code audit work has been extended to prepare the codebase for multi-domain a
 2. **Quality Domain**: Quality gates, metric aggregation, baseline comparisons
 3. **Git Domain**: Repository operations, commit analysis, context generation
 
-### Organizational Changes (v0.2.0)
+### Organizational Changes (v0.3.0)
 
 **Domain Refactoring**:
 ```
@@ -321,19 +321,19 @@ src/adapters/
 
 The multi-domain architecture maintains and extends the v0.1.0 quality standards:
 
-- ✅ **Same error handling patterns** across all domains
-- ✅ **Trait-based DI** for all new provider types
-- ✅ **Async-first** for all I/O operations
-- ✅ **File size limits** maintained (<500 lines)
-- ✅ **Test organization** by domain
+-   ✅ **Same error handling patterns** across all domains
+-   ✅ **Trait-based DI** for all new provider types
+-   ✅ **Async-first** for all I/O operations
+-   ✅ **File size limits** maintained (<500 lines)
+-   ✅ **Test organization** by domain
 
 ### No Functional Changes
 
 v0.2.0 is purely architectural:
-- All existing features work unchanged
-- No new features added
-- Zero functional regressions
-- 100% backward compatible
+-   All existing features work unchanged
+-   No new features added
+-   Zero functional regressions
+-   100% backward compatible
 
 ## References
 

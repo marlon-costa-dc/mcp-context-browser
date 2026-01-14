@@ -16,6 +16,9 @@ use rmcp::{tool, ServerHandler};
 use std::sync::Arc;
 
 use crate::application::{IndexingService, SearchService};
+use crate::domain::ports::{
+    IndexingOperation, IndexingOperationsInterface, PerformanceMetricsInterface,
+};
 use crate::infrastructure::cache::SharedCacheProvider;
 use crate::infrastructure::di::factory::ServiceProviderInterface;
 use crate::infrastructure::di::registry::ProviderRegistryTrait;
@@ -30,8 +33,6 @@ use crate::server::components::ServerComponents;
 use crate::server::handlers::{
     ClearIndexHandler, GetIndexingStatusHandler, IndexCodebaseHandler, SearchCodeHandler,
 };
-use crate::server::metrics::PerformanceMetricsInterface;
-use crate::server::operations::{IndexingOperation, IndexingOperationsInterface};
 use crate::server::tools::{create_tool_list, route_tool_call, ToolHandlers};
 
 /// Type alias for provider tuple to reduce complexity

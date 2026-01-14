@@ -109,6 +109,8 @@ pub mod limits;
 pub mod logging;
 pub mod merkle;
 pub mod metrics;
+/// Operations tracking for indexing and other system operations
+pub mod operations;
 pub mod provider_connection_tracker;
 pub mod provider_lifecycle;
 pub mod recovery;

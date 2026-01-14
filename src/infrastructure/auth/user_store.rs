@@ -242,7 +242,15 @@ pub enum FirstRunStatus {
     /// Loaded from existing users.json file
     FromFile,
     /// First run - credentials were generated (includes plaintext password)
-    Generated { password: String, email: String },
+    Generated {
+        /// Generated password (plaintext for first login)
+        password: String,
+        /// Generated email address
+        email: String
+    },
     /// First run - credentials were provided by user
-    Provided { email: String },
+    Provided {
+        /// User-provided email address
+        email: String
+    },
 }

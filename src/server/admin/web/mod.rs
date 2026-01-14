@@ -262,9 +262,19 @@ async fn diagnostics_handler(State(state): State<AdminState>) -> impl IntoRespon
 }
 
 async fn data_management_handler(State(state): State<AdminState>) -> impl IntoResponse {
-    let mut context = Context::new();
-    context.insert("page", "data");
-    render_template(&state.templates, "data_management.html", &context)
+    let builder = ViewModelBuilder::new(&state);
+
+    match builder.build_data_management().await {
+        Ok(view_model) => render_template(
+            &state.templates,
+            "data_management.html",
+            &create_page_context_with_json(view_model.page, &view_model),
+        ),
+        Err(e) => {
+            tracing::error!("Failed to build data management view model: {}", e);
+            render_error_page(&state.templates, "Data Management Error", &e.to_string())
+        }
+    }
 }
 
 async fn login_handler(State(state): State<AdminState>) -> impl IntoResponse {

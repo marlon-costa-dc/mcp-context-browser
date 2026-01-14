@@ -44,49 +44,49 @@ pub enum Error {
     #[error("Not found: {resource}")]
     NotFound {
         /// The resource that was not found
-        resource: String
+        resource: String,
     },
 
     /// Invalid argument provided to a function
     #[error("Invalid argument: {message}")]
     InvalidArgument {
         /// Description of the invalid argument
-        message: String
+        message: String,
     },
 
     /// Vector database operation error
     #[error("Vector database error: {message}")]
     VectorDb {
         /// Description of the vector database error
-        message: String
+        message: String,
     },
 
     /// Embedding provider operation error
     #[error("Embedding provider error: {message}")]
     Embedding {
         /// Description of the embedding provider error
-        message: String
+        message: String,
     },
 
     /// Configuration-related error
     #[error("Configuration error: {message}")]
     Config {
         /// Description of the configuration error
-        message: String
+        message: String,
     },
 
     /// Internal system error
     #[error("Internal error: {message}")]
     Internal {
         /// Description of the internal error
-        message: String
+        message: String,
     },
 
     /// Cache operation error
     #[error("Cache error: {message}")]
     Cache {
         /// Description of the cache error
-        message: String
+        message: String,
     },
 }
 

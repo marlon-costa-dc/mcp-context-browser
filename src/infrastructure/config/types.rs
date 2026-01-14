@@ -21,6 +21,7 @@ use super::metrics::MetricsConfig;
 use super::providers::{EmbeddingProviderConfig, VectorStoreProviderConfig};
 use super::server::ServerConfig;
 
+/// Top-level configuration structure containing all application settings
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct GlobalConfig {
     /// Server configuration
@@ -44,6 +45,7 @@ pub struct GlobalConfig {
     pub daemon: DaemonConfig,
 }
 
+/// Configuration for all AI and vector store providers
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct GlobalProviderConfig {
     #[validate(nested)]
@@ -207,7 +209,6 @@ pub struct AnalysisConfig {
     /// Enable analysis features (default: false in v0.2.0)
     #[serde(default)]
     pub enabled: bool,
-
     // Future fields (v0.3.0+):
     // pub cache_ttl: Duration,
     // pub max_file_size: u64,
@@ -230,7 +231,6 @@ pub struct QualityConfig {
     /// Enable quality features (default: false in v0.2.0)
     #[serde(default)]
     pub enabled: bool,
-
     // Future fields (v0.5.0+):
     // pub quality_gates: Vec<QualityGate>,
     // pub baseline_ttl: Duration,
@@ -252,7 +252,6 @@ pub struct GitConfig {
     /// Enable Git features (default: false in v0.2.0)
     #[serde(default)]
     pub enabled: bool,
-
     // Future fields (v0.5.0+):
     // pub detect_monorepos: bool,
     // pub follow_submodules: bool,

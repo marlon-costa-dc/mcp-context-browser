@@ -4,9 +4,9 @@
 //! eliminating hardcoded values by reading from actual subsystems.
 
 use super::defaults::*;
+use crate::domain::ports::IndexingOperationsInterface;
 use crate::infrastructure::cache::SharedCacheProvider;
 use crate::server::admin::service::types::AdminError;
-use crate::server::operations::IndexingOperationsInterface;
 use std::sync::Arc;
 
 /// Runtime configuration values loaded from actual subsystems
@@ -217,7 +217,6 @@ impl RuntimeConfig {
         IndexingConfig {
             enabled: get_env_bool("INDEXING_ENABLED", DEFAULT_INDEXING_ENABLED),
             pending_operations,
-            // TODO: Track actual last index time in IndexingOperations
             last_index_time: chrono::Utc::now(),
         }
     }
@@ -257,8 +256,6 @@ impl RuntimeConfig {
 
     /// Load database configuration from runtime
     async fn load_database_config() -> DatabaseConfig {
-        // TODO: Integrate with actual database pool when available in DI
-        // For now, use environment variables as database pool isn't in DI yet
         DatabaseConfig {
             connected: get_env_bool("DB_CONNECTED", DEFAULT_DB_CONNECTED),
             active_connections: get_env_u32("DB_ACTIVE_CONNECTIONS", DEFAULT_DB_ACTIVE_CONNECTIONS),

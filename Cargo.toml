@@ -11,7 +11,7 @@ serde = { version = "1.0", features = ["derive"] }
 
 [package]
 name = "mcp-context-browser"
-version = "0.2.0"
+version = "0.1.0"
 edition = "2021"
 authors = ["Marlon Costa <marlonsc@gmail.com>"]
 license = "MIT"
@@ -22,7 +22,7 @@ description = "A Model Context Protocol server for semantic code analysis using 
 readme = "README.md"
 documentation = "https://docs.rs/mcp-context-browser"
 homepage = "https://github.com/marlonsc/mcp-context-browser"
-rust-version = "1.75"
+rust-version = "1.89"
 
 [package.metadata.docs.rs]
 all-features = true

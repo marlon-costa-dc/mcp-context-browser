@@ -430,17 +430,28 @@ struct TransportHealthResponse {
 
 // Error handling
 
+/// HTTP transport specific errors for MCP protocol
 #[derive(Debug)]
 pub enum McpError {
+    /// Session ID is missing from request
     MissingSessionId,
+    /// Requested session was not found
     SessionNotFound,
+    /// Session has been terminated
     SessionTerminated,
+    /// Session-specific error with details
     SessionError(String),
+    /// Server is draining and not accepting new requests
     ServerDraining,
+    /// Client and server versions are incompatible
     VersionIncompatible(String),
+    /// Error occurred while processing the request
     ProcessingError(String),
+    /// Request format or content is invalid
     InvalidRequest(String),
+    /// Internal server error occurred
     InternalError(String),
+    /// Requested functionality is not implemented
     NotImplemented(String),
 }
 

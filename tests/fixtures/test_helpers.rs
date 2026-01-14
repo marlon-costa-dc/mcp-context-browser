@@ -18,8 +18,8 @@ use mcp_context_browser::infrastructure::metrics::system::{
 use mcp_context_browser::server::admin::service::{
     AdminService, AdminServiceDependencies, AdminServiceImpl,
 };
-use mcp_context_browser::server::metrics::{McpPerformanceMetrics, PerformanceMetricsInterface};
-use mcp_context_browser::server::operations::{IndexingOperationsInterface, McpIndexingOperations};
+use mcp_context_browser::infrastructure::metrics::{McpPerformanceMetrics, PerformanceMetricsInterface};
+use mcp_context_browser::infrastructure::operations::{IndexingOperationsInterface, McpIndexingOperations};
 
 /// Test infrastructure for setting up real services
 pub struct TestInfrastructure {

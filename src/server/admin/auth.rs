@@ -17,13 +17,17 @@ use crate::infrastructure::utils::TimeUtils;
 /// Cookie name for JWT token
 pub const AUTH_COOKIE_NAME: &str = "mcp_admin_token";
 
-/// JWT claims structure
+/// JWT claims structure for authentication tokens
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Claims {
-    pub sub: String,  // username
-    pub role: String, // user role
-    pub exp: usize,   // expiration timestamp
-    pub iat: usize,   // issued at timestamp
+    /// Subject (username) of the token
+    pub sub: String,
+    /// User role for authorization
+    pub role: String,
+    /// Expiration timestamp (Unix epoch)
+    pub exp: usize,
+    /// Issued at timestamp (Unix epoch)
+    pub iat: usize,
 }
 
 /// Authentication service

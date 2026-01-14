@@ -42,7 +42,7 @@ impl ContextService {
         }
     }
 
-    /// Create a new context service with specified providers (test-friendly constructor)
+    /// Create a new context service with embedding and vector store providers (test-friendly constructor)
     pub fn new_with_providers(
         embedding_provider: Arc<dyn EmbeddingProvider>,
         vector_store_provider: Arc<dyn crate::domain::ports::VectorStoreProvider>,

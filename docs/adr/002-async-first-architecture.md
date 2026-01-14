@@ -215,7 +215,7 @@ mod tests {
 }
 ```
 
-## Update for v0.2.0: Hybrid Parallelization with Rayon
+## Update for v0.3.0: Hybrid Parallelization with Rayon
 
 **Date**: 2026-01-14
 
@@ -223,9 +223,9 @@ As MCB evolves to include CPU-intensive code analysis features (v0.3.0+), the as
 
 ### Updated Strategy
 
-- **Tokio**: I/O-bound operations (file reads, network calls, database queries, vector search)
-- **Rayon**: CPU-bound operations (AST parsing, complexity calculation, graph analysis)
-- **Pattern**: Wrap Rayon in `tokio::task::spawn_blocking` to bridge sync CPU work with async I/O
+-   **Tokio**: I/O-bound operations (file reads, network calls, database queries, vector search)
+-   **Rayon**: CPU-bound operations (AST parsing, complexity calculation, graph analysis)
+-   **Pattern**: Wrap Rayon in `tokio::task::spawn_blocking` to bridge sync CPU work with async I/O
 
 ### Rationale
 
@@ -268,18 +268,18 @@ fn compute_complexity(content: &str) -> Result<ComplexityReport> {
 
 ### Benefits
 
-- ✅ Tokio remains the primary runtime for all async coordination
-- ✅ Rayon's work-stealing keeps CPU cores busy during analysis
-- ✅ No context switching between runtimes
-- ✅ Straightforward to test and reason about
-- ✅ Maintains clean async/sync boundaries
+-   ✅ Tokio remains the primary runtime for all async coordination
+-   ✅ Rayon's work-stealing keeps CPU cores busy during analysis
+-   ✅ No context switching between runtimes
+-   ✅ Straightforward to test and reason about
+-   ✅ Maintains clean async/sync boundaries
 
 ### Performance Implications
 
-- **I/O Operations**: Unchanged (Tokio handles efficiently)
-- **CPU Operations**: Improved parallelism (Rayon fully utilizes CPU cores)
-- **Context Switching**: Minimal (spawn_blocking reuses Tokio's worker threads)
-- **Memory**: Slight increase for Rayon work-stealing queues (negligible)
+-   **I/O Operations**: Unchanged (Tokio handles efficiently)
+-   **CPU Operations**: Improved parallelism (Rayon fully utilizes CPU cores)
+-   **Context Switching**: Minimal (spawn_blocking reuses Tokio's worker threads)
+-   **Memory**: Slight increase for Rayon work-stealing queues (negligible)
 
 ## References
 

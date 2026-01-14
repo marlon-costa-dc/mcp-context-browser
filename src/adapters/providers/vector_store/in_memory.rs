@@ -98,15 +98,22 @@ impl VectorStoreProvider for InMemoryVectorStoreProvider {
         let mut heap: BinaryHeap<ScoredItem> = BinaryHeap::with_capacity(limit + 1);
 
         for (i, (embedding, _metadata)) in coll.iter().enumerate() {
-            let similarity = cosine_similarity_with_norm(query_vector, &embedding.vector, query_norm);
+            let similarity =
+                cosine_similarity_with_norm(query_vector, &embedding.vector, query_norm);
 
             if heap.len() < limit {
-                heap.push(ScoredItem { score: similarity, index: i });
+                heap.push(ScoredItem {
+                    score: similarity,
+                    index: i,
+                });
             } else if let Some(min) = heap.peek() {
                 // Only add if better than current minimum
                 if similarity > min.score {
                     heap.pop();
-                    heap.push(ScoredItem { score: similarity, index: i });
+                    heap.push(ScoredItem {
+                        score: similarity,
+                        index: i,
+                    });
                 }
             }
         }

@@ -56,3 +56,34 @@ pub trait ApplicationModule:
     + HasComponent<dyn ChunkingOrchestratorInterface>
 {
 }
+
+// ============================================================================
+// Future Module Traits (v0.3.0+)
+// ============================================================================
+
+/// Analysis module trait - code complexity and technical debt detection (v0.3.0+)
+///
+/// Placeholder trait for future analysis capabilities including:
+/// - Code complexity metrics (cyclomatic, cognitive)
+/// - Technical debt detection
+/// - SATD (Self-Admitted Technical Debt) identification
+#[cfg(feature = "analysis")]
+pub trait AnalysisModule: Send + Sync {}
+
+/// Quality module trait - quality gates and assessment (v0.5.0+)
+///
+/// Placeholder trait for future quality capabilities including:
+/// - Quality gate definitions and enforcement
+/// - Code quality metrics
+/// - Quality trend analysis
+#[cfg(feature = "quality")]
+pub trait QualityModule: Send + Sync {}
+
+/// Git module trait - git operations and repository analysis (v0.5.0+)
+///
+/// Placeholder trait for future git integration including:
+/// - Repository operations
+/// - Commit history analysis
+/// - Branch management
+#[cfg(feature = "git")]
+pub trait GitModule: Send + Sync {}

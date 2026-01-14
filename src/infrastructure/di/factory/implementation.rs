@@ -23,6 +23,7 @@ use std::sync::Arc;
 pub struct DefaultProviderFactory;
 
 impl DefaultProviderFactory {
+    /// Create a new default provider factory instance
     pub fn new() -> Self {
         Self
     }
@@ -164,6 +165,7 @@ impl ServiceProviderInterface for ServiceProvider {
 }
 
 impl ServiceProvider {
+    /// Create a new service provider with default factory and registry
     pub fn new() -> Self {
         Self {
             factory: DefaultProviderFactory::new(),

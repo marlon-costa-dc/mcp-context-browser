@@ -3,6 +3,7 @@
 //! Fluent builder pattern for configuring and constructing the MCP server.
 //! Provides a type-safe way to configure all server components before startup.
 
+use crate::domain::ports::{IndexingOperationsInterface, PerformanceMetricsInterface};
 use crate::infrastructure::cache::{create_cache_provider, SharedCacheProvider};
 use crate::infrastructure::config::Config;
 use crate::infrastructure::di::factory::ServiceProviderInterface;
@@ -13,8 +14,6 @@ use crate::infrastructure::logging::SharedLogBuffer;
 use crate::infrastructure::metrics::system::SystemMetricsCollectorInterface;
 use crate::server::admin::service::AdminService;
 use crate::server::mcp_server::McpServer;
-use crate::server::metrics::PerformanceMetricsInterface;
-use crate::server::operations::IndexingOperationsInterface;
 use arc_swap::ArcSwap;
 use std::sync::Arc;
 
@@ -34,30 +33,36 @@ pub struct McpServerBuilder {
 }
 
 impl McpServerBuilder {
+    /// Create a new MCP server builder with default configuration
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Set the configuration for the MCP server
     pub fn with_config(mut self, config: Arc<ArcSwap<Config>>) -> Self {
         self.config = Some(config);
         self
     }
 
+    /// Set the cache provider for the MCP server
     pub fn with_cache_provider(mut self, cache_provider: Option<SharedCacheProvider>) -> Self {
         self.cache_provider = cache_provider;
         self
     }
 
+    /// Set the event bus for system-wide communication
     pub fn with_event_bus(mut self, event_bus: SharedEventBusProvider) -> Self {
         self.event_bus = Some(event_bus);
         self
     }
 
+    /// Set the log buffer for structured logging
     pub fn with_log_buffer(mut self, log_buffer: SharedLogBuffer) -> Self {
         self.log_buffer = Some(log_buffer);
         self
     }
 
+    /// Set the performance metrics collector
     pub fn with_performance_metrics(
         mut self,
         metrics: Arc<dyn PerformanceMetricsInterface>,
@@ -71,11 +76,13 @@ impl McpServerBuilder {
         self
     }
 
+    /// Set the service provider for dependency injection
     pub fn with_service_provider(mut self, provider: Arc<dyn ServiceProviderInterface>) -> Self {
         self.service_provider = Some(provider);
         self
     }
 
+    /// Set the system metrics collector
     pub fn with_system_collector(
         mut self,
         collector: Arc<dyn SystemMetricsCollectorInterface>,
@@ -84,11 +91,14 @@ impl McpServerBuilder {
         self
     }
 
+    /// Set resource limits for the server
+    /// Set the resource limits for the MCP server
     pub fn with_resource_limits(mut self, limits: Arc<ResourceLimits>) -> Self {
         self.resource_limits = Some(limits);
         self
     }
 
+    /// Set the HTTP client provider
     pub fn with_http_client(
         mut self,
         http_client: Arc<dyn crate::adapters::http_client::HttpClientProvider>,
@@ -97,6 +107,7 @@ impl McpServerBuilder {
         self
     }
 
+    /// Build the MCP server with the configured components
     pub async fn build(self) -> Result<McpServer, Box<dyn std::error::Error>> {
         // Load configuration if not provided
         let config_arc = if let Some(c) = self.config {
@@ -177,7 +188,7 @@ impl McpServerBuilder {
             container.resolve();
 
         // Use from_components to assemble the server with DI-resolved services
-        McpServer::from_components(crate::server::mcp_server::ServerComponents {
+        McpServer::from_components(crate::server::ServerComponents {
             config: config_arc,
             cache_provider: Some(cache_provider),
             performance_metrics,

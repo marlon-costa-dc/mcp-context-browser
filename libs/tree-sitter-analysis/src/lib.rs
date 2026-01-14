@@ -25,10 +25,9 @@ pub mod complexity;
 pub mod structure;
 
 // Re-exports
-pub use processor::{LanguageProcessor, CodeChunk, ChunkConfig};
+// Types are defined in this module, implementations in processor module
 
 use anyhow::Result;
-use std::path::Path;
 
 /// Configuration for code chunking
 #[derive(Debug, Clone)]

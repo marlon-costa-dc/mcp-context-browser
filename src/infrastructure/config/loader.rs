@@ -46,20 +46,34 @@ pub async fn load_embedded_defaults_only() -> Result<Config> {
     Ok(config)
 }
 
+/// Configuration loader for TOML-based application settings
+///
+/// Handles loading configuration from various sources including embedded defaults,
+/// environment variables, and configuration files with support for hot-reload.
 #[derive(Debug, Clone, Copy)]
 pub struct ConfigLoader;
 
 impl Default for ConfigLoader {
+    /// Create a default configuration loader instance
     fn default() -> Self {
         Self::new()
     }
 }
 
 impl ConfigLoader {
+    /// Create a new configuration loader instance with default settings
     pub fn new() -> Self {
         Self
     }
 
+    /// Load configuration from embedded defaults and environment variables
+    ///
+    /// Merges configuration sources in order:
+    /// 1. Embedded TOML defaults (source of truth)
+    /// 2. Environment variables (override defaults)
+    ///
+    /// # Returns
+    /// Complete configuration struct or error if loading fails
     pub async fn load(&self) -> Result<Config> {
         // Start with embedded default config (source of truth for defaults)
         let mut builder = ConfigBuilder::builder().add_source(config::File::from_str(
@@ -98,6 +112,28 @@ impl ConfigLoader {
         Ok(config)
     }
 
+    /// Load configuration from a specific TOML file
+    ///
+    /// Merges configuration sources in order:
+    /// 1. Embedded TOML defaults (source of truth)
+    /// 2. Specified configuration file
+    /// 3. Environment variables (highest priority)
+    ///
+    /// # Arguments
+    /// * `path` - Path to the TOML configuration file
+    ///
+    /// Load configuration from embedded defaults, environment variables, and a specific file
+    ///
+    /// This method loads configuration in the following priority order:
+    /// 1. Embedded default configuration
+    /// 2. Specified configuration file (if exists)
+    /// 3. Environment variables (highest priority)
+    ///
+    /// # Arguments
+    /// * `path` - Path to the configuration file to load
+    ///
+    /// # Returns
+    /// Complete configuration struct or error if loading fails
     pub async fn load_with_file(&self, path: &Path) -> Result<Config> {
         // Start with embedded default config
         let mut builder = ConfigBuilder::builder()

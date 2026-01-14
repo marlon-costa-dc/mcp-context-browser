@@ -6,10 +6,13 @@
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
+/// HTTP server configuration
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct ServerConfig {
+    /// Host address to bind the server to
     #[validate(length(min = 1))]
     pub host: String,
+    /// Port number to listen on
     #[validate(range(min = 1))]
     pub port: u16,
 }

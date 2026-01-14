@@ -413,10 +413,13 @@ impl ResourceLimitsProvider for ResourceLimits {
     }
 }
 
-/// RAII guard for operation permits
+/// RAII guard for operation permits ensuring proper resource cleanup
 pub struct OperationPermit<'a> {
+    /// Semaphore permit held during operation (dropped on guard destruction)
     pub _permit: Option<tokio::sync::SemaphorePermit<'a>>,
+    /// Reference to operation counters for metrics tracking
     pub counters: Arc<OperationCounters>,
+    /// Type of operation being permitted
     pub operation_type: String,
 }
 

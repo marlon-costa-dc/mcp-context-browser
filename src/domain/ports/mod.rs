@@ -17,15 +17,25 @@
 //! - **infrastructure.rs** - Infrastructure utilities (SyncProvider, SnapshotProvider)
 //! - **sync.rs** - File synchronization contracts
 
+/// Administrative interfaces for system management and monitoring
 pub mod admin;
+/// Code chunking strategies for optimal semantic analysis
 pub mod chunking;
+/// AI embedding provider interfaces for semantic text understanding
 pub mod embedding;
+/// Domain events for system-wide communication and decoupling
 pub mod events;
+/// Hybrid search combining BM25 and semantic vector approaches
 pub mod hybrid_search;
+/// Infrastructure port interfaces for cross-cutting concerns
 pub mod infrastructure;
+/// Data persistence and retrieval interfaces
 pub mod repository;
+/// Core business logic service interfaces
 pub mod services;
+/// Synchronization interfaces for distributed operations
 pub mod sync;
+/// Vector storage backend interfaces for enterprise-scale semantic search
 pub mod vector_store;
 
 // Re-export commonly used port traits

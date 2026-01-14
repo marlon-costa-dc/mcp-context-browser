@@ -13,9 +13,15 @@ pub enum CompatibilityResult {
     /// Versions are fully compatible
     Compatible,
     /// Versions differ but within tolerance (warning)
-    Warning { message: String },
+    Warning {
+        /// Warning message explaining the version difference
+        message: String
+    },
     /// Versions are incompatible
-    Incompatible { message: String },
+    Incompatible {
+        /// Error message explaining why versions are incompatible
+        message: String
+    },
 }
 
 impl CompatibilityResult {

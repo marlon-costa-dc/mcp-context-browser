@@ -32,10 +32,10 @@ use crate::infrastructure::resilience::SharedRateLimiter;
 use crate::infrastructure::service_helpers::UptimeTracker;
 use crate::infrastructure::utils::TimeUtils;
 
+use crate::domain::ports::PerformanceMetricsInterface;
 use crate::infrastructure::metrics::{
     system::SystemMetricsCollectorInterface, CacheMetrics, CpuMetrics, MemoryMetrics,
 };
-use crate::server::metrics::PerformanceMetricsInterface;
 
 /// Comprehensive metrics response
 #[derive(Debug, Serialize, Deserialize)]

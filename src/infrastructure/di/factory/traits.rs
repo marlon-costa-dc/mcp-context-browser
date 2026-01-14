@@ -18,26 +18,34 @@ pub trait ProviderFactory: Send + Sync {
         &self,
         config: &VectorStoreConfig,
     ) -> Result<Arc<dyn VectorStoreProvider>>;
+    /// Get list of supported embedding provider names
     fn supported_embedding_providers(&self) -> Vec<String>;
+    /// Get list of supported vector store provider names
     fn supported_vector_store_providers(&self) -> Vec<String>;
 }
 
 /// Service provider interface
 #[async_trait]
 pub trait ServiceProviderInterface: shaku::Interface + Send + Sync {
+    /// Get access to the provider registry
     fn registry(&self) -> &ProviderRegistry;
+    /// List all registered providers (embedding, vector_store)
     fn list_providers(&self) -> (Vec<String>, Vec<String>);
+    /// Register an embedding provider with the given name
     fn register_embedding_provider(
         &self,
         name: &str,
         provider: Arc<dyn EmbeddingProvider>,
     ) -> Result<()>;
+    /// Register a vector store provider with the given name
     fn register_vector_store_provider(
         &self,
         name: &str,
         provider: Arc<dyn VectorStoreProvider>,
     ) -> Result<()>;
+    /// Remove an embedding provider by name
     fn remove_embedding_provider(&self, name: &str) -> Result<()>;
+    /// Remove a vector store provider by name
     fn remove_vector_store_provider(&self, name: &str) -> Result<()>;
     async fn get_embedding_provider(
         &self,

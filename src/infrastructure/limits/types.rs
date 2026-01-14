@@ -67,28 +67,44 @@ pub struct OperationStats {
     pub queued_operations: usize,
 }
 
-/// Resource limit violations
+/// Resource limit violations with detailed information
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ResourceViolation {
+    /// Memory usage exceeded configured limit
     MemoryLimitExceeded {
+        /// Current memory usage as percentage
         current_percent: f32,
+        /// Configured memory limit as percentage
         limit_percent: f32,
     },
+    /// CPU usage exceeded configured limit
     CpuLimitExceeded {
+        /// Current CPU usage as percentage
         current_percent: f32,
+        /// Configured CPU limit as percentage
         limit_percent: f32,
     },
+    /// Disk I/O exceeded configured limit
     DiskLimitExceeded {
+        /// Current disk I/O usage as percentage
         current_percent: f32,
+        /// Configured disk I/O limit as percentage
         limit_percent: f32,
     },
+    /// Available disk space below required threshold
     DiskSpaceLow {
+        /// Available disk space in bytes
         available_bytes: u64,
+        /// Required minimum disk space in bytes
         required_bytes: u64,
     },
+    /// Concurrent operations exceeded configured limit
     ConcurrencyLimitExceeded {
+        /// Type of operation being limited
         operation_type: String,
+        /// Current number of concurrent operations
         current: usize,
+        /// Maximum allowed concurrent operations
         limit: usize,
     },
 }

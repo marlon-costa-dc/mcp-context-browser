@@ -12,6 +12,11 @@ use crate::infrastructure::events::EventBusProvider;
 use crate::infrastructure::metrics::system::SystemMetricsCollectorInterface;
 use crate::server::admin::service::AdminServiceImpl;
 
+/// Implementation of the AdminModule trait providing administrative services.
+///
+/// This module contains services for system administration and monitoring,
+/// including admin service implementation, service provider factory,
+/// event bus for system events, and system metrics collection.
 module! {
     pub AdminModuleImpl: AdminModule {
         components = [AdminServiceImpl],

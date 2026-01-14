@@ -3,6 +3,7 @@
 //! Provides functions for health checks, connectivity tests, and performance testing.
 
 use super::runtime_config::{RuntimeConfig, RuntimeConfigDependencies};
+use crate::domain::ports::IndexingOperationsInterface;
 use crate::infrastructure::cache::SharedCacheProvider;
 use crate::infrastructure::di::factory::ServiceProviderInterface;
 use crate::infrastructure::metrics::system::SystemMetricsCollectorInterface;
@@ -11,7 +12,6 @@ use crate::infrastructure::utils::status;
 use crate::server::admin::service::types::{
     AdminError, ConnectivityTestResult, HealthCheck, HealthCheckResult, ProviderInfo,
 };
-use crate::server::operations::IndexingOperationsInterface;
 use std::sync::Arc;
 
 /// Service dependencies for health checks

@@ -59,22 +59,6 @@ pub struct DiContainer {
     pub admin_module: Arc<dyn AdminModule>,
     /// Application module (business logic services)
     pub application_module: Arc<dyn ApplicationModule>,
-
-    // === Future modules (v0.3.0+) - prepared for incremental feature integration ===
-    /// Analysis module (code complexity, technical debt detection) - v0.3.0+
-    /// Currently None - will be initialized when analysis feature is enabled
-    #[cfg(feature = "analysis")]
-    pub analysis_module: Option<Arc<dyn crate::infrastructure::di::modules::AnalysisModule>>,
-
-    /// Quality module (quality gates, assessment) - v0.5.0+
-    /// Currently None - will be initialized when quality feature is enabled
-    #[cfg(feature = "quality")]
-    pub quality_module: Option<Arc<dyn crate::infrastructure::di::modules::QualityModule>>,
-
-    /// Git module (git operations, repository analysis) - v0.5.0+
-    /// Currently None - will be initialized when git feature is enabled
-    #[cfg(feature = "git")]
-    pub git_module: Option<Arc<dyn crate::infrastructure::di::modules::GitModule>>,
 }
 
 impl DiContainer {
@@ -111,12 +95,6 @@ impl DiContainer {
             server_module,
             admin_module,
             application_module,
-            #[cfg(feature = "analysis")]
-            analysis_module: None,  // v0.3.0+
-            #[cfg(feature = "quality")]
-            quality_module: None,   // v0.5.0+
-            #[cfg(feature = "git")]
-            git_module: None,       // v0.5.0+
         })
     }
 
@@ -183,12 +161,6 @@ impl DiContainer {
             server_module,
             admin_module,
             application_module,
-            #[cfg(feature = "analysis")]
-            analysis_module: None,  // v0.3.0+: Will be initialized from config.analysis
-            #[cfg(feature = "quality")]
-            quality_module: None,   // v0.5.0+: Will be initialized from config.quality
-            #[cfg(feature = "git")]
-            git_module: None,       // v0.5.0+: Will be initialized from config.git
         })
     }
 
@@ -205,6 +177,7 @@ impl DiContainer {
 
 /// Trait for resolving components from the right module
 pub trait ComponentResolver<T: Interface + ?Sized> {
+    /// Resolve and return an instance of the component
     fn resolve(&self) -> Arc<T>;
 }
 
@@ -233,14 +206,14 @@ impl ComponentResolver<dyn crate::infrastructure::di::factory::ServiceProviderIn
     }
 }
 
-impl ComponentResolver<dyn crate::server::metrics::PerformanceMetricsInterface> for DiContainer {
-    fn resolve(&self) -> Arc<dyn crate::server::metrics::PerformanceMetricsInterface> {
+impl ComponentResolver<dyn crate::domain::ports::PerformanceMetricsInterface> for DiContainer {
+    fn resolve(&self) -> Arc<dyn crate::domain::ports::PerformanceMetricsInterface> {
         self.server_module.resolve()
     }
 }
 
-impl ComponentResolver<dyn crate::server::operations::IndexingOperationsInterface> for DiContainer {
-    fn resolve(&self) -> Arc<dyn crate::server::operations::IndexingOperationsInterface> {
+impl ComponentResolver<dyn crate::domain::ports::IndexingOperationsInterface> for DiContainer {
+    fn resolve(&self) -> Arc<dyn crate::domain::ports::IndexingOperationsInterface> {
         self.server_module.resolve()
     }
 }

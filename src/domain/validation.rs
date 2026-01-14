@@ -37,7 +37,7 @@ pub enum ValidationError {
     /// Field is required but missing or empty
     Required {
         /// Name of the field that is required
-        field: String
+        field: String,
     },
     /// Value is too short
     TooShort {
@@ -62,7 +62,7 @@ pub enum ValidationError {
         /// Name of the field that failed validation
         field: String,
         /// Description of the expected format
-        expected: String
+        expected: String,
     },
     /// Numeric value is out of allowed range
     OutOfRange {
@@ -130,18 +130,21 @@ impl fmt::Display for ValidationError {
 
 impl std::error::Error for ValidationError {}
 
-/// Base validator trait for composability
+/// Base validator trait for composability and type safety
 pub trait Validator<T> {
+    /// Validate input value and return result with detailed error information
     fn validate(&self, input: T) -> ValidationResult<T>;
 }
 
-/// String validator trait for composable string validation
+/// String validator trait for composable string validation with common patterns
 pub trait StringValidatorTrait {
+    /// Validate string input and return result with string-specific validation rules
     fn validate(&self, input: &str) -> ValidationResult<String>;
 }
 
-/// Number validator trait for composable number validation
+/// Number validator trait for composable number validation with range checking
 pub trait NumberValidatorTrait {
+    /// Validate number input and return result with numeric validation rules
     fn validate(&self, input: &i64) -> ValidationResult<i64>;
 }
 

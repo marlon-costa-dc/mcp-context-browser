@@ -359,6 +359,32 @@ impl<'a> ViewModelBuilder<'a> {
     }
 
     // =========================================================================
+    // Data Management Builders
+    // =========================================================================
+
+    /// Build data management page view model
+    ///
+    /// Fetches backup information from the admin service and transforms
+    /// it into a view model suitable for the data management template.
+    pub async fn build_data_management(&self) -> Result<DataManagementViewModel> {
+        // Fetch backup list from admin service
+        let backups = self
+            .state
+            .admin_service
+            .list_backups()
+            .await
+            .context("Failed to fetch backup list")?;
+
+        // Transform BackupInfo into BackupViewModel
+        let backup_view_models = backups
+            .iter()
+            .map(BackupViewModel::from_backup_info)
+            .collect();
+
+        Ok(DataManagementViewModel::new(backup_view_models))
+    }
+
+    // =========================================================================
     // Error Page Builder
     // =========================================================================
 

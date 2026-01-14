@@ -15,6 +15,7 @@ use serde::{Deserialize, Serialize};
 /// Encryption algorithm configuration
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub enum EncryptionAlgorithm {
+    /// AES-256-GCM encryption (default and recommended)
     #[serde(rename = "aes256-gcm")]
     #[default]
     Aes256Gcm,

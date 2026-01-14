@@ -1,11 +1,11 @@
 # MCP Context Browser
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Rust](https://img.shields.io/badge/rust-1.70%2B-orange)](https://www.rust-lang.org/)
+[![Rust](https://img.shields.io/badge/rust-1.89%2B-orange)](https://www.rust-lang.org/)
 [![MCP](https://img.shields.io/badge/MCP-2024--11--05-blue)](https://modelcontextprotocol.io/)
 [![Version](https://img.shields.io/badge/version-0.1.0-blue)](https://github.com/marlonsc/mcp-context-browser/releases)
 
-**Drop-in replacement for [Claude-context](https://github.com/zilliztech/claude-context)** - AI-powered semantic code search as a single native binary. Same MCP tools, same environment variables, better performance.
+**High-performance MCP server for semantic code search** - AI-powered code analysis using vector embeddings. Provides intelligent, natural language code discovery with AST-based parsing for 12+ languages, supporting Claude Desktop and other AI assistants through the Model Context Protocol.
 
 ## Why Switch from Claude-context?
 
@@ -71,6 +71,93 @@ VECTOR_STORE_PROVIDER=milvus|in-memory|filesystem|edgevec
 MILVUS_ADDRESS=http://localhost:19530
 MILVUS_TOKEN=...
 ```
+
+## Installation
+
+### Prerequisites
+
+- Rust 1.89+ ([install Rust](https://rustup.rs/))
+- (Optional) Milvus vector database for production use
+
+### Build from Source
+
+```bash
+# Clone the repository
+git clone https://github.com/marlonsc/mcp-context-browser.git
+cd mcp-context-browser
+
+# Build release binary
+make build-release
+
+# Binary will be available at ./target/release/mcp-context-browser
+```
+
+### Docker Installation
+
+```bash
+# Build Docker image
+make docker-build
+
+# Run with Docker Compose
+docker-compose up -d
+```
+
+### Systemd Service (Linux)
+
+```bash
+# Install as system service
+sudo make install-service
+
+# Start the service
+sudo systemctl start mcp-context-browser
+```
+
+## Usage
+
+### Basic Usage
+
+After installation, start the MCP server:
+
+```bash
+# Set required environment variables
+export OPENAI_API_KEY="your-api-key-here"
+export MILVUS_ADDRESS="http://localhost:19530"
+
+# Start the server
+./target/release/mcp-context-browser
+```
+
+### MCP Tools
+
+The server provides 4 MCP tools for AI assistants:
+
+1. **`index_codebase`** - Index your codebase for semantic search
+2. **`search_code`** - Perform natural language code search
+3. **`get_indexing_status`** - Check indexing progress and system health
+4. **`clear_index`** - Clear the search index
+
+### Claude Desktop Integration
+
+Add to your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "context": {
+      "command": "/path/to/mcp-context-browser",
+      "args": [],
+      "env": {
+        "OPENAI_API_KEY": "sk-...",
+        "MILVUS_ADDRESS": "http://localhost:19530"
+      }
+    }
+  }
+}
+```
+
+### Advanced Configuration
+
+See [DEPLOYMENT.md](docs/operations/DEPLOYMENT.md) for production deployment guides and advanced configuration options.
 
 ## Core Features
 

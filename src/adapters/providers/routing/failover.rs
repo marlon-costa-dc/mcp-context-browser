@@ -186,7 +186,7 @@ pub enum FailoverStrategyType {
     /// Priority-based strategy with configurable priorities where lower numbers indicate higher priority
     PriorityBased {
         /// Map of provider IDs to their priority values (lower = higher priority)
-        priorities: HashMap<String, u32>
+        priorities: HashMap<String, u32>,
     },
     /// Round-robin strategy that distributes requests evenly across available providers
     RoundRobin,
@@ -246,7 +246,7 @@ pub struct FailoverManager {
 impl FailoverManager {
     /// Create a new failover manager with default priority-based strategy
     pub fn new(health_monitor: Arc<HealthMonitor>) -> Self {
-        let strategy = Box::new(PriorityBasedStrategy::new());
+        let strategy: Box<dyn FailoverStrategy> = Box::new(PriorityBasedStrategy::new());
         Self {
             health_monitor,
             strategy,
@@ -390,7 +390,7 @@ impl FailoverManager {
             new_strategy.set_priority(&id, priority);
         }
         let count = new_strategy.priorities.len();
-        self.strategy = Box::new(new_strategy);
+        self.strategy = Box::new(new_strategy) as Box<dyn FailoverStrategy>;
         info!("Provider priorities configured with {} entries", count);
     }
 }

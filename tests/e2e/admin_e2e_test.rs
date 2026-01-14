@@ -15,20 +15,20 @@ async fn create_test_admin_service() -> std::sync::Arc<dyn AdminService> {
     use mcp_context_browser::infrastructure::events::EventBus;
     use mcp_context_browser::infrastructure::logging;
     use mcp_context_browser::infrastructure::metrics::system::SystemMetricsCollector;
+    use mcp_context_browser::infrastructure::operations::McpIndexingOperations;
     use mcp_context_browser::server::admin::service::{AdminServiceDependencies, AdminServiceImpl};
     use mcp_context_browser::server::metrics::McpPerformanceMetrics;
-    use mcp_context_browser::server::operations::McpIndexingOperations;
     use std::sync::Arc;
 
     // Create minimal test dependencies
-    let performance_metrics = Arc::new(McpPerformanceMetrics::default());
-    let indexing_operations = Arc::new(McpIndexingOperations::default());
-    let service_provider = Arc::new(ServiceProvider::new());
-    let system_collector = Arc::new(SystemMetricsCollector::new());
-    let http_client = Arc::new(HttpClientPool::new().expect("Failed to create HTTP client"));
+    let performance_metrics: Arc<dyn mcp_context_browser::server::metrics::PerformanceMetricsInterface> = Arc::new(McpPerformanceMetrics::default());
+    let indexing_operations: Arc<dyn mcp_context_browser::infrastructure::operations::IndexingOperationsInterface> = Arc::new(McpIndexingOperations::default());
+    let service_provider: Arc<dyn mcp_context_browser::infrastructure::di::factory::ServiceProviderInterface> = Arc::new(ServiceProvider::new());
+    let system_collector: Arc<dyn mcp_context_browser::infrastructure::metrics::system::SystemMetricsCollectorInterface> = Arc::new(SystemMetricsCollector::new());
+    let http_client: Arc<dyn mcp_context_browser::adapters::http_client::HttpClientProvider> = Arc::new(HttpClientPool::new().expect("Failed to create HTTP client"));
 
     // Create event bus and log buffer
-    let event_bus = Arc::new(EventBus::with_default_capacity());
+    let event_bus: Arc<dyn mcp_context_browser::infrastructure::events::EventBusProvider> = Arc::new(EventBus::with_default_capacity());
     let log_buffer = logging::create_shared_log_buffer(1000);
 
     // Load config from file instead of using Config::default()

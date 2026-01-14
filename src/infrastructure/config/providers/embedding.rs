@@ -10,60 +10,89 @@ use validator::Validate;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "provider")]
 pub enum EmbeddingProviderConfig {
+    /// OpenAI API embedding provider configuration
     #[serde(rename = "openai")]
     OpenAI {
+        /// OpenAI model name (e.g., "text-embedding-3-small")
         model: String,
+        /// OpenAI API key for authentication
         api_key: String,
+        /// Custom base URL (optional, defaults to OpenAI)
         #[serde(default)]
         base_url: Option<String>,
+        /// Expected embedding dimensions
         #[serde(default)]
         dimensions: Option<usize>,
+        /// Maximum tokens per request
         #[serde(default)]
         max_tokens: Option<usize>,
     },
+    /// Ollama local AI embedding provider configuration
     #[serde(rename = "ollama")]
     Ollama {
+        /// Ollama model name (e.g., "nomic-embed-text")
         model: String,
+        /// Ollama server host URL (optional, defaults to localhost)
         #[serde(default)]
         host: Option<String>,
+        /// Expected embedding dimensions
         #[serde(default)]
         dimensions: Option<usize>,
+        /// Maximum tokens per request
         #[serde(default)]
         max_tokens: Option<usize>,
     },
+    /// VoyageAI embedding provider configuration
     #[serde(rename = "voyageai")]
     VoyageAI {
+        /// VoyageAI model name (e.g., "voyage-2")
         model: String,
+        /// VoyageAI API key for authentication
         api_key: String,
+        /// Expected embedding dimensions
         #[serde(default)]
         dimensions: Option<usize>,
+        /// Maximum tokens per request
         #[serde(default)]
         max_tokens: Option<usize>,
     },
+    /// Google Gemini embedding provider configuration
     #[serde(rename = "gemini")]
     Gemini {
+        /// Gemini model name (e.g., "text-embedding-004")
         model: String,
+        /// Gemini API key for authentication
         api_key: String,
+        /// Custom base URL (optional, defaults to Google)
         #[serde(default)]
         base_url: Option<String>,
+        /// Expected embedding dimensions
         #[serde(default)]
         dimensions: Option<usize>,
+        /// Maximum tokens per request
         #[serde(default)]
         max_tokens: Option<usize>,
     },
+    /// Mock embedding provider for testing and development
     #[serde(rename = "mock")]
     Mock {
+        /// Expected embedding dimensions
         #[serde(default)]
         dimensions: Option<usize>,
+        /// Maximum tokens per request
         #[serde(default)]
         max_tokens: Option<usize>,
     },
+    /// FastEmbed local embedding provider configuration
     #[serde(rename = "fastembed")]
     FastEmbed {
+        /// FastEmbed model name (optional, uses default if not specified)
         #[serde(default)]
         model: Option<String>,
+        /// Expected embedding dimensions
         #[serde(default)]
         dimensions: Option<usize>,
+        /// Maximum tokens per request
         #[serde(default)]
         max_tokens: Option<usize>,
     },
