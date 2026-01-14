@@ -24,7 +24,11 @@ use std::sync::Arc;
 /// Returns CRITICAL if value > unhealthy_threshold, DEGRADED if value > degraded_threshold,
 /// otherwise HEALTHY.
 #[inline]
-fn determine_health_status(value: f32, degraded_threshold: f32, unhealthy_threshold: f32) -> String {
+fn determine_health_status(
+    value: f32,
+    degraded_threshold: f32,
+    unhealthy_threshold: f32,
+) -> String {
     if value > unhealthy_threshold {
         status::CRITICAL.to_string()
     } else if value > degraded_threshold {

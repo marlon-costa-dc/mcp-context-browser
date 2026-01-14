@@ -232,7 +232,11 @@ fn add_security_headers(response: &mut Response, config: &SecurityConfig) {
     let headers = response.headers_mut();
 
     // Content Security Policy
-    insert_optional_header(headers, "Content-Security-Policy", config.content_security_policy.as_ref());
+    insert_optional_header(
+        headers,
+        "Content-Security-Policy",
+        config.content_security_policy.as_ref(),
+    );
 
     // HTTP Strict Transport Security
     if config.hsts_enabled {
@@ -249,16 +253,35 @@ fn add_security_headers(response: &mut Response, config: &SecurityConfig) {
     // Standard security headers
     insert_optional_header(headers, "X-Frame-Options", config.x_frame_options.as_ref());
     insert_optional_header(headers, "Referrer-Policy", config.referrer_policy.as_ref());
-    insert_optional_header(headers, "Permissions-Policy", config.permissions_policy.as_ref());
+    insert_optional_header(
+        headers,
+        "Permissions-Policy",
+        config.permissions_policy.as_ref(),
+    );
 
     // Cross-origin policies
-    insert_optional_header(headers, "Cross-Origin-Embedder-Policy", config.cross_origin_embedder_policy.as_ref());
-    insert_optional_header(headers, "Cross-Origin-Opener-Policy", config.cross_origin_opener_policy.as_ref());
-    insert_optional_header(headers, "Cross-Origin-Resource-Policy", config.cross_origin_resource_policy.as_ref());
+    insert_optional_header(
+        headers,
+        "Cross-Origin-Embedder-Policy",
+        config.cross_origin_embedder_policy.as_ref(),
+    );
+    insert_optional_header(
+        headers,
+        "Cross-Origin-Opener-Policy",
+        config.cross_origin_opener_policy.as_ref(),
+    );
+    insert_optional_header(
+        headers,
+        "Cross-Origin-Resource-Policy",
+        config.cross_origin_resource_policy.as_ref(),
+    );
 
     // X-Content-Type-Options
     if config.x_content_type_options {
-        headers.insert("X-Content-Type-Options", HeaderValue::from_static("nosniff"));
+        headers.insert(
+            "X-Content-Type-Options",
+            HeaderValue::from_static("nosniff"),
+        );
     }
 
     // X-Request-ID for tracing
@@ -267,7 +290,10 @@ fn add_security_headers(response: &mut Response, config: &SecurityConfig) {
     }
 
     // Server header
-    headers.insert(header::SERVER, HeaderValue::from_static("mcp-context-browser"));
+    headers.insert(
+        header::SERVER,
+        HeaderValue::from_static("mcp-context-browser"),
+    );
 }
 
 /// Advanced request validation middleware

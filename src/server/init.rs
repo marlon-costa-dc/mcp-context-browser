@@ -101,10 +101,8 @@ fn init_rate_limiter(
         return None;
     }
 
-    let backend_type = determine_rate_limiter_backend(
-        cache_provider.as_ref(),
-        config.metrics.clustering_enabled,
-    );
+    let backend_type =
+        determine_rate_limiter_backend(cache_provider.as_ref(), config.metrics.clustering_enabled);
     tracing::info!(
         backend = ?backend_type,
         "🔒 Initializing rate limiter..."
@@ -127,18 +125,17 @@ async fn setup_admin_interface(
 ) -> Option<axum::Router> {
     let data_dir = config.data.base_path();
 
-    let (admin_config, generated_password) = match
-        crate::server::admin::config::AdminConfig::load_with_first_run(&data_dir).await
-    {
-        Ok(result) => result,
-        Err(e) => {
-            tracing::warn!(
-                "⚠️  Failed to load admin config: {}. Admin interface disabled.",
-                e
-            );
-            return None;
-        }
-    };
+    let (admin_config, generated_password) =
+        match crate::server::admin::config::AdminConfig::load_with_first_run(&data_dir).await {
+            Ok(result) => result,
+            Err(e) => {
+                tracing::warn!(
+                    "⚠️  Failed to load admin config: {}. Admin interface disabled.",
+                    e
+                );
+                return None;
+            }
+        };
 
     if !admin_config.enabled {
         tracing::info!("ℹ️  Admin interface disabled");
@@ -150,10 +147,8 @@ async fn setup_admin_interface(
         display_first_run_message(&admin_config, &data_dir);
     }
 
-    let admin_api_server = crate::server::admin::api::AdminApiServer::new(
-        admin_config,
-        Arc::clone(server),
-    );
+    let admin_api_server =
+        crate::server::admin::api::AdminApiServer::new(admin_config, Arc::clone(server));
 
     let auth_handler = server.auth_handler();
     match admin_api_server.create_router_with_auth(auth_handler) {
