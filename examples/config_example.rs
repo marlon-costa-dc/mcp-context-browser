@@ -10,30 +10,44 @@ use std::path::PathBuf;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "provider")]
 pub enum EmbeddingProviderConfig {
+    /// OpenAI embedding provider configuration
     #[serde(rename = "openai")]
     OpenAI {
+        /// OpenAI model name (e.g., "text-embedding-3-small")
         model: String,
+        /// OpenAI API key
         api_key: String,
+        /// Custom base URL for OpenAI API
         #[serde(default)]
         base_url: Option<String>,
+        /// Embedding dimensions
         #[serde(default)]
         dimensions: Option<usize>,
+        /// Maximum tokens per request
         #[serde(default)]
         max_tokens: Option<usize>,
     },
+    /// VoyageAI embedding provider configuration
     #[serde(rename = "voyageai")]
     VoyageAI {
+        /// VoyageAI model name
         model: String,
+        /// VoyageAI API key
         api_key: String,
+        /// Embedding dimensions
         #[serde(default)]
         dimensions: Option<usize>,
+        /// Maximum tokens per request
         #[serde(default)]
         max_tokens: Option<usize>,
     },
+    /// Mock embedding provider for testing
     #[serde(rename = "mock")]
     Mock {
+        /// Embedding dimensions
         #[serde(default)]
         dimensions: Option<usize>,
+        /// Maximum tokens per request
         #[serde(default)]
         max_tokens: Option<usize>,
     },
@@ -43,21 +57,31 @@ pub enum EmbeddingProviderConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "provider")]
 pub enum VectorStoreProviderConfig {
+    /// Milvus vector database configuration
     #[serde(rename = "milvus")]
     Milvus {
+        /// Milvus server address (host:port)
         address: String,
+        /// Authentication token
         #[serde(default)]
         token: Option<String>,
+        /// Collection name
         #[serde(default)]
         collection: Option<String>,
+        /// Vector dimensions
         #[serde(default)]
         dimensions: Option<usize>,
     },
+    /// Pinecone vector database configuration
     #[serde(rename = "pinecone")]
     Pinecone {
+        /// Pinecone API key
         api_key: String,
+        /// Pinecone environment
         environment: String,
+        /// Index name
         index_name: String,
+        /// Vector dimensions
         #[serde(default)]
         dimensions: Option<usize>,
     },
@@ -73,6 +97,7 @@ pub struct GlobalConfig {
     pub providers: GlobalProviderConfig,
 }
 
+/// Example server configuration structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServerConfigExample {
     /// Host
@@ -91,6 +116,7 @@ impl Default for ServerConfigExample {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+/// Global provider configuration containing embedding and vector store settings
 pub struct GlobalProviderConfig {
     /// Embedding
     pub embedding: EmbeddingProviderConfig,
@@ -99,8 +125,15 @@ pub struct GlobalProviderConfig {
 }
 
 /// Configuration manager with schema validation (equivalent to Claude Context's convict.js)
+///
+/// Provides hierarchical configuration loading with the following priority:
+/// 1. Global config file (~/.context/config.toml)
+/// 2. Environment variables
+/// 3. Default values
 pub struct ConfigManager {
+    /// Path to the global configuration file (~/.context/config.toml)
     global_config_path: PathBuf,
+    /// Environment variables available for configuration
     env_config: HashMap<String, String>,
 }
 

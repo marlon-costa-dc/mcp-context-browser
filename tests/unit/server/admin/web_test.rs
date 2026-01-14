@@ -472,9 +472,12 @@ fn test_data_management_renders() {
     let web_interface = WebInterface::new().expect("Failed to create web interface");
     let templates = web_interface.templates();
 
+    // Create a DataManagementViewModel with empty backups
+    let vm = DataManagementViewModel::new(vec![]);
+
     let mut context = Context::new();
-    context.insert("page", "data");
-    context.insert("page_description", "Backup and restore operations");
+    context.insert("page", vm.page);
+    context.insert("vm", &vm);
     let result = templates.render("data_management.html", &context);
     assert!(
         result.is_ok(),
@@ -741,9 +744,12 @@ fn test_data_management_api_endpoints() {
     let web_interface = WebInterface::new().expect("Failed to create web interface");
     let templates = web_interface.templates();
 
+    // Create a DataManagementViewModel with empty backups
+    let vm = DataManagementViewModel::new(vec![]);
+
     let mut context = Context::new();
-    context.insert("page", "data");
-    context.insert("page_description", "Backup and restore");
+    context.insert("page", vm.page);
+    context.insert("vm", &vm);
 
     let html = templates
         .render("data_management.html", &context)

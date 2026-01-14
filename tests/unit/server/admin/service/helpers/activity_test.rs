@@ -2,9 +2,7 @@
 //!
 //! Tests for converting SystemEvents into human-readable activity log entries.
 
-use mcp_context_browser::application::admin::helpers::activity::{
-    ActivityLevel, ActivityLogger,
-};
+use mcp_context_browser::application::admin::helpers::activity::{ActivityLevel, ActivityLogger};
 
 #[tokio::test]
 async fn test_activity_logger_manual_add() {

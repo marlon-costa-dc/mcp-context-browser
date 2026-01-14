@@ -25,12 +25,12 @@ use axum::{
 use std::sync::Arc;
 use tera::{Context, Tera};
 
+use self::html_helpers::htmx_error;
 use crate::server::admin::auth::web_auth_middleware;
 use crate::server::admin::handlers::htmx::{
     htmx_maintenance_history_handler, htmx_recovery_status_handler,
 };
 use crate::server::admin::models::AdminState;
-use self::html_helpers::htmx_error;
 
 use self::builders::ViewModelBuilder;
 
@@ -261,6 +261,7 @@ async fn logs_handler(State(state): State<AdminState>) -> impl IntoResponse {
 async fn maintenance_handler(State(state): State<AdminState>) -> impl IntoResponse {
     let mut context = Context::new();
     context.insert("page", "maintenance");
+    context.insert("page_description", "Perform system maintenance operations including cache clearing, provider restarts, and index management.");
     render_template(&state.templates, "maintenance.html", &context)
 }
 

@@ -7,7 +7,7 @@
     <div class="page-header">
         <div>
             <h1 class="page-title">Data Management</h1>
-            <p class="page-description">{{ page_description }}</p>
+            <p class="page-description">{{ vm.page_description }}</p>
         </div>
         <button @click="createBackup()" class="btn btn-primary">
             {{ icons::icon(name="download", class="icon-sm") }}
@@ -34,12 +34,12 @@
                 </tr>
             </thead>
             <tbody>
-                {% if backups %}
-                    {% for backup in backups %}
+                {% if vm.backups %}
+                    {% for backup in vm.backups %}
                     <tr>
                         <td class="font-medium">{{ backup.name }}</td>
-                        <td>{{ backup.created_at | date(format="%Y-%m-%d %H:%M") }}</td>
-                        <td>{{ backup.size_bytes | filesizeformat }}</td>
+                        <td>{{ backup.created_at }}</td>
+                        <td>{{ backup.size_formatted }}</td>
                         <td><span class="badge badge-success">{{ backup.status }}</span></td>
                         <td class="text-right">
                             <button class="btn btn-ghost btn-sm">Restore</button>
