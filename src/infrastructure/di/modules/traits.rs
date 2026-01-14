@@ -10,9 +10,10 @@ use shaku::HasComponent;
 
 use crate::adapters::http_client::HttpClientProvider;
 use crate::domain::ports::{
-    ChunkRepository, ChunkingOrchestratorInterface, ContextServiceInterface, EmbeddingProvider,
-    IndexingOperationsInterface, IndexingServiceInterface, PerformanceMetricsInterface,
-    SearchRepository, SearchServiceInterface, VectorStoreProvider,
+    ChunkRepository, ChunkingOrchestratorInterface, CodeChunker, ContextServiceInterface,
+    EmbeddingProvider, IndexingOperationsInterface, IndexingServiceInterface,
+    PerformanceMetricsInterface, SearchRepository, SearchServiceInterface, SnapshotProvider,
+    SyncProvider, VectorStoreProvider,
 };
 use crate::infrastructure::auth::AuthServiceInterface;
 use crate::infrastructure::di::factory::ServiceProviderInterface;
@@ -36,6 +37,8 @@ pub trait InfrastructureModule:
     + HasComponent<dyn ServiceProviderInterface>
     + HasComponent<dyn EventBusProvider>
     + HasComponent<dyn AuthServiceInterface>
+    + HasComponent<dyn SnapshotProvider>
+    + HasComponent<dyn SyncProvider>
 {
 }
 
@@ -54,6 +57,7 @@ pub trait ApplicationModule:
     + HasComponent<dyn SearchServiceInterface>
     + HasComponent<dyn IndexingServiceInterface>
     + HasComponent<dyn ChunkingOrchestratorInterface>
+    + HasComponent<dyn CodeChunker>
 {
 }
 

@@ -16,7 +16,7 @@ fn test_generate_creates_valid_store() {
     let (store, password) = UserStore::generate_new().expect("should generate");
 
     assert_eq!(store.users.len(), 1);
-    assert_eq!(store.users[0].email, "admin@local");
+    assert_eq!(store.users[0].email, "admin");
     assert_eq!(store.users[0].role, UserRole::Admin);
     assert!(!store.users[0].password_hash.is_empty());
     assert!(store.users[0].password_hash.starts_with("$argon2"));
@@ -93,9 +93,9 @@ fn test_to_user_map() {
     let map = store.to_user_map();
 
     assert_eq!(map.len(), 1);
-    assert!(map.contains_key("admin@local"));
+    assert!(map.contains_key("admin"));
 
-    let user = map.get("admin@local").unwrap();
+    let user = map.get("admin").unwrap();
     assert_eq!(user.role, UserRole::Admin);
     assert!(user.password_hash.starts_with("$argon2"));
 }

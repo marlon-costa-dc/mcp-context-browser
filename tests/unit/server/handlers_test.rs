@@ -55,6 +55,7 @@ async fn create_test_admin_service() -> std::sync::Arc<dyn AdminService> {
         log_buffer,
         config,
         cache_provider: None,
+        search_service: None,
     };
     let admin_service = AdminServiceImpl::new(deps);
 
@@ -109,8 +110,8 @@ fn create_auth_handler_disabled() -> AuthHandler {
         enabled: false,
         ..Default::default()
     };
-    let auth_service = AuthService::new(config);
-    AuthHandler::new(auth_service)
+    let auth_service = std::sync::Arc::new(AuthService::new(config));
+    AuthHandler::new_from_arc(auth_service)
 }
 
 fn create_resource_limits_disabled() -> ResourceLimits {

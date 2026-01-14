@@ -105,7 +105,8 @@ impl McpServer {
     }
 
     /// Initialize core services (authentication, indexing, search)
-    async fn initialize_services(
+    async fn initialize_services_async(
+        di_container: &crate::infrastructure::di::bootstrap::DiContainer,
         service_provider: Arc<dyn ServiceProviderInterface>,
         config: &crate::infrastructure::config::Config,
         http_client: Arc<dyn crate::adapters::http_client::HttpClientProvider>,
@@ -115,9 +116,9 @@ impl McpServer {
         (Arc<AuthHandler>, Arc<IndexingService>, Arc<SearchService>),
         Box<dyn std::error::Error>,
     > {
-        // Create authentication service and handler
-        let auth_service = crate::infrastructure::auth::AuthService::new(config.auth.clone());
-        let auth_handler = Arc::new(AuthHandler::new(auth_service));
+        // Create authentication service and handler using DI
+        let auth_service = Self::create_auth_service(di_container);
+        let auth_handler = Arc::new(AuthHandler::new_from_arc(auth_service));
 
         // Create context service with configured providers
         let (embedding_provider, vector_store_provider) =
@@ -206,18 +207,23 @@ impl McpServer {
             components.indexing_service.clone(),
             components.search_service.clone(),
         ) {
-            // Use DI-resolved services - just need to create auth_handler
-            let auth_service =
-                crate::infrastructure::auth::AuthService::new(current_config.auth.clone());
-            let auth_handler = Arc::new(AuthHandler::new(auth_service));
+            // Use DI-resolved services - create auth_handler with DI container
+            let di_container = crate::infrastructure::di::bootstrap::DiContainer::build()
+                .map_err(|e| format!("Failed to create DI container: {}", e))?;
+            let auth_service = Self::create_auth_service(&di_container);
+            let auth_handler = Arc::new(AuthHandler::new_from_arc(auth_service));
 
             // Note: DI-resolved services don't need start_event_listener
             // since event setup is handled during DI construction
 
             (auth_handler, indexing, search)
         } else {
-            // Fallback to manual service creation
-            let (auth_handler, indexing_service, search_service) = Self::initialize_services(
+            // Fallback to manual service creation - create DI container for AuthService
+            let di_container = crate::infrastructure::di::bootstrap::DiContainer::build()
+                .map_err(|e| format!("Failed to create DI container: {}", e))?;
+
+            let (auth_handler, indexing_service, search_service) = Self::initialize_services_async(
+                &di_container,
                 Arc::clone(&components.service_provider),
                 &current_config,
                 Arc::clone(&components.http_client),
@@ -288,6 +294,12 @@ impl McpServer {
     /// Get the authentication handler
     pub fn auth_handler(&self) -> Arc<AuthHandler> {
         Arc::clone(&self.auth_handler)
+    }
+
+    /// Create auth service by resolving from DI container
+    fn create_auth_service(container: &crate::infrastructure::di::bootstrap::DiContainer) -> Arc<dyn crate::infrastructure::auth::AuthServiceInterface> {
+        // Resolve AuthService from the DI container
+        container.infrastructure_module.resolve()
     }
 
     /// Get performance metrics

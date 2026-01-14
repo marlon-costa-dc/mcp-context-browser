@@ -61,15 +61,27 @@ impl SyncConfig {
 pub use super::stats::SyncStats;
 
 /// Synchronization manager with cross-process coordination
+///
+/// Manages codebase synchronization with debouncing, statistics tracking,
+/// and optional cache/event bus integration. Can be used via DI with Shaku
+/// or constructed manually.
+#[derive(shaku::Component)]
+#[shaku(interface = SyncProvider)]
 pub struct SyncManager {
+    #[shaku(default = SyncConfig::default())]
     config: SyncConfig,
+    #[shaku(default)]
     cache_manager: Option<SharedCacheProvider>,
     /// Debounce service for rate limiting syncs
+    #[shaku(default = Arc::new(DebounceService::new(DebounceConfig::default())))]
     debounce: Arc<DebounceService>,
     /// File modification times for change detection
+    #[shaku(default = DashMap::new())]
     file_mod_times: DashMap<String, u64>,
     /// Statistics collector service
+    #[shaku(default = Arc::new(SyncStatsCollector::new()))]
     stats: Arc<SyncStatsCollector>,
+    #[shaku(default)]
     event_bus: Option<SharedEventBusProvider>,
 }
 

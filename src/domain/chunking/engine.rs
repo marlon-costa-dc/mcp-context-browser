@@ -12,7 +12,12 @@ use std::collections::HashMap;
 use std::path::Path;
 
 /// Intelligent chunking engine using tree-sitter
-#[derive(Default)]
+///
+/// This is a stateless component that can be shared across the application
+/// via dependency injection. It orchestrates language-specific code chunking
+/// using tree-sitter parsers with fallback to generic chunking.
+#[derive(Default, shaku::Component)]
+#[shaku(interface = CodeChunker)]
 pub struct IntelligentChunker;
 
 impl IntelligentChunker {

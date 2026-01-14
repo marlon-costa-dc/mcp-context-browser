@@ -4,22 +4,22 @@
 //! from the main server implementation to improve separation of concerns.
 
 use crate::domain::error::Result;
-use crate::infrastructure::auth::{AuthService, Claims, Permission};
+use crate::infrastructure::auth::{AuthServiceInterface, Claims, Permission};
 
 /// Authentication utilities for MCP server tools
 pub struct AuthHandler {
-    auth_service: AuthService,
+    auth_service: std::sync::Arc<dyn AuthServiceInterface>,
 }
 
 impl AuthHandler {
-    /// Create a new authentication handler
-    pub fn new(auth_service: AuthService) -> Self {
+    /// Create a new authentication handler from Arc<dyn AuthServiceInterface>
+    pub fn new_from_arc(auth_service: std::sync::Arc<dyn AuthServiceInterface>) -> Self {
         Self { auth_service }
     }
 
     /// Get the authentication service
-    pub fn auth_service(&self) -> &AuthService {
-        &self.auth_service
+    pub fn auth_service(&self) -> std::sync::Arc<dyn AuthServiceInterface> {
+        std::sync::Arc::clone(&self.auth_service)
     }
 
     /// Check authentication and permissions for a request

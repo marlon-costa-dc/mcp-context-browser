@@ -50,6 +50,7 @@ async fn create_test_admin_service() -> std::sync::Arc<dyn AdminService> {
         log_buffer,
         config,
         cache_provider: None,
+        search_service: None,
     };
     let admin_service = AdminServiceImpl::new(deps);
 

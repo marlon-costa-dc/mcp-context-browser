@@ -20,16 +20,39 @@ use std::sync::Arc;
 use std::time::SystemTime;
 
 /// Snapshot manager for incremental tracking
+///
+/// Provides file change detection via content hashing and snapshot comparison.
+/// Can be used via DI with Shaku or constructed manually.
+#[derive(shaku::Component)]
+#[shaku(interface = SnapshotProvider)]
 pub struct SnapshotManager {
     /// Base directory for storing snapshots
+    #[shaku(default = SnapshotManager::default_snapshot_dir())]
     snapshot_dir: PathBuf,
     /// Hash calculator service
+    #[shaku(default = Arc::new(HashCalculator::new()))]
     hash_calculator: Arc<HashCalculator>,
     /// Snapshot comparator service
+    #[shaku(default = Arc::new(SnapshotComparator::new()))]
     comparator: Arc<SnapshotComparator>,
 }
 
 impl SnapshotManager {
+    /// Get default snapshot directory path (for DI defaults)
+    pub fn default_snapshot_dir() -> PathBuf {
+        let snapshot_dir = dirs::home_dir()
+            .unwrap_or_else(|| std::env::temp_dir())
+            .join(".context")
+            .join("snapshots");
+
+        // Try to create the directory, fall back to temp dir on failure
+        if fs::create_dir_all(&snapshot_dir).is_ok() {
+            snapshot_dir
+        } else {
+            std::env::temp_dir().join("mcp_snapshots")
+        }
+    }
+
     /// Create a new snapshot manager
     pub fn new() -> Result<Self> {
         let snapshot_dir = dirs::home_dir()

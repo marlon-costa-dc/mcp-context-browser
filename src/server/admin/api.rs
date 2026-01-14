@@ -22,8 +22,8 @@ impl AdminApiServer {
         let admin_api = Arc::new(AdminApi::new(self.config.clone()));
         let admin_service = self.mcp_server.admin_service();
 
-        // Get AuthService from auth handler
-        let auth_service: Arc<dyn crate::infrastructure::auth::AuthServiceInterface> = Arc::new((*auth_handler.auth_service()).clone());
+        // Use the AuthService from the auth handler (already configured)
+        let auth_service: Arc<dyn crate::infrastructure::auth::AuthServiceInterface> = auth_handler.auth_service();
 
         // Initialize web interface and templates
         let web_interface = super::web::WebInterface::new()?;

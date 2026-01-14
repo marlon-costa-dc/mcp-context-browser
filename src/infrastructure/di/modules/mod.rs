@@ -64,9 +64,10 @@ use shaku::module;
 
 use crate::adapters::http_client::HttpClientProvider;
 use crate::domain::ports::{
-    ChunkRepository, ContextServiceInterface, EmbeddingProvider, IndexingOperationsInterface,
-    IndexingServiceInterface, PerformanceMetricsInterface, SearchRepository,
-    SearchServiceInterface, VectorStoreProvider,
+    ChunkRepository, ChunkingOrchestratorInterface, CodeChunker, ContextServiceInterface,
+    EmbeddingProvider, IndexingOperationsInterface, IndexingServiceInterface,
+    PerformanceMetricsInterface, SearchRepository, SearchServiceInterface, SnapshotProvider,
+    SyncProvider, VectorStoreProvider,
 };
 use crate::infrastructure::auth::AuthServiceInterface;
 use crate::infrastructure::di::factory::ServiceProviderInterface;
@@ -101,7 +102,14 @@ module! {
         },
 
         use dyn InfrastructureModule {
-            components = [dyn SystemMetricsCollectorInterface, dyn ServiceProviderInterface, dyn EventBusProvider, dyn AuthServiceInterface],
+            components = [
+                dyn SystemMetricsCollectorInterface,
+                dyn ServiceProviderInterface,
+                dyn EventBusProvider,
+                dyn AuthServiceInterface,
+                dyn SnapshotProvider,
+                dyn SyncProvider
+            ],
             providers = []
         },
 
@@ -116,7 +124,13 @@ module! {
         },
 
         use dyn ApplicationModule {
-            components = [dyn ContextServiceInterface, dyn SearchServiceInterface, dyn IndexingServiceInterface],
+            components = [
+                dyn ContextServiceInterface,
+                dyn SearchServiceInterface,
+                dyn IndexingServiceInterface,
+                dyn ChunkingOrchestratorInterface,
+                dyn CodeChunker
+            ],
             providers = []
         }
     }

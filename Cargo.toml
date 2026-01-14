@@ -1,7 +1,7 @@
 [workspace]
 members = [
     ".",
-    "libs/tree-sitter-analysis",
+    "libs/mcb-tree-sitter-analysis",
 ]
 
 [workspace.dependencies]

@@ -279,3 +279,31 @@ impl ComponentResolver<dyn crate::server::admin::service::AdminService> for DiCo
         self.admin_module.resolve()
     }
 }
+
+// ============================================================================
+// Phase 3: New ComponentResolver implementations for DI fix
+// ============================================================================
+
+impl ComponentResolver<dyn crate::domain::ports::SnapshotProvider> for DiContainer {
+    fn resolve(&self) -> Arc<dyn crate::domain::ports::SnapshotProvider> {
+        self.infrastructure_module.resolve()
+    }
+}
+
+impl ComponentResolver<dyn crate::domain::ports::SyncProvider> for DiContainer {
+    fn resolve(&self) -> Arc<dyn crate::domain::ports::SyncProvider> {
+        self.infrastructure_module.resolve()
+    }
+}
+
+impl ComponentResolver<dyn crate::domain::ports::CodeChunker> for DiContainer {
+    fn resolve(&self) -> Arc<dyn crate::domain::ports::CodeChunker> {
+        self.application_module.resolve()
+    }
+}
+
+impl ComponentResolver<dyn crate::domain::ports::ChunkingOrchestratorInterface> for DiContainer {
+    fn resolve(&self) -> Arc<dyn crate::domain::ports::ChunkingOrchestratorInterface> {
+        self.application_module.resolve()
+    }
+}
