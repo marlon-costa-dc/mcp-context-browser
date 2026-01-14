@@ -359,6 +359,63 @@ impl ProviderCircuitBreaker {
 }
 ```
 
+## Update for v0.2.0: Generalized Provider Architecture
+
+**Date**: 2026-01-14
+
+The multi-provider strategy has been generalized to support additional provider types beyond embedding providers:
+
+### Extended Provider Types
+
+**Current (v0.1.0)**:
+- Embedding Providers (OpenAI, VoyageAI, Ollama, Gemini, FastEmbed, Null)
+- Vector Store Providers (Milvus, EdgeVec, In-Memory, Filesystem, Encrypted, Null)
+
+**Future (v0.3.0+)**:
+- **Analysis Providers**: Complexity analyzers, debt detectors, SATD finders
+- **Quality Providers**: Quality gate checkers, metrics aggregators
+- **Git Providers**: Repository analyzers, commit processors
+
+### Generalized Provider Trait
+
+```rust
+// Generic provider interface (defined in v0.2.0)
+#[async_trait]
+pub trait ServiceProvider: Send + Sync {
+    type Input;
+    type Output;
+
+    async fn execute(&self, input: Self::Input) -> Result<Self::Output>;
+    async fn health_check(&self) -> HealthStatus;
+    fn provider_name(&self) -> &str;
+}
+
+// Specialized traits for each domain (v0.3.0+)
+#[async_trait]
+pub trait AnalysisProvider: ServiceProvider<Input = AnalysisRequest, Output = AnalysisReport> {}
+
+#[async_trait]
+pub trait QualityProvider: ServiceProvider<Input = QualityCheckRequest, Output = QualityReport> {}
+
+#[async_trait]
+pub trait GitProvider: ServiceProvider<Input = GitOperation, Output = RepositoryInfo> {}
+```
+
+### Routing Extension
+
+The existing router pattern extends to new provider types:
+- **Health Monitoring**: Applies to all provider types
+- **Circuit Breaker**: Protects all provider types
+- **Cost Tracking**: Tracks analysis costs
+- **Failover**: Seamless fallback between analysis providers
+
+### Benefits
+
+- ✅ Consistent provider pattern across all domains
+- ✅ Reusable health monitoring and failover logic
+- ✅ Familiar routing strategies for new provider types
+- ✅ Incremental addition of new provider types
+
 ## References
 
 \1-   [Circuit Breaker Pattern](https://microservices.io/patterns/reliability/circuit-breaker.html)

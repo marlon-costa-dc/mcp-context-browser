@@ -35,26 +35,44 @@ pub type ValidationResult<T> = Result<T, ValidationError>;
 #[derive(Debug, Clone, PartialEq)]
 pub enum ValidationError {
     /// Field is required but missing or empty
-    Required { field: String },
+    Required {
+        /// Name of the field that is required
+        field: String
+    },
     /// Value is too short
     TooShort {
+        /// Name of the field that failed validation
         field: String,
+        /// Minimum required length
         min_length: usize,
+        /// Actual length of the provided value
         actual_length: usize,
     },
     /// Value is too long
     TooLong {
+        /// Name of the field that failed validation
         field: String,
+        /// Maximum allowed length
         max_length: usize,
+        /// Actual length of the provided value
         actual_length: usize,
     },
     /// Value doesn't match required format
-    InvalidFormat { field: String, expected: String },
+    InvalidFormat {
+        /// Name of the field that failed validation
+        field: String,
+        /// Description of the expected format
+        expected: String
+    },
     /// Numeric value is out of allowed range
     OutOfRange {
+        /// Name of the field that failed validation
         field: String,
+        /// String representation of the invalid value
         value: String,
+        /// String representation of the minimum allowed value
         min: String,
+        /// String representation of the maximum allowed value
         max: String,
     },
 }

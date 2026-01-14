@@ -123,6 +123,11 @@ pub trait ChunkingOrchestratorInterface: Interface + Send + Sync {
     /// Process multiple files and return chunks
     async fn process_files(&self, files: Vec<(String, String)>) -> Result<Vec<CodeChunk>>;
 
-    /// Process a single file
+    /// Process a single file with content
     async fn process_file(&self, path: &Path, content: &str) -> Result<Vec<CodeChunk>>;
+
+    /// Read and chunk a file from disk
+    ///
+    /// Reads the file content and processes it through the chunking pipeline.
+    async fn chunk_file(&self, path: &Path) -> Result<Vec<CodeChunk>>;
 }

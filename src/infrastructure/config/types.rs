@@ -69,6 +69,11 @@ pub struct ProviderConfig {
 ///
 /// Central configuration structure containing all settings for the MCP Context Browser.
 /// Supports hierarchical configuration with validation and environment variable overrides.
+///
+/// ## Future Domains (v0.3.0+)
+///
+/// Analysis, Quality, and Git configurations are prepared for incremental feature integration.
+/// These are feature-gated and default to disabled in v0.2.0.
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct Config {
     /// Application name
@@ -113,6 +118,25 @@ pub struct Config {
     /// Data directory configuration (XDG standard locations)
     #[validate(nested)]
     pub data: DataConfig,
+
+    // === Future domains (v0.3.0+) - prepared for incremental feature integration ===
+    /// Analysis domain configuration (complexity, technical debt, SATD detection) - v0.3.0+
+    #[cfg(feature = "analysis")]
+    #[serde(default)]
+    #[validate(nested)]
+    pub analysis: AnalysisConfig,
+
+    /// Quality domain configuration (quality gates, assessment) - v0.5.0+
+    #[cfg(feature = "quality")]
+    #[serde(default)]
+    #[validate(nested)]
+    pub quality: QualityConfig,
+
+    /// Git domain configuration (git operations, repository analysis) - v0.5.0+
+    #[cfg(feature = "git")]
+    #[serde(default)]
+    #[validate(nested)]
+    pub git: GitConfig,
 }
 
 impl Default for Config {
@@ -132,6 +156,12 @@ impl Default for Config {
             cache: CacheConfig::default(),
             hybrid_search: HybridSearchConfig::default(),
             data: DataConfig::default(),
+            #[cfg(feature = "analysis")]
+            analysis: AnalysisConfig::default(),
+            #[cfg(feature = "quality")]
+            quality: QualityConfig::default(),
+            #[cfg(feature = "git")]
+            git: GitConfig::default(),
         }
     }
 }
@@ -156,4 +186,76 @@ impl Config {
     pub fn metrics_addr(&self) -> String {
         format!("0.0.0.0:{}", self.metrics.port)
     }
+}
+
+// === Future Domain Configurations (v0.3.0+) ===
+// These configurations are prepared for incremental feature integration.
+// They are feature-gated and remain empty/placeholder in v0.2.0.
+
+/// Analysis domain configuration (v0.3.0+)
+///
+/// Configuration for code analysis features including:
+/// - Cyclomatic and cognitive complexity measurement
+/// - Technical debt grading (TDG)
+/// - Self-Admitted Technical Debt (SATD) detection
+///
+/// **v0.2.0**: Placeholder - no fields yet
+/// **v0.3.0+**: Will contain analysis-specific settings
+#[cfg(feature = "analysis")]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate, Default)]
+pub struct AnalysisConfig {
+    /// Enable analysis features (default: false in v0.2.0)
+    #[serde(default)]
+    pub enabled: bool,
+
+    // Future fields (v0.3.0+):
+    // pub cache_ttl: Duration,
+    // pub max_file_size: u64,
+    // pub complexity_thresholds: ComplexityThresholds,
+    // pub tdg_weights: TdgWeights,
+}
+
+/// Quality domain configuration (v0.5.0+)
+///
+/// Configuration for quality assessment features including:
+/// - Quality gate enforcement
+/// - Metric aggregation and baselines
+/// - Quality reports and visualization
+///
+/// **v0.2.0**: Placeholder - no fields yet
+/// **v0.5.0+**: Will contain quality-specific settings
+#[cfg(feature = "quality")]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate, Default)]
+pub struct QualityConfig {
+    /// Enable quality features (default: false in v0.2.0)
+    #[serde(default)]
+    pub enabled: bool,
+
+    // Future fields (v0.5.0+):
+    // pub quality_gates: Vec<QualityGate>,
+    // pub baseline_ttl: Duration,
+    // pub report_formats: Vec<ReportFormat>,
+}
+
+/// Git domain configuration (v0.5.0+)
+///
+/// Configuration for Git integration features including:
+/// - Git repository operations
+/// - Commit analysis and history search
+/// - Context generation from repository metadata
+///
+/// **v0.2.0**: Placeholder - no fields yet
+/// **v0.5.0+**: Will contain Git-specific settings
+#[cfg(feature = "git")]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate, Default)]
+pub struct GitConfig {
+    /// Enable Git features (default: false in v0.2.0)
+    #[serde(default)]
+    pub enabled: bool,
+
+    // Future fields (v0.5.0+):
+    // pub detect_monorepos: bool,
+    // pub follow_submodules: bool,
+    // pub max_history_depth: usize,
+    // pub context_generation_rules: Vec<Rule>,
 }

@@ -8,7 +8,8 @@ exports/
 .idea/
 *.swp
 *.swo
-CLAUDE.md
+*.md
+!./README.md
 !./CLAUDE.md
 thoughts/
 docs/plans/

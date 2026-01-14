@@ -50,16 +50,15 @@ use shaku::module;
 
 use crate::adapters::http_client::HttpClientProvider;
 use crate::domain::ports::{
-    ChunkRepository, ContextServiceInterface, EmbeddingProvider, IndexingServiceInterface,
-    SearchRepository, SearchServiceInterface, VectorStoreProvider,
+    ChunkRepository, ContextServiceInterface, EmbeddingProvider, IndexingOperationsInterface,
+    IndexingServiceInterface, PerformanceMetricsInterface, SearchRepository,
+    SearchServiceInterface, VectorStoreProvider,
 };
 use crate::infrastructure::auth::AuthServiceInterface;
 use crate::infrastructure::di::factory::ServiceProviderInterface;
 use crate::infrastructure::events::EventBusProvider;
 use crate::infrastructure::metrics::system::SystemMetricsCollectorInterface;
 use crate::server::admin::service::AdminService;
-use crate::server::metrics::PerformanceMetricsInterface;
-use crate::server::operations::IndexingOperationsInterface;
 
 // Root module that composes all domain modules.
 //

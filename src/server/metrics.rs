@@ -1,20 +1,15 @@
 //! Real-time performance metrics tracking for MCP server
 //!
-//! Provides interfaces and implementations for tracking server performance
+//! Provides implementations for tracking server performance
 //! metrics including queries, response times, cache hits, and active connections.
+//!
+//! The trait is defined in `domain::ports::admin` to avoid circular dependencies.
 
 use crate::infrastructure::service_helpers::UptimeTracker;
-use shaku::Interface;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-/// Real-time performance metrics tracking interface
-pub trait PerformanceMetricsInterface: Interface + Send + Sync {
-    /// Get server uptime in seconds
-    fn uptime_secs(&self) -> u64;
-    fn record_query(&self, response_time_ms: u64, success: bool, cache_hit: bool);
-    fn update_active_connections(&self, delta: i64);
-    fn get_performance_metrics(&self) -> crate::server::admin::service::PerformanceMetricsData;
-}
+// Re-export from domain for backward compatibility
+pub use crate::domain::ports::admin::{PerformanceMetricsData, PerformanceMetricsInterface};
 
 /// Real-time performance metrics tracking
 #[derive(Debug, shaku::Component)]
@@ -81,7 +76,7 @@ impl PerformanceMetricsInterface for McpPerformanceMetrics {
         }
     }
 
-    fn get_performance_metrics(&self) -> crate::server::admin::service::PerformanceMetricsData {
+    fn get_performance_metrics(&self) -> PerformanceMetricsData {
         let total_queries = self.total_queries.load(Ordering::Relaxed);
         let successful_queries = self.successful_queries.load(Ordering::Relaxed);
         let failed_queries = self.failed_queries.load(Ordering::Relaxed);
@@ -104,7 +99,7 @@ impl PerformanceMetricsInterface for McpPerformanceMetrics {
 
         let uptime_seconds = self.uptime.elapsed_secs();
 
-        crate::server::admin::service::PerformanceMetricsData {
+        PerformanceMetricsData {
             total_queries,
             successful_queries,
             failed_queries,

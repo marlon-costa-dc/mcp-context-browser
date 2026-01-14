@@ -5,19 +5,54 @@
 
 use super::config::LanguageConfig;
 use crate::domain::types::{CodeChunk, Language};
-use regex;
+use regex::Regex;
 use std::collections::HashMap;
 
 /// Generic fallback chunker using regex patterns
+///
+/// This chunker precompiles regex patterns at construction time to avoid
+/// the overhead of repeated regex compilation during line-by-line processing.
 pub struct GenericFallbackChunker<'a> {
+    #[allow(dead_code)]
     config: &'a LanguageConfig,
+    /// Precompiled regex patterns for block detection (avoids per-line compilation)
+    compiled_patterns: Vec<Regex>,
 }
 
 impl<'a> GenericFallbackChunker<'a> {
+    /// Create a new generic fallback chunker with language configuration
+    ///
+    /// Regex patterns are compiled once at construction time for performance.
+    /// Invalid patterns are filtered out gracefully.
+    ///
+    /// # Arguments
+    /// * `config` - The language configuration containing fallback patterns
+    ///
+    /// # Returns
+    /// A new instance of the fallback chunker with precompiled patterns
     pub fn new(config: &'a LanguageConfig) -> Self {
-        Self { config }
+        // Precompile all patterns once at construction time
+        let compiled_patterns = config
+            .fallback_patterns
+            .iter()
+            .filter_map(|pattern| Regex::new(pattern).ok())
+            .collect();
+
+        Self {
+            config,
+            compiled_patterns,
+        }
     }
 
+    /// Chunk content using regex patterns as a fallback when tree-sitter parsing fails
+    ///
+    /// # Arguments
+    /// * `content` - The source code content to chunk
+    /// * `file_name` - The name of the file being processed
+    /// * `language` - The programming language of the content
+    ///
+    /// # Returns
+    /// A vector of code chunks extracted using regex patterns
     pub fn chunk_with_patterns(
         &self,
         content: &str,
@@ -32,14 +67,11 @@ impl<'a> GenericFallbackChunker<'a> {
         for (i, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
 
-            // Check if line matches any pattern
-            let is_block_start = self.config.fallback_patterns.iter().any(|pattern| {
-                if let Ok(regex) = regex::Regex::new(pattern) {
-                    regex.is_match(trimmed)
-                } else {
-                    false
-                }
-            });
+            // Check if line matches any precompiled pattern (no per-line compilation)
+            let is_block_start = self
+                .compiled_patterns
+                .iter()
+                .any(|regex| regex.is_match(trimmed));
 
             if is_block_start {
                 if !current_block.is_empty() {

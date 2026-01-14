@@ -97,14 +97,16 @@ impl UserStore {
     /// Load user store from file
     ///
     /// Returns None if file doesn't exist, Error if file is invalid.
-    pub fn load(path: &Path) -> Result<Option<Self>> {
+    pub async fn load(path: &Path) -> Result<Option<Self>> {
         if !path.exists() {
             return Ok(None);
         }
 
-        let content = std::fs::read_to_string(path).map_err(|e| Error::Internal {
-            message: format!("Failed to read user store: {}", e),
-        })?;
+        let content = tokio::fs::read_to_string(path)
+            .await
+            .map_err(|e| Error::Internal {
+                message: format!("Failed to read user store: {}", e),
+            })?;
 
         let store: Self = serde_json::from_str(&content).map_err(|e| Error::Internal {
             message: format!("Failed to parse user store: {}", e),
@@ -114,30 +116,36 @@ impl UserStore {
     }
 
     /// Save user store to file with 0600 permissions
-    pub fn save(&self, path: &Path) -> Result<()> {
+    pub async fn save(&self, path: &Path) -> Result<()> {
         // Ensure parent directory exists
         if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent).map_err(|e| Error::Internal {
-                message: format!("Failed to create data directory: {}", e),
-            })?;
+            tokio::fs::create_dir_all(parent)
+                .await
+                .map_err(|e| Error::Internal {
+                    message: format!("Failed to create data directory: {}", e),
+                })?;
         }
 
         let content = serde_json::to_string_pretty(self).map_err(|e| Error::Internal {
             message: format!("Failed to serialize user store: {}", e),
         })?;
 
-        std::fs::write(path, &content).map_err(|e| Error::Internal {
-            message: format!("Failed to write user store: {}", e),
-        })?;
+        tokio::fs::write(path, &content)
+            .await
+            .map_err(|e| Error::Internal {
+                message: format!("Failed to write user store: {}", e),
+            })?;
 
         // Set permissions to 0600 (Unix only)
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
             let perms = std::fs::Permissions::from_mode(0o600);
-            std::fs::set_permissions(path, perms).map_err(|e| Error::Internal {
-                message: format!("Failed to set file permissions: {}", e),
-            })?;
+            tokio::fs::set_permissions(path, perms)
+                .await
+                .map_err(|e| Error::Internal {
+                    message: format!("Failed to set file permissions: {}", e),
+                })?;
         }
 
         Ok(())

@@ -1,6 +1,6 @@
 //! Rust language processor for AST-based code chunking.
 
-use crate::infrastructure::constants::CHUNK_SIZE_RUST;
+use crate::domain::chunking::constants::CHUNK_SIZE_RUST;
 
 crate::define_language_processor! {
     RustProcessor,

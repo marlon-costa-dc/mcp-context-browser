@@ -169,40 +169,70 @@ pub struct CodeChunk {
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum Language {
+    /// Rust programming language
     Rust,
+    /// Python programming language
     Python,
+    /// JavaScript programming language
     JavaScript,
+    /// TypeScript programming language
     TypeScript,
+    /// Go programming language
     Go,
+    /// Java programming language
     Java,
+    /// C programming language
     C,
+    /// C++ programming language
     Cpp,
+    /// C# programming language
     CSharp,
+    /// PHP programming language
     Php,
+    /// Ruby programming language
     Ruby,
+    /// Swift programming language
     Swift,
+    /// Kotlin programming language
     Kotlin,
+    /// Scala programming language
     Scala,
+    /// Haskell programming language
     Haskell,
+    /// Shell scripting languages
     Shell,
+    /// SQL database query language
     SQL,
+    /// HTML markup language
     HTML,
+    /// XML markup language
     XML,
+    /// JSON data interchange format
     JSON,
+    /// YAML data serialization format
     YAML,
+    /// TOML configuration format
     TOML,
+    /// Markdown markup language
     Markdown,
+    /// Plain text files
     PlainText,
+    /// Unknown or unsupported language
     Unknown,
 }
 
 /// System operation types for metrics and rate limiting
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum OperationType {
+    /// Code indexing and ingestion operations
     Indexing,
+    /// Semantic search and retrieval operations
     Search,
+    /// Text embedding generation operations
     Embedding,
+    /// System maintenance and administrative operations
     Maintenance,
+    /// Other custom operation types
     Other(String),
 }
 
@@ -458,6 +488,13 @@ impl From<&str> for OperationType {
 }
 
 impl Language {
+    /// Create a Language from a file extension
+    ///
+    /// # Arguments
+    /// * `ext` - The file extension (without the dot)
+    ///
+    /// # Returns
+    /// The corresponding Language enum variant, or Language::Unknown if not recognized
     pub fn from_extension(ext: &str) -> Self {
         match ext.to_lowercase().as_str() {
             "rs" => Language::Rust,
@@ -488,6 +525,10 @@ impl Language {
         }
     }
 
+    /// Convert the language to its string representation
+    ///
+    /// # Returns
+    /// A string representation of the language (e.g., "Rust", "Python")
     pub fn as_str(&self) -> &'static str {
         match self {
             Language::Rust => "Rust",
@@ -932,10 +973,18 @@ pub struct SnapshotChanges {
 }
 
 impl SnapshotChanges {
+    /// Check if there are any changes in this snapshot
+    ///
+    /// # Returns
+    /// true if there are added, modified, or removed files, false otherwise
     pub fn has_changes(&self) -> bool {
         !self.added.is_empty() || !self.modified.is_empty() || !self.removed.is_empty()
     }
 
+    /// Get the total number of changes across all categories
+    ///
+    /// # Returns
+    /// The sum of added, modified, and removed files
     pub fn total_changes(&self) -> usize {
         self.added.len() + self.modified.len() + self.removed.len()
     }

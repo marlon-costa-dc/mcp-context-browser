@@ -1,6 +1,6 @@
 //! PHP language processor for AST-based code chunking.
 
-use crate::infrastructure::constants::CHUNK_SIZE_PHP;
+use crate::domain::chunking::constants::CHUNK_SIZE_PHP;
 
 crate::define_language_processor! {
     PhpProcessor,

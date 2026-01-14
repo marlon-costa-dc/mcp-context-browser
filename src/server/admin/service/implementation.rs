@@ -40,8 +40,8 @@ pub struct AdminServiceDependencies {
     pub system_collector: Arc<dyn SystemMetricsCollectorInterface>,
     /// Http Client
     pub http_client: Arc<dyn crate::adapters::http_client::HttpClientProvider>,
-    /// Event Bus
-    pub event_bus: crate::infrastructure::events::SharedEventBusProvider,
+    /// Event Bus (trait object for DI compatibility)
+    pub event_bus: Arc<dyn crate::infrastructure::events::EventBusProvider>,
     /// Log Buffer
     pub log_buffer: crate::infrastructure::logging::SharedLogBuffer,
     /// Config
@@ -66,8 +66,9 @@ pub struct AdminServiceImpl {
     http_client: Arc<dyn crate::adapters::http_client::HttpClientProvider>,
     #[shaku(default = Arc::new(ArcSwap::from_pointee(None)))]
     search_service: Arc<ArcSwap<Option<Arc<SearchService>>>>,
-    /// Event bus for publishing system events (optional)
-    pub event_bus: crate::infrastructure::events::SharedEventBusProvider,
+    /// Event bus for publishing system events (injected from DI)
+    #[shaku(inject)]
+    event_bus: Arc<dyn crate::infrastructure::events::EventBusProvider>,
     #[shaku(default)]
     log_buffer: crate::infrastructure::logging::SharedLogBuffer,
     #[shaku(default = Arc::new(arc_swap::ArcSwap::from_pointee(crate::infrastructure::config::Config::default())))]

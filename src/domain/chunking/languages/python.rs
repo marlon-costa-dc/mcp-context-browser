@@ -1,6 +1,6 @@
 //! Python language processor for AST-based code chunking.
 
-use crate::infrastructure::constants::CHUNK_SIZE_PYTHON;
+use crate::domain::chunking::constants::CHUNK_SIZE_PYTHON;
 
 crate::define_language_processor! {
     PythonProcessor,

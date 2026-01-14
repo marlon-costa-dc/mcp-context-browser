@@ -38,6 +38,9 @@ pub struct HybridSearchEngine {
     /// Weight for semantic score in hybrid combination (0-1)
     #[validate(range(min = 0.0, max = 1.0))]
     pub semantic_weight: f32,
+    /// Cached document index mapping (file_path:start_line -> document index)
+    /// This avoids rebuilding a HashMap on every search operation.
+    document_index: HashMap<String, usize>,
 }
 
 impl HybridSearchEngine {
@@ -48,14 +51,21 @@ impl HybridSearchEngine {
             documents: Vec::new(),
             bm25_weight,
             semantic_weight,
+            document_index: HashMap::new(),
         }
     }
 
     /// Add documents for BM25 scoring
+    ///
+    /// Documents are deduplicated by their file_path:start_line key.
+    /// The document index is maintained incrementally for O(1) lookups during search.
     pub fn add_documents(&mut self, new_documents: Vec<CodeChunk>) {
-        // Simple deduplication based on ID
         for doc in new_documents {
-            if !self.documents.iter().any(|d| d.id == doc.id) {
+            let key = format!("{}:{}", doc.file_path, doc.start_line);
+            // Use the cached index for O(1) deduplication check
+            if !self.document_index.contains_key(&key) {
+                let idx = self.documents.len();
+                self.document_index.insert(key, idx);
                 self.documents.push(doc);
             }
         }
@@ -65,10 +75,15 @@ impl HybridSearchEngine {
     /// Clear all documents and reset BM25 index
     pub fn clear(&mut self) {
         self.documents.clear();
+        self.document_index.clear();
         self.bm25_scorer = None;
     }
 
     /// Perform hybrid search combining BM25 and semantic similarity
+    ///
+    /// This implementation is optimized to:
+    /// - Use the cached document_index for O(1) lookups (no HashMap rebuild per search)
+    /// - Pre-tokenize the query once and reuse for all BM25 scoring
     pub fn hybrid_search(
         &self,
         query: &str,
@@ -94,14 +109,11 @@ impl HybridSearchEngine {
             .as_ref()
             .ok_or_else(|| crate::domain::error::Error::internal("BM25 scorer not initialized"))?;
 
-        // Create a mapping from file_path + line_number to document for BM25 scoring
-        let mut doc_map = HashMap::new();
-        for doc in &self.documents {
-            let key = format!("{}:{}", doc.file_path, doc.start_line);
-            doc_map.insert(key, doc.clone());
-        }
+        // Pre-tokenize query once for all BM25 scoring operations
+        let query_terms = BM25Scorer::tokenize(query);
 
         // Calculate hybrid scores for semantic results
+        // Uses cached document_index for O(1) lookup instead of rebuilding HashMap
         let mut hybrid_results: Vec<HybridSearchResult> = semantic_results
             .into_iter()
             .map(|semantic_result| {
@@ -111,8 +123,11 @@ impl HybridSearchEngine {
                 );
                 let semantic_score = semantic_result.score;
 
-                if let Some(document) = doc_map.get(&doc_key) {
-                    let bm25_score = bm25_scorer.score(document, query);
+                // Use cached index for O(1) lookup, then reference document by index
+                if let Some(&doc_idx) = self.document_index.get(&doc_key) {
+                    let document = &self.documents[doc_idx];
+                    // Use pre-tokenized query for efficient batch scoring
+                    let bm25_score = bm25_scorer.score_with_tokens(document, &query_terms);
 
                     // Normalize BM25 score to 0-1 range (simple min-max normalization)
                     let normalized_bm25 = if bm25_score > 0.0 {
@@ -185,6 +200,12 @@ impl HybridSearchEngine {
 
 impl Default for HybridSearchEngine {
     fn default() -> Self {
-        Self::new(0.4, 0.6) // 40% BM25, 60% semantic by default
+        Self {
+            bm25_scorer: None,
+            documents: Vec::new(),
+            bm25_weight: 0.4,    // 40% BM25
+            semantic_weight: 0.6, // 60% semantic
+            document_index: HashMap::new(),
+        }
     }
 }

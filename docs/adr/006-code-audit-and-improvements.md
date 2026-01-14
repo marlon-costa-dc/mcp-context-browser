@@ -276,6 +276,65 @@ config = "0.13"
 | Memory usage | Baseline | <10% increase | Valgrind massif |
 | Error handling coverage | Partial | Complete | Manual review |
 
+## Update for v0.2.0: Multi-Domain Architecture Preparation
+
+**Date**: 2026-01-14
+
+The code audit work has been extended to prepare the codebase for multi-domain architecture supporting future analysis capabilities:
+
+### New Domains (to be implemented)
+
+**v0.3.0+**:
+1. **Analysis Domain**: Complexity analysis, technical debt detection, quality metrics
+2. **Quality Domain**: Quality gates, metric aggregation, baseline comparisons
+3. **Git Domain**: Repository operations, commit analysis, context generation
+
+### Organizational Changes (v0.2.0)
+
+**Domain Refactoring**:
+```
+src/domain/
+├── chunking/         # Existing (moved to libs/tree-sitter-analysis)
+├── search/           # Extract existing search code
+├── analysis/         # NEW (empty in v0.2.0)
+├── quality/          # NEW (empty in v0.2.0)
+└── git/              # NEW (empty in v0.2.0)
+```
+
+**Workspace Libraries** (shared code):
+```
+libs/
+├── tree-sitter-analysis/  # Unified AST processing
+├── code-metrics/          # Analysis algorithms (v0.3.0)
+└── analysis-core/         # Orchestration utilities (v0.3.0)
+```
+
+**Adapter Integration**:
+```
+src/adapters/
+├── analyzers/   # NEW - Analysis adapters (PMAT → MCB type conversion)
+├── quality/     # NEW - Quality adapters (v0.5.0)
+└── git/         # NEW - Git adapters (v0.5.0)
+```
+
+### Quality Implications
+
+The multi-domain architecture maintains and extends the v0.1.0 quality standards:
+
+- ✅ **Same error handling patterns** across all domains
+- ✅ **Trait-based DI** for all new provider types
+- ✅ **Async-first** for all I/O operations
+- ✅ **File size limits** maintained (<500 lines)
+- ✅ **Test organization** by domain
+
+### No Functional Changes
+
+v0.2.0 is purely architectural:
+- All existing features work unchanged
+- No new features added
+- Zero functional regressions
+- 100% backward compatible
+
 ## References
 
 \1-   [Rust API Guidelines](https://rust-lang.github.io/api-guidelines/)

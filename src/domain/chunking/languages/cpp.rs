@@ -1,6 +1,6 @@
 //! C++ language processor for AST-based code chunking.
 
-use crate::infrastructure::constants::CHUNK_SIZE_CPP;
+use crate::domain::chunking::constants::CHUNK_SIZE_CPP;
 
 crate::define_language_processor! {
     CppProcessor,

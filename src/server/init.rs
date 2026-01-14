@@ -292,22 +292,27 @@ async fn initialize_server_components(
         // Initialize admin API server with first-run support
         // Priority: env vars > data file (users.json) > generate new credentials
         let data_dir = config.data.base_path();
-        match crate::server::admin::config::AdminConfig::load_with_first_run(&data_dir) {
+        match crate::server::admin::config::AdminConfig::load_with_first_run(&data_dir).await {
             Ok((admin_config, generated_password)) => {
                 if admin_config.enabled {
                     // Display first-run message if password was generated
-                    if let Some(password) = generated_password {
+                    // NOTE: Password is NOT displayed in terminal for security
+                    // User must read it from the credentials file
+                    if generated_password.is_some() {
+                        let credentials_file = data_dir.join("users.json");
                         eprintln!();
                         eprintln!("========================================");
                         eprintln!("  FIRST RUN - Admin credentials created");
                         eprintln!("========================================");
-                        eprintln!("  Email:    {}", admin_config.username);
-                        eprintln!("  Password: {}", password);
+                        eprintln!("  Username: {}", admin_config.username);
                         eprintln!();
-                        eprintln!("  Stored in: {}/users.json", data_dir.display());
+                        eprintln!("  Credentials saved to:");
+                        eprintln!("    {}", credentials_file.display());
                         eprintln!();
-                        eprintln!("  IMPORTANT: Save this password securely!");
-                        eprintln!("  It will NOT be displayed again.");
+                        eprintln!("  To view your password, run:");
+                        eprintln!("    cat {}", credentials_file.display());
+                        eprintln!();
+                        eprintln!("  IMPORTANT: Save the password securely!");
                         eprintln!("========================================");
                         eprintln!();
                     }

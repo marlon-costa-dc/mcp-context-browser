@@ -1,6 +1,6 @@
 //! Ruby language processor for AST-based code chunking.
 
-use crate::infrastructure::constants::CHUNK_SIZE_RUBY;
+use crate::domain::chunking::constants::CHUNK_SIZE_RUBY;
 
 crate::define_language_processor! {
     RubyProcessor,

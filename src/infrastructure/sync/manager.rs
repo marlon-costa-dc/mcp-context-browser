@@ -178,7 +178,7 @@ impl SyncManager {
 
             // Update modification times for changed files (using millis for precision)
             for file_path in &changed_files {
-                if let Ok(metadata) = std::fs::metadata(file_path) {
+                if let Ok(metadata) = tokio::fs::metadata(file_path).await {
                     if let Ok(modified) = metadata.modified() {
                         let mod_time = modified
                             .duration_since(UNIX_EPOCH)
@@ -349,7 +349,7 @@ impl SyncManager {
             let path_str = path.to_string_lossy().to_string();
 
             // Check if file has been modified since last sync
-            if let Ok(metadata) = std::fs::metadata(path) {
+            if let Ok(metadata) = tokio::fs::metadata(path).await {
                 if let Ok(modified) = metadata.modified() {
                     let mod_time = modified
                         .duration_since(UNIX_EPOCH)

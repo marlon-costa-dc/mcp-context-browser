@@ -143,7 +143,15 @@ impl AuthConfig {
         let mut warnings = Vec::new();
 
         if !self.enabled {
-            // Auth disabled - no security validation needed
+            // Auth disabled - warn about production security
+            warnings.push(SecurityWarning {
+                code: "AUTH_DISABLED",
+                message: "Authentication is disabled. Set JWT_SECRET and ADMIN_PASSWORD environment \
+                         variables for production use. Without authentication, any client can access \
+                         all server endpoints."
+                    .to_string(),
+                severity: WarningSeverity::Critical,
+            });
             return warnings;
         }
 
@@ -243,7 +251,7 @@ impl AuthConfig {
     /// 3. First run - generate new credentials
     ///
     /// Returns the config and status indicating how credentials were obtained.
-    pub fn load_with_first_run(
+    pub async fn load_with_first_run(
         data_dir: &std::path::Path,
     ) -> crate::domain::error::Result<(Self, super::user_store::FirstRunStatus)> {
         use super::user_store::{FirstRunStatus, UserStore};
@@ -262,7 +270,7 @@ impl AuthConfig {
 
         // Priority 2: Check data file
         let users_file = UserStore::file_path(data_dir);
-        if let Some(store) = UserStore::load(&users_file)? {
+        if let Some(store) = UserStore::load(&users_file).await? {
             let config = Self {
                 jwt_secret: store.jwt_secret.clone(),
                 jwt_expiration: DEFAULT_JWT_EXPIRATION,
@@ -279,7 +287,7 @@ impl AuthConfig {
 
         // Priority 3: First run - generate new credentials
         let (store, password) = UserStore::generate_new()?;
-        store.save(&users_file)?;
+        store.save(&users_file).await?;
 
         let email = store
             .users
@@ -305,7 +313,7 @@ impl AuthConfig {
     /// Load auth config with first-run support, using provided credentials
     ///
     /// Use this when the user provides credentials interactively.
-    pub fn load_with_credentials(
+    pub async fn load_with_credentials(
         data_dir: &std::path::Path,
         email: &str,
         password: &str,
@@ -314,7 +322,7 @@ impl AuthConfig {
 
         let users_file = UserStore::file_path(data_dir);
         let store = UserStore::with_credentials(email, password)?;
-        store.save(&users_file)?;
+        store.save(&users_file).await?;
 
         let config = Self {
             jwt_secret: store.jwt_secret.clone(),

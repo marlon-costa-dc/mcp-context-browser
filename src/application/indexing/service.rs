@@ -10,14 +10,16 @@
 use super::chunking_orchestrator::ChunkingOrchestrator;
 use crate::domain::error::{Error, Result};
 use crate::domain::ports::{
-    ContextServiceInterface, IndexingResult, IndexingServiceInterface, IndexingStatus,
+    ChunkingOrchestratorInterface, ContextServiceInterface, IndexingResult,
+    IndexingServiceInterface, IndexingStatus,
 };
+use crate::domain::ports::infrastructure::{SnapshotProvider, SyncProvider};
 use crate::domain::types::CodeChunk;
-// Cross-cutting concern: Event bus for decoupled notifications
+// Cross-cutting concern: Event bus for decoupled notifications (infrastructure-specific subscribe)
 use crate::domain::constants::INDEXING_BATCH_SIZE;
 use crate::infrastructure::events::{SharedEventBusProvider, SystemEvent};
+// Concrete types for manual construction (implements domain port traits)
 use crate::infrastructure::snapshot::SnapshotManager;
-use crate::infrastructure::sync::SyncManager;
 use async_trait::async_trait;
 use futures::future::join_all;
 use std::path::Path;
@@ -30,13 +32,15 @@ use std::sync::Arc;
 pub struct IndexingService {
     #[shaku(inject)]
     context_service: Arc<dyn ContextServiceInterface>,
-    #[shaku(default = SnapshotManager::new().unwrap_or_else(|_| SnapshotManager::new_disabled()))]
-    snapshot_manager: SnapshotManager,
+    /// Snapshot provider for incremental indexing (uses domain port trait)
+    #[shaku(default = Arc::new(SnapshotManager::new().unwrap_or_else(|_| SnapshotManager::new_disabled())) as Arc<dyn SnapshotProvider>)]
+    snapshot_provider: Arc<dyn SnapshotProvider>,
+    /// Sync provider for coordination (uses domain port trait)
     #[shaku(default = None)]
-    sync_manager: Option<Arc<SyncManager>>,
-    /// Chunking orchestrator service for code chunking
-    #[shaku(default = Arc::new(ChunkingOrchestrator::default()))]
-    chunking_orchestrator: Arc<ChunkingOrchestrator>,
+    sync_provider: Option<Arc<dyn SyncProvider>>,
+    /// Chunking orchestrator service for code chunking (injected via DI)
+    #[shaku(inject)]
+    chunking_orchestrator: Arc<dyn ChunkingOrchestratorInterface>,
     /// Whether indexing is in progress
     #[shaku(default = AtomicBool::new(false))]
     is_indexing: AtomicBool,
@@ -50,14 +54,18 @@ pub struct IndexingService {
 
 impl IndexingService {
     /// Create a new indexing service
+    ///
+    /// # Arguments
+    /// * `context_service` - Context service for storing chunks
+    /// * `sync_provider` - Optional sync provider for coordination (uses domain port trait)
     pub fn new(
         context_service: Arc<dyn ContextServiceInterface>,
-        sync_manager: Option<Arc<SyncManager>>,
+        sync_provider: Option<Arc<dyn SyncProvider>>,
     ) -> Result<Self> {
         Ok(Self {
             context_service,
-            snapshot_manager: SnapshotManager::new()?,
-            sync_manager,
+            snapshot_provider: Arc::new(SnapshotManager::new()?),
+            sync_provider,
             chunking_orchestrator: Arc::new(ChunkingOrchestrator::default()),
             is_indexing: AtomicBool::new(false),
             total_files: AtomicUsize::new(0),
@@ -86,9 +94,8 @@ impl IndexingService {
     fn clone_service(&self) -> Self {
         Self {
             context_service: Arc::clone(&self.context_service),
-            snapshot_manager: SnapshotManager::new()
-                .unwrap_or_else(|_| SnapshotManager::new_disabled()),
-            sync_manager: self.sync_manager.clone(),
+            snapshot_provider: Arc::clone(&self.snapshot_provider),
+            sync_provider: self.sync_provider.clone(),
             chunking_orchestrator: Arc::clone(&self.chunking_orchestrator),
             is_indexing: AtomicBool::new(false),
             total_files: AtomicUsize::new(0),
@@ -107,14 +114,14 @@ impl IndexingService {
             .canonicalize()
             .map_err(|e| Error::io(format!("Failed to canonicalize path: {}", e)))?;
 
-        // Check if sync is needed (if sync manager is available)
-        let batch = if let Some(sync_mgr) = &self.sync_manager {
-            if sync_mgr.should_debounce(&canonical_path).await? {
+        // Check if sync is needed (if sync provider is available)
+        let batch = if let Some(sync_prov) = &self.sync_provider {
+            if sync_prov.should_debounce(&canonical_path).await? {
                 tracing::info!("[INDEX] Skipping {} - debounced", canonical_path.display());
                 return Ok(0);
             }
 
-            match sync_mgr.acquire_sync_slot(&canonical_path).await? {
+            match sync_prov.acquire_sync_slot(&canonical_path).await? {
                 Some(b) => Some(b),
                 None => {
                     tracing::info!("[INDEX] Sync deferred for {}", canonical_path.display());
@@ -127,7 +134,7 @@ impl IndexingService {
 
         // Get changed files using snapshots
         let changed_files: Vec<String> = self
-            .snapshot_manager
+            .snapshot_provider
             .get_changed_files(&canonical_path)
             .await?;
         tracing::info!(
@@ -138,8 +145,8 @@ impl IndexingService {
 
         if changed_files.is_empty() {
             // Release slot if we acquired one but have no work
-            if let (Some(sync_mgr), Some(b)) = (&self.sync_manager, batch) {
-                sync_mgr.release_sync_slot(&canonical_path, b).await?;
+            if let (Some(sync_prov), Some(b)) = (&self.sync_provider, batch) {
+                sync_prov.release_sync_slot(&canonical_path, b).await?;
             }
             return Ok(0);
         }
@@ -150,10 +157,10 @@ impl IndexingService {
             .await;
 
         // Release slot and update timestamp
-        if let (Some(sync_mgr), Some(b)) = (&self.sync_manager, batch) {
-            sync_mgr.release_sync_slot(&canonical_path, b).await?;
+        if let (Some(sync_prov), Some(b)) = (&self.sync_provider, batch) {
+            sync_prov.release_sync_slot(&canonical_path, b).await?;
             // Update last sync time
-            sync_mgr.update_last_sync(&canonical_path).await;
+            sync_prov.update_last_sync(&canonical_path).await;
         }
 
         tracing::info!(
@@ -168,8 +175,13 @@ impl IndexingService {
     ///
     /// Delegates to `ChunkingOrchestrator` for the actual chunking logic.
     async fn process_file(&self, path: &Path) -> Result<Vec<CodeChunk>> {
+        // Read file content
+        let content = tokio::fs::read_to_string(path)
+            .await
+            .map_err(|e| Error::io(format!("Failed to read file {}: {}", path.display(), e)))?;
+
         // Delegate to ChunkingOrchestrator service
-        self.chunking_orchestrator.chunk_file(path).await
+        self.chunking_orchestrator.process_file(path, &content).await
     }
 
     /// Process files in parallel batches for better performance
@@ -267,8 +279,8 @@ impl IndexingService {
         // Clear the vector store collection
         self.context_service.clear_collection(collection).await?;
 
-        // Reset snapshot state for the collection if we have sync manager
-        if let Some(_sync_mgr) = &self.sync_manager {
+        // Reset snapshot state for the collection if we have sync provider
+        if let Some(_sync_prov) = &self.sync_provider {
             tracing::info!("[INDEX] Clearing sync state for collection: {}", collection);
         }
 

@@ -1,6 +1,6 @@
 //! Go language processor for AST-based code chunking.
 
-use crate::infrastructure::constants::CHUNK_SIZE_GO;
+use crate::domain::chunking::constants::CHUNK_SIZE_GO;
 
 crate::define_language_processor! {
     GoProcessor,

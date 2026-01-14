@@ -323,9 +323,21 @@ pub async fn web_auth_middleware(
 }
 
 /// Create a Set-Cookie header value for the JWT token
+///
+/// By default, the cookie includes the `Secure` flag which requires HTTPS.
+/// For development environments (when MCP_DEV_MODE is set), the Secure flag
+/// is omitted to allow HTTP connections.
 pub fn create_auth_cookie(token: &str, expires_in_secs: u64) -> String {
+    // In development mode, omit Secure flag to allow HTTP
+    // In production (default), require HTTPS with Secure flag
+    let secure_flag = if std::env::var("MCP_DEV_MODE").is_ok() {
+        "" // No Secure flag in dev mode (allows HTTP)
+    } else {
+        "; Secure" // Require HTTPS in production
+    };
+
     format!(
-        "{}={}; Path=/; HttpOnly; SameSite=Lax; Max-Age={}",
-        AUTH_COOKIE_NAME, token, expires_in_secs
+        "{}={}; Path=/; HttpOnly; SameSite=Lax; Max-Age={}{}",
+        AUTH_COOKIE_NAME, token, expires_in_secs, secure_flag
     )
 }

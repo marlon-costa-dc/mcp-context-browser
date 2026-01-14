@@ -167,22 +167,8 @@ impl McpServerBuilder {
         };
 
         // Resolve admin service from DI container
-        // The DI-resolved AdminService doesn't have all dependencies wired yet,
-        // so we need to manually construct for now until Phase 3 completes
-        let event_bus_trait: SharedEventBusProvider = event_bus.clone() as SharedEventBusProvider;
-        let deps = crate::server::admin::service::AdminServiceDependencies {
-            performance_metrics: Arc::clone(&performance_metrics),
-            indexing_operations: Arc::clone(&indexing_operations),
-            service_provider: Arc::clone(&service_provider),
-            system_collector: Arc::clone(&system_collector),
-            http_client: Arc::clone(&http_client),
-            event_bus: event_bus_trait,
-            log_buffer: log_buffer.clone(),
-            config: Arc::clone(&config_arc),
-            cache_provider: Some(cache_provider.clone()),
-        };
-        let admin_service: Arc<dyn AdminService> =
-            Arc::new(crate::server::admin::service::AdminServiceImpl::new(deps));
+        // AdminService is now fully wired through Shaku DI with proper submodule dependencies
+        let admin_service: Arc<dyn AdminService> = container.resolve();
 
         // Resolve application services from DI container
         let indexing_service: Arc<dyn crate::domain::ports::IndexingServiceInterface> =

@@ -60,6 +60,7 @@ pub mod admin;
 pub mod args;
 pub mod auth;
 pub mod builder;
+pub mod components;
 pub mod formatter;
 pub mod handlers;
 pub mod init;
@@ -68,15 +69,18 @@ pub mod metrics;
 pub mod operations;
 pub mod rate_limit_middleware;
 pub mod security;
+pub mod tools;
 pub mod transport;
 
 // Re-exports for public API
 pub use args::*;
 pub use auth::AuthHandler;
 pub use builder::McpServerBuilder;
+pub use components::{ServerComponents, ServerComponentsBuilder};
 pub use formatter::ResponseFormatter;
 pub use handlers::*;
 pub use init::run_server;
 pub use mcp_server::McpServer;
 pub use metrics::{McpPerformanceMetrics, PerformanceMetricsInterface};
 pub use operations::{IndexingOperation, IndexingOperationsInterface, McpIndexingOperations};
+pub use tools::{create_tool_list, route_tool_call, ToolDefinitions, ToolHandlers};

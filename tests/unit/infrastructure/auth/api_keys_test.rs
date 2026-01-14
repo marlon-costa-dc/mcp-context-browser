@@ -16,13 +16,14 @@ fn test_user() -> User {
     )
 }
 
-#[test]
-fn test_create_and_validate_key() {
+#[tokio::test]
+async fn test_create_and_validate_key() {
     let store = ApiKeyStore::new();
     let user = test_user();
 
     let (key_plaintext, api_key) = store
         .create_key("Test Key".to_string(), &user, None)
+        .await
         .unwrap();
 
     assert!(key_plaintext.starts_with(API_KEY_PREFIX));
@@ -43,17 +44,18 @@ fn test_invalid_key() {
     assert!(result.is_err());
 }
 
-#[test]
-fn test_revoke_key() {
+#[tokio::test]
+async fn test_revoke_key() {
     let store = ApiKeyStore::new();
     let user = test_user();
 
     let (key_plaintext, api_key) = store
         .create_key("Test Key".to_string(), &user, None)
+        .await
         .unwrap();
 
     // Revoke the key
-    store.revoke_key(&api_key.id).unwrap();
+    store.revoke_key(&api_key.id).await.unwrap();
 
     // Key should no longer be valid
     let result = store.validate_key(&key_plaintext);

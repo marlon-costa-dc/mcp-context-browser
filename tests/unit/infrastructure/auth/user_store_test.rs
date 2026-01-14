@@ -34,15 +34,16 @@ fn test_with_credentials_hashes_password() {
     assert!(store.users[0].password_hash.starts_with("$argon2"));
 }
 
-#[test]
-fn test_save_and_load_roundtrip() {
+#[tokio::test]
+async fn test_save_and_load_roundtrip() {
     let temp_dir = TempDir::new().expect("temp dir");
     let path = temp_dir.path().join("users.json");
 
     let (original, _password) = UserStore::generate_new().expect("should generate");
-    original.save(&path).expect("should save");
+    original.save(&path).await.expect("should save");
 
     let loaded = UserStore::load(&path)
+        .await
         .expect("should load")
         .expect("should exist");
 
@@ -51,25 +52,25 @@ fn test_save_and_load_roundtrip() {
     assert_eq!(loaded.jwt_secret, original.jwt_secret);
 }
 
-#[test]
-fn test_load_nonexistent_returns_none() {
+#[tokio::test]
+async fn test_load_nonexistent_returns_none() {
     let temp_dir = TempDir::new().expect("temp dir");
     let path = temp_dir.path().join("nonexistent.json");
 
-    let result = UserStore::load(&path).expect("should not error");
+    let result = UserStore::load(&path).await.expect("should not error");
     assert!(result.is_none());
 }
 
 #[cfg(unix)]
-#[test]
-fn test_file_permissions_are_0600() {
+#[tokio::test]
+async fn test_file_permissions_are_0600() {
     use std::os::unix::fs::PermissionsExt;
 
     let temp_dir = TempDir::new().expect("temp dir");
     let path = temp_dir.path().join("users.json");
 
     let (store, _) = UserStore::generate_new().expect("should generate");
-    store.save(&path).expect("should save");
+    store.save(&path).await.expect("should save");
 
     let metadata = std::fs::metadata(&path).expect("metadata");
     let mode = metadata.permissions().mode() & 0o777;

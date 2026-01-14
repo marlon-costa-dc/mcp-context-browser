@@ -9,7 +9,7 @@ use arc_swap::ArcSwap;
 use rmcp::handler::server::wrapper::Parameters;
 use rmcp::model::{
     CallToolResult, Implementation, ListToolsResult, PaginatedRequestParam, ProtocolVersion,
-    ServerCapabilities, ServerInfo, Tool,
+    ServerCapabilities, ServerInfo,
 };
 use rmcp::ErrorData as McpError;
 use rmcp::{tool, ServerHandler};
@@ -26,11 +26,13 @@ use crate::server::args::{
     ClearIndexArgs, GetIndexingStatusArgs, IndexCodebaseArgs, SearchCodeArgs,
 };
 use crate::server::auth::AuthHandler;
+use crate::server::components::ServerComponents;
 use crate::server::handlers::{
     ClearIndexHandler, GetIndexingStatusHandler, IndexCodebaseHandler, SearchCodeHandler,
 };
 use crate::server::metrics::PerformanceMetricsInterface;
 use crate::server::operations::{IndexingOperation, IndexingOperationsInterface};
+use crate::server::tools::{create_tool_list, route_tool_call, ToolHandlers};
 
 /// Type alias for provider tuple to reduce complexity
 type ProviderTuple = (
@@ -78,35 +80,7 @@ type InitializedHandlers = (
     Arc<ClearIndexHandler>,
 );
 
-/// Components required to initialize McpServer
-pub struct ServerComponents {
-    /// Config
-    pub config: Arc<ArcSwap<crate::infrastructure::config::Config>>,
-    /// Optional cache_provider value
-    pub cache_provider: Option<SharedCacheProvider>,
-    /// Performance Metrics
-    pub performance_metrics: Arc<dyn PerformanceMetricsInterface>,
-    /// Indexing Operations
-    pub indexing_operations: Arc<dyn IndexingOperationsInterface>,
-    /// Admin Service
-    pub admin_service: Arc<dyn crate::server::admin::service::AdminService>,
-    /// Service Provider
-    pub service_provider: Arc<dyn ServiceProviderInterface>,
-    /// Resource Limits
-    pub resource_limits: Arc<ResourceLimits>,
-    /// Http Client
-    pub http_client: Arc<dyn crate::adapters::http_client::HttpClientProvider>,
-    /// Event Bus
-    pub event_bus: SharedEventBusProvider,
-    /// Log Buffer
-    pub log_buffer: crate::infrastructure::logging::SharedLogBuffer,
-    pub system_collector:
-        Arc<dyn crate::infrastructure::metrics::system::SystemMetricsCollectorInterface>,
-    /// Optional DI-resolved indexing service (skips manual construction if provided)
-    pub indexing_service: Option<Arc<dyn crate::domain::ports::IndexingServiceInterface>>,
-    /// Optional DI-resolved search service (skips manual construction if provided)
-    pub search_service: Option<Arc<dyn crate::domain::ports::SearchServiceInterface>>,
-}
+// ServerComponents is now in components.rs
 
 impl McpServer {
     /// Create providers based on configuration using service provider
@@ -627,7 +601,7 @@ impl McpServer {
     }
 
     /// Get real performance metrics for admin interface
-    pub fn get_performance_metrics(&self) -> crate::server::admin::service::PerformanceMetricsData {
+    pub fn get_performance_metrics(&self) -> crate::domain::ports::admin::PerformanceMetricsData {
         self.performance_metrics.get_performance_metrics()
     }
 }
@@ -723,85 +697,7 @@ impl ServerHandler for McpServer {
         _pagination: Option<PaginatedRequestParam>,
         _context: rmcp::service::RequestContext<rmcp::RoleServer>,
     ) -> Result<ListToolsResult, McpError> {
-        use std::borrow::Cow;
-
-        let serialize_schema = |schema_value: serde_json::Value, tool_name: &str| {
-            schema_value
-                .as_object()
-                .ok_or_else(|| {
-                    McpError::internal_error(
-                        format!("Schema for {} is not an object", tool_name),
-                        None,
-                    )
-                })
-                .cloned()
-        };
-
-        let tools = vec![
-            Tool {
-                name: Cow::Borrowed("index_codebase"),
-                title: None,
-                description: Some(Cow::Borrowed(
-                    "Index a codebase directory for semantic search using vector embeddings",
-                )),
-                input_schema: Arc::new(serialize_schema(
-                    serde_json::to_value(schemars::schema_for!(IndexCodebaseArgs))
-                        .map_err(|e| McpError::internal_error(e.to_string(), None))?,
-                    "index_codebase",
-                )?),
-                output_schema: None,
-                annotations: None,
-                icons: None,
-                meta: Default::default(),
-            },
-            Tool {
-                name: Cow::Borrowed("search_code"),
-                title: None,
-                description: Some(Cow::Borrowed(
-                    "Search for code using natural language queries",
-                )),
-                input_schema: Arc::new(serialize_schema(
-                    serde_json::to_value(schemars::schema_for!(SearchCodeArgs))
-                        .map_err(|e| McpError::internal_error(e.to_string(), None))?,
-                    "search_code",
-                )?),
-                output_schema: None,
-                annotations: None,
-                icons: None,
-                meta: Default::default(),
-            },
-            Tool {
-                name: Cow::Borrowed("get_indexing_status"),
-                title: None,
-                description: Some(Cow::Borrowed(
-                    "Get the current indexing status and statistics",
-                )),
-                input_schema: Arc::new(serialize_schema(
-                    serde_json::to_value(schemars::schema_for!(GetIndexingStatusArgs))
-                        .map_err(|e| McpError::internal_error(e.to_string(), None))?,
-                    "get_indexing_status",
-                )?),
-                output_schema: None,
-                annotations: None,
-                icons: None,
-                meta: Default::default(),
-            },
-            Tool {
-                name: Cow::Borrowed("clear_index"),
-                title: None,
-                description: Some(Cow::Borrowed("Clear the search index for a collection")),
-                input_schema: Arc::new(serialize_schema(
-                    serde_json::to_value(schemars::schema_for!(ClearIndexArgs))
-                        .map_err(|e| McpError::internal_error(e.to_string(), None))?,
-                    "clear_index",
-                )?),
-                output_schema: None,
-                annotations: None,
-                icons: None,
-                meta: Default::default(),
-            },
-        ];
-
+        let tools = create_tool_list()?;
         Ok(ListToolsResult {
             tools,
             meta: Default::default(),
@@ -815,39 +711,12 @@ impl ServerHandler for McpServer {
         request: rmcp::model::CallToolRequestParam,
         _context: rmcp::service::RequestContext<rmcp::RoleServer>,
     ) -> Result<CallToolResult, McpError> {
-        match request.name.as_ref() {
-            "index_codebase" => {
-                let args: IndexCodebaseArgs = serde_json::from_value(serde_json::Value::Object(
-                    request.arguments.unwrap_or_default(),
-                ))
-                .map_err(|e| McpError::invalid_params(format!("Invalid arguments: {}", e), None))?;
-                self.index_codebase(Parameters(args)).await
-            }
-            "search_code" => {
-                let args: SearchCodeArgs = serde_json::from_value(serde_json::Value::Object(
-                    request.arguments.unwrap_or_default(),
-                ))
-                .map_err(|e| McpError::invalid_params(format!("Invalid arguments: {}", e), None))?;
-                self.search_code(Parameters(args)).await
-            }
-            "get_indexing_status" => {
-                let args: GetIndexingStatusArgs = serde_json::from_value(
-                    serde_json::Value::Object(request.arguments.unwrap_or_default()),
-                )
-                .map_err(|e| McpError::invalid_params(format!("Invalid arguments: {}", e), None))?;
-                self.get_indexing_status_tool(Parameters(args)).await
-            }
-            "clear_index" => {
-                let args: ClearIndexArgs = serde_json::from_value(serde_json::Value::Object(
-                    request.arguments.unwrap_or_default(),
-                ))
-                .map_err(|e| McpError::invalid_params(format!("Invalid arguments: {}", e), None))?;
-                self.clear_index(Parameters(args)).await
-            }
-            _ => Err(McpError::invalid_params(
-                format!("Unknown tool: {}", request.name),
-                None,
-            )),
-        }
+        let handlers = ToolHandlers {
+            index_codebase: Arc::clone(&self.index_codebase_handler),
+            search_code: Arc::clone(&self.search_code_handler),
+            get_indexing_status: Arc::clone(&self.get_indexing_status_handler),
+            clear_index: Arc::clone(&self.clear_index_handler),
+        };
+        route_tool_call(request, &handlers).await
     }
 }

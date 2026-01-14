@@ -29,8 +29,9 @@ use shaku::Interface;
 
 use super::dispatch::{create_embedding_provider_boxed, create_vector_store_provider_boxed};
 use super::modules::{
-    AdaptersModule, AdaptersModuleImpl, ApplicationModule, ApplicationModuleImpl,
-    InfrastructureModule, InfrastructureModuleImpl, ServerModule, ServerModuleImpl,
+    AdaptersModule, AdaptersModuleImpl, AdminModule, AdminModuleImpl, ApplicationModule,
+    ApplicationModuleImpl, InfrastructureModule, InfrastructureModuleImpl, ServerModule,
+    ServerModuleImpl,
 };
 
 /// DI Container holding the module hierarchy
@@ -42,6 +43,11 @@ use super::modules::{
 ///
 /// By default, null providers are used (for testing). In production,
 /// use `build_with_config()` to inject actual providers based on config.
+///
+/// ## Future Modules
+///
+/// Analysis, Quality, and Git modules are prepared for v0.3.0+ feature additions.
+/// They are feature-gated and optional - initialized only when enabled.
 pub struct DiContainer {
     /// Adapters module (HTTP clients, providers, repositories)
     pub adapters_module: Arc<dyn AdaptersModule>,
@@ -49,8 +55,26 @@ pub struct DiContainer {
     pub infrastructure_module: Arc<dyn InfrastructureModule>,
     /// Server module (performance, indexing operations)
     pub server_module: Arc<dyn ServerModule>,
+    /// Admin module (admin service with dependencies on all modules)
+    pub admin_module: Arc<dyn AdminModule>,
     /// Application module (business logic services)
     pub application_module: Arc<dyn ApplicationModule>,
+
+    // === Future modules (v0.3.0+) - prepared for incremental feature integration ===
+    /// Analysis module (code complexity, technical debt detection) - v0.3.0+
+    /// Currently None - will be initialized when analysis feature is enabled
+    #[cfg(feature = "analysis")]
+    pub analysis_module: Option<Arc<dyn crate::infrastructure::di::modules::AnalysisModule>>,
+
+    /// Quality module (quality gates, assessment) - v0.5.0+
+    /// Currently None - will be initialized when quality feature is enabled
+    #[cfg(feature = "quality")]
+    pub quality_module: Option<Arc<dyn crate::infrastructure::di::modules::QualityModule>>,
+
+    /// Git module (git operations, repository analysis) - v0.5.0+
+    /// Currently None - will be initialized when git feature is enabled
+    #[cfg(feature = "git")]
+    pub git_module: Option<Arc<dyn crate::infrastructure::di::modules::GitModule>>,
 }
 
 impl DiContainer {
@@ -58,6 +82,9 @@ impl DiContainer {
     ///
     /// This builds with default null providers, suitable for unit tests.
     /// For production, use `build_with_config()` instead.
+    ///
+    /// Future modules (analysis, quality, git) are initialized as None in v0.2.0.
+    /// They will be populated when those features are implemented (v0.3.0+).
     pub fn build() -> Result<Self> {
         // Build leaf modules with null providers (defaults)
         let adapters_module: Arc<dyn AdaptersModule> =
@@ -65,6 +92,15 @@ impl DiContainer {
         let infrastructure_module: Arc<dyn InfrastructureModule> =
             Arc::new(InfrastructureModuleImpl::builder().build());
         let server_module: Arc<dyn ServerModule> = Arc::new(ServerModuleImpl::builder().build());
+        // Admin module depends on infrastructure, server, and adapters modules
+        let admin_module: Arc<dyn AdminModule> = Arc::new(
+            AdminModuleImpl::builder(
+                Arc::clone(&infrastructure_module),
+                Arc::clone(&server_module),
+                Arc::clone(&adapters_module),
+            )
+            .build(),
+        );
         // Application module depends on adapters module for repositories
         let application_module: Arc<dyn ApplicationModule> =
             Arc::new(ApplicationModuleImpl::builder(Arc::clone(&adapters_module)).build());
@@ -73,7 +109,14 @@ impl DiContainer {
             adapters_module,
             infrastructure_module,
             server_module,
+            admin_module,
             application_module,
+            #[cfg(feature = "analysis")]
+            analysis_module: None,  // v0.3.0+
+            #[cfg(feature = "quality")]
+            quality_module: None,   // v0.5.0+
+            #[cfg(feature = "git")]
+            git_module: None,       // v0.5.0+
         })
     }
 
@@ -81,6 +124,9 @@ impl DiContainer {
     ///
     /// Creates providers based on configuration and injects them into the
     /// module hierarchy using Shaku's component override mechanism.
+    ///
+    /// Future modules (analysis, quality, git) are initialized as None in v0.2.0.
+    /// They will be populated from config when those features are implemented (v0.3.0+).
     ///
     /// # Arguments
     ///
@@ -118,6 +164,15 @@ impl DiContainer {
         let infrastructure_module: Arc<dyn InfrastructureModule> =
             Arc::new(InfrastructureModuleImpl::builder().build());
         let server_module: Arc<dyn ServerModule> = Arc::new(ServerModuleImpl::builder().build());
+        // Admin module depends on infrastructure, server, and adapters modules
+        let admin_module: Arc<dyn AdminModule> = Arc::new(
+            AdminModuleImpl::builder(
+                Arc::clone(&infrastructure_module),
+                Arc::clone(&server_module),
+                Arc::clone(&adapters_module),
+            )
+            .build(),
+        );
         // Application module depends on adapters module for repositories
         let application_module: Arc<dyn ApplicationModule> =
             Arc::new(ApplicationModuleImpl::builder(Arc::clone(&adapters_module)).build());
@@ -126,7 +181,14 @@ impl DiContainer {
             adapters_module,
             infrastructure_module,
             server_module,
+            admin_module,
             application_module,
+            #[cfg(feature = "analysis")]
+            analysis_module: None,  // v0.3.0+: Will be initialized from config.analysis
+            #[cfg(feature = "quality")]
+            quality_module: None,   // v0.5.0+: Will be initialized from config.quality
+            #[cfg(feature = "git")]
+            git_module: None,       // v0.5.0+: Will be initialized from config.git
         })
     }
 
@@ -234,5 +296,11 @@ impl ComponentResolver<dyn crate::domain::ports::SearchServiceInterface> for DiC
 impl ComponentResolver<dyn crate::domain::ports::IndexingServiceInterface> for DiContainer {
     fn resolve(&self) -> Arc<dyn crate::domain::ports::IndexingServiceInterface> {
         self.application_module.resolve()
+    }
+}
+
+impl ComponentResolver<dyn crate::server::admin::service::AdminService> for DiContainer {
+    fn resolve(&self) -> Arc<dyn crate::server::admin::service::AdminService> {
+        self.admin_module.resolve()
     }
 }

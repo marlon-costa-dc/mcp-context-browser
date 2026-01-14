@@ -6,11 +6,11 @@ use shaku::module;
 
 use super::traits::{AdaptersModule, AdminModule, InfrastructureModule, ServerModule};
 use crate::adapters::http_client::HttpClientProvider;
+use crate::domain::ports::admin::{IndexingOperationsInterface, PerformanceMetricsInterface};
 use crate::infrastructure::di::factory::ServiceProviderInterface;
+use crate::infrastructure::events::EventBusProvider;
 use crate::infrastructure::metrics::system::SystemMetricsCollectorInterface;
 use crate::server::admin::service::AdminServiceImpl;
-use crate::server::metrics::PerformanceMetricsInterface;
-use crate::server::operations::IndexingOperationsInterface;
 
 module! {
     pub AdminModuleImpl: AdminModule {
@@ -18,7 +18,7 @@ module! {
         providers = [],
 
         use dyn InfrastructureModule {
-            components = [dyn SystemMetricsCollectorInterface, dyn ServiceProviderInterface],
+            components = [dyn SystemMetricsCollectorInterface, dyn ServiceProviderInterface, dyn EventBusProvider],
             providers = []
         },
 

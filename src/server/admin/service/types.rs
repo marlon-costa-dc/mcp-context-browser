@@ -366,24 +366,8 @@ pub struct IndexingStatus {
     pub estimated_completion: Option<u64>,
 }
 
-/// Performance metrics data
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PerformanceMetricsData {
-    /// Total Queries
-    pub total_queries: u64,
-    /// Successful Queries
-    pub successful_queries: u64,
-    /// Failed Queries
-    pub failed_queries: u64,
-    /// Average Response Time Ms
-    pub average_response_time_ms: f64,
-    /// Cache Hit Rate
-    pub cache_hit_rate: f64,
-    /// Active Connections
-    pub active_connections: u32,
-    /// Uptime Seconds
-    pub uptime_seconds: u64,
-}
+// Re-export PerformanceMetricsData from domain port for backward compatibility
+pub use crate::domain::ports::admin::PerformanceMetricsData;
 
 /// Dashboard data
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -29,12 +29,21 @@ fn test_default_config_has_warnings_when_enabled() {
 }
 
 #[test]
-fn test_disabled_config_has_no_warnings() {
+fn test_disabled_config_has_security_warning() {
     let config = AuthConfig::default();
     assert!(!config.enabled);
 
     let warnings = config.validate_for_production();
-    assert!(warnings.is_empty(), "Disabled auth should have no warnings");
+
+    // SEC-001: Disabled auth should now produce a critical security warning
+    assert!(
+        !warnings.is_empty(),
+        "Disabled auth should have security warning"
+    );
+    assert!(
+        warnings.iter().any(|w| w.code == "AUTH_DISABLED"),
+        "Expected AUTH_DISABLED warning"
+    );
 }
 
 #[test]

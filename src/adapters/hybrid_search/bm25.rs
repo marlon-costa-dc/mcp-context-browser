@@ -124,8 +124,61 @@ impl BM25Scorer {
         score
     }
 
+    /// Score a document with pre-tokenized query terms (optimized for batch operations)
+    ///
+    /// This method avoids re-tokenizing the query for each document, improving performance
+    /// when scoring multiple documents against the same query.
+    pub fn score_with_tokens(&self, document: &CodeChunk, query_terms: &[String]) -> f32 {
+        let doc_terms = Self::tokenize(&document.content);
+        let doc_length = doc_terms.len() as f32;
+
+        let mut score = 0.0;
+        let mut doc_term_freq = HashMap::new();
+
+        // Count term frequencies in document
+        for term in &doc_terms {
+            *doc_term_freq.entry(term.clone()).or_insert(0) += 1;
+        }
+
+        // Calculate BM25 score for each query term
+        for query_term in query_terms {
+            let tf = *doc_term_freq.get(query_term).unwrap_or(&0) as f32;
+            let df = *self.document_freq.get(query_term).unwrap_or(&0) as f32;
+
+            if df > 0.0 {
+                let idf = if self.total_docs > 1 {
+                    ((self.total_docs as f32 - df + 0.5) / (df + 0.5)).ln()
+                } else {
+                    1.0
+                };
+
+                let tf_normalized = (tf * (self.params.k1 + 1.0))
+                    / (tf
+                        + self.params.k1
+                            * (1.0 - self.params.b
+                                + self.params.b * doc_length / self.avg_doc_len));
+
+                score += idf * tf_normalized;
+            }
+        }
+
+        score
+    }
+
+    /// Score multiple documents with a single tokenization pass (batch optimization)
+    ///
+    /// This is more efficient than calling `score()` for each document because
+    /// the query is tokenized only once.
+    pub fn score_batch(&self, documents: &[&CodeChunk], query: &str) -> Vec<f32> {
+        let query_terms = Self::tokenize(query);
+        documents
+            .iter()
+            .map(|doc| self.score_with_tokens(doc, &query_terms))
+            .collect()
+    }
+
     /// Tokenize text into terms (simple whitespace and punctuation splitting)
-    pub(crate) fn tokenize(text: &str) -> Vec<String> {
+    pub fn tokenize(text: &str) -> Vec<String> {
         text.to_lowercase()
             .split_whitespace()
             .flat_map(|word| {

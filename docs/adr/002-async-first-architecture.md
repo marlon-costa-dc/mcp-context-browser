@@ -215,8 +215,76 @@ mod tests {
 }
 ```
 
+## Update for v0.2.0: Hybrid Parallelization with Rayon
+
+**Date**: 2026-01-14
+
+As MCB evolves to include CPU-intensive code analysis features (v0.3.0+), the async-first design has been extended to support hybrid parallelization:
+
+### Updated Strategy
+
+- **Tokio**: I/O-bound operations (file reads, network calls, database queries, vector search)
+- **Rayon**: CPU-bound operations (AST parsing, complexity calculation, graph analysis)
+- **Pattern**: Wrap Rayon in `tokio::task::spawn_blocking` to bridge sync CPU work with async I/O
+
+### Rationale
+
+1. **Tokio for I/O**: Tokio's event-driven architecture is optimal for I/O-bound work
+2. **Rayon for Compute**: Rayon's work-stealing scheduler is proven for CPU-bound parallelism
+3. **PMAT Integration**: Upcoming PMAT analysis code uses Rayon extensively with proven performance
+4. **No Conflicts**: Tokio and Rayon are complementary and don't interfere with each other
+
+### Implementation Pattern
+
+```rust
+#[async_trait]
+pub trait CodeAnalyzer: Send + Sync {
+    async fn analyze_complexity(&self, path: &Path) -> Result<ComplexityReport> {
+        // 1. Read file (I/O - Tokio)
+        let content = tokio::fs::read_to_string(path).await?;
+
+        // 2. Compute complexity (CPU - Rayon, wrapped in spawn_blocking)
+        let report = tokio::task::spawn_blocking(move || {
+            // Rayon parallelism for AST analysis
+            self.compute_complexity(&content)
+        }).await??;
+
+        Ok(report)
+    }
+}
+
+fn compute_complexity(content: &str) -> Result<ComplexityReport> {
+    // Rayon for parallel AST node processing
+    let nodes = parse_ast(content)?;
+
+    let metrics: Vec<_> = nodes
+        .par_iter()  // Rayon's parallel iterator
+        .map(|node| calculate_node_complexity(node))
+        .collect();
+
+    Ok(ComplexityReport { metrics })
+}
+```
+
+### Benefits
+
+- ✅ Tokio remains the primary runtime for all async coordination
+- ✅ Rayon's work-stealing keeps CPU cores busy during analysis
+- ✅ No context switching between runtimes
+- ✅ Straightforward to test and reason about
+- ✅ Maintains clean async/sync boundaries
+
+### Performance Implications
+
+- **I/O Operations**: Unchanged (Tokio handles efficiently)
+- **CPU Operations**: Improved parallelism (Rayon fully utilizes CPU cores)
+- **Context Switching**: Minimal (spawn_blocking reuses Tokio's worker threads)
+- **Memory**: Slight increase for Rayon work-stealing queues (negligible)
+
 ## References
 
 \1-   [Tokio Documentation](https://tokio.rs/)
 \1-   [Async Programming in Rust](https://rust-lang.github.io/async-book/)
 \1-   [Structured Concurrency](https://vorpus.org/blog/notes-on-structured-concurrency-or-go-statement-considered-harmful/)
+\1-   [Rayon: Data Parallelism](https://docs.rs/rayon/latest/rayon/)
+\1-   [Tokio spawn_blocking](https://docs.rs/tokio/latest/tokio/task/fn.spawn_blocking.html)

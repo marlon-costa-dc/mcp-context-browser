@@ -1,6 +1,6 @@
 //! Swift language processor for AST-based code chunking.
 
-use crate::infrastructure::constants::CHUNK_SIZE_SWIFT;
+use crate::domain::chunking::constants::CHUNK_SIZE_SWIFT;
 
 crate::define_language_processor! {
     SwiftProcessor,

@@ -27,6 +27,14 @@ pub struct AstTraverser<'a> {
 }
 
 impl<'a> AstTraverser<'a> {
+    /// Create a new AST traverser with extraction rules and language configuration
+    ///
+    /// # Arguments
+    /// * `rules` - The extraction rules defining which AST nodes to process
+    /// * `language` - The programming language being processed
+    ///
+    /// # Returns
+    /// A new AST traverser instance with default maximum chunk limit of 100
     pub fn new(rules: &'a [NodeExtractionRule], language: &'a Language) -> Self {
         Self {
             rules,
@@ -35,11 +43,26 @@ impl<'a> AstTraverser<'a> {
         }
     }
 
+    /// Configure the maximum number of chunks to extract
+    ///
+    /// # Arguments
+    /// * `max_chunks` - The maximum number of chunks to extract during traversal
+    ///
+    /// # Returns
+    /// The traverser instance for method chaining
     pub fn with_max_chunks(mut self, max_chunks: usize) -> Self {
         self.max_chunks = max_chunks;
         self
     }
 
+    /// Traverse the AST and extract code chunks according to the configured rules
+    ///
+    /// # Arguments
+    /// * `cursor` - The tree-sitter tree cursor positioned at the current node
+    /// * `content` - The full source code content
+    /// * `file_name` - The name of the file being processed
+    /// * `depth` - The current depth in the AST (used for chunk metadata)
+    /// * `chunks` - Mutable vector to collect extracted code chunks
     pub fn traverse_and_extract(
         &self,
         cursor: &mut tree_sitter::TreeCursor,

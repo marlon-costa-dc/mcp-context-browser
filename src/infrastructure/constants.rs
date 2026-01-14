@@ -475,62 +475,18 @@ pub const CIRCUIT_BREAKER_HALF_OPEN_MAX_REQUESTS: u32 = 10;
 pub const CIRCUIT_BREAKER_PERSIST_INTERVAL: Duration = Duration::from_secs(30);
 
 // ============================================================================
-// Code Chunking Configuration
+// Code Chunking Configuration (Re-exported from domain layer)
 // ============================================================================
+// These constants are now defined in src/domain/chunking/constants.rs
+// Re-exported here for backward compatibility with existing imports.
 
-/// Default lines per code chunk
-pub const DEFAULT_CHUNK_SIZE: usize = 20;
-
-/// Rust language chunk size
-pub const CHUNK_SIZE_RUST: usize = 20;
-
-/// Python language chunk size
-pub const CHUNK_SIZE_PYTHON: usize = 15;
-
-/// JavaScript/TypeScript language chunk size
-pub const CHUNK_SIZE_JAVASCRIPT: usize = 15;
-
-/// Go language chunk size
-pub const CHUNK_SIZE_GO: usize = 15;
-
-/// Java language chunk size
-pub const CHUNK_SIZE_JAVA: usize = 15;
-
-/// C language chunk size
-pub const CHUNK_SIZE_C: usize = 15;
-
-/// C++ language chunk size
-pub const CHUNK_SIZE_CPP: usize = 15;
-
-/// C# language chunk size
-pub const CHUNK_SIZE_CSHARP: usize = 15;
-
-/// Ruby language chunk size
-pub const CHUNK_SIZE_RUBY: usize = 15;
-
-/// PHP language chunk size
-pub const CHUNK_SIZE_PHP: usize = 15;
-
-/// Swift language chunk size
-pub const CHUNK_SIZE_SWIFT: usize = 15;
-
-/// Kotlin language chunk size
-pub const CHUNK_SIZE_KOTLIN: usize = 15;
-
-/// Generic/fallback language chunk size (for unsupported languages)
-pub const CHUNK_SIZE_GENERIC: usize = 15;
-
-/// Node extraction rule default minimum content length
-pub const NODE_EXTRACTION_MIN_LENGTH: usize = 20;
-
-/// Node extraction rule default minimum lines
-pub const NODE_EXTRACTION_MIN_LINES: usize = 1;
-
-/// Node extraction rule default maximum depth
-pub const NODE_EXTRACTION_MAX_DEPTH: usize = 3;
-
-/// Node extraction rule default priority
-pub const NODE_EXTRACTION_DEFAULT_PRIORITY: i32 = 5;
+pub use crate::domain::chunking::constants::{
+    CHUNK_SIZE_C, CHUNK_SIZE_CPP, CHUNK_SIZE_CSHARP, CHUNK_SIZE_GENERIC, CHUNK_SIZE_GO,
+    CHUNK_SIZE_JAVA, CHUNK_SIZE_JAVASCRIPT, CHUNK_SIZE_KOTLIN, CHUNK_SIZE_PHP, CHUNK_SIZE_PYTHON,
+    CHUNK_SIZE_RUBY, CHUNK_SIZE_RUST, CHUNK_SIZE_SWIFT, DEFAULT_CHUNK_SIZE,
+    NODE_EXTRACTION_DEFAULT_PRIORITY, NODE_EXTRACTION_MAX_DEPTH, NODE_EXTRACTION_MIN_LENGTH,
+    NODE_EXTRACTION_MIN_LINES,
+};
 
 // ============================================================================
 // Vector Store Configuration

@@ -1,6 +1,17 @@
+[workspace]
+members = [
+    ".",
+    "libs/tree-sitter-analysis",
+]
+
+[workspace.dependencies]
+# Shared dependencies across workspace members
+tokio = { version = "1.49", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+
 [package]
 name = "mcp-context-browser"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["Marlon Costa <marlonsc@gmail.com>"]
 license = "MIT"
@@ -19,11 +30,27 @@ rustdoc-args = ["--cfg", "docsrs"]
 targets = ["x86_64-unknown-linux-gnu"]
 
 [features]
-default = ["fastembed", "filesystem-store", "milvus", "argon2"]
+default = ["search"]
 
 # NOTE: Feature flags currently serve as capability markers for documentation/selection.
 # Dependencies are always compiled; conditional compilation (#[cfg(feature)]) not yet implemented.
 # TODO: Add optional deps and #[cfg] guards to enable true feature-gated compilation.
+
+# === CORE FEATURES ===
+
+# v0.1.0: Semantic search (embedding-based code discovery)
+search = ["fastembed", "filesystem-store", "milvus", "edgevec", "redis-cache", "argon2"]
+
+# v0.3.0+: Code analysis (complexity, technical debt, SATD detection)
+analysis = []
+
+# v0.5.0+: Quality metrics and assessment
+quality = []
+
+# v0.5.0+: Git integration and operations
+git = []
+
+# === PROVIDER FEATURES ===
 
 # Embedding providers
 fastembed = []  # Local embeddings via FastEmbed (always compiled)
@@ -39,15 +66,17 @@ redis-cache = []  # Redis distributed caching (always compiled)
 # Authentication
 argon2 = []  # Argon2id password hashing (NIST recommended, default)
 
-# Full feature set for development/testing
-full = ["fastembed", "filesystem-store", "milvus", "edgevec", "redis-cache", "argon2"]
+# === FEATURE BUNDLES ===
+
+# Full feature set for development/testing (all capabilities)
+full = ["search", "analysis", "quality", "git"]
 
 [dependencies]
 # Core async runtime
-tokio = { version = "1.49", features = ["full"] }
+tokio = { workspace = true }
 
 # Serialization
-serde = { version = "1.0", features = ["derive"] }
+serde = { workspace = true }
 serde_json = "1.0"
 
 # Error handling

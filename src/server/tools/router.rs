@@ -1,0 +1,123 @@
+//! Tool Router Module
+//!
+//! Routes incoming tool call requests to the appropriate handlers.
+//! This module provides a centralized dispatch mechanism for MCP tool calls.
+
+use rmcp::model::{CallToolRequestParam, CallToolResult};
+use rmcp::ErrorData as McpError;
+
+use crate::server::args::{ClearIndexArgs, GetIndexingStatusArgs, IndexCodebaseArgs, SearchCodeArgs};
+use crate::server::handlers::{
+    ClearIndexHandler, GetIndexingStatusHandler, IndexCodebaseHandler, SearchCodeHandler,
+};
+use rmcp::handler::server::wrapper::Parameters;
+use std::sync::Arc;
+
+/// Handler references for tool routing
+pub struct ToolHandlers {
+    /// Handler for codebase indexing operations
+    pub index_codebase: Arc<IndexCodebaseHandler>,
+    /// Handler for code search operations
+    pub search_code: Arc<SearchCodeHandler>,
+    /// Handler for indexing status operations
+    pub get_indexing_status: Arc<GetIndexingStatusHandler>,
+    /// Handler for index clearing operations
+    pub clear_index: Arc<ClearIndexHandler>,
+}
+
+/// Route a tool call request to the appropriate handler
+///
+/// Parses the request arguments and delegates to the matching handler.
+///
+/// # Arguments
+///
+/// * `request` - The incoming tool call request
+/// * `handlers` - References to all available handlers
+///
+/// # Returns
+///
+/// The tool call result or an error if the tool is unknown or arguments are invalid.
+pub async fn route_tool_call(
+    request: CallToolRequestParam,
+    handlers: &ToolHandlers,
+) -> Result<CallToolResult, McpError> {
+    match request.name.as_ref() {
+        "index_codebase" => {
+            let args = parse_args::<IndexCodebaseArgs>(&request)?;
+            handlers.index_codebase.handle(Parameters(args)).await
+        }
+        "search_code" => {
+            let args = parse_args::<SearchCodeArgs>(&request)?;
+            handlers.search_code.handle(Parameters(args)).await
+        }
+        "get_indexing_status" => {
+            let args = parse_args::<GetIndexingStatusArgs>(&request)?;
+            handlers.get_indexing_status.handle(Parameters(args)).await
+        }
+        "clear_index" => {
+            let args = parse_args::<ClearIndexArgs>(&request)?;
+            handlers.clear_index.handle(Parameters(args)).await
+        }
+        _ => Err(McpError::invalid_params(
+            format!("Unknown tool: {}", request.name),
+            None,
+        )),
+    }
+}
+
+/// Parse request arguments into the expected type
+fn parse_args<T: serde::de::DeserializeOwned>(
+    request: &CallToolRequestParam,
+) -> Result<T, McpError> {
+    let args_value = serde_json::Value::Object(request.arguments.clone().unwrap_or_default());
+    serde_json::from_value(args_value)
+        .map_err(|e| McpError::invalid_params(format!("Invalid arguments: {}", e), None))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+    use std::borrow::Cow;
+
+    #[test]
+    fn test_parse_args_valid() {
+        let request = CallToolRequestParam {
+            name: Cow::Borrowed("search_code"),
+            arguments: Some(
+                json!({
+                    "query": "test query",
+                    "limit": 10
+                })
+                .as_object()
+                .cloned()
+                .unwrap(),
+            ),
+            meta: None,
+        };
+
+        let args: SearchCodeArgs = parse_args(&request).expect("should parse args");
+        assert_eq!(args.query, "test query");
+        assert_eq!(args.limit, Some(10));
+    }
+
+    #[test]
+    fn test_parse_args_missing_optional() {
+        let request = CallToolRequestParam {
+            name: Cow::Borrowed("search_code"),
+            arguments: Some(
+                json!({
+                    "query": "test query"
+                })
+                .as_object()
+                .cloned()
+                .unwrap(),
+            ),
+            meta: None,
+        };
+
+        let args: SearchCodeArgs = parse_args(&request).expect("should parse args");
+        assert_eq!(args.query, "test query");
+        assert!(args.limit.is_none());
+    }
+}

@@ -6,7 +6,7 @@
 use crate::domain::error::Result;
 use crate::domain::ports::chunking::{ChunkingOptions, ChunkingResult, CodeChunker};
 use crate::domain::types::{CodeChunk, Language};
-use crate::infrastructure::constants::CHUNK_SIZE_GENERIC;
+use crate::domain::chunking::constants::CHUNK_SIZE_GENERIC;
 use async_trait::async_trait;
 use std::collections::HashMap;
 use std::path::Path;

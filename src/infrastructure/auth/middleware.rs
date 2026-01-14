@@ -226,7 +226,9 @@ where
 /// assert!(RequirePermission::check(&claims, &Permission::ManageUsers));
 /// ```
 pub struct RequirePermission {
+    /// The permission that is required for access
     pub permission: super::roles::Permission,
+    /// The JWT claims containing user identity and permissions
     pub claims: Claims,
 }
 

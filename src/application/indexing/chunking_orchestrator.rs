@@ -64,8 +64,12 @@ pub struct BatchChunkResult {
 }
 
 /// Orchestrates code chunking operations
+#[derive(shaku::Component)]
+#[shaku(interface = ChunkingOrchestratorInterface)]
 pub struct ChunkingOrchestrator {
+    #[shaku(default = IntelligentChunker::new())]
     chunker: IntelligentChunker,
+    #[shaku(default = ChunkingConfig::default())]
     config: ChunkingConfig,
 }
 
@@ -226,5 +230,10 @@ impl ChunkingOrchestratorInterface for ChunkingOrchestrator {
             .chunk_content(content.to_string(), file_name, language)
             .await;
         Ok(chunks)
+    }
+
+    async fn chunk_file(&self, path: &Path) -> Result<Vec<CodeChunk>> {
+        // Delegate to the existing public method
+        ChunkingOrchestrator::chunk_file(self, path).await
     }
 }

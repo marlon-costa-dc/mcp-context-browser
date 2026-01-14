@@ -40,11 +40,17 @@
 //! [`Embedding`]: types::Embedding
 //! [`SearchResult`]: types::SearchResult
 
+/// AST-based code chunking for 12+ programming languages
 pub mod chunking;
+/// Domain-level constants and configuration values
 pub mod constants;
+/// Domain error types with rich context
 pub mod error;
+/// Port traits (interfaces) for dependency injection
 pub mod ports;
+/// Core domain types like [`CodeChunk`], [`Embedding`], [`SearchResult`]
 pub mod types;
+/// Input validation utilities with composable validators
 pub mod validation;
 
 pub use error::{Error, Result};

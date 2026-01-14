@@ -16,11 +16,16 @@ use tokio::sync::mpsc;
 
 /// Messages for the backup actor
 pub enum BackupMessage {
+    /// Create a new backup at the specified path
     CreateBackup {
+        /// Path where the backup should be created
         path: String,
+        /// Channel to send the backup result back to the caller
         response: tokio::sync::oneshot::Sender<Result<BackupInfo>>,
     },
+    /// List all available backups
     ListBackups {
+        /// Channel to send the list of backups back to the caller
         response: tokio::sync::oneshot::Sender<Result<Vec<BackupInfo>>>,
     },
 }

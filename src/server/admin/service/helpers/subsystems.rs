@@ -2,12 +2,12 @@
 //!
 //! Builds SubsystemInfo structures from runtime data.
 
+use crate::domain::ports::admin::PerformanceMetricsData;
 use crate::infrastructure::cache::CacheBackendConfig;
 use crate::infrastructure::config::Config;
 use crate::infrastructure::metrics::ProcessMetrics;
 use crate::server::admin::service::types::{
-    HealthCheck, PerformanceMetricsData, ProviderInfo, SubsystemInfo, SubsystemMetrics,
-    SubsystemStatus, SubsystemType,
+    HealthCheck, ProviderInfo, SubsystemInfo, SubsystemMetrics, SubsystemStatus, SubsystemType,
 };
 
 /// Build subsystem info from providers and metrics

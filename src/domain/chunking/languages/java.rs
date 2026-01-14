@@ -1,6 +1,6 @@
 //! Java language processor for AST-based code chunking.
 
-use crate::infrastructure::constants::CHUNK_SIZE_JAVA;
+use crate::domain::chunking::constants::CHUNK_SIZE_JAVA;
 
 crate::define_language_processor! {
     JavaProcessor,

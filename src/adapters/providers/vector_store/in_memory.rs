@@ -6,7 +6,8 @@ use crate::domain::types::{Embedding, SearchResult};
 use crate::infrastructure::utils::JsonExt;
 use async_trait::async_trait;
 use dashmap::DashMap;
-use std::collections::HashMap;
+use std::cmp::Ordering;
+use std::collections::{BinaryHeap, HashMap};
 use std::sync::Arc;
 
 /// In-memory storage entry type
@@ -89,22 +90,35 @@ impl VectorStoreProvider for InMemoryVectorStoreProvider {
             .get(collection)
             .ok_or_else(|| Error::vector_db(format!("Collection '{}' not found", collection)))?;
 
-        // Simple cosine similarity search
-        let mut results: Vec<_> = coll
-            .iter()
-            .enumerate()
-            .map(|(i, (embedding, metadata))| {
-                let similarity = cosine_similarity(query_vector, &embedding.vector);
-                (similarity, i, embedding, metadata)
-            })
-            .collect();
+        // Precompute query norm once (avoids redundant calculation per vector)
+        let query_norm = compute_norm(query_vector);
 
-        results.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
-        results.truncate(limit);
+        // Use min-heap for top-k selection: O(n log k) instead of O(n log n)
+        // The heap keeps the smallest scores at the top for efficient eviction
+        let mut heap: BinaryHeap<ScoredItem> = BinaryHeap::with_capacity(limit + 1);
 
-        let search_results = results
+        for (i, (embedding, _metadata)) in coll.iter().enumerate() {
+            let similarity = cosine_similarity_with_norm(query_vector, &embedding.vector, query_norm);
+
+            if heap.len() < limit {
+                heap.push(ScoredItem { score: similarity, index: i });
+            } else if let Some(min) = heap.peek() {
+                // Only add if better than current minimum
+                if similarity > min.score {
+                    heap.pop();
+                    heap.push(ScoredItem { score: similarity, index: i });
+                }
+            }
+        }
+
+        // Extract results in descending score order
+        let mut items: Vec<_> = heap.into_iter().collect();
+        items.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(Ordering::Equal));
+
+        let search_results = items
             .into_iter()
-            .map(|(score, _i, _embedding, metadata)| {
+            .map(|item| {
+                let (_embedding, metadata) = &coll[item.index];
                 let id = metadata.string_or("generated_id", "");
                 // Fallback for backward compatibility
                 let start_line = metadata
@@ -117,7 +131,7 @@ impl VectorStoreProvider for InMemoryVectorStoreProvider {
                     file_path: metadata.string_or("file_path", ""),
                     start_line,
                     content: metadata.string_or("content", ""),
-                    score,
+                    score: item.score,
                     metadata: serde_json::to_value(metadata).unwrap_or(serde_json::json!({})),
                 }
             })
@@ -237,10 +251,45 @@ impl VectorStoreProvider for InMemoryVectorStoreProvider {
     }
 }
 
-/// Cosine similarity calculation
-fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
+/// Scored item for heap-based top-k selection
+///
+/// Uses reverse ordering so BinaryHeap acts as a min-heap (smallest scores at top).
+/// This allows efficient eviction of the smallest score when adding better matches.
+#[derive(PartialEq)]
+struct ScoredItem {
+    score: f32,
+    index: usize,
+}
+
+impl Eq for ScoredItem {}
+
+impl Ord for ScoredItem {
+    fn cmp(&self, other: &Self) -> Ordering {
+        // Reverse ordering for min-heap behavior: smallest at top
+        other
+            .score
+            .partial_cmp(&self.score)
+            .unwrap_or(Ordering::Equal)
+    }
+}
+
+impl PartialOrd for ScoredItem {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+/// Compute the L2 norm of a vector
+fn compute_norm(v: &[f32]) -> f32 {
+    v.iter().map(|x| x * x).sum::<f32>().sqrt()
+}
+
+/// Cosine similarity with precomputed query norm (optimized version)
+///
+/// This avoids redundant norm calculation for the query vector when
+/// computing similarity against many document vectors.
+fn cosine_similarity_with_norm(a: &[f32], b: &[f32], norm_a: f32) -> f32 {
     let dot_product: f32 = a.iter().zip(b.iter()).map(|(x, y)| x * y).sum();
-    let norm_a: f32 = a.iter().map(|x| x * x).sum::<f32>().sqrt();
     let norm_b: f32 = b.iter().map(|x| x * x).sum::<f32>().sqrt();
 
     if norm_a == 0.0 || norm_b == 0.0 {
@@ -249,4 +298,11 @@ fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
         // Normalize to [0, 1] range
         (dot_product / (norm_a * norm_b) + 1.0) / 2.0
     }
+}
+
+/// Cosine similarity calculation (legacy, for backward compatibility)
+#[allow(dead_code)]
+fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
+    let norm_a = compute_norm(a);
+    cosine_similarity_with_norm(a, b, norm_a)
 }

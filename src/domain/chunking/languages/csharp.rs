@@ -1,6 +1,6 @@
 //! C# language processor for AST-based code chunking.
 
-use crate::infrastructure::constants::CHUNK_SIZE_CSHARP;
+use crate::domain::chunking::constants::CHUNK_SIZE_CSHARP;
 
 crate::define_language_processor! {
     CSharpProcessor,

@@ -343,7 +343,7 @@ impl AdminConfig {
     /// 3. First run - generate new credentials and save to data file
     ///
     /// Returns (config, Option<generated_password>) - password is Some only on first run
-    pub fn load_with_first_run(
+    pub async fn load_with_first_run(
         data_dir: &std::path::Path,
     ) -> Result<(Self, Option<String>), ConfigError> {
         use crate::infrastructure::auth::user_store::UserStore;
@@ -364,7 +364,7 @@ impl AdminConfig {
 
         // Priority 2: Check data file (users.json)
         let users_file = UserStore::file_path(data_dir);
-        if let Ok(Some(store)) = UserStore::load(&users_file) {
+        if let Ok(Some(store)) = UserStore::load(&users_file).await {
             // Get first admin user's credentials
             if let Some(user) = store.users.first() {
                 // Note: We can't recover the plaintext password from the hash,
@@ -391,6 +391,7 @@ impl AdminConfig {
         // Save to data file
         store
             .save(&users_file)
+            .await
             .map_err(|e| ConfigError::ConfigError(format!("Failed to save credentials: {}", e)))?;
 
         let user = store

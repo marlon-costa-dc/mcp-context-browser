@@ -239,12 +239,18 @@ impl AuthRateLimiter {
 pub enum RateLimitStatus {
     /// Client is allowed to make requests
     Ok {
+        /// Number of requests remaining in the current window
         remaining_requests: u32,
+        /// Seconds remaining in the current rate limit window
         window_remaining_secs: u64,
+        /// Number of consecutive failed authentication attempts
         failed_attempts: u32,
     },
-    /// Client is locked out
-    LockedOut { remaining_secs: u64 },
+    /// Client is locked out due to too many failed attempts
+    LockedOut {
+        /// Seconds remaining until lockout expires
+        remaining_secs: u64
+    },
 }
 
 /// Rate limit error response

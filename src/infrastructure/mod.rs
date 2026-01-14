@@ -95,6 +95,7 @@ pub mod auth;
 pub mod backup;
 pub mod binary_watcher;
 pub mod cache;
+/// TOML configuration management with hot-reload capabilities
 pub mod config;
 pub mod connection_tracker;
 pub mod constants;

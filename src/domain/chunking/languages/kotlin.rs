@@ -1,6 +1,6 @@
 //! Kotlin language processor for AST-based code chunking.
 
-use crate::infrastructure::constants::CHUNK_SIZE_KOTLIN;
+use crate::domain::chunking::constants::CHUNK_SIZE_KOTLIN;
 
 crate::define_language_processor! {
     KotlinProcessor,
