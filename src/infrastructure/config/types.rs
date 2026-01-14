@@ -1,3 +1,8 @@
+//! # Configuration Types
+//!
+//! Shared configuration type definitions and utilities.
+//! Provides validation, serialization, and default value handling.
+
 // Architecture Note: Configuration aggregation requires importing from adapters layer.
 // This is an acceptable deviation for the root config type that aggregates all settings.
 // The alternative (duplicating config types) would violate DRY principle.

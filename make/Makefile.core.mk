@@ -2,7 +2,7 @@
 # CORE - Build, test and clean operations
 # =============================================================================
 
-.PHONY: build build-release test test-unit test-integration clean run
+.PHONY: build build-release test test-unit test-integration test-doc test-all clean run
 
 # -----------------------------------------------------------------------------
 # Build
@@ -30,6 +30,12 @@ test-unit: ## Run unit tests only
 
 test-integration: ## Run integration tests only
 	@MCP_PORT=$(MCP_PORT) cargo test --test '*'
+
+test-doc: ## Run documentation tests (doctests)
+	@MCP_PORT=$(MCP_PORT) cargo test --doc --all-features
+
+test-all: test test-doc ## Run all tests including doctests
+	@echo "✅ All tests passed"
 
 # -----------------------------------------------------------------------------
 # Run

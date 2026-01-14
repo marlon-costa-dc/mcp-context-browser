@@ -61,14 +61,15 @@ pub enum DomainEvent {
 ///
 /// # Example
 ///
-/// ```rust,ignore
-/// use crate::domain::ports::events::{EventPublisher, DomainEvent};
+/// ```rust,no_run
+/// use mcp_context_browser::domain::ports::events::{EventPublisher, DomainEvent};
 ///
 /// async fn notify_index_rebuild(
 ///     publisher: &dyn EventPublisher,
 ///     collection: Option<String>,
-/// ) -> Result<()> {
-///     publisher.publish(DomainEvent::IndexRebuild { collection }).await
+/// ) -> anyhow::Result<()> {
+///     publisher.publish(DomainEvent::IndexRebuild { collection }).await?;
+///     Ok(())
 /// }
 /// ```
 #[async_trait]
@@ -89,75 +90,3 @@ pub trait EventPublisher: Interface + Send + Sync {
 
 /// Shared event publisher for dependency injection
 pub type SharedEventPublisher = Arc<dyn EventPublisher>;
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-
-    /// Mock event publisher for testing
-    struct MockEventPublisher {
-        publish_count: AtomicUsize,
-        has_subscribers: AtomicBool,
-    }
-
-    impl MockEventPublisher {
-        fn new(has_subscribers: bool) -> Self {
-            Self {
-                publish_count: AtomicUsize::new(0),
-                has_subscribers: AtomicBool::new(has_subscribers),
-            }
-        }
-
-        fn get_publish_count(&self) -> usize {
-            self.publish_count.load(Ordering::Relaxed)
-        }
-    }
-
-    #[async_trait]
-    impl EventPublisher for MockEventPublisher {
-        async fn publish(&self, _event: DomainEvent) -> Result<()> {
-            self.publish_count.fetch_add(1, Ordering::Relaxed);
-            Ok(())
-        }
-
-        fn has_subscribers(&self) -> bool {
-            self.has_subscribers.load(Ordering::Relaxed)
-        }
-    }
-
-    #[tokio::test]
-    async fn test_event_publisher_publish() {
-        let publisher = MockEventPublisher::new(true);
-
-        let result = publisher
-            .publish(DomainEvent::IndexRebuild { collection: None })
-            .await;
-
-        assert!(result.is_ok());
-        assert_eq!(publisher.get_publish_count(), 1);
-    }
-
-    #[tokio::test]
-    async fn test_event_publisher_has_subscribers() {
-        let publisher_with_subs = MockEventPublisher::new(true);
-        let publisher_without_subs = MockEventPublisher::new(false);
-
-        assert!(publisher_with_subs.has_subscribers());
-        assert!(!publisher_without_subs.has_subscribers());
-    }
-
-    #[test]
-    fn test_domain_event_serialization() {
-        let event = DomainEvent::SyncCompleted {
-            path: "/test/path".to_string(),
-            files_changed: 5,
-        };
-
-        let serialized = serde_json::to_string(&event).expect("Serialization failed");
-        let deserialized: DomainEvent =
-            serde_json::from_str(&serialized).expect("Deserialization failed");
-
-        assert_eq!(event, deserialized);
-    }
-}

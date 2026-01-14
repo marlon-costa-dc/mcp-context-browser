@@ -22,13 +22,13 @@ use std::sync::Arc;
 use tracing::{debug, info, instrument};
 
 // Import types from modules
-use crate::adapters::providers::routing::circuit_breaker::CircuitBreaker;
 use crate::adapters::providers::routing::cost_tracker::{CostTracker, CostTrackerTrait};
 use crate::adapters::providers::routing::failover::{FailoverContext, FailoverManager};
 use crate::adapters::providers::routing::health::{HealthMonitor, HealthMonitorTrait};
 use crate::adapters::providers::routing::metrics::{
     ProviderMetricsCollector, ProviderMetricsCollectorTrait,
 };
+use crate::infrastructure::resilience::SharedCircuitBreaker;
 
 /// Context for provider selection decisions
 #[derive(Debug, Clone)]
@@ -256,7 +256,7 @@ pub struct ProviderRouterDeps {
     /// Health monitoring
     pub health_monitor: Arc<HealthMonitor>,
     /// Circuit breaker for resilience
-    pub circuit_breaker: Arc<CircuitBreaker>,
+    pub circuit_breaker: SharedCircuitBreaker,
     /// Metrics collection
     pub metrics: Arc<ProviderMetricsCollector>,
     /// Cost tracking
@@ -270,7 +270,7 @@ impl ProviderRouterDeps {
     pub fn new(
         registry: Arc<ProviderRegistry>,
         health_monitor: Arc<HealthMonitor>,
-        circuit_breaker: Arc<CircuitBreaker>,
+        circuit_breaker: SharedCircuitBreaker,
         metrics: Arc<ProviderMetricsCollector>,
         cost_tracker: Arc<CostTracker>,
         failover_manager: Arc<FailoverManager>,

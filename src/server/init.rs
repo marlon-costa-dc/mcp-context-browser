@@ -13,8 +13,10 @@ use crate::infrastructure::health::ActiveHealthMonitor;
 use crate::infrastructure::limits::ResourceLimits;
 use crate::infrastructure::metrics::MetricsApiServer;
 use crate::infrastructure::provider_lifecycle::ProviderLifecycleManager;
-use crate::infrastructure::rate_limit::RateLimiter;
 use crate::infrastructure::recovery::{RecoveryManager, SharedRecoveryManager};
+use crate::infrastructure::resilience::{
+    create_rate_limiter, determine_rate_limiter_backend, SharedRateLimiter,
+};
 use crate::server::transport::{
     create_mcp_router, HttpTransportState, SessionManager, TransportConfig, TransportMode,
     VersionChecker,
@@ -124,26 +126,7 @@ async fn initialize_server_components(
         tracing::info!("ℹ️  Database disabled");
     }
 
-    // Initialize rate limiter for HTTP API
-    let rate_limiter = if config.metrics.rate_limiting.enabled {
-        tracing::info!("🔒 Initializing rate limiter...");
-        let limiter = Arc::new(RateLimiter::new(config.metrics.rate_limiting.clone()));
-        if let Err(e) = limiter.init().await {
-            tracing::warn!(
-                "⚠️  Failed to initialize Redis rate limiter: {}. Running without rate limiting.",
-                e
-            );
-            None
-        } else {
-            tracing::info!("✅ Rate limiter initialized successfully");
-            Some(limiter)
-        }
-    } else {
-        tracing::info!("ℹ️  Rate limiting disabled");
-        None
-    };
-
-    // Initialize cache provider
+    // Initialize cache provider first (needed for distributed rate limiting)
     let cache_provider = if config.cache.enabled {
         tracing::info!("🗄️  Initializing cache provider...");
         match create_cache_provider(&config.cache).await {
@@ -161,6 +144,28 @@ async fn initialize_server_components(
         }
     } else {
         tracing::info!("ℹ️  Caching disabled");
+        None
+    };
+
+    // Initialize rate limiter for HTTP API (uses cache if clustering enabled)
+    let rate_limiter: Option<SharedRateLimiter> = if config.metrics.rate_limiting.enabled {
+        let backend_type = determine_rate_limiter_backend(
+            cache_provider.as_ref(),
+            config.metrics.clustering_enabled,
+        );
+        tracing::info!(
+            backend = ?backend_type,
+            "🔒 Initializing rate limiter..."
+        );
+        let limiter = create_rate_limiter(
+            backend_type,
+            config.metrics.rate_limiting.clone(),
+            cache_provider.clone(),
+        );
+        tracing::info!("✅ Rate limiter initialized successfully");
+        Some(limiter)
+    } else {
+        tracing::info!("ℹ️  Rate limiting disabled");
         None
     };
 

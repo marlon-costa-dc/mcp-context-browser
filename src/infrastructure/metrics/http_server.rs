@@ -28,7 +28,7 @@ use tower_http::{
 
 use crate::infrastructure::cache::{CacheStats, SharedCacheProvider};
 use crate::infrastructure::limits::ResourceLimits;
-use crate::infrastructure::rate_limit::RateLimiter;
+use crate::infrastructure::resilience::SharedRateLimiter;
 use crate::infrastructure::service_helpers::UptimeTracker;
 use crate::infrastructure::utils::TimeUtils;
 
@@ -68,7 +68,7 @@ pub struct MetricsApiServer {
     system_collector: Arc<dyn SystemMetricsCollectorInterface>,
     performance_metrics: Arc<dyn PerformanceMetricsInterface>,
     uptime: UptimeTracker,
-    _rate_limiter: Option<Arc<RateLimiter>>,
+    _rate_limiter: Option<SharedRateLimiter>,
     resource_limits: Option<Arc<ResourceLimits>>,
     cache_provider: Option<SharedCacheProvider>,
     external_router: Option<Router>,
@@ -98,7 +98,7 @@ impl MetricsApiServer {
         port: u16,
         system_collector: Arc<dyn SystemMetricsCollectorInterface>,
         performance_metrics: Arc<dyn PerformanceMetricsInterface>,
-        rate_limiter: Option<Arc<RateLimiter>>,
+        rate_limiter: Option<SharedRateLimiter>,
         resource_limits: Option<Arc<ResourceLimits>>,
         cache_provider: Option<SharedCacheProvider>,
     ) -> Self {
@@ -388,7 +388,7 @@ struct MetricsServerState {
     system_collector: Arc<dyn SystemMetricsCollectorInterface>,
     performance_metrics: Arc<dyn PerformanceMetricsInterface>,
     uptime: UptimeTracker,
-    _rate_limiter: Option<Arc<RateLimiter>>,
+    _rate_limiter: Option<SharedRateLimiter>,
     resource_limits: Option<Arc<ResourceLimits>>,
     cache_provider: Option<SharedCacheProvider>,
 }

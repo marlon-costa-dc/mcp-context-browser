@@ -7,12 +7,22 @@ use std::collections::HashMap;
 /// Extension trait for serde_json::Value with convenient accessor methods
 ///
 /// Replaces the verbose pattern:
-/// ```ignore
-/// meta.get("key").and_then(|v| v.as_str()).unwrap_or("default")
+/// ```rust
+/// use serde_json::json;
+///
+/// let meta = json!({"key": "value"});
+/// let value = meta.get("key").and_then(|v| v.as_str()).unwrap_or("default");
+/// assert_eq!(value, "value");
 /// ```
-/// With:
-/// ```ignore
-/// meta.str_or("key", "default")
+///
+/// With this cleaner API:
+/// ```rust
+/// use serde_json::json;
+/// use mcp_context_browser::infrastructure::utils::json::JsonExt;
+///
+/// let meta = json!({"key": "value"});
+/// let value = meta.str_or("key", "default");
+/// assert_eq!(value, "value");
 /// ```
 pub trait JsonExt {
     /// Get string value or default (replaces .get().and_then(as_str).unwrap_or)

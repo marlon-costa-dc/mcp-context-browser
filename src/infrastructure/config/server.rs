@@ -1,3 +1,8 @@
+//! # Server Configuration
+//!
+//! HTTP server and MCP protocol configuration.
+//! Defines listen addresses, TLS settings, and request handling parameters.
+
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 

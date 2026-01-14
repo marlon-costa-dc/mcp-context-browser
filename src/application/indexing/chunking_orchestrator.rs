@@ -228,33 +228,3 @@ impl ChunkingOrchestratorInterface for ChunkingOrchestrator {
         Ok(chunks)
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_default_config() {
-        let config = ChunkingConfig::default();
-        assert!(config.batch_size > 0);
-        assert!(config.min_chunk_length > 0);
-    }
-
-    #[tokio::test]
-    async fn test_chunk_empty_content() {
-        let orchestrator = ChunkingOrchestrator::default();
-        let chunks = orchestrator
-            .chunk_content("".to_string(), "test.rs".to_string(), Language::Rust)
-            .await;
-        assert!(chunks.is_empty());
-    }
-
-    #[test]
-    fn test_detect_language() {
-        let orchestrator = ChunkingOrchestrator::default();
-        assert_eq!(
-            orchestrator.detect_language(Path::new("test.rs")),
-            Language::Rust
-        );
-    }
-}

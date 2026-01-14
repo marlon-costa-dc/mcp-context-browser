@@ -3,11 +3,15 @@
 //! Centralizes all configuration key strings used in the admin interface.
 //! This eliminates magic strings and provides IDE autocompletion support.
 //!
-//! # Usage
+//! # Example
 //!
-//! ```rust,ignore
-//! use crate::server::admin::config_keys::indexing;
-//! let chunk_size_key = indexing::CHUNK_SIZE;
+//! ```rust
+//! use mcp_context_browser::server::admin::config_keys::{indexing, security, cache};
+//!
+//! // Access typed configuration keys
+//! assert_eq!(indexing::CHUNK_SIZE, "indexing.chunk_size");
+//! assert_eq!(security::ENABLE_AUTH, "security.enable_auth");
+//! assert_eq!(cache::ENABLED, "cache.enabled");
 //! ```
 
 /// Indexing configuration keys
@@ -54,37 +58,4 @@ pub mod vector_store {
     pub const HOST: &str = "vector_store.host";
     pub const PORT: &str = "vector_store.port";
     pub const COLLECTION: &str = "vector_store.collection";
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_config_keys_exist() {
-        assert_eq!(indexing::CHUNK_SIZE, "indexing.chunk_size");
-        assert_eq!(security::ENABLE_AUTH, "security.enable_auth");
-        assert_eq!(metrics::ENABLED, "metrics.enabled");
-        assert_eq!(cache::ENABLED, "cache.enabled");
-        assert_eq!(embedding::MODEL, "embedding.model");
-        assert_eq!(vector_store::TYPE_NAME, "vector_store.type");
-    }
-
-    #[test]
-    fn test_all_keys_are_non_empty() {
-        assert!(!indexing::CHUNK_SIZE.is_empty());
-        assert!(!security::ENABLE_AUTH.is_empty());
-        assert!(!metrics::ENABLED.is_empty());
-        assert!(!cache::ENABLED.is_empty());
-        assert!(!embedding::MODEL.is_empty());
-        assert!(!vector_store::HOST.is_empty());
-    }
-
-    #[test]
-    fn test_config_keys_use_correct_format() {
-        // All keys should follow the pattern "domain.key"
-        assert!(indexing::CHUNK_SIZE.contains('.'));
-        assert!(security::ENABLE_AUTH.contains('.'));
-        assert!(metrics::COLLECTION_INTERVAL.contains('.'));
-    }
 }

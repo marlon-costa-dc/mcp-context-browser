@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: make ci-docs
+      - run: make docs-check
 
   diagrams:
     name: Generate Diagrams
@@ -59,7 +59,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: make ci-rust-docs
+      - run: make rust-docs
+      - run: make test-doc
 
       - uses: actions/upload-artifact@v6
         with:
@@ -74,7 +75,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - run: make ci-setup-docs
+      - run: make docs-setup
       - run: make docs-sync
       - run: make docs-build
 

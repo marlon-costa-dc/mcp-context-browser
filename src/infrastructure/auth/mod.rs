@@ -25,17 +25,30 @@
 //!
 //! # Example
 //!
-//! ```ignore
+//! ```rust,no_run
 //! use mcp_context_browser::infrastructure::auth::{AuthService, AuthConfig};
 //!
+//! # fn example() -> anyhow::Result<()> {
 //! // Create auth service with default config
 //! let auth_service = AuthService::with_default_config();
 //!
-//! // Authenticate a user
-//! let token = auth_service.authenticate("user@example.com", "password")?;
+//! // Authenticate a user (would need user to be created first)
+//! // let token = auth_service.authenticate("user@example.com", "password")?;
 //!
 //! // Validate a token
-//! let claims = auth_service.validate_token(&token)?;
+//! // let claims = auth_service.validate_token(&token)?;
+//! # Ok(())
+//! # }
+//! ```
+//!
+//! ## Checking Permissions
+//!
+//! ```rust
+//! use mcp_context_browser::infrastructure::auth::{UserRole, Permission};
+//!
+//! let role = UserRole::Admin;
+//! assert!(role.has_permission(&Permission::ManageUsers));
+//! assert!(role.has_permission(&Permission::SearchCodebase));
 //! ```
 
 pub mod api_keys;

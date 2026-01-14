@@ -8,7 +8,7 @@
 .PHONY: docs docs-build docs-serve docs-check docs-fix docs-setup docs-sync docs-metrics
 .PHONY: adr-new adr-list adr-check
 .PHONY: lint-md fix-md validate-all pre-commit
-.PHONY: rust-docs module-docs diagrams info
+.PHONY: rust-docs doc module-docs diagrams info
 
 # Path to mdbook (uses cargo-installed binary)
 MDBOOK := $(HOME)/.cargo/bin/mdbook
@@ -17,7 +17,7 @@ MDBOOK := $(HOME)/.cargo/bin/mdbook
 # Main Documentation Commands
 # -----------------------------------------------------------------------------
 
-docs: docs-metrics docs-sync docs-build docs-check ## Build and validate all documentation
+docs: docs-metrics docs-sync docs-build rust-docs docs-check ## Build and validate all documentation
 	@echo "✅ Documentation complete"
 
 docs-metrics: ## Update all docs with metrics from codebase (single source of truth)
@@ -108,10 +108,15 @@ pre-commit: lint-md validate-all ## Run all pre-commit documentation checks
 # Specialized Documentation
 # -----------------------------------------------------------------------------
 
-rust-docs: ## Generate Rust API documentation
+rust-docs: ## Generate Rust API documentation (docs.rs compatible)
 	@echo "🦀 Generating Rust docs..."
-	@cargo doc --no-deps --document-private-items
+	@cargo doc \
+		--no-deps \
+		--all-features \
+		--document-private-items
 	@echo "📖 Docs at: target/doc/mcp_context_browser/index.html"
+
+doc: rust-docs ## Alias: Generate documentation (standard verb)
 
 module-docs: ## Generate module documentation from source analysis
 	@echo "📄 Generating module documentation..."

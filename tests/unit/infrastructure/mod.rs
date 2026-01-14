@@ -1,8 +1,10 @@
 //! Infrastructure layer unit tests
 
+mod auth;
 mod auth_test;
 mod backup_test;
 mod binary_watcher_test;
+mod cache;
 mod cache_test;
 mod config;
 mod config_providers_test;
@@ -10,13 +12,22 @@ mod connection_tracker_test;
 mod crypto_test;
 mod daemon;
 mod di;
+mod error_ext_test;
+mod events;
+mod health_test;
 mod limits_test;
 mod logging_test;
 mod merkle_test;
 mod metrics;
+mod provider_connection_tracker_test;
+mod provider_lifecycle_test;
 mod rate_limiting_test;
+mod recovery_test;
 mod reproduce_freeze_test;
+mod resilience;
 mod respawn_test;
+mod service_helpers_test;
+mod shutdown_test;
 mod signals_test;
 mod snapshot;
 mod sync;

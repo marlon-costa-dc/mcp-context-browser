@@ -45,11 +45,18 @@ impl EventBus {
     ///
     /// Returns a receiver that can be used in an async context.
     /// Typically used in sync code that spawns an async task:
-    /// ```ignore
-    /// let receiver = event_bus.subscribe_sync();
+    /// ```rust,no_run
+    /// use mcp_context_browser::infrastructure::events::EventBus;
+    ///
+    /// # fn example() {
+    /// let event_bus = EventBus::default();
+    /// let mut receiver = event_bus.subscribe_sync();
     /// tokio::spawn(async move {
-    ///     // use receiver here
+    ///     while let Ok(event) = receiver.recv().await {
+    ///         println!("Received: {:?}", event);
+    ///     }
     /// });
+    /// # }
     /// ```
     pub fn subscribe_sync(&self) -> Receiver<SystemEvent> {
         self.sender.subscribe()
@@ -156,36 +163,5 @@ impl EventPublisher for EventBus {
 
     fn has_subscribers(&self) -> bool {
         self.sender.receiver_count() > 0
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_event_bus_publish_subscribe() {
-        let bus = EventBus::new(10);
-        let mut receiver = bus.sender.subscribe();
-
-        // Send event directly without unnecessary clone
-        let _ = bus.sender.send(SystemEvent::Reload);
-
-        let received = receiver.recv().await.unwrap();
-        assert!(matches!(received, SystemEvent::Reload));
-    }
-
-    #[tokio::test]
-    async fn test_event_bus_provider_trait() {
-        let bus: Arc<dyn EventBusProvider> = Arc::new(EventBus::new(10));
-
-        // Subscribe BEFORE publishing to avoid race condition
-        let mut receiver = bus.subscribe().await.unwrap();
-
-        let event = SystemEvent::Shutdown;
-        let _ = bus.publish(event).await;
-
-        let received = receiver.recv().await.unwrap();
-        assert!(matches!(received, SystemEvent::Shutdown));
     }
 }

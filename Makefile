@@ -23,10 +23,10 @@ include make/Makefile.aliases.mk
 # PHONY declarations (consolidated)
 # =============================================================================
 .PHONY: help all
-.PHONY: build build-release test test-unit test-integration clean run
+.PHONY: build build-release test test-unit test-integration test-doc test-all clean run
 .PHONY: check fmt lint fix quality validate audit coverage bench
 .PHONY: lint-md fix-md
-.PHONY: docs docs-build docs-serve docs-check docs-fix docs-setup docs-metrics docs-sync info
+.PHONY: docs docs-build docs-serve docs-check docs-fix docs-setup docs-metrics docs-sync info doc
 .PHONY: adr-new adr-list adr-check rust-docs diagrams
 .PHONY: status commit push tag sync
 .PHONY: dev dev-metrics dev-sync setup

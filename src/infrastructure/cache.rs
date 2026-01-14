@@ -6,15 +6,20 @@
 //!
 //! ## Architecture
 //!
-//! Application code should depend on the `CacheProvider` trait, not concrete implementations:
+//! Application code should depend on the [`CacheProvider`] trait, not concrete implementations:
 //!
-//! ```ignore
-//! use crate::infrastructure::cache::SharedCacheProvider;
+//! ```rust
+//! use std::sync::Arc;
+//! use mcp_context_browser::infrastructure::cache::{SharedCacheProvider, NullCacheProvider};
 //!
-//! async fn my_function(cache: SharedCacheProvider) {
-//!     // Works with any cache backend
-//!     cache.set("ns", "key", vec![1,2,3], Duration::from_secs(60)).await?;
+//! fn accepts_any_cache(cache: SharedCacheProvider) {
+//!     // Works with Moka, Redis, or Null cache
+//!     println!("Backend: {}", cache.backend_type());
 //! }
+//!
+//! // Create a null cache for testing
+//! let cache: SharedCacheProvider = Arc::new(NullCacheProvider);
+//! accepts_any_cache(cache);
 //! ```
 
 mod config;

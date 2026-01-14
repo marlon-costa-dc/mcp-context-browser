@@ -79,10 +79,10 @@ impl NatsEventBus {
     ///
     /// # Example
     ///
-    /// ```ignore
+    /// ```rust,no_run
     /// use mcp_context_browser::infrastructure::events::NatsEventBus;
     ///
-    /// async fn connect() -> Result<(), Box<dyn std::error::Error>> {
+    /// async fn connect() -> anyhow::Result<()> {
     ///     let bus = NatsEventBus::new("nats://localhost:4222").await?;
     ///     Ok(())
     /// }
@@ -253,18 +253,5 @@ impl EventBusProvider for NatsEventBus {
         // NATS doesn't provide an easy way to get subscriber count
         // Return 0 as we can't easily track this
         0
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    #[ignore] // Requires NATS server running
-    async fn test_nats_event_bus_new() {
-        let result = NatsEventBus::new("nats://localhost:4222").await;
-        // This will fail if NATS server not running, which is expected
-        assert!(result.is_ok() || result.is_err()); // Just check it doesn't panic
     }
 }

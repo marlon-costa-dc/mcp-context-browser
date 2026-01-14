@@ -1,4 +1,24 @@
-//! Search service for querying indexed code
+//! Search Service
+//!
+//! Provides semantic code search across indexed collections.
+//!
+//! The search service delegates to [`ContextServiceInterface`] for actual
+//! vector similarity search, providing a focused API for search operations.
+//!
+//! # Example
+//!
+//! ```rust,no_run
+//! use std::sync::Arc;
+//! use mcp_context_browser::application::SearchService;
+//! use mcp_context_browser::domain::ports::ContextServiceInterface;
+//!
+//! async fn example(context: Arc<dyn ContextServiceInterface>) -> anyhow::Result<()> {
+//!     let search = SearchService::new(context);
+//!     let results = search.search("collection", "error handling", 5).await?;
+//!     println!("Found {} results", results.len());
+//!     Ok(())
+//! }
+//! ```
 
 use crate::domain::error::Result;
 use crate::domain::ports::{ContextServiceInterface, SearchServiceInterface};

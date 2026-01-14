@@ -189,31 +189,20 @@ pub(crate) use impl_language_processor;
 /// Macro to define complete language processor with boilerplate generation
 ///
 /// Generates:
-/// - Processor struct
-/// - Default impl
-/// - new() constructor with full configuration
-/// - LanguageProcessor trait implementation
+/// - Processor struct with documentation
+/// - `Default` implementation
+/// - `new()` constructor with full configuration
+/// - `LanguageProcessor` trait implementation
 ///
-/// # Example
-/// ```ignore
-/// define_language_processor! {
-///     PythonProcessor,
-///     tree_sitter_python::LANGUAGE,
-///     chunk_size: 512,
-///     doc: "Python language processor",
-///     rules: [
-///         {
-///             node_types: ["function_definition"],
-///             min_length: 30,
-///             min_lines: 2,
-///             max_depth: 2,
-///             priority: 5,
-///             include_context: true,
-///         },
-///     ],
-///     fallback_patterns: [r"^def "],
-/// }
-/// ```
+/// This macro reduces boilerplate when adding support for new programming languages.
+/// See `src/domain/chunking/languages/` for concrete implementations.
+///
+/// # Generated API
+///
+/// For a processor defined as `PythonProcessor`, the macro generates:
+/// - `PythonProcessor::new()` - Create with configured extraction rules
+/// - `PythonProcessor::default()` - Same as `new()`
+/// - `impl LanguageProcessor for PythonProcessor` - Full trait implementation
 #[macro_export]
 macro_rules! define_language_processor {
     (

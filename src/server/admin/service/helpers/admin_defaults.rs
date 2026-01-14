@@ -204,115 +204,29 @@ pub fn get_env_u64(key: &str, default: u64) -> u64 {
         .unwrap_or(default)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_get_env_usize_uses_default_when_not_set() {
-        let result = get_env_usize("NONEXISTENT_ADMIN_VAR_12345", 100);
-        assert_eq!(result, 100);
-    }
-
-    #[test]
-    fn test_get_env_usize_parses_valid_value() {
-        std::env::set_var("TEST_ADMIN_USIZE", "250");
-        let result = get_env_usize("TEST_ADMIN_USIZE", 100);
-        assert_eq!(result, 250);
-        std::env::remove_var("TEST_ADMIN_USIZE");
-    }
-
-    #[test]
-    fn test_get_env_usize_uses_default_on_invalid_value() {
-        std::env::set_var("TEST_ADMIN_USIZE_INVALID", "not_a_number");
-        let result = get_env_usize("TEST_ADMIN_USIZE_INVALID", 100);
-        assert_eq!(result, 100);
-        std::env::remove_var("TEST_ADMIN_USIZE_INVALID");
-    }
-
-    #[test]
-    fn test_get_env_usize_handles_empty_string() {
-        std::env::set_var("TEST_ADMIN_USIZE_EMPTY", "");
-        let result = get_env_usize("TEST_ADMIN_USIZE_EMPTY", 100);
-        assert_eq!(result, 100);
-        std::env::remove_var("TEST_ADMIN_USIZE_EMPTY");
-    }
-
-    #[test]
-    fn test_get_env_u32_uses_default_when_not_set() {
-        let result = get_env_u32("NONEXISTENT_ADMIN_VAR_U32_12345", 100);
-        assert_eq!(result, 100);
-    }
-
-    #[test]
-    fn test_get_env_u32_parses_valid_value() {
-        std::env::set_var("TEST_ADMIN_U32", "500");
-        let result = get_env_u32("TEST_ADMIN_U32", 100);
-        assert_eq!(result, 500);
-        std::env::remove_var("TEST_ADMIN_U32");
-    }
-
-    #[test]
-    fn test_get_env_u32_uses_default_on_invalid_value() {
-        std::env::set_var("TEST_ADMIN_U32_INVALID", "abc123");
-        let result = get_env_u32("TEST_ADMIN_U32_INVALID", 100);
-        assert_eq!(result, 100);
-        std::env::remove_var("TEST_ADMIN_U32_INVALID");
-    }
-
-    #[test]
-    fn test_get_env_u64_uses_default_when_not_set() {
-        let result = get_env_u64("NONEXISTENT_ADMIN_VAR_U64_12345", 3600);
-        assert_eq!(result, 3600);
-    }
-
-    #[test]
-    fn test_get_env_u64_parses_valid_value() {
-        std::env::set_var("TEST_ADMIN_U64", "7200");
-        let result = get_env_u64("TEST_ADMIN_U64", 3600);
-        assert_eq!(result, 7200);
-        std::env::remove_var("TEST_ADMIN_U64");
-    }
-
-    #[test]
-    fn test_get_env_u64_uses_default_on_invalid_value() {
-        std::env::set_var("TEST_ADMIN_U64_INVALID", "xyz");
-        let result = get_env_u64("TEST_ADMIN_U64_INVALID", 3600);
-        assert_eq!(result, 3600);
-        std::env::remove_var("TEST_ADMIN_U64_INVALID");
-    }
-
-    #[test]
-    fn test_byte_conversion_constants() {
-        assert_eq!(BYTES_PER_KILOBYTE, 1024);
-        assert_eq!(BYTES_PER_MEGABYTE, 1024 * 1024);
-        assert_eq!(BYTES_PER_GIGABYTE, 1024 * 1024 * 1024);
-    }
-
-    // Compile-time verification of constant values (assertions_on_constants is intentional here)
-    #[allow(clippy::assertions_on_constants)]
-    const _: () = {
-        assert!(
-            DEFAULT_MAX_ACTIVITIES > 0,
-            "MAX_ACTIVITIES must be positive"
-        );
-        assert!(
-            DEFAULT_ACTIVITY_RETENTION_DAYS > 0,
-            "RETENTION_DAYS must be positive"
-        );
-        assert!(
-            DEFAULT_ACTIVITY_BUFFER_SIZE > 0,
-            "BUFFER_SIZE must be positive"
-        );
-        assert!(
-            DEFAULT_BACKUP_RETENTION_DAYS > 0,
-            "BACKUP_RETENTION_DAYS must be positive"
-        );
-        assert!(
-            DEFAULT_BACKUP_COMPRESSION_LEVEL >= 1 && DEFAULT_BACKUP_COMPRESSION_LEVEL <= 9,
-            "COMPRESSION_LEVEL must be 1-9"
-        );
-        assert!(DEFAULT_MAX_BACKUPS > 0, "MAX_BACKUPS must be positive");
-        assert!(SECONDS_PER_DAY == 86400, "SECONDS_PER_DAY must equal 86400");
-    };
-}
+// Compile-time verification of constant values (assertions_on_constants is intentional here)
+#[allow(clippy::assertions_on_constants)]
+const _: () = {
+    assert!(
+        DEFAULT_MAX_ACTIVITIES > 0,
+        "MAX_ACTIVITIES must be positive"
+    );
+    assert!(
+        DEFAULT_ACTIVITY_RETENTION_DAYS > 0,
+        "RETENTION_DAYS must be positive"
+    );
+    assert!(
+        DEFAULT_ACTIVITY_BUFFER_SIZE > 0,
+        "BUFFER_SIZE must be positive"
+    );
+    assert!(
+        DEFAULT_BACKUP_RETENTION_DAYS > 0,
+        "BACKUP_RETENTION_DAYS must be positive"
+    );
+    assert!(
+        DEFAULT_BACKUP_COMPRESSION_LEVEL >= 1 && DEFAULT_BACKUP_COMPRESSION_LEVEL <= 9,
+        "COMPRESSION_LEVEL must be 1-9"
+    );
+    assert!(DEFAULT_MAX_BACKUPS > 0, "MAX_BACKUPS must be positive");
+    assert!(SECONDS_PER_DAY == 86400, "SECONDS_PER_DAY must equal 86400");
+};

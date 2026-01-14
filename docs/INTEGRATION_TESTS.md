@@ -124,7 +124,7 @@ docker-compose down -v        # Cleanup
 
 ### Redis Cache Provider Tests
 
-**File:**`tests/infrastructure/redis_cache_integration.rs`
+**File:** `tests/e2e/redis_cache_test.rs` (integration tests moved to e2e/)
 
 Tests include:
 
@@ -147,7 +147,7 @@ cargo test redis_cache_integration -- --nocapture
 
 ### NATS Event Bus Tests
 
-**File:**`tests/infrastructure/nats_event_bus_integration.rs`
+**File:** `tests/e2e/nats_event_bus_test.rs` (integration tests moved to e2e/)
 
 Tests include:
 

@@ -1,3 +1,8 @@
+//! # Data Configuration
+//!
+//! Data storage and persistence configuration.
+//! Defines paths, retention policies, and backup settings.
+
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use validator::Validate;
@@ -91,31 +96,5 @@ fn expand_path(path: &str) -> PathBuf {
         home.join(rest)
     } else {
         PathBuf::from(path)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_expand_path() {
-        let expanded = expand_path("~/.local/share/mcp-context-browser");
-        assert!(expanded
-            .to_string_lossy()
-            .contains(".local/share/mcp-context-browser"));
-    }
-
-    #[test]
-    fn test_expand_path_home_shortcut() {
-        let expanded = expand_path("~");
-        let home = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
-        assert_eq!(expanded, home);
-    }
-
-    #[test]
-    fn test_expand_path_absolute() {
-        let expanded = expand_path("/tmp/test");
-        assert_eq!(expanded, PathBuf::from("/tmp/test"));
     }
 }

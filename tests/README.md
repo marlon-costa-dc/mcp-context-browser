@@ -10,54 +10,58 @@ Tests are organized in a structure that mirrors the `src/` directory (Clean Arch
 
 ```text
 tests/
-├── server/             # Tests for src/server/
-│   ├── admin/          # Admin web interface tests
-│   ├── transport/      # HTTP transport tests
-│   └── handlers_test.rs
-├── domain/             # Tests for src/domain/
-│   ├── chunking/       # Code chunking tests
-│   ├── core_types.rs   # Domain types
-│   ├── error_handling.rs
-│   └── validation_tests.rs
-├── infrastructure/     # Tests for src/infrastructure/
-│   ├── config/         # Configuration tests
-│   ├── di/             # DI/Shaku tests
-│   ├── metrics/        # Metrics tests
-│   ├── snapshot/       # Snapshot tests
-│   └── sync/           # Sync manager tests
-├── adapters/           # Tests for src/adapters/
-│   ├── providers/      # Embedding, vector store, routing
-│   ├── repository/     # Repository tests
-│   └── hybrid_search/  # Hybrid search tests
-├── application/        # Tests for src/application/
-│   └── services_logic.rs
-├── e2e/                # End-to-end integration tests
-│   └── docker/         # Docker-based tests
-├── perf/               # Performance benchmarks
-├── fixtures/           # Test data and helpers
-│   ├── artifacts/      # Test data files
-│   └── test_helpers.rs # Shared utilities
-├── validation/         # Validation system tests
-└── README.md           # This documentation
+├── unit/                   # Unit tests organized by Clean Architecture layer
+│   ├── domain/             # Tests for src/domain/
+│   │   ├── chunking/       # Code chunking tests
+│   │   ├── ports/          # Port trait tests
+│   │   ├── core_types_test.rs
+│   │   ├── error_handling_test.rs
+│   │   └── validation_test.rs
+│   ├── application/        # Tests for src/application/
+│   │   └── services_test.rs
+│   ├── adapters/           # Tests for src/adapters/
+│   │   ├── providers/      # Embedding, vector store, routing
+│   │   ├── repository/     # Repository tests
+│   │   └── hybrid_search/  # Hybrid search tests
+│   ├── infrastructure/     # Tests for src/infrastructure/
+│   │   ├── auth/           # Authentication tests
+│   │   ├── config/         # Configuration tests
+│   │   ├── daemon/         # Daemon tests
+│   │   ├── di/             # DI/Shaku tests
+│   │   ├── metrics/        # Metrics tests
+│   │   ├── snapshot/       # Snapshot tests
+│   │   └── sync/           # Sync manager tests
+│   ├── server/             # Tests for src/server/
+│   │   ├── admin/          # Admin web interface tests
+│   │   ├── transport/      # HTTP transport tests
+│   │   └── handlers_test.rs
+│   ├── property_based_test.rs  # Property-based tests
+│   ├── security_test.rs        # Security tests
+│   └── unit_test.rs            # General unit tests
+├── e2e/                    # End-to-end integration tests
+│   └── docker/             # Docker-based tests
+├── perf/                   # Performance benchmarks
+├── fixtures/               # Test data and helpers
+│   ├── artifacts/          # Test data files
+│   └── test_helpers.rs     # Shared utilities
+└── README.md               # This documentation
 ```
 
 **Naming Convention**: `{source_file}_test.rs` for test files that correspond to source files.
 
 ## Test Categories
 
-### 1. Layer-Specific Tests
+### 1. Layer-Specific Unit Tests (`tests/unit/{layer}/`)
 
-Tests mirror the Clean Architecture layers:
+Unit tests mirror the Clean Architecture layers:
 
--   **domain/**: Domain types, validation, and error handling tests
--   **application/**: Business service layer tests (indexing, search, context)
--   **adapters/**: Provider and repository implementation tests
--   **infrastructure/**: Auth, cache, events, and daemon tests
--   **server/**: MCP handlers, admin, and protocol tests
--   **core/**: Legacy core type tests
--   **validation/**: Input validation and business rules tests
+-   **unit/domain/**: Domain types, ports, validation, and error handling tests
+-   **unit/application/**: Business service layer tests (indexing, search, context)
+-   **unit/adapters/**: Provider and repository implementation tests
+-   **unit/infrastructure/**: Auth, cache, config, events, daemon, and sync tests
+-   **unit/server/**: MCP handlers, admin, transport, and protocol tests
 
-### 2. Integration Tests (`tests/e2e/`)
+### 2. End-to-End Tests (`tests/e2e/`)
 
 Component interaction and end-to-end testing:
 
@@ -79,14 +83,13 @@ Performance measurement with Criterion:
 -   Concurrent operation performance
 -   System throughput measurements
 
-### 4. Unit Tests (`tests/unit/`)
+### 4. General Unit Tests (`tests/unit/*.rs`)
 
-General unit tests that don't fit specific modules:
+Cross-cutting unit tests at the root of `tests/unit/`:
 
--   Property-based tests with proptest
--   Security and safety tests
--   Rate limiting functionality tests
--   General utility function tests
+-   `property_based_test.rs`: Property-based tests with proptest
+-   `security_test.rs`: Security and safety tests
+-   `unit_test.rs`: General utility function tests
 
 ## Testing Strategy
 
@@ -178,53 +181,50 @@ PROPTEST_CASES=1000 cargo test unit::property_based
 
 ### Directory Structure
 
-Tests follow Clean Architecture layers matching the source structure:
+Tests follow Clean Architecture layers under `tests/unit/`:
 
 ```text
 tests/
-├── domain/                # Domain layer tests
-│   └── mod.rs            # Domain type and validation tests
-├── application/          # Application service tests
-│   └── mod.rs            # Service layer tests
-├── adapters/             # Adapter tests
-│   ├── mod.rs            # Adapter aggregator
-│   └── database.rs       # Database adapter tests
-├── infrastructure/       # Infrastructure tests
-│   ├── mod.rs            # Infrastructure aggregator
-│   ├── auth.rs           # Authentication tests
-│   ├── events.rs         # Event bus tests
-│   ├── nats_event_bus_integration.rs  # NATS integration
-│   └── daemon/           # Daemon tests
-├── server/               # Server tests
-│   ├── mod.rs            # Server aggregator
-│   ├── handlers/         # Handler tests
-│   └── admin/            # Admin tests
-├── integration/          # Integration tests
-│   ├── mod.rs            # Integration aggregator
-│   ├── docker/           # Docker integration tests
-│   └── mcp*.rs           # MCP protocol tests
-├── benchmark/            # Performance benchmarks
-│   └── mod.rs            # Benchmark tests
-├── core/                 # Legacy core tests
-│   ├── mod.rs            # Core aggregator
-│   └── core_types.rs     # Type tests
-├── unit/                 # General unit tests
-│   ├── mod.rs            # Unit test aggregator
-│   └── property_based.rs # Property-based tests
-├── validation/           # Validation tests
-│   ├── mod.rs            # Validation aggregator
-│   └── comprehensive.rs  # Comprehensive validation
-└── README.md             # This documentation
+├── unit/                          # Unit tests by Clean Architecture layer
+│   ├── domain/                    # Domain layer tests
+│   │   ├── chunking/              # Chunking tests
+│   │   ├── ports/                 # Port trait tests
+│   │   ├── validation/            # Validation tests
+│   │   ├── core_types_test.rs
+│   │   └── error_handling_test.rs
+│   ├── application/               # Application service tests
+│   │   └── services_test.rs
+│   ├── adapters/                  # Adapter tests
+│   │   ├── providers/             # Embedding, vector store, routing
+│   │   ├── repository/            # Repository tests
+│   │   └── hybrid_search/         # Hybrid search tests
+│   ├── infrastructure/            # Infrastructure tests
+│   │   ├── auth/                  # Authentication tests
+│   │   ├── config/                # Configuration tests
+│   │   ├── daemon/                # Daemon tests
+│   │   ├── di/                    # DI/Shaku tests
+│   │   ├── metrics/               # Metrics tests
+│   │   ├── snapshot/              # Snapshot tests
+│   │   └── sync/                  # Sync manager tests
+│   ├── server/                    # Server tests
+│   │   ├── admin/                 # Admin tests
+│   │   ├── transport/             # Transport tests
+│   │   └── handlers_test.rs
+│   ├── property_based_test.rs     # Property-based tests
+│   ├── security_test.rs           # Security tests
+│   └── unit_test.rs               # General unit tests
+├── e2e/                           # End-to-end tests
+│   └── docker/                    # Docker integration tests
+├── perf/                          # Performance benchmarks
+├── fixtures/                      # Test data and helpers
+└── README.md                      # This documentation
 ```
 
 ### Naming Conventions
 
 -   `mod.rs`: Module declaration file in each directory
--   `*_tests.rs`: Test files containing multiple test modules
--   `*_unit.rs`: Unit tests for specific functionality
--   `*_integration.rs`: Tests for component interactions
--   `*_property.rs`: Property-based tests
--   `*_benchmark.rs`: Performance benchmarks
+-   `*_test.rs`: Test file corresponding to a source file (preferred)
+-   `*_tests.rs`: Test file containing multiple test modules
 
 ## Coverage Analysis
 

@@ -52,6 +52,7 @@ pub mod test_helpers {
             event_bus,
             log_buffer,
             config,
+            cache_provider: None,
         };
         let admin_service = AdminServiceImpl::new(deps);
 

@@ -1,3 +1,8 @@
+//! # MCP Server Builder
+//!
+//! Fluent builder pattern for configuring and constructing the MCP server.
+//! Provides a type-safe way to configure all server components before startup.
+
 use crate::infrastructure::cache::{create_cache_provider, SharedCacheProvider};
 use crate::infrastructure::config::Config;
 use crate::infrastructure::di::factory::ServiceProviderInterface;
@@ -174,6 +179,7 @@ impl McpServerBuilder {
             event_bus: event_bus_trait,
             log_buffer: log_buffer.clone(),
             config: Arc::clone(&config_arc),
+            cache_provider: Some(cache_provider.clone()),
         };
         let admin_service: Arc<dyn AdminService> =
             Arc::new(crate::server::admin::service::AdminServiceImpl::new(deps));

@@ -38,6 +38,8 @@ pub struct AdminServiceDependencies {
     pub event_bus: crate::infrastructure::events::SharedEventBusProvider,
     pub log_buffer: crate::infrastructure::logging::SharedLogBuffer,
     pub config: Arc<arc_swap::ArcSwap<crate::infrastructure::config::Config>>,
+    /// Cache provider for real cache statistics
+    pub cache_provider: Option<crate::infrastructure::cache::SharedCacheProvider>,
 }
 
 /// Concrete implementation of AdminService
@@ -62,6 +64,9 @@ pub struct AdminServiceImpl {
     log_buffer: crate::infrastructure::logging::SharedLogBuffer,
     #[shaku(default = Arc::new(arc_swap::ArcSwap::from_pointee(crate::infrastructure::config::Config::default())))]
     config: Arc<arc_swap::ArcSwap<crate::infrastructure::config::Config>>,
+    /// Cache provider for real cache statistics
+    #[shaku(default)]
+    cache_provider: Option<crate::infrastructure::cache::SharedCacheProvider>,
 }
 
 impl AdminServiceImpl {
@@ -77,6 +82,7 @@ impl AdminServiceImpl {
             event_bus: deps.event_bus,
             log_buffer: deps.log_buffer,
             config: deps.config,
+            cache_provider: deps.cache_provider,
         }
     }
 
@@ -562,7 +568,14 @@ impl AdminService for AdminServiceImpl {
 
     async fn run_health_check(&self) -> Result<HealthCheckResult, AdminError> {
         let providers = self.get_providers().await?;
-        helpers::health::run_health_check(&self.system_collector, providers).await
+        // Use run_health_check_with_services to pass real service dependencies
+        helpers::health::run_health_check_with_services(helpers::health::HealthCheckDependencies {
+            system_collector: Arc::clone(&self.system_collector),
+            providers,
+            indexing_operations: Some(Arc::clone(&self.indexing_operations)),
+            cache_provider: self.cache_provider.clone(),
+        })
+        .await
     }
 
     async fn test_provider_connectivity(

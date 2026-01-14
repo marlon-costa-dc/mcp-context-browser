@@ -1,4 +1,4 @@
-use crate::infrastructure::rate_limit::RateLimitConfig;
+use crate::infrastructure::resilience::RateLimiterConfig;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
@@ -11,8 +11,10 @@ pub struct MetricsConfig {
     /// Enable metrics collection
     pub enabled: bool,
     /// Rate limiting configuration
-    #[validate(nested)]
-    pub rate_limiting: RateLimitConfig,
+    pub rate_limiting: RateLimiterConfig,
+    /// Whether to use distributed rate limiting (requires Redis cache)
+    #[serde(default)]
+    pub clustering_enabled: bool,
 }
 
 impl Default for MetricsConfig {
@@ -20,7 +22,8 @@ impl Default for MetricsConfig {
         Self {
             port: 3001,
             enabled: true,
-            rate_limiting: RateLimitConfig::default(),
+            rate_limiting: RateLimiterConfig::default(),
+            clustering_enabled: false,
         }
     }
 }

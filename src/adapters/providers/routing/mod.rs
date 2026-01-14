@@ -8,11 +8,12 @@
 //! The routing system is composed of several specialized modules:
 //!
 //! - `health`: Health monitoring using established health check patterns
-//! - `circuit_breaker`: Circuit breaker implementation for resilience
 //! - `metrics`: Metrics collection using prometheus and metrics crates
 //! - `cost_tracker`: Cost tracking with thread-safe operations
 //! - `failover`: Failover management with configurable strategies
 //! - `router`: Main router coordinating all components via dependency injection
+//!
+//! Circuit breaker functionality is provided by `infrastructure::resilience` module.
 //!
 //! ## Key Features
 //!
@@ -28,17 +29,21 @@
 //! ```rust,ignore
 //! use mcp_context_browser::adapters::providers::routing::{
 //!     ProviderRouter, ProviderRouterDeps, ProviderContext,
-//!     HealthMonitor, CircuitBreaker, ProviderMetricsCollector,
+//!     HealthMonitor, ProviderMetricsCollector,
 //!     CostTracker, FailoverManager
 //! };
+//! use mcp_context_browser::infrastructure::resilience::{create_circuit_breaker, CircuitBreakerConfig};
 //! use mcp_context_browser::infrastructure::di::registry::ProviderRegistry;
 //! use std::sync::Arc;
+//!
+//! // Create circuit breaker from resilience module
+//! let circuit_breaker = create_circuit_breaker(CircuitBreakerConfig::new("router"), true);
 //!
 //! // All dependencies must be explicitly injected (DI pattern)
 //! let deps = ProviderRouterDeps::new(
 //!     registry,           // Arc<ProviderRegistry>
 //!     health_monitor,     // Arc<HealthMonitor>
-//!     circuit_breaker,    // Arc<CircuitBreaker>
+//!     circuit_breaker,    // SharedCircuitBreaker
 //!     metrics,            // Arc<ProviderMetricsCollector>
 //!     cost_tracker,       // Arc<CostTracker>
 //!     failover_manager,   // Arc<FailoverManager>
@@ -53,7 +58,6 @@
 //! let provider = router.get_embedding_provider(&context).await?;
 //! ```
 
-pub mod circuit_breaker;
 pub mod cost_tracker;
 pub mod failover;
 pub mod health;
@@ -69,10 +73,6 @@ pub use router::{
 pub use health::{
     HealthCheckResult, HealthMonitor, ProviderHealth, ProviderHealthChecker, ProviderHealthStatus,
     RealProviderHealthChecker,
-};
-
-pub use circuit_breaker::{
-    CircuitBreaker, CircuitBreakerConfig, CircuitBreakerMetrics, CircuitBreakerState,
 };
 
 pub use metrics::{MetricsSummary, ProviderMetricsCollector};

@@ -14,32 +14,39 @@
 //! ## TimedOperation - Replace Manual Timing
 //!
 //! **Before:**
-//! ```ignore
+//! ```rust
 //! let start = std::time::Instant::now();
-//! perform_operation().await?;
+//! // perform_operation()
 //! let elapsed_ms = start.elapsed().as_millis() as u64;
 //! ```
 //!
 //! **After:**
-//! ```ignore
+//! ```rust
+//! use mcp_context_browser::infrastructure::service_helpers::TimedOperation;
+//!
 //! let timer = TimedOperation::start();
-//! perform_operation().await?;
+//! // perform_operation()
 //! let elapsed_ms = timer.elapsed_ms();
 //! ```
 //!
-//! ## SafeMetrics - Replace unwrap_or_default Patterns
+//! ## UptimeTracker - Server Lifetime Tracking
 //!
-//! **Before:**
-//! ```ignore
-//! let cpu = system_collector.collect_cpu_metrics().await.unwrap_or_default();
-//! ```
+//! ```rust
+//! use mcp_context_browser::infrastructure::service_helpers::UptimeTracker;
 //!
-//! **After:**
-//! ```ignore
-//! let cpu = SafeMetrics::collect(
-//!     system_collector.collect_cpu_metrics(),
-//!     CpuMetrics::default()
-//! ).await;
+//! struct Server {
+//!     uptime: UptimeTracker,
+//! }
+//!
+//! impl Server {
+//!     fn new() -> Self {
+//!         Self { uptime: UptimeTracker::start() }
+//!     }
+//!
+//!     fn get_uptime_secs(&self) -> u64 {
+//!         self.uptime.elapsed_secs()
+//!     }
+//! }
 //! ```
 
 use anyhow::{Context, Result};
@@ -51,10 +58,15 @@ use std::time::Instant;
 /// Eliminates 8+ manual `Instant::now()` patterns across services
 ///
 /// # Example
-/// ```ignore
+///
+/// ```rust
+/// use mcp_context_browser::infrastructure::service_helpers::TimedOperation;
+///
 /// let timer = TimedOperation::start();
-/// perform_operation().await?;
-/// println!("Elapsed: {}ms", timer.elapsed_ms());
+/// // Simulate some work
+/// std::thread::sleep(std::time::Duration::from_millis(10));
+/// let elapsed = timer.elapsed_ms();
+/// assert!(elapsed >= 10);
 /// ```
 pub struct TimedOperation {
     start: Instant,
@@ -91,12 +103,15 @@ impl TimedOperation {
 
 /// Uptime tracker for server/service lifetime tracking
 ///
-/// Unlike `TimedOperation` which measures a single operation's duration,
+/// Unlike [`TimedOperation`] which measures a single operation's duration,
 /// `UptimeTracker` is designed to be stored as a struct field and provides
 /// uptime calculations throughout the lifetime of a service.
 ///
 /// # Example
-/// ```ignore
+///
+/// ```rust
+/// use mcp_context_browser::infrastructure::service_helpers::UptimeTracker;
+///
 /// struct Server {
 ///     uptime: UptimeTracker,
 /// }
@@ -110,6 +125,9 @@ impl TimedOperation {
 ///         self.uptime.elapsed_secs()
 ///     }
 /// }
+///
+/// let server = Server::new();
+/// assert!(server.get_uptime_secs() == 0); // Just started
 /// ```
 #[derive(Debug, Clone, Copy)]
 pub struct UptimeTracker {
@@ -148,14 +166,22 @@ impl Default for UptimeTracker {
 
 /// Safe metrics collection wrapper - provides fallback defaults
 ///
-/// Eliminates 6+ `unwrap_or_default()` patterns across health checks
+/// Eliminates 6+ `unwrap_or_default()` patterns across health checks.
+/// Works with any async function that returns a `Result`.
 ///
 /// # Example
-/// ```ignore
-/// let cpu = SafeMetrics::collect(
-///     || system_collector.collect_cpu_metrics().await,
-///     || Ok(CpuMetrics::default())
-/// ).await;
+///
+/// ```rust,no_run
+/// use mcp_context_browser::infrastructure::service_helpers::SafeMetrics;
+///
+/// async fn example() {
+///     // Collect metrics with fallback on error
+///     let value = SafeMetrics::collect(
+///         async { Ok::<_, std::io::Error>(42) },
+///         0
+///     ).await;
+///     assert_eq!(value, 42);
+/// }
 /// ```
 pub struct SafeMetrics;
 
@@ -189,14 +215,32 @@ impl SafeMetrics {
 
 /// Retry helper with exponential backoff
 ///
-/// Eliminates hardcoded retry loops in provider health checks
+/// Eliminates hardcoded retry loops in provider health checks.
+/// Automatically retries failed operations with increasing delays.
 ///
 /// # Example
-/// ```ignore
-/// let result = RetryHelper::with_backoff(
-///     || async { provider.health_check().await },
-///     3,
-/// ).await?;
+///
+/// ```rust,no_run
+/// use mcp_context_browser::infrastructure::service_helpers::RetryHelper;
+///
+/// async fn example() -> anyhow::Result<()> {
+///     let mut attempts = 0;
+///     let result = RetryHelper::with_backoff(
+///         || {
+///             attempts += 1;
+///             async move {
+///                 if attempts < 2 {
+///                     Err("transient error")
+///                 } else {
+///                     Ok(42)
+///                 }
+///             }
+///         },
+///         3,
+///     ).await?;
+///     assert_eq!(result, 42);
+///     Ok(())
+/// }
 /// ```
 pub struct RetryHelper;
 
@@ -300,15 +344,26 @@ impl RetryHelper {
 
 /// Configuration validation builder - declarative validation rules
 ///
-/// Eliminates 80+ lines of manual validation match statements
+/// Eliminates 80+ lines of manual validation match statements.
+/// Provides a fluent API for building validation chains.
 ///
 /// # Example
-/// ```ignore
-/// ValidationBuilder::new("database connection pool")
-///     .check_range("pool_size", pool_size, 1..=100, "must be 1-100")?
-///     .check_positive("timeout_ms", timeout_ms, "must be positive")?
-///     .check_string_not_empty("username", &username)?
+///
+/// ```rust
+/// use mcp_context_browser::infrastructure::service_helpers::ValidationBuilder;
+///
+/// let pool_size = 50;
+/// let timeout_ms = 1000i64;
+/// let username = "admin";
+///
+/// let warnings = ValidationBuilder::new("database connection pool")
+///     .check_range("pool_size", pool_size, 1, 100, "must be 1-100")
+///     .check_positive("timeout_ms", timeout_ms, "must be positive")
+///     .check_string_not_empty("username", username)
 ///     .finalize()
+///     .expect("validation should pass");
+///
+/// assert!(warnings.is_empty());
 /// ```
 pub struct ValidationBuilder {
     name: String,
@@ -386,15 +441,22 @@ impl ValidationBuilder {
 
 /// Iterator helpers - cleaner functional chains
 ///
-/// Eliminates manual vec filtering patterns
+/// Eliminates manual vec filtering patterns.
 ///
 /// # Example
-/// ```ignore
-/// use itertools::Itertools;
-/// entries.into_iter()
-///     .filter(|e| e.matches_filter(filter))
-///     .take(limit)
-///     .collect::<Vec<_>>()
+///
+/// ```rust
+/// use mcp_context_browser::infrastructure::service_helpers::IteratorHelpers;
+///
+/// let data = vec![1, 2, 3, 4, 5];
+///
+/// // Take first 3 elements
+/// let result = IteratorHelpers::take_collect(data.clone(), 3);
+/// assert_eq!(result, vec![1, 2, 3]);
+///
+/// // Filter even numbers
+/// let result = IteratorHelpers::filter_collect(data, |x| x % 2 == 0);
+/// assert_eq!(result, vec![2, 4]);
 /// ```
 pub struct IteratorHelpers;
 
@@ -414,81 +476,5 @@ impl IteratorHelpers {
         F: FnMut(&T) -> bool,
     {
         iter.into_iter().filter(predicate).collect()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_timed_operation() {
-        let timer = TimedOperation::start();
-        std::thread::sleep(Duration::from_millis(10));
-        assert!(timer.elapsed_ms() >= 10);
-    }
-
-    #[test]
-    fn test_timed_operation_remaining() {
-        let timer = TimedOperation::start();
-        let remaining = timer.remaining(Duration::from_secs(10));
-        assert!(remaining.is_some());
-        assert!(remaining.unwrap() > Duration::from_secs(9));
-    }
-
-    #[tokio::test]
-    async fn test_safe_metrics_collect_success() {
-        let result: i32 =
-            SafeMetrics::collect::<_, i32, String>(async { Ok::<i32, String>(42) }, 0).await;
-        assert_eq!(result, 42);
-    }
-
-    #[tokio::test]
-    async fn test_safe_metrics_collect_failure() {
-        let result: i32 = SafeMetrics::collect::<_, i32, String>(
-            async { Err::<i32, String>("error".to_string()) },
-            99,
-        )
-        .await;
-        assert_eq!(result, 99);
-    }
-
-    #[test]
-    fn test_validation_builder_range_ok() {
-        let result = ValidationBuilder::new("test")
-            .check_range("value", 50, 1, 100, "must be 1-100")
-            .finalize();
-        assert!(result.is_ok());
-    }
-
-    #[test]
-    fn test_validation_builder_range_fail() {
-        let result = ValidationBuilder::new("test")
-            .check_range("value", 150, 1, 100, "must be 1-100")
-            .finalize();
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_validation_builder_positive() {
-        let result = ValidationBuilder::new("test")
-            .check_positive("timeout", -1, "must be positive")
-            .finalize();
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_validation_builder_string() {
-        let result = ValidationBuilder::new("test")
-            .check_string_not_empty("username", "")
-            .finalize();
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_iterator_helpers_take_collect() {
-        let vec = vec![1, 2, 3, 4, 5];
-        let result = IteratorHelpers::take_collect(vec, 3);
-        assert_eq!(result, vec![1, 2, 3]);
     }
 }

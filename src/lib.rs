@@ -2,6 +2,8 @@
 //!
 //! A Model Context Protocol server for semantic code analysis using vector embeddings.
 //!
+//! For user guides and tutorials, see the [online documentation](https://marlonsc.github.io/mcp-context-browser/).
+//!
 //! ## Features
 //!
 //! - **Semantic Search**: AI-powered code understanding and retrieval using vector embeddings
@@ -35,9 +37,23 @@
 //! ## Modules
 //!
 //! - [`server`]: MCP protocol implementation and handlers
-//! - [`chunking`]: AST-based code chunking for 14 languages
+//! - [`domain`]: Core types ([`CodeChunk`], [`Embedding`], [`Language`]) and port traits
 //! - [`adapters`]: Embedding and vector store provider implementations
 //! - [`application`]: Business logic services (indexing, search, context)
+//! - [`infrastructure`]: Cross-cutting concerns (cache, auth, config)
+//!
+//! ## Core Types
+//!
+//! The most important types for users:
+//!
+//! | Type | Description |
+//! |------|-------------|
+//! | [`McpServer`] | Main server struct |
+//! | [`McpServerBuilder`] | Builder for server configuration |
+//! | [`CodeChunk`] | A semantically meaningful code segment |
+//! | [`Embedding`] | Vector representation of text |
+//! | [`Language`] | Supported programming languages |
+//! | [`Error`] | Domain error type |
 //!
 //! ## Feature Flags
 //!
@@ -47,6 +63,9 @@
 //! - `edgevec`: EdgeVec in-memory vector store
 //! - `redis-cache`: Redis distributed caching
 //! - `full`: All features enabled
+
+// Documentation configuration for docs.rs
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 pub mod adapters;
 pub mod application;

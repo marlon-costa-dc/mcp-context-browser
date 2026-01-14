@@ -2,9 +2,6 @@
 //!
 //! Tests for intelligent provider routing with dependency injection.
 
-use mcp_context_browser::adapters::providers::routing::circuit_breaker::{
-    CircuitBreaker, CircuitBreakerConfig,
-};
 use mcp_context_browser::adapters::providers::routing::cost_tracker::{
     CostTracker, CostTrackerConfig,
 };
@@ -18,17 +15,17 @@ use mcp_context_browser::adapters::providers::routing::router::{
     ProviderSelectionStrategy,
 };
 use mcp_context_browser::infrastructure::di::registry::ProviderRegistry;
+use mcp_context_browser::infrastructure::resilience::{
+    create_circuit_breaker, CircuitBreakerConfig,
+};
 use std::sync::Arc;
 use std::time::Duration;
 
 /// Helper to create router dependencies for testing
 async fn create_test_deps(registry: Arc<ProviderRegistry>) -> ProviderRouterDeps {
     let health_monitor = Arc::new(HealthMonitor::with_registry(Arc::clone(&registry)));
-    let temp_dir = std::env::temp_dir().join("test_circuit_breakers");
-    let circuit_breaker = Arc::new(
-        CircuitBreaker::with_config_and_path("test", CircuitBreakerConfig::production(), temp_dir)
-            .await,
-    );
+    let config = CircuitBreakerConfig::new("test");
+    let circuit_breaker = create_circuit_breaker(config, true);
     let metrics = Arc::new(ProviderMetricsCollector::new().expect("metrics"));
     let cost_tracker = Arc::new(CostTracker::new(CostTrackerConfig::production()));
     let failover_manager = Arc::new(FailoverManager::new(Arc::clone(&health_monitor)));

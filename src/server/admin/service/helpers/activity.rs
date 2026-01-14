@@ -365,39 +365,3 @@ pub async fn get_recent_activities(
 ) -> Result<Vec<Activity>, AdminError> {
     Ok(activity_logger.get_activities(limit).await)
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_activity_logger_manual_add() {
-        let logger = ActivityLogger::new();
-
-        logger
-            .add_activity(
-                ActivityLevel::Info,
-                "test",
-                "Test activity",
-                Some(serde_json::json!({"key": "value"})),
-            )
-            .await;
-
-        let activities = logger.get_activities(None).await;
-        assert_eq!(activities.len(), 1);
-        assert_eq!(activities[0].category, "test");
-        assert_eq!(activities[0].message, "Test activity");
-    }
-
-    #[tokio::test]
-    async fn test_event_to_activity_conversion() {
-        let event = SystemEvent::CacheClear {
-            namespace: Some("test".to_string()),
-        };
-
-        let activity = event_to_activity(&event).unwrap();
-        assert_eq!(activity.category, "cache");
-        assert_eq!(activity.level, ActivityLevel::Success);
-        assert!(activity.message.contains("Cache cleared"));
-    }
-}

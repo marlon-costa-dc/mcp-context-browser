@@ -4,11 +4,92 @@
 //! platform. These types represent the core business concepts of code intelligence,
 //! from semantic embeddings that capture code meaning to search results that deliver
 //! business value to development teams.
+//!
+//! ## Core Types
+//!
+//! | Type | Description |
+//! |------|-------------|
+//! | [`Embedding`] | Vector representation of text for similarity search |
+//! | [`CodeChunk`] | Semantically meaningful code segment from AST parsing |
+//! | [`Language`] | Supported programming languages (24 variants) |
+//! | [`SearchResult`] | Ranked result from semantic search |
+//!
+//! ## Provider Types
+//!
+//! | Type | Description |
+//! |------|-------------|
+//! | [`EmbeddingProviderKind`] | Type-safe embedding provider selection |
+//! | [`VectorStoreProviderKind`] | Type-safe vector store selection |
+//! | [`EmbeddingConfig`] | Configuration for embedding providers |
+//! | [`VectorStoreConfig`] | Configuration for vector stores |
+//!
+//! ## Snapshot Types
+//!
+//! | Type | Description |
+//! |------|-------------|
+//! | [`FileSnapshot`] | File metadata for change tracking |
+//! | [`CodebaseSnapshot`] | Complete codebase state capture |
+//! | [`SnapshotChanges`] | Diff between two snapshots |
+//!
+//! ## Example: End-to-End Indexing Flow
+//!
+//! ```rust
+//! use mcp_context_browser::domain::types::{
+//!     CodeChunk, Language, Embedding, SearchResult,
+//! };
+//!
+//! // 1. Create a code chunk from parsed AST
+//! let chunk = CodeChunk {
+//!     id: "chunk_001".to_string(),
+//!     content: "fn authenticate(user: &str) -> bool { true }".to_string(),
+//!     file_path: "src/auth.rs".to_string(),
+//!     start_line: 10,
+//!     end_line: 12,
+//!     language: Language::Rust,
+//!     metadata: serde_json::json!({"type": "function", "name": "authenticate"}),
+//! };
+//!
+//! // 2. Generate embedding (normally done by provider)
+//! let embedding = Embedding {
+//!     vector: vec![0.1, 0.2, 0.3, 0.4],
+//!     model: "text-embedding-3-small".to_string(),
+//!     dimensions: 4,
+//! };
+//!
+//! // 3. Search results returned after similarity search
+//! let result = SearchResult {
+//!     id: chunk.id.clone(),
+//!     file_path: chunk.file_path.clone(),
+//!     start_line: chunk.start_line,
+//!     content: chunk.content.clone(),
+//!     score: 0.95,
+//!     metadata: chunk.metadata.clone(),
+//! };
+//!
+//! assert!(result.score > 0.9);
+//! ```
 
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
 /// AI Semantic Understanding Representation
+///
+/// An embedding is a dense vector representation of text that captures semantic meaning.
+/// Embeddings enable similarity search across code chunks.
+///
+/// # Example
+///
+/// ```rust
+/// use mcp_context_browser::domain::types::Embedding;
+///
+/// let embedding = Embedding {
+///     vector: vec![0.1, 0.2, 0.3],
+///     model: "text-embedding-3-small".to_string(),
+///     dimensions: 3,
+/// };
+///
+/// assert_eq!(embedding.dimensions, embedding.vector.len());
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default, Validate)]
 pub struct Embedding {
     /// The embedding vector values
@@ -23,6 +104,26 @@ pub struct Embedding {
 }
 
 /// Intelligent Code Segment with Business Context
+///
+/// A code chunk represents a semantically meaningful portion of source code,
+/// extracted by the AST-based chunking engine. Each chunk is indexed for
+/// semantic search.
+///
+/// # Example
+///
+/// ```rust
+/// use mcp_context_browser::domain::types::{CodeChunk, Language};
+///
+/// let chunk = CodeChunk {
+///     id: "abc123".to_string(),
+///     content: "fn hello() { println!(\"Hello!\"); }".to_string(),
+///     file_path: "src/lib.rs".to_string(),
+///     start_line: 1,
+///     end_line: 3,
+///     language: Language::Rust,
+///     metadata: serde_json::json!({"type": "function"}),
+/// };
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Validate)]
 pub struct CodeChunk {
     /// Unique identifier for this code chunk
@@ -50,7 +151,22 @@ pub struct CodeChunk {
     pub metadata: serde_json::Value,
 }
 
-/// Supported programming languages
+/// Supported programming languages for AST parsing
+///
+/// Each variant corresponds to a tree-sitter grammar for AST-based code chunking.
+/// The chunking engine uses language-specific rules to extract meaningful code segments.
+///
+/// # Example
+///
+/// ```rust
+/// use mcp_context_browser::domain::types::Language;
+///
+/// let lang = Language::Rust;
+/// assert!(matches!(lang, Language::Rust));
+///
+/// // Unknown is used for unrecognized file extensions
+/// let unknown = Language::Unknown;
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum Language {
     Rust,
@@ -98,6 +214,33 @@ pub enum OperationType {
 ///
 /// Replaces string-based provider selection with compile-time type safety.
 /// Invalid provider names are caught at config deserialization time.
+///
+/// # Providers
+///
+/// | Variant | Use Case |
+/// |---------|----------|
+/// | `OpenAI` | Cloud-hosted, high quality |
+/// | `Ollama` | Local, privacy-focused |
+/// | `VoyageAI` | Cloud, code-optimized |
+/// | `Gemini` | Google Cloud |
+/// | `FastEmbed` | Local, fast, default |
+///
+/// # Example
+///
+/// ```rust
+/// use mcp_context_browser::domain::types::EmbeddingProviderKind;
+///
+/// // Default is FastEmbed for local development
+/// let provider = EmbeddingProviderKind::default();
+/// assert_eq!(provider, EmbeddingProviderKind::FastEmbed);
+///
+/// // Parse from config string
+/// let parsed = EmbeddingProviderKind::from_string("openai");
+/// assert_eq!(parsed, Some(EmbeddingProviderKind::OpenAI));
+///
+/// // Display for logging
+/// assert_eq!(format!("{}", EmbeddingProviderKind::Ollama), "ollama");
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum EmbeddingProviderKind {
@@ -146,6 +289,37 @@ impl EmbeddingProviderKind {
 }
 
 /// Type-safe vector store provider selection
+///
+/// Provides compile-time type safety for vector database configuration.
+/// Each variant corresponds to a different storage backend with its own
+/// tradeoffs for performance, persistence, and scalability.
+///
+/// # Providers
+///
+/// | Variant | Persistence | Use Case |
+/// |---------|-------------|----------|
+/// | `InMemory` | None | Testing, ephemeral |
+/// | `Filesystem` | File-based | Development, single-node |
+/// | `Milvus` | Database | Production, distributed |
+/// | `EdgeVec` | Memory | Edge computing |
+///
+/// # Example
+///
+/// ```rust
+/// use mcp_context_browser::domain::types::VectorStoreProviderKind;
+///
+/// // Default is Filesystem for local persistence
+/// let provider = VectorStoreProviderKind::default();
+/// assert_eq!(provider, VectorStoreProviderKind::Filesystem);
+///
+/// // Parse from config string
+/// let parsed = VectorStoreProviderKind::from_string("in-memory");
+/// assert_eq!(parsed, Some(VectorStoreProviderKind::InMemory));
+///
+/// // Check available providers
+/// let providers = VectorStoreProviderKind::supported_providers();
+/// assert!(providers.contains(&"filesystem"));
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum VectorStoreProviderKind {
@@ -197,20 +371,65 @@ impl VectorStoreProviderKind {
 }
 
 /// Query performance metrics tracking
+///
+/// Aggregated statistics for monitoring search query performance.
+/// Used by the admin dashboard and Prometheus metrics endpoint.
+///
+/// # Example
+///
+/// ```rust
+/// use mcp_context_browser::domain::types::QueryPerformanceMetrics;
+///
+/// let metrics = QueryPerformanceMetrics {
+///     total_queries: 1000,
+///     average_latency: 45.5,  // milliseconds
+///     p99_latency: 150.0,     // milliseconds
+///     success_rate: 0.998,    // 99.8%
+/// };
+///
+/// assert!(metrics.success_rate > 0.99);
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
 pub struct QueryPerformanceMetrics {
+    /// Total number of queries processed
     pub total_queries: u64,
+    /// Average query latency in milliseconds
     pub average_latency: f64,
+    /// 99th percentile latency in milliseconds
     pub p99_latency: f64,
+    /// Ratio of successful queries (0.0 to 1.0)
     pub success_rate: f64,
 }
 
 /// Cache performance metrics tracking
+///
+/// Statistics for monitoring embedding and search result caches.
+/// High hit rates indicate effective caching; low rates may indicate
+/// cache sizing issues or highly diverse query patterns.
+///
+/// # Example
+///
+/// ```rust
+/// use mcp_context_browser::domain::types::CacheMetrics;
+///
+/// let metrics = CacheMetrics {
+///     hits: 850,
+///     misses: 150,
+///     hit_rate: 0.85,      // 85% hit rate
+///     size: 1024 * 1024,   // 1 MB
+/// };
+///
+/// assert!(metrics.hit_rate > 0.8);
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
 pub struct CacheMetrics {
+    /// Number of cache hits
     pub hits: u64,
+    /// Number of cache misses
     pub misses: u64,
+    /// Hit rate ratio (0.0 to 1.0)
     pub hit_rate: f64,
+    /// Current cache size in bytes
     pub size: u64,
 }
 
@@ -341,35 +560,120 @@ impl std::str::FromStr for Language {
 }
 
 /// Semantic search result
+///
+/// A ranked result from vector similarity search. Results are ordered
+/// by score (highest first) and include the matched code content with
+/// file location information.
+///
+/// # Example
+///
+/// ```rust
+/// use mcp_context_browser::domain::types::SearchResult;
+///
+/// let result = SearchResult {
+///     id: "chunk_abc123".to_string(),
+///     file_path: "src/auth/login.rs".to_string(),
+///     start_line: 42,
+///     content: "pub fn authenticate(token: &str) -> Result<User>".to_string(),
+///     score: 0.92,
+///     metadata: serde_json::json!({
+///         "type": "function",
+///         "language": "rust",
+///         "end_line": 55
+///     }),
+/// };
+///
+/// // High scores indicate strong semantic match
+/// assert!(result.score > 0.9);
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SearchResult {
+    /// Unique chunk identifier
     pub id: String,
+    /// Source file path
     pub file_path: String,
+    /// Starting line number in source
     pub start_line: u32,
+    /// Matched code content
     pub content: String,
+    /// Similarity score (0.0 to 1.0, higher is better)
     pub score: f32,
+    /// Additional metadata (language, end_line, AST info)
     pub metadata: serde_json::Value,
 }
 
 /// Indexing statistics
+///
+/// Summary of a codebase indexing operation. Returned by the indexing
+/// service after processing files to show progress and timing.
+///
+/// # Example
+///
+/// ```rust
+/// use mcp_context_browser::domain::types::IndexingStats;
+///
+/// let stats = IndexingStats {
+///     total_files: 150,
+///     indexed_files: 148,
+///     total_chunks: 1200,
+///     duration_ms: 5432,
+/// };
+///
+/// // Calculate indexing rate
+/// let files_per_sec = stats.indexed_files as f64 / (stats.duration_ms as f64 / 1000.0);
+/// assert!(files_per_sec > 20.0, "Should index at least 20 files/sec");
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct IndexingStats {
+    /// Total files discovered
     pub total_files: u32,
+    /// Files successfully indexed
     pub indexed_files: u32,
+    /// Total code chunks extracted
     pub total_chunks: u32,
+    /// Total indexing time in milliseconds
     pub duration_ms: u64,
 }
 
 /// Configuration for embedding providers
+///
+/// Settings for configuring how code embeddings are generated. Different
+/// providers have different requirements for API keys and models.
+///
+/// # Example
+///
+/// ```rust
+/// use mcp_context_browser::domain::types::EmbeddingConfig;
+///
+/// // Local FastEmbed (default, no API key needed)
+/// let local = EmbeddingConfig::default();
+/// assert_eq!(local.provider, "fastembed");
+///
+/// // OpenAI configuration
+/// let openai = EmbeddingConfig {
+///     provider: "openai".to_string(),
+///     model: "text-embedding-3-small".to_string(),
+///     api_key: Some("sk-...".to_string()),
+///     base_url: None,
+///     dimensions: Some(1536),
+///     max_tokens: Some(8191),
+/// };
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct EmbeddingConfig {
+    /// Provider name (openai, ollama, fastembed, etc.)
     #[validate(length(min = 1))]
     pub provider: String,
+    /// Model identifier specific to the provider
     #[validate(length(min = 1))]
     pub model: String,
+    /// API key for cloud providers
     pub api_key: Option<String>,
+    /// Custom API endpoint URL
     pub base_url: Option<String>,
+    /// Output embedding dimensions
     pub dimensions: Option<usize>,
+    /// Maximum input token limit
     pub max_tokens: Option<usize>,
 }
 
@@ -387,14 +691,44 @@ impl Default for EmbeddingConfig {
 }
 
 /// Configuration for vector store providers
+///
+/// Settings for configuring where and how code embeddings are stored.
+/// Different providers have different capabilities for persistence
+/// and scalability.
+///
+/// # Example
+///
+/// ```rust
+/// use mcp_context_browser::domain::types::VectorStoreConfig;
+///
+/// // Local filesystem (default)
+/// let local = VectorStoreConfig::default();
+/// assert_eq!(local.provider, "filesystem");
+///
+/// // In-memory for testing
+/// let test_config = VectorStoreConfig {
+///     provider: "in-memory".to_string(),
+///     address: None,
+///     token: None,
+///     collection: Some("test".to_string()),
+///     dimensions: Some(384),
+///     timeout_secs: Some(5),
+/// };
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct VectorStoreConfig {
+    /// Provider name (filesystem, in-memory, milvus, edgevec)
     #[validate(length(min = 1))]
     pub provider: String,
+    /// Server address for remote providers (e.g., Milvus)
     pub address: Option<String>,
+    /// Authentication token for remote providers
     pub token: Option<String>,
+    /// Collection/namespace for organizing embeddings
     pub collection: Option<String>,
+    /// Expected embedding dimensions (must match provider)
     pub dimensions: Option<usize>,
+    /// Operation timeout in seconds
     pub timeout_secs: Option<u64>,
 }
 
@@ -412,57 +746,188 @@ impl Default for VectorStoreConfig {
 }
 
 /// Sync batch for queue processing
+///
+/// Represents a batch of files queued for synchronization/re-indexing.
+/// Used by the file watcher daemon to batch file changes.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SyncBatch {
+    /// Unique batch identifier
     pub id: String,
+    /// Root path for the batch
     pub path: String,
+    /// Unix timestamp when batch was created
     pub created_at: u64,
 }
 
 /// Statistics for repository operations
+///
+/// Aggregated metrics about the chunk repository state.
+/// Used for monitoring storage usage and data distribution.
+///
+/// # Example
+///
+/// ```rust
+/// use mcp_context_browser::domain::types::RepositoryStats;
+///
+/// let stats = RepositoryStats {
+///     total_chunks: 10_000,
+///     total_collections: 5,
+///     storage_size_bytes: 50 * 1024 * 1024,  // 50 MB
+///     avg_chunk_size_bytes: 5120.0,          // ~5 KB avg
+/// };
+///
+/// assert_eq!(stats.total_collections, 5);
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
 pub struct RepositoryStats {
+    /// Total chunks stored across all collections
     pub total_chunks: u64,
+    /// Number of collections/namespaces
     pub total_collections: u64,
+    /// Total storage used in bytes
     pub storage_size_bytes: u64,
+    /// Average chunk size in bytes
     pub avg_chunk_size_bytes: f64,
 }
 
 /// Statistics for search operations
+///
+/// Aggregated metrics about search query performance.
+/// Used by the admin dashboard for monitoring.
+///
+/// # Example
+///
+/// ```rust
+/// use mcp_context_browser::domain::types::SearchStats;
+///
+/// let stats = SearchStats {
+///     total_queries: 5000,
+///     avg_response_time_ms: 45.0,
+///     cache_hit_rate: 0.75,
+///     indexed_documents: 10_000,
+/// };
+///
+/// assert!(stats.cache_hit_rate > 0.5);
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
 pub struct SearchStats {
+    /// Total queries executed
     pub total_queries: u64,
+    /// Average response time in milliseconds
     pub avg_response_time_ms: f64,
+    /// Cache hit rate (0.0 to 1.0)
     pub cache_hit_rate: f64,
+    /// Number of indexed documents
     pub indexed_documents: u64,
 }
 
 /// File snapshot with metadata
+///
+/// Captures the state of a single file at a point in time.
+/// Used for change detection in incremental indexing.
+///
+/// # Example
+///
+/// ```rust
+/// use mcp_context_browser::domain::types::FileSnapshot;
+///
+/// let snapshot = FileSnapshot {
+///     path: "src/main.rs".to_string(),
+///     size: 1024,
+///     modified: 1705000000,
+///     hash: "abc123def456".to_string(),
+///     extension: "rs".to_string(),
+/// };
+///
+/// assert_eq!(snapshot.extension, "rs");
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct FileSnapshot {
+    /// Relative file path
     pub path: String,
+    /// File size in bytes
     pub size: u64,
+    /// Last modified timestamp (Unix epoch)
     pub modified: u64,
+    /// Content hash for change detection
     pub hash: String,
+    /// File extension (without dot)
     pub extension: String,
 }
 
 /// Codebase snapshot with all files
+///
+/// Complete state capture of a codebase at a point in time.
+/// Used for incremental indexing by comparing snapshots.
+///
+/// # Example
+///
+/// ```rust
+/// use mcp_context_browser::domain::types::{CodebaseSnapshot, FileSnapshot};
+/// use std::collections::HashMap;
+///
+/// let mut files = HashMap::new();
+/// files.insert("src/main.rs".to_string(), FileSnapshot {
+///     path: "src/main.rs".to_string(),
+///     size: 1024,
+///     modified: 1705000000,
+///     hash: "abc123".to_string(),
+///     extension: "rs".to_string(),
+/// });
+///
+/// let snapshot = CodebaseSnapshot {
+///     root_path: "/project".to_string(),
+///     created_at: 1705000000,
+///     files,
+///     file_count: 1,
+///     total_size: 1024,
+/// };
+///
+/// assert_eq!(snapshot.file_count, 1);
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CodebaseSnapshot {
+    /// Absolute path to project root
     pub root_path: String,
+    /// Snapshot creation timestamp (Unix epoch)
     pub created_at: u64,
+    /// Map of relative paths to file snapshots
     pub files: std::collections::HashMap<String, FileSnapshot>,
+    /// Total number of files in snapshot
     pub file_count: usize,
+    /// Total size of all files in bytes
     pub total_size: u64,
 }
 
 /// Changes between snapshots
+///
+/// Diff result from comparing two codebase snapshots.
+/// Used to determine which files need re-indexing.
+///
+/// # Example
+///
+/// ```rust
+/// use mcp_context_browser::domain::types::SnapshotChanges;
+///
+/// let changes = SnapshotChanges {
+///     added: vec!["src/new.rs".to_string()],
+///     modified: vec!["src/main.rs".to_string()],
+///     removed: vec!["src/old.rs".to_string()],
+///     unchanged: vec!["src/lib.rs".to_string()],
+/// };
+///
+/// assert!(changes.has_changes());
+/// assert_eq!(changes.total_changes(), 3);
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SnapshotChanges {
+    /// Newly added file paths
     pub added: Vec<String>,
+    /// Modified file paths
     pub modified: Vec<String>,
+    /// Removed file paths
     pub removed: Vec<String>,
+    /// Unchanged file paths
     pub unchanged: Vec<String>,
 }
 

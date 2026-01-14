@@ -127,13 +127,22 @@ pub async fn auth_middleware_simple(
 /// Claims extractor for Axum handlers
 ///
 /// Extracts authenticated user claims from request extensions.
+/// Used as an Axum extractor to get the authenticated user's claims
+/// in handler functions. The middleware must run before this extractor
+/// can be used.
 ///
-/// # Example
+/// # Handler Usage
 ///
-/// ```ignore
-/// async fn handler(claims: ClaimsExtractor) -> impl IntoResponse {
-///     let user_id = &claims.sub;
-///     // ...
+/// When used with `auth_middleware`, the claims are automatically
+/// injected into the request extensions and can be extracted in handlers:
+///
+/// ```rust
+/// use mcp_context_browser::infrastructure::auth::ClaimsExtractor;
+///
+/// // In an Axum handler (simplified - would need auth middleware)
+/// fn example_handler(claims: ClaimsExtractor) {
+///     println!("User: {}", claims.sub);
+///     println!("Role: {:?}", claims.role);
 /// }
 /// ```
 #[derive(Debug, Clone)]
@@ -197,15 +206,24 @@ where
 /// Permission guard for handlers
 ///
 /// Validates that the authenticated user has a specific permission.
+/// Use [`RequirePermission::check`] to verify permissions in handlers.
 ///
 /// # Example
 ///
-/// ```ignore
-/// async fn admin_handler(
-///     _guard: PermissionGuard<{ Permission::ManageUsers as u8 }>,
-/// ) -> impl IntoResponse {
-///     // Only accessible by users with ManageUsers permission
-/// }
+/// ```rust
+/// use mcp_context_browser::infrastructure::auth::{RequirePermission, Claims, Permission, UserRole};
+///
+/// // Create claims for testing
+/// let claims = Claims::new(
+///     "user-123".to_string(),
+///     "admin@example.com".to_string(),
+///     UserRole::Admin,
+///     "test-issuer".to_string(),
+///     3600,
+/// );
+///
+/// // Check if user has permission
+/// assert!(RequirePermission::check(&claims, &Permission::ManageUsers));
 /// ```
 pub struct RequirePermission {
     pub permission: super::roles::Permission,
@@ -216,47 +234,5 @@ impl RequirePermission {
     /// Check if the user has the required permission
     pub fn check(claims: &Claims, permission: &super::roles::Permission) -> bool {
         claims.role.has_permission(permission)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::infrastructure::auth::roles::UserRole;
-    use crate::infrastructure::constants::JWT_EXPIRATION_SECS;
-
-    #[test]
-    fn test_claims_extractor() {
-        let claims = Claims::new(
-            "user1".to_string(),
-            "user@example.com".to_string(),
-            UserRole::Developer,
-            "test".to_string(),
-            JWT_EXPIRATION_SECS,
-        );
-
-        let extractor = ClaimsExtractor(claims.clone());
-        assert_eq!(extractor.sub, "user1");
-        assert_eq!(extractor.email, "user@example.com");
-    }
-
-    #[test]
-    fn test_require_permission() {
-        let claims = Claims::new(
-            "user1".to_string(),
-            "user@example.com".to_string(),
-            UserRole::Developer,
-            "test".to_string(),
-            JWT_EXPIRATION_SECS,
-        );
-
-        assert!(RequirePermission::check(
-            &claims,
-            &super::super::roles::Permission::IndexCodebase
-        ));
-        assert!(!RequirePermission::check(
-            &claims,
-            &super::super::roles::Permission::ManageUsers
-        ));
     }
 }

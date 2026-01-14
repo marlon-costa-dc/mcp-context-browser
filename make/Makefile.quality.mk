@@ -37,7 +37,7 @@ fix: ## Auto-fix all issues (Rust + Markdown)
 # Quality Gates
 # -----------------------------------------------------------------------------
 
-quality: check fmt lint test ## Full quality check
+quality: check fmt lint test test-doc ## Full quality check (includes doctests)
 	@echo "✅ Quality checks passed"
 
 validate: quality audit docs-check ## Complete validation

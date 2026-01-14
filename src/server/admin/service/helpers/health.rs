@@ -2,7 +2,8 @@
 //!
 //! Provides functions for health checks, connectivity tests, and performance testing.
 
-use super::runtime_config::RuntimeConfig;
+use super::runtime_config::{RuntimeConfig, RuntimeConfigDependencies};
+use crate::infrastructure::cache::SharedCacheProvider;
 use crate::infrastructure::di::factory::ServiceProviderInterface;
 use crate::infrastructure::metrics::system::SystemMetricsCollectorInterface;
 use crate::infrastructure::service_helpers::{SafeMetrics, TimedOperation};
@@ -10,25 +11,59 @@ use crate::infrastructure::utils::status;
 use crate::server::admin::service::types::{
     AdminError, ConnectivityTestResult, HealthCheck, HealthCheckResult, ProviderInfo,
 };
+use crate::server::operations::IndexingOperationsInterface;
 use std::sync::Arc;
 
-/// Run comprehensive health check
+/// Service dependencies for health checks
+pub struct HealthCheckDependencies {
+    /// System metrics collector
+    pub system_collector: Arc<dyn SystemMetricsCollectorInterface>,
+    /// Provider list
+    pub providers: Vec<ProviderInfo>,
+    /// Indexing operations for real pending operation count
+    pub indexing_operations: Option<Arc<dyn IndexingOperationsInterface>>,
+    /// Cache provider for real cache statistics
+    pub cache_provider: Option<SharedCacheProvider>,
+}
+
+/// Run comprehensive health check with injected services
 pub async fn run_health_check(
     system_collector: &Arc<dyn SystemMetricsCollectorInterface>,
     providers: Vec<ProviderInfo>,
 ) -> Result<HealthCheckResult, AdminError> {
+    run_health_check_with_services(HealthCheckDependencies {
+        system_collector: Arc::clone(system_collector),
+        providers,
+        indexing_operations: None,
+        cache_provider: None,
+    })
+    .await
+}
+
+/// Run comprehensive health check with full service dependencies
+///
+/// This is the preferred method - it uses real service data.
+pub async fn run_health_check_with_services(
+    deps: HealthCheckDependencies,
+) -> Result<HealthCheckResult, AdminError> {
     let timer = TimedOperation::start();
     let mut checks = Vec::new();
 
-    // Load runtime configuration with dynamic thresholds
-    let runtime_cfg = RuntimeConfig::load()
-        .await
-        .unwrap_or_else(|_| RuntimeConfig {
-            indexing: Default::default(),
-            cache: Default::default(),
-            database: Default::default(),
-            thresholds: Default::default(),
-        });
+    // Load runtime configuration with real service data
+    let runtime_cfg = RuntimeConfig::load_with_services(RuntimeConfigDependencies {
+        indexing_operations: deps.indexing_operations,
+        cache_provider: deps.cache_provider,
+    })
+    .await
+    .unwrap_or_else(|_| RuntimeConfig {
+        indexing: Default::default(),
+        cache: Default::default(),
+        database: Default::default(),
+        thresholds: Default::default(),
+    });
+
+    let system_collector = &deps.system_collector;
+    let providers = deps.providers;
 
     // Get system thresholds from runtime config
     let thresholds = &runtime_cfg.thresholds;

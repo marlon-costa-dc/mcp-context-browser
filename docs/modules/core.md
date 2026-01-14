@@ -80,7 +80,7 @@ pub use crypto::*;
 
 // Infrastructure
 pub use cache::CacheManager;
-pub use rate_limit::RateLimiter;
+pub use resilience::{RateLimiterBackend, CircuitBreakerBackend};
 pub use hybrid_search::HybridSearchEngine;
 ```
 
@@ -97,7 +97,7 @@ src/infrastructure/
 ├── auth/            # JWT authentication
 ├── cache.rs         # Multi-level caching
 ├── crypto/          # Encryption utilities
-├── rate_limit.rs    # Request throttling
+├── resilience/      # Rate limiting and circuit breakers
 └── ...              # Other infrastructure
 ```
 

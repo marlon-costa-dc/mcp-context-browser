@@ -45,15 +45,17 @@ impl HttpResponseUtils {
     /// Check HTTP response and return error if not successful (saves ~8 lines per use)
     ///
     /// # Example
-    /// ```ignore
-    /// let response = client.post(url).send().await?;
-    /// HttpResponseUtils::check_response(response, "OpenAI").await?;
-    /// // vs. the old 8-line pattern:
-    /// // if !response.status().is_success() {
-    /// //     let status = response.status();
-    /// //     let error_text = response.text().await.unwrap_or_default();
-    /// //     return Err(Error::embedding(format!("API error {}: {}", status, error_text)));
-    /// // }
+    ///
+    /// ```rust,no_run
+    /// use mcp_context_browser::infrastructure::utils::http::HttpResponseUtils;
+    ///
+    /// async fn call_api() -> anyhow::Result<()> {
+    ///     let client = reqwest::Client::new();
+    ///     let response = client.get("https://api.example.com").send().await?;
+    ///     let response = HttpResponseUtils::check_response(response, "Example").await?;
+    ///     // Process successful response
+    ///     Ok(())
+    /// }
     /// ```
     pub async fn check_response(
         response: reqwest::Response,

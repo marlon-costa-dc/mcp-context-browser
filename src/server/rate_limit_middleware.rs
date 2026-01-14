@@ -1,18 +1,17 @@
 //! HTTP Rate Limiting Middleware
 //!
-//! Axum middleware for rate limiting HTTP requests using the core RateLimiter.
-//! Integrates with the metrics server and provides proper HTTP headers.
+//! Axum middleware for rate limiting HTTP requests.
+//! Uses the resilience module's pluggable rate limiter backend.
 
 use axum::extract::ConnectInfo;
 use std::net::SocketAddr;
-use std::sync::Arc;
 
-use crate::infrastructure::rate_limit::{RateLimitKey, RateLimiter};
+use crate::infrastructure::resilience::{RateLimitResult, SharedRateLimiter};
 
 /// Simple rate limiting check function
 /// This can be used in route handlers directly
 pub async fn check_rate_limit_for_ip(
-    rate_limiter: &Option<Arc<RateLimiter>>,
+    rate_limiter: &Option<SharedRateLimiter>,
     addr: &ConnectInfo<SocketAddr>,
 ) -> Result<(), (axum::http::StatusCode, String)> {
     let Some(limiter) = rate_limiter else {
@@ -20,10 +19,13 @@ pub async fn check_rate_limit_for_ip(
         return Ok(());
     };
 
-    let client_ip = addr.0.ip().to_string();
-    let key = RateLimitKey::Ip(client_ip);
+    if !limiter.is_enabled() {
+        return Ok(());
+    }
 
-    match limiter.check_rate_limit(&key).await {
+    let key = format!("ip:{}", addr.0.ip());
+
+    match limiter.check(&key).await {
         Ok(result) if result.allowed => Ok(()),
         Ok(result) => {
             let message = format!(
@@ -41,14 +43,11 @@ pub async fn check_rate_limit_for_ip(
 }
 
 /// Helper function to add rate limit headers to a response
-pub fn add_rate_limit_headers(
-    headers: &mut axum::http::HeaderMap,
-    limiter: &Arc<RateLimiter>,
-    result: &crate::infrastructure::rate_limit::RateLimitResult,
-) {
+pub fn add_rate_limit_headers(headers: &mut axum::http::HeaderMap, result: &RateLimitResult) {
     headers.insert(
         "X-RateLimit-Limit",
-        (limiter.config().max_requests_per_window + limiter.config().burst_allowance)
+        result
+            .limit
             .to_string()
             .parse()
             .unwrap_or_else(|_| axum::http::HeaderValue::from_static("0")),

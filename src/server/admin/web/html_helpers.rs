@@ -2,6 +2,23 @@
 //!
 //! Provides reusable HTML fragments for common UI patterns in admin responses.
 //! These helpers ensure consistent styling and markup across the admin interface.
+//!
+//! # Example
+//!
+//! ```rust
+//! use mcp_context_browser::server::admin::web::html_helpers::*;
+//!
+//! // Generate styled messages
+//! let error = html_error("Failed to update");
+//! let success = html_success("Configuration saved");
+//! let warning = html_warning("Operation in progress");
+//! let info = html_info("Click 'Add' to create");
+//!
+//! // HTMX responses for AJAX
+//! let htmx_err = htmx_error("Load failed");
+//! let htmx_ok = htmx_success("Updated");
+//! let loading = htmx_loading();
+//! ```
 
 use axum::response::Html;
 
@@ -9,13 +26,12 @@ use axum::response::Html;
 ///
 /// # Example
 ///
-/// ```rust,ignore
-/// html_error("Failed to update configuration")
-/// ```
+/// ```rust
+/// use mcp_context_browser::server::admin::web::html_helpers::html_error;
 ///
-/// Outputs:
-/// ```html
-/// <div class="text-red-600 dark:text-red-400 mt-2">Error: Failed to update configuration</div>
+/// let response = html_error("Failed to update configuration");
+/// assert!(response.0.contains("text-red-600"));
+/// assert!(response.0.contains("Error:"));
 /// ```
 #[inline]
 pub fn html_error(message: impl AsRef<str>) -> Html<String> {
@@ -29,13 +45,11 @@ pub fn html_error(message: impl AsRef<str>) -> Html<String> {
 ///
 /// # Example
 ///
-/// ```rust,ignore
-/// html_success("Configuration updated successfully")
-/// ```
+/// ```rust
+/// use mcp_context_browser::server::admin::web::html_helpers::html_success;
 ///
-/// Outputs:
-/// ```html
-/// <div class="text-green-600 dark:text-green-400 mt-2">Configuration updated successfully</div>
+/// let response = html_success("Configuration updated successfully");
+/// assert!(response.0.contains("text-green-600"));
 /// ```
 #[inline]
 pub fn html_success(message: impl AsRef<str>) -> Html<String> {
@@ -49,13 +63,11 @@ pub fn html_success(message: impl AsRef<str>) -> Html<String> {
 ///
 /// # Example
 ///
-/// ```rust,ignore
-/// html_warning("This operation may take some time")
-/// ```
+/// ```rust
+/// use mcp_context_browser::server::admin::web::html_helpers::html_warning;
 ///
-/// Outputs:
-/// ```html
-/// <div class="text-yellow-600 dark:text-yellow-400 mt-2">This operation may take some time</div>
+/// let response = html_warning("This operation may take some time");
+/// assert!(response.0.contains("text-yellow-600"));
 /// ```
 #[inline]
 pub fn html_warning(message: impl AsRef<str>) -> Html<String> {
@@ -69,13 +81,11 @@ pub fn html_warning(message: impl AsRef<str>) -> Html<String> {
 ///
 /// # Example
 ///
-/// ```rust,ignore
-/// html_info("No providers found. Click 'Add Provider' to create one.")
-/// ```
+/// ```rust
+/// use mcp_context_browser::server::admin::web::html_helpers::html_info;
 ///
-/// Outputs:
-/// ```html
-/// <div class="text-blue-600 dark:text-blue-400 mt-2">No providers found. Click 'Add Provider' to create one.</div>
+/// let response = html_info("No providers found. Click 'Add Provider' to create one.");
+/// assert!(response.0.contains("text-blue-600"));
 /// ```
 #[inline]
 pub fn html_info(message: impl AsRef<str>) -> Html<String> {
@@ -90,16 +100,16 @@ pub fn html_info(message: impl AsRef<str>) -> Html<String> {
 // =============================================================================
 
 /// Generate HTMX-compatible error message HTML
-/// Uses Tailwind classes with dark mode support.
+///
+/// Uses Tailwind classes with dark mode support for AJAX error responses.
 ///
 /// # Example
-/// ```rust,ignore
-/// htmx_error("Failed to load metrics")
-/// ```
 ///
-/// Outputs:
-/// ```html
-/// <div class="text-red-500 dark:text-red-400">Failed to load metrics</div>
+/// ```rust
+/// use mcp_context_browser::server::admin::web::html_helpers::htmx_error;
+///
+/// let response = htmx_error("Failed to load metrics");
+/// assert!(response.0.contains("text-red-500"));
 /// ```
 #[inline]
 pub fn htmx_error(message: impl AsRef<str>) -> Html<String> {
@@ -110,11 +120,16 @@ pub fn htmx_error(message: impl AsRef<str>) -> Html<String> {
 }
 
 /// Generate HTMX-compatible loading message HTML
+///
 /// Uses gray color to indicate loading state.
 ///
 /// # Example
-/// ```rust,ignore
-/// htmx_loading()
+///
+/// ```rust
+/// use mcp_context_browser::server::admin::web::html_helpers::htmx_loading;
+///
+/// let response = htmx_loading();
+/// assert!(response.0.contains("Loading..."));
 /// ```
 #[inline]
 pub fn htmx_loading() -> Html<String> {
@@ -122,11 +137,16 @@ pub fn htmx_loading() -> Html<String> {
 }
 
 /// Generate HTMX-compatible success message HTML
+///
 /// Uses green color for success state.
 ///
 /// # Example
-/// ```rust,ignore
-/// htmx_success("Metrics updated successfully")
+///
+/// ```rust
+/// use mcp_context_browser::server::admin::web::html_helpers::htmx_success;
+///
+/// let response = htmx_success("Metrics updated successfully");
+/// assert!(response.0.contains("text-green-500"));
 /// ```
 #[inline]
 pub fn htmx_success(message: impl AsRef<str>) -> Html<String> {
@@ -134,61 +154,4 @@ pub fn htmx_success(message: impl AsRef<str>) -> Html<String> {
         r#"<div class="text-green-500 dark:text-green-400">{}</div>"#,
         message.as_ref()
     ))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_html_error() {
-        let result = html_error("test error");
-        assert!(result.0.contains("text-red-600"));
-        assert!(result.0.contains("Error: test error"));
-    }
-
-    #[test]
-    fn test_html_success() {
-        let result = html_success("test success");
-        assert!(result.0.contains("text-green-600"));
-        assert!(result.0.contains("test success"));
-    }
-
-    #[test]
-    fn test_html_warning() {
-        let result = html_warning("test warning");
-        assert!(result.0.contains("text-yellow-600"));
-        assert!(result.0.contains("test warning"));
-    }
-
-    #[test]
-    fn test_html_info() {
-        let result = html_info("test info");
-        assert!(result.0.contains("text-blue-600"));
-        assert!(result.0.contains("test info"));
-    }
-
-    #[test]
-    fn test_htmx_error() {
-        let result = htmx_error("Failed to load metrics");
-        assert!(result.0.contains("text-red-500"));
-        assert!(result.0.contains("dark:text-red-400"));
-        assert!(result.0.contains("Failed to load metrics"));
-    }
-
-    #[test]
-    fn test_htmx_loading() {
-        let result = htmx_loading();
-        assert!(result.0.contains("text-gray-500"));
-        assert!(result.0.contains("dark:text-gray-400"));
-        assert!(result.0.contains("Loading..."));
-    }
-
-    #[test]
-    fn test_htmx_success() {
-        let result = htmx_success("Updated successfully");
-        assert!(result.0.contains("text-green-500"));
-        assert!(result.0.contains("dark:text-green-400"));
-        assert!(result.0.contains("Updated successfully"));
-    }
 }

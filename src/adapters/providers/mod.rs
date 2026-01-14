@@ -14,6 +14,5 @@ pub use embedding::OpenAIEmbeddingProvider;
 pub use vector_store::InMemoryVectorStoreProvider;
 
 pub use routing::{
-    circuit_breaker::CircuitBreaker, metrics::ProviderMetricsCollector, ProviderContext,
-    ProviderRouter, ProviderSelectionStrategy,
+    metrics::ProviderMetricsCollector, ProviderContext, ProviderRouter, ProviderSelectionStrategy,
 };

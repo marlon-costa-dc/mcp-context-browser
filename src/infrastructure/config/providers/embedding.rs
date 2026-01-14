@@ -1,3 +1,8 @@
+//! # Embedding Provider Configuration
+//!
+//! Configuration types for embedding providers (OpenAI, Ollama, VoyageAI, etc.).
+//! Defines connection settings, model selection, and rate limiting parameters.
+
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 

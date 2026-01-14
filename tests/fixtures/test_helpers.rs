@@ -72,6 +72,7 @@ impl TestInfrastructure {
             event_bus: event_bus.clone(),
             log_buffer: log_buffer.clone(),
             config: Arc::clone(&config_arc),
+            cache_provider: None,
         };
         let admin_service = Arc::new(AdminServiceImpl::new(deps)) as Arc<dyn AdminService>;
 

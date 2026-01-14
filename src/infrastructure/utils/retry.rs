@@ -59,15 +59,23 @@ impl RetryUtils {
     /// * `context` - Description for logging (e.g., "index creation")
     ///
     /// # Example
-    /// ```ignore
-    /// // Before: ~15 lines of retry logic
-    /// // After: 6 lines
-    /// RetryUtils::retry_with_backoff(
-    ///     RetryConfig::default(),
-    ///     || async { client.create_index(name).await },
-    ///     |e| e.to_string().contains("NotFound"),
-    ///     "index creation",
-    /// ).await?;
+    ///
+    /// ```rust,no_run
+    /// use mcp_context_browser::infrastructure::utils::retry::{RetryUtils, RetryConfig};
+    ///
+    /// async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    ///     // Retry an operation with exponential backoff
+    ///     let result = RetryUtils::retry_with_backoff(
+    ///         RetryConfig::default().with_attempts(3),
+    ///         || async {
+    ///             // Your fallible async operation here
+    ///             Ok::<_, std::io::Error>("success")
+    ///         },
+    ///         |e| e.kind() == std::io::ErrorKind::TimedOut,
+    ///         "example operation",
+    ///     ).await?;
+    ///     Ok(())
+    /// }
     /// ```
     pub async fn retry_with_backoff<T, E, F, Fut, R>(
         config: RetryConfig,
@@ -115,8 +123,18 @@ impl RetryUtils {
     /// Simplified retry - always retries on any error
     ///
     /// # Example
-    /// ```ignore
-    /// RetryUtils::retry(3, 500, || async { fetch_data().await }, "data fetch").await?;
+    ///
+    /// ```rust,no_run
+    /// use mcp_context_browser::infrastructure::utils::retry::RetryUtils;
+    ///
+    /// async fn example() -> Result<String, std::io::Error> {
+    ///     RetryUtils::retry(
+    ///         3,    // max attempts
+    ///         500,  // initial delay ms
+    ///         || async { Ok::<_, std::io::Error>("data".to_string()) },
+    ///         "data fetch",
+    ///     ).await
+    /// }
     /// ```
     pub async fn retry<T, E, F, Fut>(
         max_attempts: u32,

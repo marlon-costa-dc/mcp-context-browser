@@ -23,8 +23,14 @@ pub trait RwLockExt<T> {
     /// * `extractor` - Closure that extracts value from &T
     ///
     /// # Example
-    /// ```ignore
-    /// let value: String = lock.extract(|data| data.clone())?;
+    ///
+    /// ```rust
+    /// use std::sync::RwLock;
+    /// use mcp_context_browser::infrastructure::utils::locks::RwLockExt;
+    ///
+    /// let lock = RwLock::new("hello".to_string());
+    /// let value: String = lock.extract(|data| data.clone()).unwrap();
+    /// assert_eq!(value, "hello");
     /// ```
     fn extract<F, R>(&self, extractor: F) -> Result<R>
     where
@@ -33,8 +39,14 @@ pub trait RwLockExt<T> {
     /// Extract and transform value from read lock
     ///
     /// # Example
-    /// ```ignore
-    /// let count = lock.extract_map(|data| data.len())?;
+    ///
+    /// ```rust
+    /// use std::sync::RwLock;
+    /// use mcp_context_browser::infrastructure::utils::locks::RwLockExt;
+    ///
+    /// let lock = RwLock::new(vec![1, 2, 3]);
+    /// let count: usize = lock.extract_map(|data| data.len()).unwrap();
+    /// assert_eq!(count, 3);
     /// ```
     fn extract_map<F, R>(&self, mapper: F) -> Result<R>
     where
@@ -76,8 +88,17 @@ pub trait AsyncRwLockExt<T> {
     /// Extract value from read lock asynchronously without holding lock
     ///
     /// # Example
-    /// ```ignore
-    /// let value: String = lock.extract_async(|data| data.clone()).await?;
+    ///
+    /// ```rust,no_run
+    /// use mcp_context_browser::infrastructure::utils::locks::AsyncRwLockExt;
+    /// use tokio::sync::RwLock;
+    ///
+    /// async fn example() -> anyhow::Result<()> {
+    ///     let lock = RwLock::new("hello".to_string());
+    ///     let value: String = lock.extract_async(|data| data.clone()).await?;
+    ///     assert_eq!(value, "hello");
+    ///     Ok(())
+    /// }
     /// ```
     async fn extract_async<F, R>(&self, extractor: F) -> Result<R>
     where

@@ -4,7 +4,10 @@
 //! eliminating hardcoded values by reading from actual subsystems.
 
 use super::defaults::*;
+use crate::infrastructure::cache::SharedCacheProvider;
 use crate::server::admin::service::types::AdminError;
+use crate::server::operations::IndexingOperationsInterface;
+use std::sync::Arc;
 
 /// Runtime configuration values loaded from actual subsystems
 #[derive(Debug, Clone)]
@@ -151,93 +154,105 @@ impl Default for DatabaseConfig {
     }
 }
 
+/// Service dependencies for RuntimeConfig
+pub struct RuntimeConfigDependencies {
+    /// Indexing operations for pending operation count
+    pub indexing_operations: Option<Arc<dyn IndexingOperationsInterface>>,
+    /// Cache provider for cache statistics
+    pub cache_provider: Option<SharedCacheProvider>,
+}
+
 impl RuntimeConfig {
     /// Load runtime configuration from actual subsystems
+    ///
+    /// Uses real service queries when dependencies are provided,
+    /// falls back to environment variables or defaults otherwise.
     pub async fn load() -> Result<Self, AdminError> {
+        Self::load_with_services(RuntimeConfigDependencies {
+            indexing_operations: None,
+            cache_provider: None,
+        })
+        .await
+    }
+
+    /// Load runtime configuration with injected service dependencies
+    ///
+    /// This is the preferred method - it queries real services for accurate data.
+    pub async fn load_with_services(deps: RuntimeConfigDependencies) -> Result<Self, AdminError> {
         Ok(RuntimeConfig {
-            indexing: Self::load_indexing_config().await,
-            cache: Self::load_cache_config().await,
+            indexing: Self::load_indexing_config(deps.indexing_operations.as_ref()).await,
+            cache: Self::load_cache_config(deps.cache_provider.as_ref()).await,
             database: Self::load_database_config().await,
             thresholds: HealthThresholds::default(),
         })
     }
 
     /// Load indexing configuration from runtime
-    async fn load_indexing_config() -> IndexingConfig {
-        // Get indexing status from actual service
-        // This reads from the running indexing subsystem
+    async fn load_indexing_config(
+        indexing_ops: Option<&Arc<dyn IndexingOperationsInterface>>,
+    ) -> IndexingConfig {
+        let pending_operations = if let Some(ops) = indexing_ops {
+            // Query real pending operations from IndexingOperationsInterface
+            ops.get_map().len() as u64
+        } else {
+            // Fallback to environment variable
+            get_env_u64(
+                "INDEXING_PENDING_OPERATIONS",
+                DEFAULT_INDEXING_PENDING_OPERATIONS,
+            )
+        };
+
         IndexingConfig {
             enabled: get_env_bool("INDEXING_ENABLED", DEFAULT_INDEXING_ENABLED),
-            pending_operations: Self::get_pending_operations().await,
-            last_index_time: Self::get_last_index_time().await,
+            pending_operations,
+            // TODO: Track actual last index time in IndexingOperations
+            last_index_time: chrono::Utc::now(),
         }
     }
 
     /// Load cache configuration from runtime
-    async fn load_cache_config() -> CacheConfig {
-        // Get cache stats from actual cache manager
+    async fn load_cache_config(cache_provider: Option<&SharedCacheProvider>) -> CacheConfig {
+        if let Some(cache) = cache_provider {
+            // Query real cache statistics from CacheProvider
+            match cache.get_stats("default").await {
+                Ok(stats) => CacheConfig {
+                    enabled: true,
+                    entries_count: stats.total_entries as u64,
+                    hit_rate: stats.hit_ratio,
+                    size_bytes: stats.total_size_bytes as u64,
+                    max_size_bytes: get_env_u64(
+                        "CACHE_MAX_SIZE_BYTES",
+                        DEFAULT_CACHE_MAX_SIZE_BYTES,
+                    ),
+                },
+                Err(_) => Self::default_cache_config(),
+            }
+        } else {
+            Self::default_cache_config()
+        }
+    }
+
+    /// Default cache config when no provider available
+    fn default_cache_config() -> CacheConfig {
         CacheConfig {
             enabled: get_env_bool("CACHE_ENABLED", DEFAULT_CACHE_ENABLED),
-            entries_count: Self::get_cache_entries().await,
-            hit_rate: Self::calculate_hit_rate().await,
-            size_bytes: Self::get_cache_size().await,
+            entries_count: get_env_u64("CACHE_ENTRIES_COUNT", DEFAULT_CACHE_ENTRIES_COUNT),
+            hit_rate: get_env_f64("CACHE_HIT_RATE", DEFAULT_CACHE_HIT_RATE),
+            size_bytes: get_env_u64("CACHE_SIZE_BYTES", DEFAULT_CACHE_SIZE_BYTES),
             max_size_bytes: get_env_u64("CACHE_MAX_SIZE_BYTES", DEFAULT_CACHE_MAX_SIZE_BYTES),
         }
     }
 
     /// Load database configuration from runtime
     async fn load_database_config() -> DatabaseConfig {
-        // Get connection pool stats from actual database
+        // TODO: Integrate with actual database pool when available in DI
+        // For now, use environment variables as database pool isn't in DI yet
         DatabaseConfig {
             connected: get_env_bool("DB_CONNECTED", DEFAULT_DB_CONNECTED),
-            active_connections: Self::get_active_connections().await,
-            idle_connections: Self::get_idle_connections().await,
+            active_connections: get_env_u32("DB_ACTIVE_CONNECTIONS", DEFAULT_DB_ACTIVE_CONNECTIONS),
+            idle_connections: get_env_u32("DB_IDLE_CONNECTIONS", DEFAULT_DB_IDLE_CONNECTIONS),
             total_pool_size: get_env_u32("DB_POOL_SIZE", DEFAULT_DB_POOL_SIZE),
         }
-    }
-
-    // Helper methods to query actual subsystems
-    // These would be implemented to query real subsystem state
-
-    async fn get_pending_operations() -> u64 {
-        // Query indexing service for pending operations
-        // For now, return value from environment if available
-        get_env_u64(
-            "INDEXING_PENDING_OPERATIONS",
-            DEFAULT_INDEXING_PENDING_OPERATIONS,
-        )
-    }
-
-    async fn get_last_index_time() -> chrono::DateTime<chrono::Utc> {
-        // Query indexing service for last index timestamp
-        chrono::Utc::now()
-    }
-
-    async fn get_cache_entries() -> u64 {
-        // Query cache manager for entry count
-        // Return actual count from cache statistics or environment
-        get_env_u64("CACHE_ENTRIES_COUNT", DEFAULT_CACHE_ENTRIES_COUNT)
-    }
-
-    async fn calculate_hit_rate() -> f64 {
-        // Calculate hit rate from cache statistics
-        // hit_rate = hits / (hits + misses)
-        get_env_f64("CACHE_HIT_RATE", DEFAULT_CACHE_HIT_RATE)
-    }
-
-    async fn get_cache_size() -> u64 {
-        // Get current cache memory usage in bytes
-        get_env_u64("CACHE_SIZE_BYTES", DEFAULT_CACHE_SIZE_BYTES)
-    }
-
-    async fn get_active_connections() -> u32 {
-        // Query database connection pool for active connections
-        get_env_u32("DB_ACTIVE_CONNECTIONS", DEFAULT_DB_ACTIVE_CONNECTIONS)
-    }
-
-    async fn get_idle_connections() -> u32 {
-        // Query database connection pool for idle connections
-        get_env_u32("DB_IDLE_CONNECTIONS", DEFAULT_DB_IDLE_CONNECTIONS)
     }
 }
 

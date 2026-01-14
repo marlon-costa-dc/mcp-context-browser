@@ -5,12 +5,15 @@
 
 use mcp_context_browser::adapters::providers::embedding::null::NullEmbeddingProvider;
 use mcp_context_browser::adapters::providers::routing::{
-    CircuitBreaker, ContextualStrategy, CostTracker, CostTrackerConfig, FailoverManager,
-    HealthMonitor, ProviderContext, ProviderMetricsCollector, ProviderRouter, ProviderRouterDeps,
+    ContextualStrategy, CostTracker, CostTrackerConfig, FailoverManager, HealthMonitor,
+    ProviderContext, ProviderMetricsCollector, ProviderRouter, ProviderRouterDeps,
 };
 use mcp_context_browser::domain::error::Error;
 use mcp_context_browser::domain::error::Result;
 use mcp_context_browser::infrastructure::di::registry::{ProviderRegistry, ProviderRegistryTrait};
+use mcp_context_browser::infrastructure::resilience::{
+    create_circuit_breaker, CircuitBreakerConfig,
+};
 use std::sync::Arc;
 
 #[tokio::main]
@@ -23,8 +26,7 @@ async fn main() -> Result<()> {
 
     // Create all dependencies for proper DI
     let health_monitor = Arc::new(HealthMonitor::with_registry(Arc::clone(&registry)));
-    let persistence_dir = std::env::temp_dir().join("mcp-example");
-    let circuit_breaker = Arc::new(CircuitBreaker::new("example", persistence_dir).await);
+    let circuit_breaker = create_circuit_breaker(CircuitBreakerConfig::new("example"), true);
     let metrics = Arc::new(ProviderMetricsCollector::new()?);
     let cost_tracker = Arc::new(CostTracker::new(CostTrackerConfig::production()));
     let failover_manager = Arc::new(FailoverManager::new(Arc::clone(&health_monitor)));

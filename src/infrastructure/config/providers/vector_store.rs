@@ -1,3 +1,8 @@
+//! # Vector Store Configuration
+//!
+//! Configuration types for vector storage backends (Milvus, EdgeVec, Filesystem).
+//! Defines connection pools, indexing parameters, and persistence settings.
+
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
