@@ -83,6 +83,22 @@ pub const HEALTH_CHECK_PATH: &str = "/health";
 pub const METRICS_PATH: &str = "/metrics";
 
 // ============================================================================
+// HTTP CLIENT POOL CONSTANTS
+// ============================================================================
+
+/// HTTP client request timeout in seconds (for embedding API calls)
+pub const HTTP_REQUEST_TIMEOUT_SECS: u64 = 30;
+
+/// HTTP client idle timeout in seconds
+pub const HTTP_CLIENT_IDLE_TIMEOUT_SECS: u64 = 90;
+
+/// HTTP client TCP keep-alive duration in seconds
+pub const HTTP_KEEPALIVE_SECS: u64 = 60;
+
+/// Maximum idle connections per host in HTTP client pool
+pub const HTTP_MAX_IDLE_PER_HOST: usize = 10;
+
+// ============================================================================
 // RESILIENCE CONSTANTS
 // ============================================================================
 
@@ -260,6 +276,49 @@ pub const HEALTH_CHECK_INTERVAL_SECS: u64 = 30;
 
 /// Health check failure threshold
 pub const HEALTH_CHECK_FAILURE_THRESHOLD: u32 = 3;
+
+// ============================================================================
+// EMBEDDING PROVIDER CONSTANTS
+// ============================================================================
+
+/// Null embedding provider dimension (for testing)
+pub const EMBEDDING_DIMENSION_NULL: usize = 384;
+
+/// FastEmbed default dimension (BAAI/bge models)
+pub const EMBEDDING_DIMENSION_FASTEMBED_DEFAULT: usize = 384;
+
+/// OpenAI text-embedding-3-small dimension
+pub const EMBEDDING_DIMENSION_OPENAI_SMALL: usize = 1536;
+
+/// OpenAI text-embedding-3-large dimension
+pub const EMBEDDING_DIMENSION_OPENAI_LARGE: usize = 3072;
+
+/// OpenAI text-embedding-ada-002 dimension
+pub const EMBEDDING_DIMENSION_OPENAI_ADA: usize = 1536;
+
+/// VoyageAI default dimension
+pub const EMBEDDING_DIMENSION_VOYAGEAI_DEFAULT: usize = 1024;
+
+/// VoyageAI code model dimension
+pub const EMBEDDING_DIMENSION_VOYAGEAI_CODE: usize = 1024;
+
+/// Ollama nomic-embed-text dimension
+pub const EMBEDDING_DIMENSION_OLLAMA_NOMIC: usize = 768;
+
+/// Ollama all-minilm dimension
+pub const EMBEDDING_DIMENSION_OLLAMA_MINILM: usize = 384;
+
+/// Ollama mxbai-embed-large dimension
+pub const EMBEDDING_DIMENSION_OLLAMA_MXBAI: usize = 1024;
+
+/// Ollama snowflake-arctic-embed dimension
+pub const EMBEDDING_DIMENSION_OLLAMA_ARCTIC: usize = 768;
+
+/// Ollama default dimension
+pub const EMBEDDING_DIMENSION_OLLAMA_DEFAULT: usize = 768;
+
+/// Gemini embedding dimension
+pub const EMBEDDING_DIMENSION_GEMINI: usize = 768;
 
 // Re-export domain constants for convenience
 pub use mcb_domain::constants::*;

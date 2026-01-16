@@ -92,6 +92,8 @@
 //! ```
 
 // Core infrastructure modules (implemented)
+/// Adapter implementations for domain ports
+pub mod adapters;
 pub mod cache;
 /// TOML configuration management with hot-reload capabilities
 pub mod config;
@@ -101,6 +103,8 @@ pub mod di;
 pub mod error_ext;
 pub mod health;
 pub mod logging;
+/// Utility helpers (timing, etc.)
+pub mod utils;
 
 // Placeholder modules (to be implemented - commented out to avoid compilation errors)
 // pub mod auth;
@@ -128,3 +132,5 @@ pub mod logging;
 
 // Re-export commonly used traits and types
 pub use error_ext::ErrorContext;
+pub use adapters::repository::{VectorStoreChunkRepository, VectorStoreSearchRepository};
+pub use utils::TimedOperation;
