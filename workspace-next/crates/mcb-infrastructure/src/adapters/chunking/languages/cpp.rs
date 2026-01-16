@@ -3,6 +3,7 @@
 use crate::adapters::chunking::config::{LanguageConfig, NodeExtractionRule};
 use crate::adapters::chunking::constants::CHUNK_SIZE_CPP;
 use crate::adapters::chunking::processor::{BaseProcessor, LanguageProcessor};
+use crate::constants::TS_NODE_FUNCTION_DEFINITION;
 use mcb_domain::entities::CodeChunk;
 use mcb_domain::value_objects::Language;
 
@@ -22,7 +23,7 @@ impl CppProcessor {
         let config = LanguageConfig::new(tree_sitter_cpp::LANGUAGE.into())
             .with_rules(vec![NodeExtractionRule {
                 node_types: vec![
-                    "function_definition".to_string(),
+                    TS_NODE_FUNCTION_DEFINITION.to_string(),
                     "class_specifier".to_string(),
                     "struct_specifier".to_string(),
                 ],

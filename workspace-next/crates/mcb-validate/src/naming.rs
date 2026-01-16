@@ -6,7 +6,7 @@
 //! - Constants: SCREAMING_SNAKE_CASE
 //! - Modules/Files: snake_case
 
-use crate::{Result, Severity};
+use crate::{Result, Severity, ValidationConfig};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -127,15 +127,18 @@ impl std::fmt::Display for NamingViolation {
 
 /// Naming validator
 pub struct NamingValidator {
-    workspace_root: PathBuf,
+    config: ValidationConfig,
 }
 
 impl NamingValidator {
     /// Create a new naming validator
     pub fn new(workspace_root: impl Into<PathBuf>) -> Self {
-        Self {
-            workspace_root: workspace_root.into(),
-        }
+        Self::with_config(ValidationConfig::new(workspace_root))
+    }
+
+    /// Create a validator with custom configuration for multi-directory support
+    pub fn with_config(config: ValidationConfig) -> Self {
+        Self { config }
     }
 
     /// Run all naming validations
@@ -152,9 +155,12 @@ impl NamingValidator {
     pub fn validate_type_names(&self) -> Result<Vec<NamingViolation>> {
         let mut violations = Vec::new();
 
-        let struct_pattern = Regex::new(r"(?:pub\s+)?struct\s+([A-Za-z_][A-Za-z0-9_]*)").expect("Invalid regex");
-        let enum_pattern = Regex::new(r"(?:pub\s+)?enum\s+([A-Za-z_][A-Za-z0-9_]*)").expect("Invalid regex");
-        let trait_pattern = Regex::new(r"(?:pub\s+)?trait\s+([A-Za-z_][A-Za-z0-9_]*)").expect("Invalid regex");
+        let struct_pattern =
+            Regex::new(r"(?:pub\s+)?struct\s+([A-Za-z_][A-Za-z0-9_]*)").expect("Invalid regex");
+        let enum_pattern =
+            Regex::new(r"(?:pub\s+)?enum\s+([A-Za-z_][A-Za-z0-9_]*)").expect("Invalid regex");
+        let trait_pattern =
+            Regex::new(r"(?:pub\s+)?trait\s+([A-Za-z_][A-Za-z0-9_]*)").expect("Invalid regex");
 
         for crate_dir in self.get_crate_dirs()? {
             let src_dir = crate_dir.join("src");
@@ -228,7 +234,9 @@ impl NamingValidator {
     pub fn validate_function_names(&self) -> Result<Vec<NamingViolation>> {
         let mut violations = Vec::new();
 
-        let fn_pattern = Regex::new(r"(?:pub\s+)?(?:async\s+)?fn\s+([A-Za-z_][A-Za-z0-9_]*)\s*[<(]").expect("Invalid regex");
+        let fn_pattern =
+            Regex::new(r"(?:pub\s+)?(?:async\s+)?fn\s+([A-Za-z_][A-Za-z0-9_]*)\s*[<(]")
+                .expect("Invalid regex");
 
         for crate_dir in self.get_crate_dirs()? {
             let src_dir = crate_dir.join("src");
@@ -273,8 +281,10 @@ impl NamingValidator {
     pub fn validate_constant_names(&self) -> Result<Vec<NamingViolation>> {
         let mut violations = Vec::new();
 
-        let const_pattern = Regex::new(r"(?:pub\s+)?const\s+([A-Za-z_][A-Za-z0-9_]*)\s*:").expect("Invalid regex");
-        let static_pattern = Regex::new(r"(?:pub\s+)?static\s+([A-Za-z_][A-Za-z0-9_]*)\s*:").expect("Invalid regex");
+        let const_pattern =
+            Regex::new(r"(?:pub\s+)?const\s+([A-Za-z_][A-Za-z0-9_]*)\s*:").expect("Invalid regex");
+        let static_pattern =
+            Regex::new(r"(?:pub\s+)?static\s+([A-Za-z_][A-Za-z0-9_]*)\s*:").expect("Invalid regex");
 
         for crate_dir in self.get_crate_dirs()? {
             let src_dir = crate_dir.join("src");
@@ -419,23 +429,13 @@ impl NamingValidator {
     }
 
     fn get_crate_dirs(&self) -> Result<Vec<PathBuf>> {
-        let crates_dir = self.workspace_root.join("crates");
-        if !crates_dir.exists() {
-            return Ok(Vec::new());
-        }
+        self.config.get_source_dirs()
+    }
 
-        let mut dirs = Vec::new();
-        for entry in std::fs::read_dir(&crates_dir)? {
-            let entry = entry?;
-            if entry.file_type()?.is_dir() {
-                let name = entry.file_name();
-                let name_str = name.to_string_lossy();
-                if name_str != "mcb-validate" {
-                    dirs.push(entry.path());
-                }
-            }
-        }
-        Ok(dirs)
+    /// Check if a path is from legacy/additional source directories
+    #[allow(dead_code)]
+    fn is_legacy_path(&self, path: &std::path::Path) -> bool {
+        self.config.is_legacy_path(path)
     }
 }
 

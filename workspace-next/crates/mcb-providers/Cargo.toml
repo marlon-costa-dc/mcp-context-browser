@@ -1,0 +1,131 @@
+[package]
+name = "mcb-providers"
+version = "0.1.1"
+edition = "2021"
+authors = ["Marlon Costa <marlonsc@gmail.com>"]
+license = "MIT"
+keywords = ["providers", "mcp", "semantic-search", "embedding", "vector-store"]
+categories = ["development-tools", "api-bindings"]
+description = "Provider implementations for MCP Context Browser - Embedding, Vector Store, Cache, and Language Chunking"
+readme = "README.md"
+repository = "https://github.com/marlonsc/mcp-context-browser"
+homepage = "https://github.com/marlonsc/mcp-context-browser"
+rust-version = "1.89"
+
+[lib]
+name = "mcb_providers"
+path = "src/lib.rs"
+
+[features]
+default = ["embedding-ollama", "vectorstore-memory", "cache-moka", "lang-all"]
+
+# === Embedding Providers ===
+embedding-all = ["embedding-openai", "embedding-ollama", "embedding-voyageai", "embedding-gemini", "embedding-fastembed"]
+embedding-openai = []
+embedding-ollama = []
+embedding-voyageai = []
+embedding-gemini = []
+embedding-fastembed = ["dep:fastembed"]
+
+# === Vector Store Providers ===
+vectorstore-all = ["vectorstore-memory", "vectorstore-encrypted"]
+vectorstore-memory = []
+vectorstore-encrypted = ["dep:aes-gcm"]
+
+# === Cache Providers ===
+cache-all = ["cache-moka", "cache-redis"]
+cache-moka = ["dep:moka"]
+cache-redis = ["dep:redis"]
+
+# === Language Chunking Providers ===
+lang-all = ["lang-rust", "lang-python", "lang-javascript", "lang-typescript", "lang-go", "lang-java", "lang-c", "lang-cpp", "lang-csharp", "lang-ruby", "lang-php", "lang-swift", "lang-kotlin"]
+lang-rust = ["dep:tree-sitter-rust"]
+lang-python = ["dep:tree-sitter-python"]
+lang-javascript = ["dep:tree-sitter-javascript"]
+lang-typescript = ["dep:tree-sitter-typescript"]
+lang-go = ["dep:tree-sitter-go"]
+lang-java = ["dep:tree-sitter-java"]
+lang-c = ["dep:tree-sitter-c"]
+lang-cpp = ["dep:tree-sitter-cpp"]
+lang-csharp = ["dep:tree-sitter-c-sharp"]
+lang-ruby = ["dep:tree-sitter-ruby"]
+lang-php = ["dep:tree-sitter-php"]
+lang-swift = ["dep:tree-sitter-swift"]
+lang-kotlin = ["dep:tree-sitter-kotlin-ng"]
+
+# === Convenience Feature Groups ===
+minimal = ["embedding-ollama", "vectorstore-memory", "cache-moka", "lang-rust", "lang-python"]
+full = ["embedding-all", "vectorstore-all", "cache-all", "lang-all"]
+
+[dependencies]
+# Domain layer
+mcb-domain = { path = "../mcb-domain" }
+
+# Core async runtime
+tokio = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Error handling
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+
+# Async traits
+async-trait = { workspace = true }
+
+# HTTP client (for API providers)
+reqwest = { workspace = true }
+
+# Regex for text processing
+regex = { workspace = true }
+
+# Text processing
+unicode-segmentation = { workspace = true }
+
+# Base64 encoding
+base64 = { workspace = true }
+
+# Dependency injection
+shaku = { workspace = true }
+
+# Concurrent data structures
+dashmap = { workspace = true }
+
+# Tree-sitter core (always needed for chunking)
+tree-sitter = { workspace = true }
+
+# Optional: Tree-sitter language parsers
+tree-sitter-rust = { workspace = true, optional = true }
+tree-sitter-python = { workspace = true, optional = true }
+tree-sitter-javascript = { workspace = true, optional = true }
+tree-sitter-typescript = { workspace = true, optional = true }
+tree-sitter-go = { workspace = true, optional = true }
+tree-sitter-java = { workspace = true, optional = true }
+tree-sitter-c = { workspace = true, optional = true }
+tree-sitter-cpp = { workspace = true, optional = true }
+tree-sitter-c-sharp = { workspace = true, optional = true }
+tree-sitter-ruby = { workspace = true, optional = true }
+tree-sitter-php = { workspace = true, optional = true }
+tree-sitter-swift = { workspace = true, optional = true }
+tree-sitter-kotlin-ng = { workspace = true, optional = true }
+
+# Optional: FastEmbed (heavy ML dependency)
+fastembed = { workspace = true, optional = true }
+
+# Optional: Encryption for encrypted vector store
+aes-gcm = { workspace = true, optional = true }
+
+# Optional: Moka cache
+moka = { workspace = true, optional = true }
+
+# Optional: Redis cache
+redis = { workspace = true, optional = true }
+
+[dev-dependencies]
+tempfile = "3.10"
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }

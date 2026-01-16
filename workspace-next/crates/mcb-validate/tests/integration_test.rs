@@ -1,6 +1,6 @@
 //! Integration tests that validate the actual workspace
 
-use mcb_validate::{ArchitectureValidator, Reporter, Severity};
+use mcb_validate::{ArchitectureValidator, Reporter, Severity, ValidationConfig};
 use std::path::PathBuf;
 
 fn get_workspace_root() -> PathBuf {
@@ -161,4 +161,96 @@ fn test_full_validation_report() {
 
     // The validation should complete without panicking
     // We don't assert on violation count as existing code may have issues
+}
+
+// ============================================
+// Multi-Directory Validation Tests
+// ============================================
+
+#[test]
+fn test_validation_with_legacy() {
+    let workspace_root = get_workspace_root();
+    let config = ValidationConfig::new(&workspace_root)
+        .with_additional_path("../src") // Parent's src/
+        .with_exclude_pattern("target/");
+
+    let mut validator = ArchitectureValidator::with_config(config);
+    let report = validator.validate_all().unwrap();
+
+    println!("\n{}", "=".repeat(60));
+    println!("COMBINED VALIDATION: workspace-next + ../src");
+    println!("{}", "=".repeat(60));
+    println!("{}", Reporter::to_human_readable(&report));
+
+    let error_count = Reporter::count_errors(&report);
+    let warning_count = Reporter::count_warnings(&report);
+    let info_count = report.summary.total_violations - error_count - warning_count;
+
+    println!(
+        "\nSummary: {} errors, {} warnings, {} info, {} total",
+        error_count, warning_count, info_count, report.summary.total_violations
+    );
+}
+
+#[test]
+fn test_legacy_only() {
+    let workspace_root = get_workspace_root();
+    let config = ValidationConfig::new(&workspace_root)
+        .with_additional_path("../src")
+        .with_exclude_pattern("target/");
+
+    let mut validator = ArchitectureValidator::with_config(config);
+    let report = validator.validate_all().unwrap();
+
+    // Filter to show only legacy violations (those containing "src/" in path)
+    println!("\n{}", "=".repeat(60));
+    println!("LEGACY VIOLATIONS (../src only)");
+    println!("{}", "=".repeat(60));
+
+    // Quality violations from legacy
+    let legacy_quality: Vec<_> = report
+        .quality_violations
+        .iter()
+        .filter(|v| {
+            let display = format!("{}", v);
+            display.contains("/src/") && !display.contains("/crates/")
+        })
+        .collect();
+
+    if !legacy_quality.is_empty() {
+        println!("\nQuality violations in ../src: {}", legacy_quality.len());
+        for v in legacy_quality.iter().take(10) {
+            println!("  [{:?}] {}", v.severity(), v);
+        }
+        if legacy_quality.len() > 10 {
+            println!("  ... and {} more", legacy_quality.len() - 10);
+        }
+    }
+
+    println!(
+        "\nTotal violations: {} (showing subset from ../src)",
+        report.summary.total_violations
+    );
+}
+
+#[test]
+fn test_validation_config() {
+    let workspace_root = get_workspace_root();
+    let config = ValidationConfig::new(&workspace_root)
+        .with_additional_path("../src")
+        .with_exclude_pattern("target/");
+
+    println!("\n{}", "=".repeat(60));
+    println!("VALIDATION CONFIGURATION");
+    println!("{}", "=".repeat(60));
+    println!("Workspace root: {}", config.workspace_root.display());
+    println!("Additional paths: {:?}", config.additional_src_paths);
+    println!("Exclude patterns: {:?}", config.exclude_patterns);
+
+    let dirs = config.get_source_dirs().unwrap();
+    println!("\nSource directories to scan:");
+    for dir in &dirs {
+        println!("  - {}", dir.display());
+    }
+    println!("\nTotal directories: {}", dirs.len());
 }

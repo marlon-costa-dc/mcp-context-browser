@@ -4,9 +4,9 @@
 //! - mcb-domain: No internal dependencies (pure domain)
 //! - mcb-infrastructure: Only mcb-domain
 //! - mcb-server: mcb-domain and mcb-infrastructure
-//! - mcb: mcb-domain only (facade)
+//! - mcb: All crates (facade that re-exports entire public API)
 
-use crate::{Result, Severity};
+use crate::{Result, Severity, ValidationConfig};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -14,11 +14,15 @@ use std::path::PathBuf;
 use walkdir::WalkDir;
 
 /// Allowed dependencies for each crate in Clean Architecture
+///
+/// Notes:
+/// - mcb is a facade crate that re-exports the entire public API
+/// - mcb-validate is a development tool, not part of the runtime dependency graph
 const ALLOWED_DEPS: &[(&str, &[&str])] = &[
     ("mcb-domain", &[]),
     ("mcb-infrastructure", &["mcb-domain"]),
     ("mcb-server", &["mcb-domain", "mcb-infrastructure"]),
-    ("mcb", &["mcb-domain"]),
+    ("mcb", &["mcb-domain", "mcb-infrastructure", "mcb-server"]), // Facade: re-exports all
     ("mcb-validate", &[]),
 ];
 
@@ -102,13 +106,18 @@ impl std::fmt::Display for DependencyViolation {
 
 /// Dependency validator
 pub struct DependencyValidator {
-    workspace_root: PathBuf,
+    config: ValidationConfig,
     allowed_deps: HashMap<String, HashSet<String>>,
 }
 
 impl DependencyValidator {
     /// Create a new dependency validator
     pub fn new(workspace_root: impl Into<PathBuf>) -> Self {
+        Self::with_config(ValidationConfig::new(workspace_root))
+    }
+
+    /// Create a validator with custom configuration for multi-directory support
+    pub fn with_config(config: ValidationConfig) -> Self {
         let mut allowed_deps = HashMap::new();
         for (crate_name, deps) in ALLOWED_DEPS {
             allowed_deps.insert(
@@ -117,7 +126,7 @@ impl DependencyValidator {
             );
         }
         Self {
-            workspace_root: workspace_root.into(),
+            config,
             allowed_deps,
         }
     }
@@ -137,7 +146,7 @@ impl DependencyValidator {
 
         for (crate_name, allowed) in &self.allowed_deps {
             let cargo_toml = self
-                .workspace_root
+                .config.workspace_root
                 .join("crates")
                 .join(crate_name)
                 .join("Cargo.toml");
@@ -180,7 +189,7 @@ impl DependencyValidator {
 
         for (crate_name, allowed) in &self.allowed_deps {
             let crate_src = self
-                .workspace_root
+                .config.workspace_root
                 .join("crates")
                 .join(crate_name)
                 .join("src");
@@ -244,7 +253,7 @@ impl DependencyValidator {
         // Build dependency graph from Cargo.toml files
         for crate_name in self.allowed_deps.keys() {
             let cargo_toml = self
-                .workspace_root
+                .config.workspace_root
                 .join("crates")
                 .join(crate_name)
                 .join("Cargo.toml");

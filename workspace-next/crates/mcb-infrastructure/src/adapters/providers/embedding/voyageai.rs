@@ -13,7 +13,10 @@ use mcb_domain::value_objects::Embedding;
 
 use crate::adapters::http_client::HttpClientProvider;
 use crate::adapters::providers::embedding::helpers::constructor;
-use crate::constants::{EMBEDDING_DIMENSION_VOYAGEAI_CODE, EMBEDDING_DIMENSION_VOYAGEAI_DEFAULT};
+use crate::constants::{
+    CONTENT_TYPE_JSON, EMBEDDING_DIMENSION_VOYAGEAI_CODE, EMBEDDING_DIMENSION_VOYAGEAI_DEFAULT,
+    VOYAGEAI_MAX_INPUT_TOKENS,
+};
 use crate::utils::HttpResponseUtils;
 
 /// VoyageAI embedding provider
@@ -30,7 +33,7 @@ use crate::utils::HttpResponseUtils;
 ///
 /// let http_client = Arc::new(HttpClientPool::new().unwrap());
 /// let provider = VoyageAIEmbeddingProvider::new(
-///     "voyage-xxx".to_string(),
+///     "voyage-your-api-key".to_string(),
 ///     None,
 ///     "voyage-code-3".to_string(),
 ///     http_client,
@@ -79,10 +82,8 @@ impl VoyageAIEmbeddingProvider {
 
     /// Get the maximum tokens supported by this provider
     pub fn max_tokens(&self) -> usize {
-        match self.model.as_str() {
-            "voyage-code-3" => 16000,
-            _ => 16000,
-        }
+        // All VoyageAI models support the same max tokens
+        VOYAGEAI_MAX_INPUT_TOKENS
     }
 
     /// Get the API key for this provider
@@ -114,7 +115,7 @@ impl EmbeddingProvider for VoyageAIEmbeddingProvider {
         let response = client
             .post(format!("{}/embeddings", base_url))
             .header("Authorization", format!("Bearer {}", self.api_key))
-            .header("Content-Type", "application/json")
+            .header("Content-Type", CONTENT_TYPE_JSON)
             .json(&payload)
             .send()
             .await

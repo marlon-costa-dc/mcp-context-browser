@@ -13,7 +13,7 @@ use mcb_domain::value_objects::Embedding;
 
 use crate::adapters::http_client::HttpClientProvider;
 use crate::adapters::providers::embedding::helpers::constructor;
-use crate::constants::EMBEDDING_DIMENSION_GEMINI;
+use crate::constants::{CONTENT_TYPE_JSON, EMBEDDING_DIMENSION_GEMINI};
 use crate::utils::HttpResponseUtils;
 
 /// Gemini embedding provider
@@ -31,7 +31,7 @@ use crate::utils::HttpResponseUtils;
 ///
 /// let http_client = Arc::new(HttpClientPool::new().unwrap());
 /// let provider = GeminiEmbeddingProvider::new(
-///     "AIza-xxx".to_string(),
+///     "AIza-your-api-key".to_string(),
 ///     None,
 ///     "text-embedding-004".to_string(),
 ///     Duration::from_secs(30),
@@ -150,7 +150,7 @@ impl EmbeddingProvider for GeminiEmbeddingProvider {
 
             let response = client
                 .post(&url)
-                .header("Content-Type", "application/json")
+                .header("Content-Type", CONTENT_TYPE_JSON)
                 .json(&payload)
                 .send()
                 .await

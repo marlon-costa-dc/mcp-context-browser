@@ -24,6 +24,27 @@ pub struct HybridSearchResult {
 }
 
 /// Port for hybrid search operations
+///
+/// Combines lexical (BM25) and semantic (vector) search for improved relevance.
+/// BM25 excels at exact keyword matching while semantic search understands meaning.
+///
+/// # Example
+///
+/// ```ignore
+/// use mcb_domain::ports::providers::HybridSearchProvider;
+///
+/// // Index code chunks for hybrid search
+/// provider.index_chunks("project", &code_chunks).await?;
+///
+/// // Perform hybrid search combining BM25 and semantic results
+/// let semantic_results = vector_store.search_similar("project", &query_vec, 20, None).await?;
+/// let results = provider.search("project", "async fn", semantic_results, 10).await?;
+///
+/// // Results are ranked by combined BM25 + semantic scores
+/// for result in results {
+///     println!("{}: {}", result.file_path, result.score);
+/// }
+/// ```
 #[async_trait]
 pub trait HybridSearchProvider: Interface + Send + Sync {
     /// Index code chunks for hybrid search

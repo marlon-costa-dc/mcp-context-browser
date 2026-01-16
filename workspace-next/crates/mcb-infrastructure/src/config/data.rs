@@ -58,11 +58,19 @@ pub struct AppConfig {
 /// Server configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServerConfig {
+    /// Transport mode (stdio, http, hybrid)
+    #[serde(default)]
+    pub transport_mode: TransportMode,
+
     /// Server host address
     pub host: String,
 
     /// Server port
     pub port: u16,
+
+    /// Admin API port (separate from main server port)
+    #[serde(default = "default_admin_port")]
+    pub admin_port: u16,
 
     /// HTTPS enabled
     pub https: bool,
@@ -89,11 +97,18 @@ pub struct ServerConfig {
     pub cors_origins: Vec<String>,
 }
 
+/// Default admin port (9090)
+fn default_admin_port() -> u16 {
+    9090
+}
+
 impl Default for ServerConfig {
     fn default() -> Self {
         Self {
+            transport_mode: TransportMode::default(),
             host: DEFAULT_SERVER_HOST.to_string(),
             port: DEFAULT_HTTP_PORT,
+            admin_port: default_admin_port(),
             https: false,
             ssl_cert_path: None,
             ssl_key_path: None,
@@ -183,12 +198,9 @@ impl Default for AuthConfig {
 /// Password hashing algorithms
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum PasswordAlgorithm {
-    /// Argon2id (recommended)
-    Argon2,
-    /// bcrypt
-    Bcrypt,
-    /// PBKDF2
-    Pbkdf2,
+    Argon2, // Argon2id (recommended)
+    Bcrypt, // bcrypt
+    Pbkdf2, // PBKDF2
 }
 
 /// Cache configuration
@@ -231,12 +243,38 @@ impl Default for CacheConfig {
 }
 
 /// Cache providers
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum CacheProvider {
     /// In-memory cache (Moka)
     Moka,
-    /// Redis distributed cache
+    /// Distributed cache (Redis)
     Redis,
+}
+
+/// Transport mode for MCP server
+///
+/// Defines how the MCP server communicates with clients.
+///
+/// # Modes
+///
+/// | Mode | Description | Use Case |
+/// |------|-------------|----------|
+/// | `Stdio` | Standard I/O streams | CLI tools, IDE integrations |
+/// | `Http` | HTTP with SSE | Web clients, REST APIs |
+/// | `Hybrid` | Both simultaneously | Dual-interface servers |
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum TransportMode {
+    /// Standard I/O transport (traditional MCP protocol)
+    /// Used for CLI tools and IDE integrations (e.g., Claude Code)
+    #[default]
+    Stdio,
+    /// HTTP transport with Server-Sent Events
+    /// Used for web clients and REST API access
+    Http,
+    /// Both Stdio and HTTP simultaneously
+    /// Allows serving both CLI and web clients from the same process
+    Hybrid,
 }
 
 /// Metrics configuration
@@ -498,7 +536,7 @@ impl Default for OperationsConfig {
             tracking_enabled: true,
             cleanup_interval_secs: OPERATIONS_CLEANUP_INTERVAL_SECS,
             retention_secs: OPERATIONS_RETENTION_SECS,
-            max_operations_in_memory: 10000,
+            max_operations_in_memory: OPERATIONS_MAX_IN_MEMORY,
         }
     }
 }

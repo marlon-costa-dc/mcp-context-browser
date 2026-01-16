@@ -2,7 +2,11 @@
 # For building the refactored crate structure
 
 .PHONY: build test lint fmt clean check verify release
-.PHONY: validate-arch validate-deps validate-quality validate-patterns validate-docs check-full ci
+.PHONY: validate validate-report validate-summary validate-arch
+.PHONY: validate-deps validate-quality validate-patterns validate-tests validate-docs validate-naming validate-solid validate-org
+.PHONY: validate-kiss validate-shaku
+.PHONY: validate-all validate-legacy validate-config
+.PHONY: check-full ci
 
 # Build all crates
 build:
@@ -40,31 +44,124 @@ release:
 # Architecture Validation Targets
 # ============================================
 
-# Full architecture validation
+# Quick validation summary (shows counts only)
+validate:
+	@echo "╔══════════════════════════════════════════════════════════════╗"
+	@echo "║           mcb-validate Architecture Report                   ║"
+	@echo "╚══════════════════════════════════════════════════════════════╝"
+	@cargo test --package mcb-validate test_full_validation_report -- --nocapture 2>&1 | \
+		grep -E "(Total Violations:|Dependency:|Quality:|Patterns:|Tests:|Documentation:|Naming:|SOLID:|Organization:|KISS:|DI/Shaku:|Status:|\[Error\]|\[Warning\])" | \
+		head -25
+	@echo ""
+	@echo "Run 'make validate-report' for full details"
+
+# Full validation report (shows all violations)
+validate-report:
+	@echo "╔══════════════════════════════════════════════════════════════╗"
+	@echo "║        mcb-validate Full Architecture Report                 ║"
+	@echo "╚══════════════════════════════════════════════════════════════╝"
+	@cargo test --package mcb-validate test_full_validation_report -- --nocapture 2>&1 | \
+		grep -v "^running\|^test \|^$\|Compiling\|Finished\|Doc-tests\|passed\|filtered"
+
+# Full architecture validation (all tests)
 validate-arch:
 	cargo test --package mcb-validate -- --nocapture
-	@echo "Architecture validation passed!"
+	@echo "Architecture validation completed!"
 
-# Dependency validation only
+# Individual validator targets for targeted fixes
 validate-deps:
-	cargo test --package mcb-validate dependency -- --nocapture
+	@echo "=== Dependency Violations ==="
+	@cargo test --package mcb-validate test_validate_workspace_dependencies -- --nocapture 2>&1 | \
+		grep -v "^running\|^test \|Compiling\|Finished"
 
-# Quality validation only (unwrap/expect/panic detection)
 validate-quality:
-	cargo test --package mcb-validate quality -- --nocapture
+	@echo "=== Quality Violations (unwrap/expect/panic) ==="
+	@cargo test --package mcb-validate test_validate_workspace_quality -- --nocapture 2>&1 | \
+		grep -v "^running\|^test \|Compiling\|Finished"
 
-# Pattern validation only (DI patterns, async traits)
 validate-patterns:
-	cargo test --package mcb-validate patterns -- --nocapture
+	@echo "=== Pattern Violations (DI, async traits) ==="
+	@cargo test --package mcb-validate test_validate_workspace_patterns -- --nocapture 2>&1 | \
+		grep -v "^running\|^test \|Compiling\|Finished"
 
-# Documentation validation only
+validate-tests:
+	@echo "=== Test Organization Violations ==="
+	@cargo test --package mcb-validate test_validate_workspace_tests -- --nocapture 2>&1 | \
+		grep -v "^running\|^test \|Compiling\|Finished"
+
 validate-docs:
-	cargo test --package mcb-validate documentation -- --nocapture
+	@echo "=== Documentation Violations ==="
+	@cargo test --package mcb-validate test_validate_workspace_documentation -- --nocapture 2>&1 | \
+		grep -v "^running\|^test \|Compiling\|Finished"
 
-# Extended check (build + lint + test + arch validation)
-check-full: check validate-arch
-	@echo "Full validation passed!"
+validate-naming:
+	@echo "=== Naming Violations ==="
+	@cargo test --package mcb-validate test_validate_workspace_naming -- --nocapture 2>&1 | \
+		grep -v "^running\|^test \|Compiling\|Finished"
+
+# Extended check (build + lint + test + validation summary)
+check-full: check
+	@echo ""
+	@$(MAKE) validate
+	@echo ""
+	@echo "Full validation completed!"
 
 # CI target (all checks including architecture)
 ci: fmt lint test validate-arch
 	@echo "CI checks passed!"
+
+# ============================================
+# Multi-Directory Validation Targets
+# ============================================
+
+# Validate workspace-next + legacy ../src (shows all issues)
+validate-all:
+	@echo "╔══════════════════════════════════════════════════════════════╗"
+	@echo "║     mcb-validate: Workspace + Legacy Source Validation       ║"
+	@echo "╚══════════════════════════════════════════════════════════════╝"
+	@cargo test --package mcb-validate test_validation_with_legacy -- --nocapture 2>&1 | \
+		grep -E "(Total Violations:|Dependency:|Quality:|Patterns:|Tests:|Documentation:|Naming:|SOLID:|Organization:|KISS:|DI/Shaku:|Status:|\[Error\]|\[Warning\]|\[Info\])" | \
+		head -35
+	@echo ""
+	@echo "Note: Legacy paths use Info severity level"
+
+# Validate only legacy ../src (for comparison)
+validate-legacy:
+	@echo "╔══════════════════════════════════════════════════════════════╗"
+	@echo "║          mcb-validate: Legacy Source Only                     ║"
+	@echo "╚══════════════════════════════════════════════════════════════╝"
+	@cargo test --package mcb-validate test_legacy_only -- --nocapture 2>&1 | \
+		grep -E "(Total Violations:|Dependency:|Quality:|Patterns:|Tests:|Documentation:|Naming:|SOLID:|Organization:|KISS:|DI/Shaku:|Status:|\[Error\]|\[Warning\]|\[Info\])" | \
+		head -35
+
+# Show current validation configuration
+validate-config:
+	@echo "╔══════════════════════════════════════════════════════════════╗"
+	@echo "║          mcb-validate Configuration Test                     ║"
+	@echo "╚══════════════════════════════════════════════════════════════╝"
+	@cargo test --package mcb-validate test_validation_config -- --nocapture 2>&1 | \
+		grep -v "^running\|^test \|Compiling\|Finished"
+
+# ============================================
+# Extended Validation Targets
+# ============================================
+
+validate-solid:
+	@echo "=== SOLID Principle Violations ==="
+	@cargo test --package mcb-validate test_validate_workspace_solid -- --nocapture 2>&1 | \
+		grep -v "^running\|^test \|Compiling\|Finished"
+
+validate-org:
+	@echo "=== Organization Violations (file placement, centralization) ==="
+	@cargo test --package mcb-validate test_validate_workspace_organization -- --nocapture 2>&1 | \
+		grep -v "^running\|^test \|Compiling\|Finished"
+
+validate-kiss:
+	@echo "=== KISS Violations (complexity) ==="
+	@cargo test --package mcb-validate test_validate_workspace_kiss -- --nocapture 2>&1 | \
+		grep -v "^running\|^test \|Compiling\|Finished"
+
+validate-shaku:
+	@echo "=== DI/Shaku Violations ==="
+	@cargo test --package mcb-validate test_validate_workspace_shaku -- --nocapture 2>&1 | \
+		grep -v "^running\|^test \|Compiling\|Finished"

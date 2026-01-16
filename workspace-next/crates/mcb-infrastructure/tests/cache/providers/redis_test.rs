@@ -31,8 +31,7 @@ async fn test_redis_provider_basic_operations() {
         .unwrap();
 
     let retrieved_json = provider.get_json("test_key").await.unwrap();
-    let retrieved: Option<TestValue> =
-        retrieved_json.map(|j| serde_json::from_str(&j).unwrap());
+    let retrieved: Option<TestValue> = retrieved_json.map(|j| serde_json::from_str(&j).unwrap());
     assert_eq!(retrieved, Some(value));
 
     // Test exists

@@ -4,8 +4,8 @@
 
 use async_trait::async_trait;
 use mcb_domain::domain_services::search::{
-    ChunkingOrchestratorInterface, ContextServiceInterface, IndexingResult, IndexingServiceInterface,
-    IndexingStatus, SearchServiceInterface,
+    ChunkingOrchestratorInterface, ContextServiceInterface, IndexingResult,
+    IndexingServiceInterface, IndexingStatus, SearchServiceInterface,
 };
 use mcb_domain::entities::CodeChunk;
 use mcb_domain::error::Result;
@@ -425,9 +425,7 @@ async fn test_context_service_interface_contract() {
     assert!(result.is_ok());
 
     // Test search_similar
-    let results = service
-        .search_similar("test_collection", "query", 5)
-        .await;
+    let results = service.search_similar("test_collection", "query", 5).await;
     assert!(results.is_ok());
 
     // Test embed_text

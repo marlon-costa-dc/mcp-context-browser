@@ -6,7 +6,7 @@
 use crate::crypto::CryptoService;
 use async_trait::async_trait;
 use mcb_domain::error::{Error, Result};
-use mcb_domain::ports::providers::VectorStoreProvider;
+use mcb_domain::ports::providers::{VectorStoreAdmin, VectorStoreProvider};
 use mcb_domain::value_objects::{Embedding, SearchResult};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -38,6 +38,31 @@ impl<P: VectorStoreProvider> EncryptedVectorStoreProvider<P> {
 }
 
 #[async_trait]
+impl<P: VectorStoreProvider> VectorStoreAdmin for EncryptedVectorStoreProvider<P> {
+    async fn collection_exists(&self, name: &str) -> Result<bool> {
+        self.inner.collection_exists(name).await
+    }
+
+    async fn get_stats(&self, collection: &str) -> Result<HashMap<String, Value>> {
+        let mut stats = self.inner.get_stats(collection).await?;
+        stats.insert("encryption_enabled".to_string(), serde_json::json!(true));
+        stats.insert(
+            "encryption_algorithm".to_string(),
+            serde_json::json!("AES-256-GCM"),
+        );
+        Ok(stats)
+    }
+
+    async fn flush(&self, collection: &str) -> Result<()> {
+        self.inner.flush(collection).await
+    }
+
+    fn provider_name(&self) -> &str {
+        "encrypted"
+    }
+}
+
+#[async_trait]
 impl<P: VectorStoreProvider> VectorStoreProvider for EncryptedVectorStoreProvider<P> {
     async fn create_collection(&self, name: &str, dimensions: usize) -> Result<()> {
         self.inner.create_collection(name, dimensions).await
@@ -45,10 +70,6 @@ impl<P: VectorStoreProvider> VectorStoreProvider for EncryptedVectorStoreProvide
 
     async fn delete_collection(&self, name: &str) -> Result<()> {
         self.inner.delete_collection(name).await
-    }
-
-    async fn collection_exists(&self, name: &str) -> Result<bool> {
-        self.inner.collection_exists(name).await
     }
 
     async fn insert_vectors(
@@ -139,23 +160,5 @@ impl<P: VectorStoreProvider> VectorStoreProvider for EncryptedVectorStoreProvide
     async fn list_vectors(&self, collection: &str, limit: usize) -> Result<Vec<SearchResult>> {
         // Delegate to inner provider - SearchResult fields are extracted from stored metadata
         self.inner.list_vectors(collection, limit).await
-    }
-
-    async fn get_stats(&self, collection: &str) -> Result<HashMap<String, Value>> {
-        let mut stats = self.inner.get_stats(collection).await?;
-        stats.insert("encryption_enabled".to_string(), serde_json::json!(true));
-        stats.insert(
-            "encryption_algorithm".to_string(),
-            serde_json::json!("AES-256-GCM"),
-        );
-        Ok(stats)
-    }
-
-    async fn flush(&self, collection: &str) -> Result<()> {
-        self.inner.flush(collection).await
-    }
-
-    fn provider_name(&self) -> &str {
-        "encrypted"
     }
 }

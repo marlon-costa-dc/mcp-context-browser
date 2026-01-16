@@ -24,6 +24,21 @@ pub struct InfrastructureProviderImpl {
 }
 
 /// Infrastructure provider interface
+///
+/// # Example
+///
+/// ```ignore
+/// use mcb_infrastructure::di::InfrastructureProvider;
+///
+/// // Get from DI container
+/// let infra: Arc<dyn InfrastructureProvider> = container.resolve();
+///
+/// // Access services
+/// let cache = infra.cache();
+/// let crypto = infra.crypto();
+/// let health = infra.health();
+/// let config = infra.config();
+/// ```
 pub trait InfrastructureProvider: Interface {
     fn cache(&self) -> &SharedCacheProvider;
     fn crypto(&self) -> &CryptoService;

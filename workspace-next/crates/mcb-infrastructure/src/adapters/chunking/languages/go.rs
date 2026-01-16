@@ -3,6 +3,7 @@
 use crate::adapters::chunking::config::{LanguageConfig, NodeExtractionRule};
 use crate::adapters::chunking::constants::CHUNK_SIZE_GO;
 use crate::adapters::chunking::processor::{BaseProcessor, LanguageProcessor};
+use crate::constants::{TS_NODE_FUNCTION_DECLARATION, TS_NODE_METHOD_DECLARATION};
 use mcb_domain::entities::CodeChunk;
 use mcb_domain::value_objects::Language;
 
@@ -23,8 +24,8 @@ impl GoProcessor {
         let config = LanguageConfig::new(tree_sitter_go::LANGUAGE.into())
             .with_rules(vec![NodeExtractionRule {
                 node_types: vec![
-                    "function_declaration".to_string(),
-                    "method_declaration".to_string(),
+                    TS_NODE_FUNCTION_DECLARATION.to_string(),
+                    TS_NODE_METHOD_DECLARATION.to_string(),
                     "type_declaration".to_string(),
                 ],
                 min_length: 30,

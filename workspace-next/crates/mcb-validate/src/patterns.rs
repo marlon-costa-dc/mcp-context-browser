@@ -6,7 +6,7 @@
 //! - Error types use crate::error::Result<T>
 //! - Provider pattern compliance
 
-use crate::{Result, Severity};
+use crate::{Result, Severity, ValidationConfig};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -152,15 +152,18 @@ impl std::fmt::Display for PatternViolation {
 
 /// Pattern validator
 pub struct PatternValidator {
-    workspace_root: PathBuf,
+    config: ValidationConfig,
 }
 
 impl PatternValidator {
     /// Create a new pattern validator
     pub fn new(workspace_root: impl Into<PathBuf>) -> Self {
-        Self {
-            workspace_root: workspace_root.into(),
-        }
+        Self::with_config(ValidationConfig::new(workspace_root))
+    }
+
+    /// Create a validator with custom configuration for multi-directory support
+    pub fn with_config(config: ValidationConfig) -> Self {
+        Self { config }
     }
 
     /// Run all pattern validations
@@ -177,8 +180,7 @@ impl PatternValidator {
         let mut violations = Vec::new();
 
         // Pattern to find Arc<SomeConcreteType> where SomeConcreteType doesn't start with "dyn"
-        let arc_pattern =
-            Regex::new(r"Arc<([A-Z][a-zA-Z0-9_]*)>").expect("Invalid regex");
+        let arc_pattern = Regex::new(r"Arc<([A-Z][a-zA-Z0-9_]*)>").expect("Invalid regex");
 
         // Known concrete types that are OK to use directly
         let allowed_concrete = [
@@ -208,21 +210,12 @@ impl PatternValidator {
 
         // Provider trait names that should use Arc<dyn ...>
         // Note: "Handler" is excluded - handlers are typically final implementations
-        let provider_traits = [
-            "Provider",
-            "Service",
-            "Repository",
-            "Interface",
-        ];
+        let provider_traits = ["Provider", "Service", "Repository", "Interface"];
 
-        for crate_dir in self.get_crate_dirs()? {
-            let src_dir = crate_dir.join("src");
-            if !src_dir.exists() {
-                continue;
-            }
-
+        // Use get_scan_dirs() for proper handling of both crate-style and flat directories
+        for src_dir in self.config.get_scan_dirs()? {
             // Skip mcb-validate (contains test examples of bad patterns)
-            if crate_dir.ends_with("mcb-validate") {
+            if src_dir.to_string_lossy().contains("mcb-validate") {
                 continue;
             }
 
@@ -305,17 +298,14 @@ impl PatternValidator {
         let async_fn_pattern = Regex::new(r"async\s+fn\s+").expect("Invalid regex");
         let send_sync_pattern = Regex::new(r":\s*.*Send\s*\+\s*Sync").expect("Invalid regex");
         // Match both #[async_trait] and #[async_trait::async_trait]
-        let async_trait_attr = Regex::new(r"#\[(async_trait::)?async_trait\]").expect("Invalid regex");
+        let async_trait_attr =
+            Regex::new(r"#\[(async_trait::)?async_trait\]").expect("Invalid regex");
         // Rust 1.75+ native async trait support
         let allow_async_fn_trait =
             Regex::new(r"#\[allow\(async_fn_in_trait\)\]").expect("Invalid regex");
 
-        for crate_dir in self.get_crate_dirs()? {
-            let src_dir = crate_dir.join("src");
-            if !src_dir.exists() {
-                continue;
-            }
-
+        // Use get_scan_dirs() for proper handling of both crate-style and flat directories
+        for src_dir in self.config.get_scan_dirs()? {
             for entry in WalkDir::new(&src_dir)
                 .into_iter()
                 .filter_map(|e| e.ok())
@@ -339,8 +329,10 @@ impl PatternValidator {
                                 in_trait = true;
                             }
                             if in_trait {
-                                brace_depth += subsequent_line.chars().filter(|c| *c == '{').count();
-                                brace_depth -= subsequent_line.chars().filter(|c| *c == '}').count();
+                                brace_depth +=
+                                    subsequent_line.chars().filter(|c| *c == '{').count();
+                                brace_depth -=
+                                    subsequent_line.chars().filter(|c| *c == '}').count();
 
                                 if async_fn_pattern.is_match(subsequent_line) {
                                     has_async_methods = true;
@@ -407,21 +399,16 @@ impl PatternValidator {
         let mut violations = Vec::new();
 
         // Pattern to find std::result::Result usage
-        let std_result_pattern =
-            Regex::new(r"std::result::Result<").expect("Invalid regex");
+        let std_result_pattern = Regex::new(r"std::result::Result<").expect("Invalid regex");
 
         // Pattern to find Result<T, E> with explicit error type (not crate::Result)
         let explicit_result_pattern =
             Regex::new(r"Result<[^,]+,\s*([A-Za-z][A-Za-z0-9_:]+)>").expect("Invalid regex");
 
-        for crate_dir in self.get_crate_dirs()? {
-            let src_dir = crate_dir.join("src");
-            if !src_dir.exists() {
-                continue;
-            }
-
+        // Use get_scan_dirs() for proper handling of both crate-style and flat directories
+        for src_dir in self.config.get_scan_dirs()? {
             // Skip mcb-validate itself
-            if crate_dir.ends_with("mcb-validate") {
+            if src_dir.to_string_lossy().contains("mcb-validate") {
                 continue;
             }
 
@@ -489,19 +476,13 @@ impl PatternValidator {
     }
 
     fn get_crate_dirs(&self) -> Result<Vec<PathBuf>> {
-        let crates_dir = self.workspace_root.join("crates");
-        if !crates_dir.exists() {
-            return Ok(Vec::new());
-        }
+        self.config.get_source_dirs()
+    }
 
-        let mut dirs = Vec::new();
-        for entry in std::fs::read_dir(&crates_dir)? {
-            let entry = entry?;
-            if entry.file_type()?.is_dir() {
-                dirs.push(entry.path());
-            }
-        }
-        Ok(dirs)
+    /// Check if a path is from legacy/additional source directories
+    #[allow(dead_code)]
+    fn is_legacy_path(&self, path: &std::path::Path) -> bool {
+        self.config.is_legacy_path(path)
     }
 }
 

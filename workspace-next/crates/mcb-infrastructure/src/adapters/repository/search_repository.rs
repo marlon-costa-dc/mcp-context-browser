@@ -17,7 +17,7 @@ use async_trait::async_trait;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
-// TODO: Import HybridSearchEngine when hybrid_search module is migrated (Phase 1.5)
+// NOTE: HybridSearchEngine integration pending - see hybrid_search module
 // use crate::adapters::hybrid_search::HybridSearchEngine;
 
 /// Vector store backed search repository with hybrid search support
@@ -27,7 +27,7 @@ pub struct VectorStoreSearchRepository {
     /// Provider for vector storage operations
     #[shaku(inject)]
     vector_store_provider: Arc<dyn VectorStoreProvider>,
-    // TODO: Add hybrid engine when migrated (Phase 1.5)
+    // NOTE: Hybrid engine field commented out - enable when integration is ready
     // #[shaku(default = Arc::new(RwLock::new(HybridSearchEngine::new(0.3, 0.7))))]
     // hybrid_engine: Arc<RwLock<HybridSearchEngine>>,
     /// Search statistics tracker
@@ -62,7 +62,7 @@ impl VectorStoreSearchRepository {
     pub fn new(vector_store_provider: Arc<dyn VectorStoreProvider>) -> Self {
         Self {
             vector_store_provider,
-            // TODO: Initialize hybrid engine when migrated
+            // NOTE: Hybrid engine initialization skipped for now
             stats: SearchStatsTracker::default(),
         }
     }
@@ -97,7 +97,7 @@ impl SearchRepository for VectorStoreSearchRepository {
     }
 
     async fn index_for_hybrid_search(&self, chunks: &[CodeChunk]) -> Result<()> {
-        // TODO: Implement when HybridSearchEngine is migrated (Phase 1.5)
+        // NOTE: Full hybrid indexing will be implemented when integration is complete
         // For now, just track the document count
         self.stats
             .indexed_documents
@@ -115,7 +115,7 @@ impl SearchRepository for VectorStoreSearchRepository {
         let timer = TimedOperation::start();
         self.stats.total_queries.fetch_add(1, Ordering::Relaxed);
 
-        // TODO: Implement proper hybrid search when HybridSearchEngine is migrated
+        // NOTE: Currently falls back to semantic search only
         // For now, fall back to pure semantic search
         let results = self
             .semantic_search(collection, query_vector, limit, None)
@@ -140,7 +140,7 @@ impl SearchRepository for VectorStoreSearchRepository {
                 .await?;
         }
 
-        // TODO: Clear hybrid engine when migrated
+        // NOTE: Hybrid engine clear will be added when integration is complete
         self.stats.indexed_documents.store(0, Ordering::Relaxed);
         Ok(())
     }

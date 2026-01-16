@@ -5,14 +5,95 @@ use serde_json::Value;
 use shaku::Interface;
 use std::collections::HashMap;
 
+/// Vector Store Administrative Operations
+///
+/// Defines administrative and monitoring operations for vector stores.
+/// This trait is separated to keep trait sizes manageable per SOLID principles.
+///
+/// # Example
+///
+/// ```ignore
+/// use mcb_domain::ports::providers::VectorStoreAdmin;
+///
+/// // Check if a collection exists
+/// if provider.collection_exists("code_embeddings").await? {
+///     let stats = provider.get_stats("code_embeddings").await?;
+///     println!("Collection has {} vectors", stats["total_count"]);
+///
+///     // Flush pending writes
+///     provider.flush("code_embeddings").await?;
+/// }
+/// ```
+#[async_trait]
+pub trait VectorStoreAdmin: Send + Sync {
+    /// Check if a collection exists
+    ///
+    /// # Arguments
+    /// * `name` - Name of the collection to check
+    ///
+    /// # Returns
+    /// Ok(true) if collection exists, Ok(false) if it doesn't exist, Error if check failed
+    async fn collection_exists(&self, name: &str) -> Result<bool>;
+
+    /// Get statistics about a collection
+    ///
+    /// # Arguments
+    /// * `collection` - Name of the collection to get stats for
+    ///
+    /// # Returns
+    /// Ok(hashmap) containing various statistics about the collection
+    async fn get_stats(&self, collection: &str) -> Result<HashMap<String, Value>>;
+
+    /// Flush pending operations for a collection
+    ///
+    /// # Arguments
+    /// * `collection` - Name of the collection to flush
+    ///
+    /// # Returns
+    /// Ok(()) if flush completed successfully, Error if flush failed
+    async fn flush(&self, collection: &str) -> Result<()>;
+
+    /// Get the name/identifier of this vector store provider
+    ///
+    /// # Returns
+    /// A string identifier for the provider (e.g., "milvus", "edgevec", "null")
+    fn provider_name(&self) -> &str;
+
+    /// Health check for the provider (default implementation)
+    async fn health_check(&self) -> Result<()> {
+        // Default implementation - try a simple operation
+        self.collection_exists("__health_check__").await?;
+        Ok(())
+    }
+}
+
 /// Enterprise Vector Storage Interface
 ///
 /// Defines the business contract for vector storage systems that persist and
 /// retrieve semantic embeddings at enterprise scale. This abstraction supports
 /// multiple storage backends from in-memory development stores to production
 /// Milvus clusters, ensuring optimal performance for different business needs.
+///
+/// # Example
+///
+/// ```ignore
+/// use mcb_domain::ports::providers::VectorStoreProvider;
+///
+/// // Create a collection for code embeddings
+/// provider.create_collection("rust_code", 1536).await?;
+///
+/// // Insert vectors with metadata
+/// let metadata = vec![hashmap!{ "file_path" => "src/main.rs".into() }];
+/// let ids = provider.insert_vectors("rust_code", &embeddings, metadata).await?;
+///
+/// // Search for similar code
+/// let results = provider.search_similar("rust_code", &query_vec, 10, None).await?;
+/// for result in results {
+///     println!("Found: {} (score: {})", result.file_path, result.score);
+/// }
+/// ```
 #[async_trait]
-pub trait VectorStoreProvider: Interface + Send + Sync {
+pub trait VectorStoreProvider: Interface + VectorStoreAdmin + Send + Sync {
     /// Create a new vector collection with specified dimensions
     ///
     /// # Arguments
@@ -31,15 +112,6 @@ pub trait VectorStoreProvider: Interface + Send + Sync {
     /// # Returns
     /// Ok(()) if collection was deleted successfully, Error if deletion failed
     async fn delete_collection(&self, name: &str) -> Result<()>;
-
-    /// Check if a collection exists
-    ///
-    /// # Arguments
-    /// * `name` - Name of the collection to check
-    ///
-    /// # Returns
-    /// Ok(true) if collection exists, Ok(false) if it doesn't exist, Error if check failed
-    async fn collection_exists(&self, name: &str) -> Result<bool>;
 
     /// Insert vectors into a collection with associated metadata
     ///
@@ -108,35 +180,4 @@ pub trait VectorStoreProvider: Interface + Send + Sync {
     /// # Returns
     /// Ok(vector_of_results) containing the vectors in the collection
     async fn list_vectors(&self, collection: &str, limit: usize) -> Result<Vec<SearchResult>>;
-
-    /// Get statistics about a collection
-    ///
-    /// # Arguments
-    /// * `collection` - Name of the collection to get stats for
-    ///
-    /// # Returns
-    /// Ok(hashmap) containing various statistics about the collection
-    async fn get_stats(&self, collection: &str) -> Result<HashMap<String, Value>>;
-
-    /// Flush pending operations for a collection
-    ///
-    /// # Arguments
-    /// * `collection` - Name of the collection to flush
-    ///
-    /// # Returns
-    /// Ok(()) if flush completed successfully, Error if flush failed
-    async fn flush(&self, collection: &str) -> Result<()>;
-
-    /// Get the name/identifier of this vector store provider
-    ///
-    /// # Returns
-    /// A string identifier for the provider (e.g., "milvus", "edgevec", "null")
-    fn provider_name(&self) -> &str;
-
-    /// Health check for the provider (default implementation)
-    async fn health_check(&self) -> Result<()> {
-        // Default implementation - try a simple operation
-        self.collection_exists("__health_check__").await?;
-        Ok(())
-    }
 }

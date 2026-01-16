@@ -16,6 +16,12 @@ rust-version = "1.89"
 # Domain layer - re-exported for public API
 mcb-domain = { path = "../mcb-domain" }
 
+# Server layer - re-exported for run_server entry point
+mcb-server = { path = "../mcb-server" }
+
+# Infrastructure layer - re-exported for DI container
+mcb-infrastructure = { path = "../mcb-infrastructure" }
+
 # Re-export for doc examples
 serde_json = { workspace = true }
 

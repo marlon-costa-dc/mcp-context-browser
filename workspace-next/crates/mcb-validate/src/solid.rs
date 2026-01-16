@@ -7,7 +7,7 @@
 //! - ISP: Interface Segregation Principle (large traits)
 //! - DIP: Dependency Inversion Principle (concrete dependencies)
 
-use crate::{Result, Severity};
+use crate::{Result, Severity, ValidationConfig};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -21,6 +21,9 @@ pub const MAX_STRUCT_LINES: usize = 200;
 
 /// Maximum match arms before warning (OCP)
 pub const MAX_MATCH_ARMS: usize = 10;
+
+/// Maximum methods for a single impl block (SRP)
+pub const MAX_IMPL_METHODS: usize = 15;
 
 /// SOLID violation types
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -84,6 +87,26 @@ pub enum SolidViolation {
         method_name: String,
         severity: Severity,
     },
+
+    /// SRP: Impl block has too many methods
+    ImplTooManyMethods {
+        file: PathBuf,
+        line: usize,
+        type_name: String,
+        method_count: usize,
+        max_allowed: usize,
+        suggestion: String,
+        severity: Severity,
+    },
+
+    /// OCP: String-based type dispatch instead of polymorphism
+    StringBasedDispatch {
+        file: PathBuf,
+        line: usize,
+        match_expression: String,
+        suggestion: String,
+        severity: Severity,
+    },
 }
 
 impl SolidViolation {
@@ -95,6 +118,8 @@ impl SolidViolation {
             Self::ConcreteDependency { severity, .. } => *severity,
             Self::MultipleUnrelatedStructs { severity, .. } => *severity,
             Self::PartialTraitImplementation { severity, .. } => *severity,
+            Self::ImplTooManyMethods { severity, .. } => *severity,
+            Self::StringBasedDispatch { severity, .. } => *severity,
         }
     }
 }
@@ -210,26 +235,69 @@ impl std::fmt::Display for SolidViolation {
                     method_name
                 )
             }
+            Self::ImplTooManyMethods {
+                file,
+                line,
+                type_name,
+                method_count,
+                max_allowed,
+                suggestion,
+                ..
+            } => {
+                write!(
+                    f,
+                    "SRP: Impl {} has too many methods: {}:{} ({} methods, max: {}) - {}",
+                    type_name,
+                    file.display(),
+                    line,
+                    method_count,
+                    max_allowed,
+                    suggestion
+                )
+            }
+            Self::StringBasedDispatch {
+                file,
+                line,
+                match_expression,
+                suggestion,
+                ..
+            } => {
+                write!(
+                    f,
+                    "OCP: String-based dispatch: {}:{} - {} - {}",
+                    file.display(),
+                    line,
+                    match_expression,
+                    suggestion
+                )
+            }
         }
     }
 }
 
 /// SOLID principles validator
 pub struct SolidValidator {
-    workspace_root: PathBuf,
+    config: ValidationConfig,
     max_trait_methods: usize,
     max_struct_lines: usize,
     max_match_arms: usize,
+    max_impl_methods: usize,
 }
 
 impl SolidValidator {
     /// Create a new SOLID validator
     pub fn new(workspace_root: impl Into<PathBuf>) -> Self {
+        Self::with_config(ValidationConfig::new(workspace_root))
+    }
+
+    /// Create a validator with custom configuration for multi-directory support
+    pub fn with_config(config: ValidationConfig) -> Self {
         Self {
-            workspace_root: workspace_root.into(),
+            config,
             max_trait_methods: MAX_TRAIT_METHODS,
             max_struct_lines: MAX_STRUCT_LINES,
             max_match_arms: MAX_MATCH_ARMS,
+            max_impl_methods: MAX_IMPL_METHODS,
         }
     }
 
@@ -240,6 +308,8 @@ impl SolidValidator {
         violations.extend(self.validate_ocp()?);
         violations.extend(self.validate_isp()?);
         violations.extend(self.validate_lsp()?);
+        violations.extend(self.validate_impl_method_count()?);
+        violations.extend(self.validate_string_dispatch()?);
         Ok(violations)
     }
 
@@ -247,7 +317,8 @@ impl SolidValidator {
     pub fn validate_srp(&self) -> Result<Vec<SolidViolation>> {
         let mut violations = Vec::new();
         let impl_pattern = Regex::new(r"impl(?:<[^>]*>)?\s+(?:([A-Z][a-zA-Z0-9_]*)|[A-Z][a-zA-Z0-9_]*\s+for\s+([A-Z][a-zA-Z0-9_]*))").expect("Invalid regex");
-        let struct_pattern = Regex::new(r"(?:pub\s+)?struct\s+([A-Z][a-zA-Z0-9_]*)").expect("Invalid regex");
+        let struct_pattern =
+            Regex::new(r"(?:pub\s+)?struct\s+([A-Z][a-zA-Z0-9_]*)").expect("Invalid regex");
 
         for crate_dir in self.get_crate_dirs()? {
             let src_dir = crate_dir.join("src");
@@ -260,6 +331,22 @@ impl SolidValidator {
                 .filter_map(|e| e.ok())
                 .filter(|e| e.path().extension().is_some_and(|ext| ext == "rs"))
             {
+                let file_name = entry
+                    .path()
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("");
+
+                // Skip files that typically have multiple related structs
+                let is_collection_file = file_name == "types.rs"
+                    || file_name == "models.rs"
+                    || file_name == "args.rs"
+                    || file_name == "handlers.rs"
+                    || file_name == "responses.rs"
+                    || file_name == "requests.rs"
+                    || file_name == "dto.rs"
+                    || file_name == "entities.rs";
+
                 let content = std::fs::read_to_string(entry.path())?;
                 let lines: Vec<&str> = content.lines().collect();
 
@@ -288,7 +375,8 @@ impl SolidValidator {
                                 item_name: name.to_string(),
                                 line_count: block_lines,
                                 max_allowed: self.max_struct_lines,
-                                suggestion: "Consider splitting into smaller, focused impl blocks".to_string(),
+                                suggestion: "Consider splitting into smaller, focused impl blocks"
+                                    .to_string(),
                                 severity: Severity::Warning,
                             });
                         }
@@ -296,8 +384,10 @@ impl SolidValidator {
                 }
 
                 // Check if file has many unrelated structs (potential SRP violation)
-                if structs_in_file.len() > 3 {
-                    let struct_names: Vec<String> = structs_in_file.iter().map(|(n, _)| n.clone()).collect();
+                // Skip collection files which intentionally group related types
+                if structs_in_file.len() > 3 && !is_collection_file {
+                    let struct_names: Vec<String> =
+                        structs_in_file.iter().map(|(n, _)| n.clone()).collect();
 
                     // Check if structs seem unrelated (different prefixes/suffixes)
                     if !self.structs_seem_related(&struct_names) {
@@ -360,8 +450,10 @@ impl SolidValidator {
     /// ISP: Check for traits with too many methods
     pub fn validate_isp(&self) -> Result<Vec<SolidViolation>> {
         let mut violations = Vec::new();
-        let trait_pattern = Regex::new(r"(?:pub\s+)?trait\s+([A-Z][a-zA-Z0-9_]*)").expect("Invalid regex");
-        let fn_pattern = Regex::new(r"(?:async\s+)?fn\s+[a-z_][a-z0-9_]*\s*[<(]").expect("Invalid regex");
+        let trait_pattern =
+            Regex::new(r"(?:pub\s+)?trait\s+([A-Z][a-zA-Z0-9_]*)").expect("Invalid regex");
+        let fn_pattern =
+            Regex::new(r"(?:async\s+)?fn\s+[a-z_][a-z0-9_]*\s*[<(]").expect("Invalid regex");
 
         for crate_dir in self.get_crate_dirs()? {
             let src_dir = crate_dir.join("src");
@@ -391,7 +483,8 @@ impl SolidValidator {
                                 trait_name: trait_name.to_string(),
                                 method_count,
                                 max_allowed: self.max_trait_methods,
-                                suggestion: "Consider splitting into smaller, focused traits".to_string(),
+                                suggestion: "Consider splitting into smaller, focused traits"
+                                    .to_string(),
                                 severity: Severity::Warning,
                             });
                         }
@@ -406,9 +499,12 @@ impl SolidValidator {
     /// LSP: Check for partial trait implementations (panic!/todo! in trait methods)
     pub fn validate_lsp(&self) -> Result<Vec<SolidViolation>> {
         let mut violations = Vec::new();
-        let impl_for_pattern = Regex::new(r"impl(?:<[^>]*>)?\s+([A-Z][a-zA-Z0-9_]*)\s+for\s+([A-Z][a-zA-Z0-9_]*)").expect("Invalid regex");
+        let impl_for_pattern =
+            Regex::new(r"impl(?:<[^>]*>)?\s+([A-Z][a-zA-Z0-9_]*)\s+for\s+([A-Z][a-zA-Z0-9_]*)")
+                .expect("Invalid regex");
         let fn_pattern = Regex::new(r"fn\s+([a-z_][a-z0-9_]*)\s*[<(]").expect("Invalid regex");
-        let panic_todo_pattern = Regex::new(r"(panic!|todo!|unimplemented!)").expect("Invalid regex");
+        let panic_todo_pattern =
+            Regex::new(r"(panic!|todo!|unimplemented!)").expect("Invalid regex");
 
         for crate_dir in self.get_crate_dirs()? {
             let src_dir = crate_dir.join("src");
@@ -444,20 +540,24 @@ impl SolidValidator {
 
                                 // Track current method
                                 if let Some(fn_cap) = fn_pattern.captures(impl_line) {
-                                    let method_name = fn_cap.get(1).map(|m| m.as_str()).unwrap_or("");
-                                    current_method = Some((method_name.to_string(), line_num + idx + 1));
+                                    let method_name =
+                                        fn_cap.get(1).map(|m| m.as_str()).unwrap_or("");
+                                    current_method =
+                                        Some((method_name.to_string(), line_num + idx + 1));
                                 }
 
                                 // Check for panic!/todo! in method body
                                 if let Some((ref method_name, method_line)) = current_method {
                                     if panic_todo_pattern.is_match(impl_line) {
-                                        violations.push(SolidViolation::PartialTraitImplementation {
-                                            file: entry.path().to_path_buf(),
-                                            line: method_line,
-                                            impl_name: format!("{}::{}", impl_name, trait_name),
-                                            method_name: method_name.clone(),
-                                            severity: Severity::Warning,
-                                        });
+                                        violations.push(
+                                            SolidViolation::PartialTraitImplementation {
+                                                file: entry.path().to_path_buf(),
+                                                line: method_line,
+                                                impl_name: format!("{}::{}", impl_name, trait_name),
+                                                method_name: method_name.clone(),
+                                                severity: Severity::Warning,
+                                            },
+                                        );
                                         current_method = None; // Don't report same method twice
                                     }
                                 }
@@ -473,6 +573,187 @@ impl SolidValidator {
         }
 
         Ok(violations)
+    }
+
+    /// SRP: Check for impl blocks with too many methods
+    pub fn validate_impl_method_count(&self) -> Result<Vec<SolidViolation>> {
+        let mut violations = Vec::new();
+        let impl_pattern =
+            Regex::new(r"impl(?:<[^>]*>)?\s+([A-Z][a-zA-Z0-9_]*)").expect("Invalid regex");
+        let fn_pattern =
+            Regex::new(r"(?:pub\s+)?(?:async\s+)?fn\s+[a-z_][a-z0-9_]*\s*[<(]").expect("Invalid regex");
+
+        for crate_dir in self.get_crate_dirs()? {
+            let src_dir = crate_dir.join("src");
+            if !src_dir.exists() {
+                continue;
+            }
+
+            for entry in WalkDir::new(&src_dir)
+                .into_iter()
+                .filter_map(|e| e.ok())
+                .filter(|e| e.path().extension().is_some_and(|ext| ext == "rs"))
+            {
+                let content = std::fs::read_to_string(entry.path())?;
+                let lines: Vec<&str> = content.lines().collect();
+
+                for (line_num, line) in lines.iter().enumerate() {
+                    // Skip impl Trait for Type (already checked in ISP)
+                    if line.contains(" for ") {
+                        continue;
+                    }
+
+                    if let Some(cap) = impl_pattern.captures(line) {
+                        let type_name = cap.get(1).map(|m| m.as_str()).unwrap_or("");
+
+                        // Count methods in impl block
+                        let method_count = self.count_impl_methods(&lines, line_num, &fn_pattern);
+
+                        if method_count > self.max_impl_methods {
+                            violations.push(SolidViolation::ImplTooManyMethods {
+                                file: entry.path().to_path_buf(),
+                                line: line_num + 1,
+                                type_name: type_name.to_string(),
+                                method_count,
+                                max_allowed: self.max_impl_methods,
+                                suggestion: "Consider splitting into smaller, focused impl blocks or extracting to traits".to_string(),
+                                severity: Severity::Warning,
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(violations)
+    }
+
+    /// OCP: Check for string-based type dispatch
+    pub fn validate_string_dispatch(&self) -> Result<Vec<SolidViolation>> {
+        let mut violations = Vec::new();
+        // Pattern: match on .as_str() or match with string literals
+        let string_match_pattern =
+            Regex::new(r#"match\s+\w+\.as_str\(\)|match\s+[&]?\w+\s*\{\s*"[^"]+"\s*=>"#)
+                .expect("Invalid regex");
+        let string_arm_pattern =
+            Regex::new(r#"^\s*"[^"]+"\s*=>"#).expect("Invalid regex");
+
+        for crate_dir in self.get_crate_dirs()? {
+            let src_dir = crate_dir.join("src");
+            if !src_dir.exists() {
+                continue;
+            }
+
+            for entry in WalkDir::new(&src_dir)
+                .into_iter()
+                .filter_map(|e| e.ok())
+                .filter(|e| e.path().extension().is_some_and(|ext| ext == "rs"))
+            {
+                let content = std::fs::read_to_string(entry.path())?;
+                let lines: Vec<&str> = content.lines().collect();
+
+                // Track test modules to skip
+                let mut in_test_module = false;
+                let mut test_brace_depth: i32 = 0;
+                let mut brace_depth: i32 = 0;
+
+                for (line_num, line) in lines.iter().enumerate() {
+                    let trimmed = line.trim();
+
+                    // Track test module boundaries
+                    if trimmed.contains("#[cfg(test)]") {
+                        in_test_module = true;
+                        test_brace_depth = brace_depth;
+                    }
+
+                    // Track brace depth
+                    brace_depth += line.chars().filter(|c| *c == '{').count() as i32;
+                    brace_depth -= line.chars().filter(|c| *c == '}').count() as i32;
+
+                    // Exit test module when braces close (use < not <= to avoid premature exit)
+                    if in_test_module && brace_depth < test_brace_depth {
+                        in_test_module = false;
+                    }
+
+                    // Skip test modules
+                    if in_test_module {
+                        continue;
+                    }
+
+                    // Check for string-based match dispatch
+                    if string_match_pattern.is_match(line) {
+                        // Count string arms in the match
+                        let string_arm_count = self.count_string_match_arms(&lines, line_num, &string_arm_pattern);
+
+                        if string_arm_count >= 3 {
+                            violations.push(SolidViolation::StringBasedDispatch {
+                                file: entry.path().to_path_buf(),
+                                line: line_num + 1,
+                                match_expression: trimmed.chars().take(60).collect(),
+                                suggestion: "Consider using enum types with FromStr or a registry pattern".to_string(),
+                                severity: Severity::Info,
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(violations)
+    }
+
+    /// Count methods in an impl block
+    fn count_impl_methods(&self, lines: &[&str], start_line: usize, fn_pattern: &Regex) -> usize {
+        let mut brace_depth = 0;
+        let mut in_impl = false;
+        let mut method_count = 0;
+
+        for line in &lines[start_line..] {
+            if line.contains('{') {
+                in_impl = true;
+            }
+            if in_impl {
+                brace_depth += line.chars().filter(|c| *c == '{').count();
+                brace_depth -= line.chars().filter(|c| *c == '}').count();
+
+                if fn_pattern.is_match(line) {
+                    method_count += 1;
+                }
+
+                if brace_depth == 0 {
+                    break;
+                }
+            }
+        }
+
+        method_count
+    }
+
+    /// Count string match arms
+    fn count_string_match_arms(&self, lines: &[&str], start_line: usize, string_arm_pattern: &Regex) -> usize {
+        let mut brace_depth = 0;
+        let mut in_match = false;
+        let mut arm_count = 0;
+
+        for line in &lines[start_line..] {
+            if line.contains('{') {
+                in_match = true;
+            }
+            if in_match {
+                brace_depth += line.chars().filter(|c| *c == '{').count();
+                brace_depth -= line.chars().filter(|c| *c == '}').count();
+
+                if string_arm_pattern.is_match(line) {
+                    arm_count += 1;
+                }
+
+                if brace_depth == 0 {
+                    break;
+                }
+            }
+        }
+
+        arm_count
     }
 
     /// Count lines in a code block (impl, struct, etc.)
@@ -578,12 +859,102 @@ impl SolidValidator {
             }
         }
 
-        // Check for common keywords
-        let keywords = ["Config", "Options", "Settings", "Error", "Result", "Builder", "Handler", "Provider", "Service"];
-        for keyword in keywords {
+        // Check for common domain keywords (most structs contain one of these)
+        let domain_keywords = [
+            "Config",
+            "Options",
+            "Settings",
+            "Error",
+            "Result",
+            "Builder",
+            "Handler",
+            "Provider",
+            "Service",
+            "Health",
+            "Crypto",
+            "Admin",
+            "Http",
+            "Args",
+            "Request",
+            "Response",
+            "State",
+            "Status",
+            "Info",
+            "Data",
+            "Message",
+            "Event",
+            "Token",
+            "Auth",
+            "Cache",
+            "Index",
+            "Search",
+            "Chunk",
+            "Embed",
+            "Vector",
+            "Transport",
+            "Operation",
+            "Mcp",
+            "Protocol",
+            "Server",
+            "Client",
+            "Connection",
+            "Session",
+            "Route",
+            "Endpoint",
+        ];
+
+        // Check if structs share related purpose suffixes (Config, State, Error, etc.)
+        let purpose_suffixes = [
+            "Config", "State", "Error", "Request", "Response", "Options", "Args",
+        ];
+        let prefix_count: usize = names
+            .iter()
+            .filter(|n| purpose_suffixes.iter().any(|suffix| n.ends_with(suffix)))
+            .count();
+        // If majority of structs have purpose suffixes, they're likely related
+        if prefix_count > names.len() / 2 {
+            return true;
+        }
+        for keyword in domain_keywords {
             let has_keyword: Vec<_> = names.iter().filter(|n| n.contains(keyword)).collect();
-            if has_keyword.len() == names.len() {
+            // If majority (>50%) of structs share a keyword, they're related
+            if has_keyword.len() > names.len() / 2 {
                 return true;
+            }
+        }
+
+        // Check for partial word overlaps (e.g., Validation and ValidationResult share "Validation")
+        let words: Vec<Vec<&str>> = names
+            .iter()
+            .map(|n| {
+                // Split CamelCase into words
+                let mut words = Vec::new();
+                let mut start = 0;
+                for (i, c) in n.char_indices() {
+                    if c.is_uppercase() && i > 0 {
+                        if start < i {
+                            words.push(&n[start..i]);
+                        }
+                        start = i;
+                    }
+                }
+                if start < n.len() {
+                    words.push(&n[start..]);
+                }
+                words
+            })
+            .collect();
+
+        // Count common words across all struct names
+        if let Some(first_words) = words.first() {
+            for word in first_words {
+                if word.len() >= 4 {
+                    // Only consider meaningful words (4+ chars)
+                    let count = words.iter().filter(|w| w.contains(word)).count();
+                    if count > names.len() / 2 {
+                        return true;
+                    }
+                }
             }
         }
 
@@ -591,23 +962,13 @@ impl SolidValidator {
     }
 
     fn get_crate_dirs(&self) -> Result<Vec<PathBuf>> {
-        let crates_dir = self.workspace_root.join("crates");
-        if !crates_dir.exists() {
-            return Ok(Vec::new());
-        }
+        self.config.get_source_dirs()
+    }
 
-        let mut dirs = Vec::new();
-        for entry in std::fs::read_dir(&crates_dir)? {
-            let entry = entry?;
-            if entry.file_type()?.is_dir() {
-                let name = entry.file_name();
-                let name_str = name.to_string_lossy();
-                if name_str != "mcb-validate" {
-                    dirs.push(entry.path());
-                }
-            }
-        }
-        Ok(dirs)
+    /// Check if a path is from legacy/additional source directories
+    #[allow(dead_code)]
+    fn is_legacy_path(&self, path: &std::path::Path) -> bool {
+        self.config.is_legacy_path(path)
     }
 }
 

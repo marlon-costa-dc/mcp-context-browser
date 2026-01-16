@@ -85,9 +85,18 @@ fn test_domain_event_variants() {
     // Just verify they can be created
     assert!(matches!(index_rebuild, DomainEvent::IndexRebuild { .. }));
     assert!(matches!(sync_completed, DomainEvent::SyncCompleted { .. }));
-    assert!(matches!(cache_invalidate, DomainEvent::CacheInvalidate { .. }));
-    assert!(matches!(snapshot_created, DomainEvent::SnapshotCreated { .. }));
-    assert!(matches!(file_changes, DomainEvent::FileChangesDetected { .. }));
+    assert!(matches!(
+        cache_invalidate,
+        DomainEvent::CacheInvalidate { .. }
+    ));
+    assert!(matches!(
+        snapshot_created,
+        DomainEvent::SnapshotCreated { .. }
+    ));
+    assert!(matches!(
+        file_changes,
+        DomainEvent::FileChangesDetected { .. }
+    ));
 }
 
 #[test]

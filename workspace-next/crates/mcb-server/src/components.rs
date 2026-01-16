@@ -1,12 +1,18 @@
-//! Server Components
+//! Server Components (Stub)
 //!
 //! Shared components and utilities for the server layer.
-//! Provides common functionality used across different server modules.
+//! Currently a placeholder - component management is handled by
+//! `InfrastructureComponents` and DI container.
+//!
+//! Future implementation may add:
+//! - Component lifecycle management
+//! - Hot reload support
+//! - Dynamic component registration
 
-/// Server component utilities
-pub struct ServerComponents {
-    // Placeholder for shared server components
-}
+#![allow(dead_code)]
+
+/// Server component utilities (placeholder)
+pub struct ServerComponents;
 
 impl Default for ServerComponents {
     fn default() -> Self {
@@ -17,6 +23,6 @@ impl Default for ServerComponents {
 impl ServerComponents {
     /// Create new server components
     pub fn new() -> Self {
-        Self {}
+        Self
     }
 }

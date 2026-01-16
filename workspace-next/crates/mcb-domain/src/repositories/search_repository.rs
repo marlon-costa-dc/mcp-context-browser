@@ -13,6 +13,25 @@ use shaku::Interface;
 ///
 /// Provides interfaces for semantic vector search and hybrid search
 /// that combines semantic similarity with keyword relevance.
+///
+/// # Example
+///
+/// ```ignore
+/// use mcb_domain::repositories::SearchRepository;
+///
+/// // Semantic search using embedding vector
+/// let results = repo.semantic_search("my-project", &query_vec, 10, None).await?;
+///
+/// // Hybrid search (semantic + BM25 keyword matching)
+/// let results = repo.hybrid_search("my-project", "async error handling", &query_vec, 10).await?;
+/// for result in results {
+///     println!("{}: score={:.3}", result.file_path, result.score);
+/// }
+///
+/// // Get search statistics
+/// let stats = repo.stats().await?;
+/// println!("Queries: {}, Avg time: {:.1}ms", stats.total_queries, stats.avg_response_time_ms);
+/// ```
 #[async_trait]
 pub trait SearchRepository: Interface + Send + Sync {
     /// Semantic search using vector similarity

@@ -277,6 +277,9 @@ pub const OPERATIONS_CLEANUP_INTERVAL_SECS: u64 = 3600;
 /// Operations tracking retention period in seconds (7 days)
 pub const OPERATIONS_RETENTION_SECS: u64 = 604800;
 
+/// Maximum number of operations to keep in memory
+pub const OPERATIONS_MAX_IN_MEMORY: usize = 10000;
+
 // ============================================================================
 // HEALTH CHECK CONSTANTS
 // ============================================================================
@@ -332,6 +335,163 @@ pub const EMBEDDING_DIMENSION_OLLAMA_DEFAULT: usize = 768;
 
 /// Gemini embedding dimension
 pub const EMBEDDING_DIMENSION_GEMINI: usize = 768;
+
+/// Default embedding dimension (for providers that don't specify)
+pub const EMBEDDING_DIMENSION_DEFAULT: usize = 512;
+
+// ============================================================================
+// NETWORK CONSTANTS
+// ============================================================================
+
+/// Redis default port
+pub const REDIS_DEFAULT_PORT: u16 = 6379;
+
+/// Admin service default port
+pub const ADMIN_SERVICE_DEFAULT_PORT: u16 = 3000;
+
+/// Ollama server default port
+pub const OLLAMA_DEFAULT_PORT: u16 = 11434;
+
+// ============================================================================
+// EMBEDDING PROVIDER API CONSTANTS
+// ============================================================================
+
+/// VoyageAI max input tokens
+pub const VOYAGEAI_MAX_INPUT_TOKENS: usize = 16000;
+
+/// VoyageAI max output tokens
+pub const VOYAGEAI_MAX_OUTPUT_TOKENS: usize = 16000;
+
+/// OpenAI token cache TTL in seconds (2 hours)
+pub const OPENAI_TOKEN_CACHE_TTL_SECS: u64 = 7200;
+
+/// OpenAI max tokens per request
+pub const OPENAI_MAX_TOKENS_PER_REQUEST: usize = 8191;
+
+/// Encrypted data padding alignment
+pub const ENCRYPTED_DATA_PADDING: usize = 256;
+
+// ============================================================================
+// HTTP HEADER CONSTANTS
+// ============================================================================
+
+/// Content-Type header name
+pub const HTTP_HEADER_CONTENT_TYPE: &str = "Content-Type";
+
+/// Accept header name
+pub const HTTP_HEADER_ACCEPT: &str = "Accept";
+
+/// User-Agent header name
+pub const HTTP_HEADER_USER_AGENT: &str = "User-Agent";
+
+/// JSON content type
+pub const CONTENT_TYPE_JSON: &str = "application/json";
+
+// ============================================================================
+// AST NODE TYPE CONSTANTS
+// ============================================================================
+
+/// Function definition AST node type
+pub const AST_NODE_FUNCTION_DEFINITION: &str = "function_definition";
+
+/// Function declaration AST node type
+pub const AST_NODE_FUNCTION_DECLARATION: &str = "function_declaration";
+
+/// Method declaration AST node type
+pub const AST_NODE_METHOD_DECLARATION: &str = "method_declaration";
+
+/// Class declaration AST node type
+pub const AST_NODE_CLASS_DECLARATION: &str = "class_declaration";
+
+/// Interface declaration AST node type
+pub const AST_NODE_INTERFACE_DECLARATION: &str = "interface_declaration";
+
+// ============================================================================
+// METADATA KEY CONSTANTS
+// ============================================================================
+
+/// Start line metadata key
+pub const METADATA_KEY_START_LINE: &str = "start_line";
+
+/// End line metadata key
+pub const METADATA_KEY_END_LINE: &str = "end_line";
+
+/// Chunk type metadata key
+pub const METADATA_KEY_CHUNK_TYPE: &str = "chunk_type";
+
+/// File path metadata key
+pub const METADATA_KEY_FILE_PATH: &str = "file_path";
+
+/// Vectors count metadata key
+pub const METADATA_KEY_VECTORS_COUNT: &str = "vectors_count";
+
+// ============================================================================
+// LANGUAGE CONSTANTS
+// ============================================================================
+
+/// JavaScript language identifier
+pub const LANG_JAVASCRIPT: &str = "javascript";
+
+/// TypeScript language identifier
+pub const LANG_TYPESCRIPT: &str = "typescript";
+
+/// Python language identifier
+pub const LANG_PYTHON: &str = "python";
+
+/// Rust language identifier
+pub const LANG_RUST: &str = "rust";
+
+// ============================================================================
+// ENVIRONMENT VARIABLE CONSTANTS
+// ============================================================================
+
+/// Cargo package version environment variable
+pub const ENV_CARGO_PKG_VERSION: &str = "CARGO_PKG_VERSION";
+
+// ============================================================================
+// ERROR MESSAGE CONSTANTS
+// ============================================================================
+
+/// Request timeout error message format
+pub const ERROR_MSG_REQUEST_TIMEOUT: &str = "Request timed out after {:?}";
+
+// ============================================================================
+// BM25 / HYBRID SEARCH CONSTANTS
+// ============================================================================
+
+/// BM25 k1 parameter - controls term frequency saturation (default: 1.2)
+pub const HYBRID_SEARCH_BM25_K1: f64 = 1.2;
+
+/// BM25 b parameter - controls document length normalization (default: 0.75)
+pub const HYBRID_SEARCH_BM25_B: f64 = 0.75;
+
+/// Minimum token length for BM25 tokenization
+pub const BM25_TOKEN_MIN_LENGTH: usize = 2;
+
+/// Default BM25 weight in hybrid search (0.4 = 40% keyword-based)
+pub const HYBRID_SEARCH_BM25_WEIGHT: f64 = 0.4;
+
+/// Default semantic weight in hybrid search (0.6 = 60% embedding-based)
+pub const HYBRID_SEARCH_SEMANTIC_WEIGHT: f64 = 0.6;
+
+/// Maximum number of results to retrieve from each search method before fusion
+pub const HYBRID_SEARCH_MAX_CANDIDATES: usize = 100;
+
+// ============================================================================
+// TREE-SITTER NODE TYPE CONSTANTS
+// ============================================================================
+
+/// Tree-sitter node type: function declaration (JS, Go, Swift, Kotlin)
+pub const TS_NODE_FUNCTION_DECLARATION: &str = "function_declaration";
+
+/// Tree-sitter node type: function definition (Python, C, C++, PHP)
+pub const TS_NODE_FUNCTION_DEFINITION: &str = "function_definition";
+
+/// Tree-sitter node type: method declaration (Go, Java, C#, PHP)
+pub const TS_NODE_METHOD_DECLARATION: &str = "method_declaration";
+
+/// Tree-sitter node type: class declaration (JS, Java, C#, PHP, Swift, Kotlin)
+pub const TS_NODE_CLASS_DECLARATION: &str = "class_declaration";
 
 // Re-export domain constants for convenience
 pub use mcb_domain::constants::*;

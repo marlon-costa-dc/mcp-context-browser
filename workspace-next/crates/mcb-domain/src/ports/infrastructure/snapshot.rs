@@ -19,6 +19,23 @@ use std::time::Duration;
 /// Sync Provider Interface
 ///
 /// Defines the contract for codebase synchronization operations.
+///
+/// # Example
+///
+/// ```ignore
+/// use mcb_domain::ports::infrastructure::SyncProvider;
+///
+/// // Check if sync should be debounced (too recent)
+/// if !sync.should_debounce(&codebase_path).await? {
+///     // Acquire a sync slot from the queue
+///     if let Some(batch) = sync.acquire_sync_slot(&codebase_path).await? {
+///         let changed = sync.get_changed_files(&codebase_path).await?;
+///         // Process changed files...
+///         sync.release_sync_slot(&codebase_path, batch).await?;
+///         sync.update_last_sync(&codebase_path).await;
+///     }
+/// }
+/// ```
 #[async_trait]
 pub trait SyncProvider: Interface + Send + Sync {
     /// Check if codebase should be debounced (synced too recently)
@@ -52,6 +69,24 @@ pub trait SyncProvider: Interface + Send + Sync {
 /// Defines the contract for codebase snapshot and change tracking operations.
 /// Snapshots capture the state of files (paths, sizes, modification times, hashes)
 /// to detect what has changed between indexing runs.
+///
+/// # Example
+///
+/// ```ignore
+/// use mcb_domain::ports::infrastructure::SnapshotProvider;
+///
+/// // Create a new snapshot of the codebase
+/// let new_snapshot = snapshot.create_snapshot(&project_path).await?;
+///
+/// // Load previous snapshot and compare
+/// if let Some(old_snapshot) = snapshot.load_snapshot(&project_path).await? {
+///     let changes = snapshot.compare_snapshots(&old_snapshot, &new_snapshot).await?;
+///     println!("Added: {}, Modified: {}", changes.added.len(), changes.modified.len());
+/// }
+///
+/// // Shortcut: get files needing re-indexing
+/// let changed_files = snapshot.get_changed_files(&project_path).await?;
+/// ```
 #[async_trait]
 pub trait SnapshotProvider: Interface + Send + Sync {
     /// Create a new snapshot for a codebase

@@ -6,7 +6,7 @@
 //! - File size limits (500 lines)
 //! - TODO/FIXME comment detection
 
-use crate::{Result, Severity};
+use crate::{Result, Severity, ValidationConfig};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -74,7 +74,10 @@ impl std::fmt::Display for QualityViolation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::UnwrapInProduction {
-                file, line, context, ..
+                file,
+                line,
+                context,
+                ..
             } => {
                 write!(
                     f,
@@ -85,7 +88,10 @@ impl std::fmt::Display for QualityViolation {
                 )
             }
             Self::ExpectInProduction {
-                file, line, context, ..
+                file,
+                line,
+                context,
+                ..
             } => {
                 write!(
                     f,
@@ -96,7 +102,10 @@ impl std::fmt::Display for QualityViolation {
                 )
             }
             Self::PanicInProduction {
-                file, line, context, ..
+                file,
+                line,
+                context,
+                ..
             } => {
                 write!(
                     f,
@@ -134,15 +143,20 @@ impl std::fmt::Display for QualityViolation {
 
 /// Quality validator
 pub struct QualityValidator {
-    workspace_root: PathBuf,
+    config: ValidationConfig,
     max_file_lines: usize,
 }
 
 impl QualityValidator {
     /// Create a new quality validator
     pub fn new(workspace_root: impl Into<PathBuf>) -> Self {
+        Self::with_config(ValidationConfig::new(workspace_root))
+    }
+
+    /// Create a validator with custom configuration for multi-directory support
+    pub fn with_config(config: ValidationConfig) -> Self {
         Self {
-            workspace_root: workspace_root.into(),
+            config,
             max_file_lines: MAX_FILE_LINES,
         }
     }
@@ -174,12 +188,8 @@ impl QualityValidator {
             Regex::new(r"\.unwrap_or_default\(").expect("Invalid regex"),
         ];
 
-        for crate_dir in self.get_crate_dirs()? {
-            let src_dir = crate_dir.join("src");
-            if !src_dir.exists() {
-                continue;
-            }
-
+        // Use get_scan_dirs() for proper handling of both crate-style and flat directories
+        for src_dir in self.config.get_scan_dirs()? {
             for entry in WalkDir::new(&src_dir)
                 .into_iter()
                 .filter_map(|e| e.ok())
@@ -271,12 +281,8 @@ impl QualityValidator {
         let mut violations = Vec::new();
         let panic_pattern = Regex::new(r"panic!\s*\(").expect("Invalid regex");
 
-        for crate_dir in self.get_crate_dirs()? {
-            let src_dir = crate_dir.join("src");
-            if !src_dir.exists() {
-                continue;
-            }
-
+        // Use get_scan_dirs() for proper handling of both crate-style and flat directories
+        for src_dir in self.config.get_scan_dirs()? {
             for entry in WalkDir::new(&src_dir)
                 .into_iter()
                 .filter_map(|e| e.ok())
@@ -323,12 +329,8 @@ impl QualityValidator {
     pub fn validate_file_sizes(&self) -> Result<Vec<QualityViolation>> {
         let mut violations = Vec::new();
 
-        for crate_dir in self.get_crate_dirs()? {
-            let src_dir = crate_dir.join("src");
-            if !src_dir.exists() {
-                continue;
-            }
-
+        // Use get_scan_dirs() for proper handling of both crate-style and flat directories
+        for src_dir in self.config.get_scan_dirs()? {
             for entry in WalkDir::new(&src_dir)
                 .into_iter()
                 .filter_map(|e| e.ok())
@@ -354,14 +356,11 @@ impl QualityValidator {
     /// Find TODO/FIXME comments
     pub fn find_todo_comments(&self) -> Result<Vec<QualityViolation>> {
         let mut violations = Vec::new();
-        let todo_pattern = Regex::new(r"(?i)(TODO|FIXME|XXX|HACK):?\s*(.*)").expect("Invalid regex");
+        let todo_pattern =
+            Regex::new(r"(?i)(TODO|FIXME|XXX|HACK):?\s*(.*)").expect("Invalid regex");
 
-        for crate_dir in self.get_crate_dirs()? {
-            let src_dir = crate_dir.join("src");
-            if !src_dir.exists() {
-                continue;
-            }
-
+        // Use get_scan_dirs() for proper handling of both crate-style and flat directories
+        for src_dir in self.config.get_scan_dirs()? {
             for entry in WalkDir::new(&src_dir)
                 .into_iter()
                 .filter_map(|e| e.ok())
@@ -389,24 +388,13 @@ impl QualityValidator {
     }
 
     fn get_crate_dirs(&self) -> Result<Vec<PathBuf>> {
-        let crates_dir = self.workspace_root.join("crates");
-        if !crates_dir.exists() {
-            return Ok(Vec::new());
-        }
+        self.config.get_source_dirs()
+    }
 
-        let mut dirs = Vec::new();
-        for entry in std::fs::read_dir(&crates_dir)? {
-            let entry = entry?;
-            if entry.file_type()?.is_dir() {
-                let name = entry.file_name();
-                let name_str = name.to_string_lossy();
-                // Skip the validation crate itself
-                if name_str != "mcb-validate" {
-                    dirs.push(entry.path());
-                }
-            }
-        }
-        Ok(dirs)
+    /// Check if a path is from legacy/additional source directories
+    #[allow(dead_code)]
+    fn is_legacy_path(&self, path: &std::path::Path) -> bool {
+        self.config.is_legacy_path(path)
     }
 }
 
@@ -526,7 +514,9 @@ mod tests {
     #[test]
     fn test_file_size_validation() {
         let temp = TempDir::new().unwrap();
-        let content = (0..600).map(|i| format!("// line {}\n", i)).collect::<String>();
+        let content = (0..600)
+            .map(|i| format!("// line {}\n", i))
+            .collect::<String>();
         create_test_crate(&temp, "mcb-test", &content);
 
         let validator = QualityValidator::new(temp.path());

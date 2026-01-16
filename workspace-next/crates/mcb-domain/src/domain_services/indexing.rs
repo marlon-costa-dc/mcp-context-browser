@@ -19,6 +19,25 @@ use std::path::Path;
 /// NOTE: The primary interface is `IndexingServiceInterface` in search.rs
 /// which matches the main src/ API. This interface provides additional
 /// capabilities for advanced use cases.
+///
+/// # Example
+///
+/// ```ignore
+/// use mcb_domain::domain_services::BatchIndexingServiceInterface;
+///
+/// // Index a directory
+/// batch_indexer.index_directory(Path::new("./src")).await?;
+///
+/// // Process incremental sync batch
+/// batch_indexer.process_sync_batch(&sync_batch).await?;
+///
+/// // Get indexing stats
+/// let stats = batch_indexer.get_indexing_stats().await?;
+/// println!("Total chunks: {}, Throughput: {:.1}/s", stats.total_chunks, stats.avg_throughput);
+///
+/// // Rebuild entire collection
+/// batch_indexer.rebuild_index("my-project").await?;
+/// ```
 #[async_trait]
 pub trait BatchIndexingServiceInterface: Interface + Send + Sync {
     /// Index a batch of code chunks

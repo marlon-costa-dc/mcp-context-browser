@@ -47,5 +47,25 @@ pub mod domain {
     pub use mcb_domain::*;
 }
 
+/// Server layer - MCP protocol server and handlers
+///
+/// Re-exports from the server crate for convenience
+pub mod server {
+    pub use mcb_server::*;
+}
+
+/// Infrastructure layer - DI, config, and infrastructure services
+///
+/// Re-exports from the infrastructure crate for convenience
+pub mod infrastructure {
+    pub use mcb_infrastructure::*;
+}
+
 // Re-export commonly used domain types at the crate root
 pub use domain::*;
+
+// Re-export main entry point at the crate root
+pub use server::run_server;
+
+// Re-export server types for convenience
+pub use server::{McpServer, McpServerBuilder};

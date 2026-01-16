@@ -89,13 +89,18 @@ impl IntelligentChunker {
     }
 
     /// Chunk code based on language-specific structural analysis
-    pub fn chunk_code(&self, content: &str, file_name: &str, language: &Language) -> Vec<CodeChunk> {
+    pub fn chunk_code(
+        &self,
+        content: &str,
+        file_name: &str,
+        language: &Language,
+    ) -> Vec<CodeChunk> {
         if let Some(processor) = LANGUAGE_PROCESSORS.get(language) {
             // Try tree-sitter parsing first
             match self.parse_with_tree_sitter(content, processor.get_language()) {
                 Ok(tree) => {
-                    let chunks =
-                        processor.extract_chunks_with_tree_sitter(&tree, content, file_name, language);
+                    let chunks = processor
+                        .extract_chunks_with_tree_sitter(&tree, content, file_name, language);
                     if !chunks.is_empty() {
                         return chunks;
                     }
@@ -186,7 +191,11 @@ impl IntelligentChunker {
 
 #[async_trait]
 impl CodeChunker for IntelligentChunker {
-    async fn chunk_file(&self, file_path: &Path, _options: ChunkingOptions) -> Result<ChunkingResult> {
+    async fn chunk_file(
+        &self,
+        file_path: &Path,
+        _options: ChunkingOptions,
+    ) -> Result<ChunkingResult> {
         let content = tokio::fs::read_to_string(file_path)
             .await
             .map_err(|e| Error::io(e.to_string()))?;

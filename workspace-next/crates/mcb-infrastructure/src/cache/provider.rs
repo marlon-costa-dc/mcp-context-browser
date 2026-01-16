@@ -90,6 +90,25 @@ impl std::fmt::Debug for CacheProviderType {
 }
 
 /// Cache provider trait (legacy - use CacheProviderType enum instead)
+///
+/// # Example
+///
+/// ```ignore
+/// use mcb_infrastructure::cache::CacheProvider;
+///
+/// // Store JSON in cache with TTL
+/// let config = CacheEntryConfig::default().with_ttl_secs(300);
+/// cache.set_json("user:123", &serde_json::to_string(&user)?, config).await?;
+///
+/// // Retrieve from cache
+/// if let Some(json) = cache.get_json("user:123").await? {
+///     let user: User = serde_json::from_str(&json)?;
+/// }
+///
+/// // Check stats
+/// let stats = cache.stats().await?;
+/// println!("Hit rate: {:.1}%", stats.hit_rate * 100.0);
+/// ```
 #[async_trait::async_trait]
 pub trait CacheProvider: Send + Sync + std::fmt::Debug {
     /// Get a value from the cache as JSON string

@@ -5,5 +5,6 @@
 mod adapters;
 mod cache;
 mod config;
+mod constants_test;
 mod di;
 mod utils;

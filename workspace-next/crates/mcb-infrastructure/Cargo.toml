@@ -88,6 +88,7 @@ hostname = { workspace = true }
 
 # Hashing
 sha2 = { workspace = true }
+hex = { workspace = true }
 
 # Utilities
 uuid = { workspace = true }

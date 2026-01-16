@@ -9,6 +9,15 @@ use rmcp::ServiceExt;
 use tracing::info;
 
 /// Extension trait for McpServer to add stdio serving capability
+///
+/// # Example
+///
+/// ```ignore
+/// use mcb_server::transport::StdioServerExt;
+///
+/// let server = McpServer::new(context_service, config)?;
+/// server.serve_stdio().await?;  // Blocks until shutdown
+/// ```
 #[allow(async_fn_in_trait)]
 pub trait StdioServerExt {
     /// Serve the MCP server over stdio transport

@@ -54,25 +54,17 @@ impl McpServerBuilder {
     /// Build the MCP server
     ///
     /// # Returns
-    /// A fully configured McpServer instance
+    /// A Result containing the McpServer or an error if dependencies are missing
     ///
-    /// # Panics
-    /// Panics if any required dependencies are missing
-    pub fn build(self) -> McpServer {
-        let indexing_service = self
-            .indexing_service
-            .expect("Indexing service must be provided");
-        let context_service = self
-            .context_service
-            .expect("Context service must be provided");
-        let search_service = self
-            .search_service
-            .expect("Search service must be provided");
-
-        McpServer::new(indexing_service, context_service, search_service)
+    /// # Errors
+    /// Returns `BuilderError::MissingDependency` if any required service is not provided
+    pub fn build(self) -> Result<McpServer, BuilderError> {
+        self.try_build()
     }
 
-    /// Try to build the MCP server
+    /// Try to build the MCP server (alias for `build`)
+    ///
+    /// This method is kept for API compatibility.
     ///
     /// # Returns
     /// A Result containing the McpServer or an error if dependencies are missing

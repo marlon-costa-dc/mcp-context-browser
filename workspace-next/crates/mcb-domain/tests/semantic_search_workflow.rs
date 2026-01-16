@@ -151,7 +151,10 @@ fn create_chunk_embeddings(chunks: &[CodeChunk]) -> Vec<Embedding> {
         .collect()
 }
 
-fn perform_semantic_search(chunks: &[CodeChunk], _query_embedding: &Embedding) -> Vec<SearchResult> {
+fn perform_semantic_search(
+    chunks: &[CodeChunk],
+    _query_embedding: &Embedding,
+) -> Vec<SearchResult> {
     let len = chunks.len() as f64;
     chunks
         .iter()

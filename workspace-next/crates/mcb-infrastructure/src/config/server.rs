@@ -50,9 +50,7 @@ impl ServerConfigUtils {
         }
 
         // Both paths validated above - use pattern match to avoid unwrap
-        if let (Some(cert_path), Some(key_path)) =
-            (&config.ssl_cert_path, &config.ssl_key_path)
-        {
+        if let (Some(cert_path), Some(key_path)) = (&config.ssl_cert_path, &config.ssl_key_path) {
             if !cert_path.exists() {
                 return Err(Error::Configuration {
                     message: format!(

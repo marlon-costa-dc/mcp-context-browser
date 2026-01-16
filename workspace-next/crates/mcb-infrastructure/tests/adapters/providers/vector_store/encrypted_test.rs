@@ -1,6 +1,6 @@
 //! Tests for EncryptedVectorStoreProvider
 
-use mcb_domain::ports::providers::VectorStoreProvider;
+use mcb_domain::ports::providers::{VectorStoreAdmin, VectorStoreProvider};
 use mcb_infrastructure::adapters::providers::vector_store::{
     EncryptedVectorStoreProvider, NullVectorStoreProvider,
 };

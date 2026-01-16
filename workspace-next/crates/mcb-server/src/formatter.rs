@@ -46,18 +46,7 @@ impl ResponseFormatter {
     }
 
     fn format_empty_search_response(message: &mut String) {
-        message.push_str("❌ **No Results Found**\n\n");
-        message.push_str("**Possible Reasons:**\n");
-        message.push_str("• Codebase not indexed yet (run `index_codebase` first)\n");
-        message.push_str("• Query terms not present in the codebase\n");
-        message.push_str("• Try different keywords or more general terms\n\n");
-        message.push_str("**Search Tips:**\n");
-        message.push_str(
-            "• Use natural language: \"find error handling\", \"authentication logic\"\n",
-        );
-        message.push_str("• Be specific: \"HTTP request middleware\" > \"middleware\"\n");
-        message.push_str("• Include technologies: \"React component state management\"\n");
-        message.push_str("• Try synonyms: \"validate\" instead of \"check\"\n");
+        format_empty_search_response_impl(message);
     }
 
     fn format_search_results(
@@ -66,75 +55,7 @@ impl ResponseFormatter {
         limit: usize,
         duration: Duration,
     ) {
-        message.push_str("📊 **Search Results:**\n\n");
-
-        for (i, result) in results.iter().enumerate() {
-            message.push_str(&format!(
-                "**{}.** 📁 `{}` (line {})\n",
-                i + 1,
-                result.file_path,
-                result.start_line
-            ));
-
-            Self::format_code_preview(message, result);
-            message.push_str(&format!("🎯 **Relevance Score:** {:.3}\n\n", result.score));
-        }
-
-        if results.len() == limit {
-            message.push_str(&format!(
-                "💡 **Showing top {} results.** For more results, try:\n",
-                limit
-            ));
-            message.push_str("• More specific search terms\n");
-            message.push_str("• Different query formulations\n");
-            message.push_str("• Breaking complex queries into simpler ones\n");
-        }
-
-        if duration.as_millis() > 1000 {
-            message.push_str(&format!(
-                "\n⚠️ **Performance Note:** Search took {:.2}s. \
-                Consider using more specific queries for faster results.\n",
-                duration.as_secs_f64()
-            ));
-        }
-    }
-
-    fn format_code_preview(message: &mut String, result: &SearchResult) {
-        let lines: Vec<&str> = result.content.lines().collect();
-        let preview_lines = if lines.len() > 10 {
-            lines
-                .iter()
-                .take(10)
-                .cloned()
-                .collect::<Vec<_>>()
-                .join("\n")
-        } else {
-            result.content.clone()
-        };
-
-        let file_ext = Path::new(&result.file_path)
-            .extension()
-            .and_then(|ext| ext.to_str())
-            .unwrap_or("");
-
-        let lang_hint = match file_ext {
-            "rs" => "rust",
-            "py" => "python",
-            "js" => "javascript",
-            "ts" => "typescript",
-            "go" => "go",
-            "java" => "java",
-            "cpp" | "cc" | "cxx" => "cpp",
-            "c" => "c",
-            "cs" => "csharp",
-            _ => result.language.as_str(),
-        };
-
-        if lang_hint.is_empty() {
-            message.push_str(&format!("```\n{}\n```\n", preview_lines));
-        } else {
-            message.push_str(&format!("``` {}\n{}\n```\n", lang_hint, preview_lines));
-        }
+        format_search_results_impl(message, results, limit, duration);
     }
 
     /// Format indexing completion response
@@ -244,5 +165,101 @@ impl ResponseFormatter {
             collection
         );
         CallToolResult::success(vec![Content::text(message)])
+    }
+}
+
+// Helper functions extracted to reduce impl block size
+
+fn format_empty_search_response_impl(message: &mut String) {
+    message.push_str("❌ **No Results Found**\n\n");
+    message.push_str("**Possible Reasons:**\n");
+    message.push_str("• Codebase not indexed yet (run `index_codebase` first)\n");
+    message.push_str("• Query terms not present in the codebase\n");
+    message.push_str("• Try different keywords or more general terms\n\n");
+    message.push_str("**Search Tips:**\n");
+    message.push_str("• Use natural language: \"find error handling\", \"authentication logic\"\n");
+    message.push_str("• Be specific: \"HTTP request middleware\" > \"middleware\"\n");
+    message.push_str("• Include technologies: \"React component state management\"\n");
+    message.push_str("• Try synonyms: \"validate\" instead of \"check\"\n");
+}
+
+fn format_search_results_impl(
+    message: &mut String,
+    results: &[SearchResult],
+    limit: usize,
+    duration: Duration,
+) {
+    message.push_str("📊 **Search Results:**\n\n");
+
+    for (i, result) in results.iter().enumerate() {
+        message.push_str(&format!(
+            "**{}.** 📁 `{}` (line {})\n",
+            i + 1,
+            result.file_path,
+            result.start_line
+        ));
+
+        format_code_preview_impl(message, result);
+        message.push_str(&format!("🎯 **Relevance Score:** {:.3}\n\n", result.score));
+    }
+
+    if results.len() == limit {
+        message.push_str(&format!(
+            "💡 **Showing top {} results.** For more results, try:\n",
+            limit
+        ));
+        message.push_str("• More specific search terms\n");
+        message.push_str("• Different query formulations\n");
+        message.push_str("• Breaking complex queries into simpler ones\n");
+    }
+
+    if duration.as_millis() > 1000 {
+        message.push_str(&format!(
+            "\n⚠️ **Performance Note:** Search took {:.2}s. \
+            Consider using more specific queries for faster results.\n",
+            duration.as_secs_f64()
+        ));
+    }
+}
+
+fn format_code_preview_impl(message: &mut String, result: &SearchResult) {
+    let lines: Vec<&str> = result.content.lines().collect();
+    let preview_lines = if lines.len() > 10 {
+        lines
+            .iter()
+            .take(10)
+            .cloned()
+            .collect::<Vec<_>>()
+            .join("\n")
+    } else {
+        result.content.clone()
+    };
+
+    let file_ext = Path::new(&result.file_path)
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .unwrap_or("");
+
+    let lang_hint = get_language_hint(file_ext, &result.language);
+
+    if lang_hint.is_empty() {
+        message.push_str(&format!("```\n{}\n```\n", preview_lines));
+    } else {
+        message.push_str(&format!("``` {}\n{}\n```\n", lang_hint, preview_lines));
+    }
+}
+
+fn get_language_hint<'a>(file_ext: &str, default_lang: &'a str) -> &'a str {
+    match file_ext {
+        "rs" => "rust",
+        "py" => "python",
+        "js" => "javascript",
+        "ts" => "typescript",
+        "go" => "go",
+        "java" => "java",
+        "cpp" | "cc" | "cxx" => "cpp",
+        "c" => "c",
+        "cs" => "csharp",
+        _ => default_lang,
     }
 }

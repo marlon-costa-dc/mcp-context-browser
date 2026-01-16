@@ -16,7 +16,7 @@ use crate::adapters::http_client::HttpClientProvider;
 use crate::adapters::providers::embedding::helpers::constructor;
 use crate::cache::{CacheEntryConfig, SharedCacheProvider};
 use crate::constants::{
-    EMBEDDING_DIMENSION_OPENAI_ADA, EMBEDDING_DIMENSION_OPENAI_LARGE,
+    CONTENT_TYPE_JSON, EMBEDDING_DIMENSION_OPENAI_ADA, EMBEDDING_DIMENSION_OPENAI_LARGE,
     EMBEDDING_DIMENSION_OPENAI_SMALL,
 };
 use crate::utils::HttpResponseUtils;
@@ -36,7 +36,7 @@ use crate::utils::HttpResponseUtils;
 ///
 /// let http_client = Arc::new(HttpClientPool::new().unwrap());
 /// let provider = OpenAIEmbeddingProvider::new(
-///     "sk-xxx".to_string(),
+///     "sk-your-api-key".to_string(),
 ///     None,
 ///     "text-embedding-3-small".to_string(),
 ///     Duration::from_secs(30),
@@ -128,7 +128,7 @@ impl OpenAIEmbeddingProvider {
         let response = client
             .post(format!("{}/embeddings", self.base_url()))
             .header("Authorization", format!("Bearer {}", self.api_key))
-            .header("Content-Type", "application/json")
+            .header("Content-Type", CONTENT_TYPE_JSON)
             .json(&payload)
             .send()
             .await

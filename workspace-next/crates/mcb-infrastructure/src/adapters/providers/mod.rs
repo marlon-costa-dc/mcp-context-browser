@@ -18,7 +18,11 @@
 //! Providers are registered with Shaku DI for injection.
 
 pub mod embedding;
+pub mod factory;
 pub mod vector_store;
+
+// Re-export factories
+pub use factory::{EmbeddingProviderFactory, VectorStoreProviderFactory};
 
 // Re-export embedding providers
 pub use embedding::{

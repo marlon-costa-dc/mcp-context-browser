@@ -1,6 +1,6 @@
 //! Tests for InMemoryVectorStoreProvider
 
-use mcb_domain::ports::providers::VectorStoreProvider;
+use mcb_domain::ports::providers::{VectorStoreAdmin, VectorStoreProvider};
 use mcb_domain::value_objects::Embedding;
 use mcb_infrastructure::adapters::providers::vector_store::InMemoryVectorStoreProvider;
 use std::collections::HashMap;

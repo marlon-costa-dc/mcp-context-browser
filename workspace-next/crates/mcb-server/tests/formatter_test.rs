@@ -180,7 +180,8 @@ fn test_format_search_result_code_preview() {
     let results = vec![result];
     let duration = Duration::from_millis(50);
 
-    let response = ResponseFormatter::format_search_response("main function", &results, duration, 10);
+    let response =
+        ResponseFormatter::format_search_response("main function", &results, duration, 10);
 
     assert!(response.is_ok());
 }

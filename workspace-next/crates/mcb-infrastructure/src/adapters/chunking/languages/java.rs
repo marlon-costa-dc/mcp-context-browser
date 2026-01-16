@@ -3,6 +3,7 @@
 use crate::adapters::chunking::config::{LanguageConfig, NodeExtractionRule};
 use crate::adapters::chunking::constants::CHUNK_SIZE_JAVA;
 use crate::adapters::chunking::processor::{BaseProcessor, LanguageProcessor};
+use crate::constants::{TS_NODE_CLASS_DECLARATION, TS_NODE_METHOD_DECLARATION};
 use mcb_domain::entities::CodeChunk;
 use mcb_domain::value_objects::Language;
 
@@ -22,8 +23,8 @@ impl JavaProcessor {
         let config = LanguageConfig::new(tree_sitter_java::LANGUAGE.into())
             .with_rules(vec![NodeExtractionRule {
                 node_types: vec![
-                    "method_declaration".to_string(),
-                    "class_declaration".to_string(),
+                    TS_NODE_METHOD_DECLARATION.to_string(),
+                    TS_NODE_CLASS_DECLARATION.to_string(),
                     "interface_declaration".to_string(),
                 ],
                 min_length: 30,

@@ -108,9 +108,15 @@ impl ContextServiceImpl {
 impl ContextServiceInterface for ContextServiceImpl {
     async fn initialize(&self, collection: &str) -> Result<()> {
         // Check if collection exists in vector store, create if not
-        if !self.vector_store_provider.collection_exists(collection).await? {
+        if !self
+            .vector_store_provider
+            .collection_exists(collection)
+            .await?
+        {
             let dimensions = self.embedding_provider.dimensions();
-            self.vector_store_provider.create_collection(collection, dimensions).await?;
+            self.vector_store_provider
+                .create_collection(collection, dimensions)
+                .await?;
         }
 
         // Also track in cache for metadata
@@ -174,7 +180,8 @@ impl ContextServiceInterface for ContextServiceImpl {
         let query_embedding = self.embedding_provider.embed(query).await?;
 
         // Search in vector store
-        let results = self.vector_store_provider
+        let results = self
+            .vector_store_provider
             .search_similar(collection, &query_embedding.vector, limit, None)
             .await?;
 
@@ -188,8 +195,14 @@ impl ContextServiceInterface for ContextServiceImpl {
 
     async fn clear_collection(&self, collection: &str) -> Result<()> {
         // Delete the collection from vector store
-        if self.vector_store_provider.collection_exists(collection).await? {
-            self.vector_store_provider.delete_collection(collection).await?;
+        if self
+            .vector_store_provider
+            .collection_exists(collection)
+            .await?
+        {
+            self.vector_store_provider
+                .delete_collection(collection)
+                .await?;
         }
 
         // Also clear cache metadata
@@ -259,7 +272,9 @@ impl SearchServiceInterface for SearchServiceImpl {
     ) -> Result<Vec<SearchResult>> {
         // Delegate to context service for semantic search
         // Future: add BM25 scoring and hybrid ranking
-        self.context_service.search_similar(collection, query, limit).await
+        self.context_service
+            .search_similar(collection, query, limit)
+            .await
     }
 }
 

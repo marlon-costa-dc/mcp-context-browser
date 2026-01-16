@@ -4,6 +4,7 @@ members = [
     "crates/mcb",
     "crates/mcb-domain",
     "crates/mcb-infrastructure",
+    "crates/mcb-providers",
     "crates/mcb-server",
     "crates/mcb-validate",
 ]
@@ -75,6 +76,7 @@ hostname = "0.4"
 
 # Hashing
 sha2 = "0.10"
+hex = "0.4"
 
 # Utilities
 uuid = { version = "1.0", features = ["v4"] }
@@ -114,6 +116,7 @@ ignore = "0.4"
 
 # Concurrent processing
 futures = "0.3"
+async-stream = "0.3"
 rayon = "1.8"
 
 # Text processing

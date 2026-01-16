@@ -19,6 +19,24 @@ use std::path::Path;
 /// Code Intelligence Service Interface
 ///
 /// Defines the contract for semantic code understanding operations.
+///
+/// # Example
+///
+/// ```ignore
+/// use mcb_domain::domain_services::ContextServiceInterface;
+///
+/// // Initialize collection for a project
+/// context.initialize("my-project").await?;
+///
+/// // Store code chunks
+/// context.store_chunks("my-project", &chunks).await?;
+///
+/// // Search for similar code
+/// let results = context.search_similar("my-project", "async fn handler", 10).await?;
+/// for result in results {
+///     println!("{}:{} - score: {}", result.file_path, result.start_line, result.score);
+/// }
+/// ```
 #[async_trait]
 pub trait ContextServiceInterface: Interface + Send + Sync {
     /// Initialize the service for a collection
@@ -55,6 +73,18 @@ pub trait ContextServiceInterface: Interface + Send + Sync {
 /// Search Service Interface
 ///
 /// Simplified search interface for code queries.
+///
+/// # Example
+///
+/// ```ignore
+/// use mcb_domain::domain_services::SearchServiceInterface;
+///
+/// // Perform semantic code search
+/// let results = search.search("my-project", "error handling", 5).await?;
+/// for result in results {
+///     println!("{}: {:.2}", result.file_path, result.score);
+/// }
+/// ```
 #[async_trait]
 pub trait SearchServiceInterface: Interface + Send + Sync {
     /// Search for code similar to the query
@@ -73,6 +103,23 @@ pub trait SearchServiceInterface: Interface + Send + Sync {
 /// Indexing Service Interface
 ///
 /// Defines the contract for codebase indexing operations.
+///
+/// # Example
+///
+/// ```ignore
+/// use mcb_domain::domain_services::IndexingServiceInterface;
+///
+/// // Index a codebase
+/// let result = indexing.index_codebase(Path::new("./src"), "my-project").await?;
+/// println!("Indexed {} files, {} chunks", result.files_processed, result.chunks_created);
+///
+/// // Check status during long operations
+/// let status = indexing.get_status();
+/// if status.is_indexing {
+///     println!("Progress: {:.1}% ({}/{})", status.progress * 100.0,
+///         status.processed_files, status.total_files);
+/// }
+/// ```
 #[async_trait]
 pub trait IndexingServiceInterface: Interface + Send + Sync {
     /// Index a codebase at the given path
@@ -120,6 +167,22 @@ pub struct IndexingStatus {
 /// Chunking Orchestrator Interface
 ///
 /// Coordinates batch code chunking operations.
+///
+/// # Example
+///
+/// ```ignore
+/// use mcb_domain::domain_services::ChunkingOrchestratorInterface;
+///
+/// // Chunk a single file
+/// let chunks = orchestrator.chunk_file(Path::new("src/main.rs")).await?;
+///
+/// // Process multiple files in batch
+/// let files = vec![
+///     ("src/lib.rs".into(), lib_content),
+///     ("src/utils.rs".into(), utils_content),
+/// ];
+/// let all_chunks = orchestrator.process_files(files).await?;
+/// ```
 #[async_trait]
 pub trait ChunkingOrchestratorInterface: Interface + Send + Sync {
     /// Process multiple files and return chunks

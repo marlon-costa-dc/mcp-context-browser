@@ -14,7 +14,7 @@ use mcb_domain::value_objects::Embedding;
 
 use crate::adapters::http_client::HttpClientProvider;
 use crate::constants::{
-    EMBEDDING_DIMENSION_OLLAMA_ARCTIC, EMBEDDING_DIMENSION_OLLAMA_DEFAULT,
+    CONTENT_TYPE_JSON, EMBEDDING_DIMENSION_OLLAMA_ARCTIC, EMBEDDING_DIMENSION_OLLAMA_DEFAULT,
     EMBEDDING_DIMENSION_OLLAMA_MINILM, EMBEDDING_DIMENSION_OLLAMA_MXBAI,
     EMBEDDING_DIMENSION_OLLAMA_NOMIC,
 };
@@ -117,7 +117,7 @@ impl EmbeddingProvider for OllamaEmbeddingProvider {
                     "{}/api/embeddings",
                     self.base_url.trim_end_matches('/')
                 ))
-                .header("Content-Type", "application/json")
+                .header("Content-Type", CONTENT_TYPE_JSON)
                 .json(&payload)
                 .send()
                 .await

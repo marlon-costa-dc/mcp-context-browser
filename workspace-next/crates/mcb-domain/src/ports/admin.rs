@@ -42,6 +42,23 @@ pub struct PerformanceMetricsData {
 ///
 /// Domain port for tracking server performance metrics including
 /// queries, response times, cache hits, and active connections.
+///
+/// # Example
+///
+/// ```ignore
+/// use mcb_domain::ports::admin::PerformanceMetricsInterface;
+///
+/// // Record a successful query with 50ms response time (cache miss)
+/// metrics.record_query(50, true, false);
+///
+/// // Track active connections
+/// metrics.update_active_connections(1);  // connection opened
+/// metrics.update_active_connections(-1); // connection closed
+///
+/// // Get current metrics snapshot
+/// let stats = metrics.get_performance_metrics();
+/// println!("Uptime: {}s, Queries: {}", stats.uptime_seconds, stats.total_queries);
+/// ```
 pub trait PerformanceMetricsInterface: Interface + Send + Sync {
     /// Get server uptime in seconds
     fn uptime_secs(&self) -> u64;
@@ -84,6 +101,19 @@ pub struct IndexingOperation {
 /// Interface for indexing operations tracking
 ///
 /// Domain port for tracking ongoing indexing operations in the MCP server.
+///
+/// # Example
+///
+/// ```ignore
+/// use mcb_domain::ports::admin::IndexingOperationsInterface;
+///
+/// // Get all active indexing operations
+/// let operations = tracker.get_operations();
+/// for (id, op) in operations {
+///     println!("Operation {}: {}/{} files in {}",
+///         id, op.processed_files, op.total_files, op.collection);
+/// }
+/// ```
 pub trait IndexingOperationsInterface: Interface + Send + Sync {
     /// Get the map of ongoing indexing operations
     fn get_operations(&self) -> HashMap<String, IndexingOperation>;

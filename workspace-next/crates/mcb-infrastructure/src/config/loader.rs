@@ -141,102 +141,124 @@ impl ConfigLoader {
 
     /// Validate configuration values
     fn validate_config(&self, config: &AppConfig) -> Result<()> {
-        // Validate server configuration
-        if config.server.port == 0 {
+        validate_app_config(config)
+    }
+}
+
+/// Validate application configuration
+///
+/// Performs comprehensive validation of all configuration sections.
+fn validate_app_config(config: &AppConfig) -> Result<()> {
+    validate_server_config(config)?;
+    validate_auth_config(config)?;
+    validate_cache_config(config)?;
+    validate_limits_config(config)?;
+    validate_daemon_config(config)?;
+    validate_backup_config(config)?;
+    validate_operations_config(config)?;
+    Ok(())
+}
+
+fn validate_server_config(config: &AppConfig) -> Result<()> {
+    if config.server.port == 0 {
+        return Err(Error::Configuration {
+            message: "Server port cannot be 0".to_string(),
+            source: None,
+        });
+    }
+    if config.server.https
+        && (config.server.ssl_cert_path.is_none() || config.server.ssl_key_path.is_none())
+    {
+        return Err(Error::Configuration {
+            message: "SSL certificate and key paths are required when HTTPS is enabled".to_string(),
+            source: None,
+        });
+    }
+    Ok(())
+}
+
+fn validate_auth_config(config: &AppConfig) -> Result<()> {
+    if config.auth.enabled {
+        if config.auth.jwt_secret.is_empty() {
             return Err(Error::Configuration {
-                message: "Server port cannot be 0".to_string(),
+                message: "JWT secret cannot be empty when authentication is enabled".to_string(),
                 source: None,
             });
         }
-
-        if config.server.https
-            && (config.server.ssl_cert_path.is_none() || config.server.ssl_key_path.is_none())
-        {
+        if config.auth.jwt_secret.len() < 32 {
             return Err(Error::Configuration {
-                message: "SSL certificate and key paths are required when HTTPS is enabled"
+                message: "JWT secret should be at least 32 characters long".to_string(),
+                source: None,
+            });
+        }
+    }
+    Ok(())
+}
+
+fn validate_cache_config(config: &AppConfig) -> Result<()> {
+    if config.cache.enabled && config.cache.default_ttl_secs == 0 {
+        return Err(Error::Configuration {
+            message: "Cache TTL cannot be 0 when cache is enabled".to_string(),
+            source: None,
+        });
+    }
+    Ok(())
+}
+
+fn validate_limits_config(config: &AppConfig) -> Result<()> {
+    if config.limits.memory_limit == 0 {
+        return Err(Error::Configuration {
+            message: "Memory limit cannot be 0".to_string(),
+            source: None,
+        });
+    }
+    if config.limits.cpu_limit == 0 {
+        return Err(Error::Configuration {
+            message: "CPU limit cannot be 0".to_string(),
+            source: None,
+        });
+    }
+    Ok(())
+}
+
+fn validate_daemon_config(config: &AppConfig) -> Result<()> {
+    if config.daemon.enabled && config.daemon.max_restart_attempts == 0 {
+        return Err(Error::Configuration {
+            message: "Maximum restart attempts cannot be 0 when daemon is enabled".to_string(),
+            source: None,
+        });
+    }
+    Ok(())
+}
+
+fn validate_backup_config(config: &AppConfig) -> Result<()> {
+    if config.backup.enabled && config.backup.interval_secs == 0 {
+        return Err(Error::Configuration {
+            message: "Backup interval cannot be 0 when backup is enabled".to_string(),
+            source: None,
+        });
+    }
+    Ok(())
+}
+
+fn validate_operations_config(config: &AppConfig) -> Result<()> {
+    if config.operations.tracking_enabled {
+        if config.operations.cleanup_interval_secs == 0 {
+            return Err(Error::Configuration {
+                message: "Operations cleanup interval cannot be 0 when tracking is enabled"
                     .to_string(),
                 source: None,
             });
         }
-
-        // Validate auth configuration
-        if config.auth.enabled {
-            if config.auth.jwt_secret.is_empty() {
-                return Err(Error::Configuration {
-                    message: "JWT secret cannot be empty when authentication is enabled"
-                        .to_string(),
-                    source: None,
-                });
-            }
-
-            if config.auth.jwt_secret.len() < 32 {
-                return Err(Error::Configuration {
-                    message: "JWT secret should be at least 32 characters long".to_string(),
-                    source: None,
-                });
-            }
-        }
-
-        // Validate cache configuration
-        if config.cache.enabled && config.cache.default_ttl_secs == 0 {
+        if config.operations.retention_secs == 0 {
             return Err(Error::Configuration {
-                message: "Cache TTL cannot be 0 when cache is enabled".to_string(),
+                message: "Operations retention period cannot be 0 when tracking is enabled"
+                    .to_string(),
                 source: None,
             });
         }
-
-        // Validate limits
-        if config.limits.memory_limit == 0 {
-            return Err(Error::Configuration {
-                message: "Memory limit cannot be 0".to_string(),
-                source: None,
-            });
-        }
-
-        if config.limits.cpu_limit == 0 {
-            return Err(Error::Configuration {
-                message: "CPU limit cannot be 0".to_string(),
-                source: None,
-            });
-        }
-
-        // Validate daemon configuration
-        if config.daemon.enabled && config.daemon.max_restart_attempts == 0 {
-            return Err(Error::Configuration {
-                message: "Maximum restart attempts cannot be 0 when daemon is enabled".to_string(),
-                source: None,
-            });
-        }
-
-        // Validate backup configuration
-        if config.backup.enabled && config.backup.interval_secs == 0 {
-            return Err(Error::Configuration {
-                message: "Backup interval cannot be 0 when backup is enabled".to_string(),
-                source: None,
-            });
-        }
-
-        // Validate operations configuration
-        if config.operations.tracking_enabled {
-            if config.operations.cleanup_interval_secs == 0 {
-                return Err(Error::Configuration {
-                    message: "Operations cleanup interval cannot be 0 when tracking is enabled"
-                        .to_string(),
-                    source: None,
-                });
-            }
-
-            if config.operations.retention_secs == 0 {
-                return Err(Error::Configuration {
-                    message: "Operations retention period cannot be 0 when tracking is enabled"
-                        .to_string(),
-                    source: None,
-                });
-            }
-        }
-
-        Ok(())
     }
+    Ok(())
 }
 
 impl Default for ConfigLoader {

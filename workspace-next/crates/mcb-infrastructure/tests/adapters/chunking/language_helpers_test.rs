@@ -3,10 +3,10 @@
 //! Tests for language detection and helper utilities.
 
 use mcb_infrastructure::adapters::chunking::{
-    get_chunk_size, is_language_supported, language_from_extension,
-    CHUNK_SIZE_GENERIC, CHUNK_SIZE_RUST, LANG_C, LANG_CPP, LANG_CSHARP, LANG_GO, LANG_JAVA,
-    LANG_JAVASCRIPT, LANG_KOTLIN, LANG_PHP, LANG_PYTHON, LANG_RUBY, LANG_RUST, LANG_SWIFT,
-    LANG_TYPESCRIPT, LANG_UNKNOWN,
+    get_chunk_size, is_language_supported, language_from_extension, CHUNK_SIZE_GENERIC,
+    CHUNK_SIZE_RUST, LANG_C, LANG_CPP, LANG_CSHARP, LANG_GO, LANG_JAVA, LANG_JAVASCRIPT,
+    LANG_KOTLIN, LANG_PHP, LANG_PYTHON, LANG_RUBY, LANG_RUST, LANG_SWIFT, LANG_TYPESCRIPT,
+    LANG_UNKNOWN,
 };
 
 #[test]

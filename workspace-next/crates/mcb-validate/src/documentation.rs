@@ -5,7 +5,7 @@
 //! - Module-level documentation (//!)
 //! - Example code blocks for traits
 
-use crate::{Result, Severity};
+use crate::{Result, Severity, ValidationConfig};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -15,10 +15,7 @@ use walkdir::WalkDir;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DocumentationViolation {
     /// Missing module-level documentation
-    MissingModuleDoc {
-        file: PathBuf,
-        severity: Severity,
-    },
+    MissingModuleDoc { file: PathBuf, severity: Severity },
     /// Missing documentation on public item
     MissingPubItemDoc {
         file: PathBuf,
@@ -88,15 +85,18 @@ impl std::fmt::Display for DocumentationViolation {
 
 /// Documentation validator
 pub struct DocumentationValidator {
-    workspace_root: PathBuf,
+    config: ValidationConfig,
 }
 
 impl DocumentationValidator {
     /// Create a new documentation validator
     pub fn new(workspace_root: impl Into<PathBuf>) -> Self {
-        Self {
-            workspace_root: workspace_root.into(),
-        }
+        Self::with_config(ValidationConfig::new(workspace_root))
+    }
+
+    /// Create a validator with custom configuration for multi-directory support
+    pub fn with_config(config: ValidationConfig) -> Self {
+        Self { config }
     }
 
     /// Run all documentation validations
@@ -124,7 +124,11 @@ impl DocumentationValidator {
                 .filter(|e| e.path().extension().is_some_and(|ext| ext == "rs"))
             {
                 let content = std::fs::read_to_string(entry.path())?;
-                let file_name = entry.path().file_name().and_then(|s| s.to_str()).unwrap_or("");
+                let file_name = entry
+                    .path()
+                    .file_name()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("");
 
                 // Only check lib.rs, mod.rs, and main module files
                 if file_name != "lib.rs" && file_name != "mod.rs" {
@@ -155,10 +159,14 @@ impl DocumentationValidator {
         let mut violations = Vec::new();
 
         // Patterns for public items
-        let pub_struct_pattern = Regex::new(r"pub\s+struct\s+([A-Z][a-zA-Z0-9_]*)").expect("Invalid regex");
-        let pub_enum_pattern = Regex::new(r"pub\s+enum\s+([A-Z][a-zA-Z0-9_]*)").expect("Invalid regex");
-        let pub_trait_pattern = Regex::new(r"pub\s+trait\s+([A-Z][a-zA-Z0-9_]*)").expect("Invalid regex");
-        let pub_fn_pattern = Regex::new(r"pub\s+(?:async\s+)?fn\s+([a-z_][a-z0-9_]*)").expect("Invalid regex");
+        let pub_struct_pattern =
+            Regex::new(r"pub\s+struct\s+([A-Z][a-zA-Z0-9_]*)").expect("Invalid regex");
+        let pub_enum_pattern =
+            Regex::new(r"pub\s+enum\s+([A-Z][a-zA-Z0-9_]*)").expect("Invalid regex");
+        let pub_trait_pattern =
+            Regex::new(r"pub\s+trait\s+([A-Z][a-zA-Z0-9_]*)").expect("Invalid regex");
+        let pub_fn_pattern =
+            Regex::new(r"pub\s+(?:async\s+)?fn\s+([a-z_][a-z0-9_]*)").expect("Invalid regex");
         let _doc_comment_pattern = Regex::new(r"^\s*///").expect("Invalid regex");
         let example_pattern = Regex::new(r"#\s*Example").expect("Invalid regex");
 
@@ -334,23 +342,13 @@ impl DocumentationValidator {
     }
 
     fn get_crate_dirs(&self) -> Result<Vec<PathBuf>> {
-        let crates_dir = self.workspace_root.join("crates");
-        if !crates_dir.exists() {
-            return Ok(Vec::new());
-        }
+        self.config.get_source_dirs()
+    }
 
-        let mut dirs = Vec::new();
-        for entry in std::fs::read_dir(&crates_dir)? {
-            let entry = entry?;
-            if entry.file_type()?.is_dir() {
-                let name = entry.file_name();
-                let name_str = name.to_string_lossy();
-                if name_str != "mcb-validate" {
-                    dirs.push(entry.path());
-                }
-            }
-        }
-        Ok(dirs)
+    /// Check if a path is from legacy/additional source directories
+    #[allow(dead_code)]
+    fn is_legacy_path(&self, path: &std::path::Path) -> bool {
+        self.config.is_legacy_path(path)
     }
 }
 
@@ -416,7 +414,11 @@ pub fn something() {}
         let validator = DocumentationValidator::new(temp.path());
         let violations = validator.validate_module_docs().unwrap();
 
-        assert!(violations.is_empty(), "Should have no violations: {:?}", violations);
+        assert!(
+            violations.is_empty(),
+            "Should have no violations: {:?}",
+            violations
+        );
     }
 
     #[test]
@@ -467,6 +469,10 @@ pub struct DocumentedStruct {
             .filter(|v| matches!(v, DocumentationViolation::MissingPubItemDoc { item_kind, .. } if item_kind == "struct"))
             .collect();
 
-        assert!(struct_violations.is_empty(), "Should have no struct violations: {:?}", struct_violations);
+        assert!(
+            struct_violations.is_empty(),
+            "Should have no struct violations: {:?}",
+            struct_violations
+        );
     }
 }

@@ -40,7 +40,9 @@ pub mod languages;
 pub use config::{LanguageConfig, NodeExtractionRule, NodeExtractionRuleBuilder};
 pub use constants::*;
 pub use engine::IntelligentChunker;
-pub use language_helpers::{get_chunk_size, is_language_supported, language_from_extension, supported_languages};
+pub use language_helpers::{
+    get_chunk_size, is_language_supported, language_from_extension, supported_languages,
+};
 pub use processor::LanguageProcessor;
 
 // Re-export language processors

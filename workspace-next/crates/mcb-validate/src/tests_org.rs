@@ -5,7 +5,7 @@
 //! - Test file naming conventions
 //! - Test function naming conventions
 
-use crate::{Result, Severity};
+use crate::{Result, Severity, ValidationConfig};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -65,7 +65,9 @@ impl std::fmt::Display for TestViolation {
                     line
                 )
             }
-            Self::BadTestFileName { file, suggestion, .. } => {
+            Self::BadTestFileName {
+                file, suggestion, ..
+            } => {
                 write!(
                     f,
                     "Bad test file name: {} (use {})",
@@ -109,15 +111,18 @@ impl std::fmt::Display for TestViolation {
 
 /// Test organization validator
 pub struct TestValidator {
-    workspace_root: PathBuf,
+    config: ValidationConfig,
 }
 
 impl TestValidator {
     /// Create a new test validator
     pub fn new(workspace_root: impl Into<PathBuf>) -> Self {
-        Self {
-            workspace_root: workspace_root.into(),
-        }
+        Self::with_config(ValidationConfig::new(workspace_root))
+    }
+
+    /// Create a validator with custom configuration for multi-directory support
+    pub fn with_config(config: ValidationConfig) -> Self {
+        Self { config }
     }
 
     /// Run all test organization validations
@@ -238,7 +243,8 @@ impl TestValidator {
         let mut violations = Vec::new();
         let test_attr_pattern = Regex::new(r"#\[test\]").expect("Invalid regex");
         let tokio_test_pattern = Regex::new(r"#\[tokio::test\]").expect("Invalid regex");
-        let fn_pattern = Regex::new(r"(?:async\s+)?fn\s+([a-z_][a-z0-9_]*)\s*\(").expect("Invalid regex");
+        let fn_pattern =
+            Regex::new(r"(?:async\s+)?fn\s+([a-z_][a-z0-9_]*)\s*\(").expect("Invalid regex");
         // Standard assertions plus implicit assertions
         let assert_pattern = Regex::new(
             r"assert!|assert_eq!|assert_ne!|panic!|should_panic|\.unwrap\(|\.expect\(|Box<dyn\s|type_name::",
@@ -247,11 +253,11 @@ impl TestValidator {
 
         // Smoke test patterns - these verify compilation, not runtime behavior
         let smoke_test_patterns = [
-            "_trait_object",  // Tests that verify trait object construction compiles
-            "_exists",        // Tests that verify types exist
-            "_creation",      // Constructor tests with implicit unwrap assertions
-            "_compiles",      // Explicit compile-time tests
-            "_factory",       // Factory pattern tests (often smoke tests)
+            "_trait_object", // Tests that verify trait object construction compiles
+            "_exists",       // Tests that verify types exist
+            "_creation",     // Constructor tests with implicit unwrap assertions
+            "_compiles",     // Explicit compile-time tests
+            "_factory",      // Factory pattern tests (often smoke tests)
         ];
 
         for crate_dir in self.get_crate_dirs()? {
@@ -346,23 +352,13 @@ impl TestValidator {
     }
 
     fn get_crate_dirs(&self) -> Result<Vec<PathBuf>> {
-        let crates_dir = self.workspace_root.join("crates");
-        if !crates_dir.exists() {
-            return Ok(Vec::new());
-        }
+        self.config.get_source_dirs()
+    }
 
-        let mut dirs = Vec::new();
-        for entry in std::fs::read_dir(&crates_dir)? {
-            let entry = entry?;
-            if entry.file_type()?.is_dir() {
-                let name = entry.file_name();
-                let name_str = name.to_string_lossy();
-                if name_str != "mcb-validate" {
-                    dirs.push(entry.path());
-                }
-            }
-        }
-        Ok(dirs)
+    /// Check if a path is from legacy/additional source directories
+    #[allow(dead_code)]
+    fn is_legacy_path(&self, path: &std::path::Path) -> bool {
+        self.config.is_legacy_path(path)
     }
 }
 
@@ -372,7 +368,12 @@ mod tests {
     use std::fs;
     use tempfile::TempDir;
 
-    fn create_test_crate_with_tests(temp: &TempDir, name: &str, src_content: &str, test_content: &str) {
+    fn create_test_crate_with_tests(
+        temp: &TempDir,
+        name: &str,
+        src_content: &str,
+        test_content: &str,
+    ) {
         let crate_dir = temp.path().join("crates").join(name);
         let src_dir = crate_dir.join("src");
         let tests_dir = crate_dir.join("tests");
@@ -424,7 +425,10 @@ mod tests {
         .unwrap();
 
         fs::write(
-            temp.path().join("crates").join("mcb-test").join("Cargo.toml"),
+            temp.path()
+                .join("crates")
+                .join("mcb-test")
+                .join("Cargo.toml"),
             r#"
 [package]
 name = "mcb-test"

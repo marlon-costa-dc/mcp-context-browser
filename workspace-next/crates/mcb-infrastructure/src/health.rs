@@ -191,6 +191,25 @@ impl Default for SystemInfo {
 }
 
 /// Health check function trait
+///
+/// # Example
+///
+/// ```ignore
+/// use mcb_infrastructure::health::HealthChecker;
+///
+/// struct DatabaseHealthChecker { db: Arc<Pool> }
+///
+/// #[async_trait]
+/// impl HealthChecker for DatabaseHealthChecker {
+///     async fn check_health(&self) -> HealthCheck {
+///         match self.db.ping().await {
+///             Ok(_) => HealthCheck::new("database", HealthStatus::Healthy),
+///             Err(e) => HealthCheck::new("database", HealthStatus::Unhealthy)
+///                 .with_message(e.to_string()),
+///         }
+///     }
+/// }
+/// ```
 #[async_trait::async_trait]
 pub trait HealthChecker: Send + Sync {
     /// Perform a health check

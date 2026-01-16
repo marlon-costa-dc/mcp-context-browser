@@ -15,6 +15,23 @@ use shaku::Interface;
 /// The `embed()` method has a default implementation that delegates to
 /// `embed_batch()` with a single item. Providers only need to implement
 /// `embed_batch()` unless custom single-item optimization is needed.
+///
+/// # Example
+///
+/// ```ignore
+/// use mcb_domain::ports::providers::EmbeddingProvider;
+///
+/// // Inject the provider via dependency injection
+/// let provider: Arc<dyn EmbeddingProvider> = container.resolve();
+///
+/// // Generate embedding for code
+/// let embedding = provider.embed("fn main() { println!(\"Hello\"); }").await?;
+/// println!("Embedding dimensions: {}", provider.dimensions());
+///
+/// // Batch processing for efficiency
+/// let texts = vec!["fn foo() {}".into(), "fn bar() {}".into()];
+/// let embeddings = provider.embed_batch(&texts).await?;
+/// ```
 #[async_trait]
 pub trait EmbeddingProvider: Interface + Send + Sync {
     /// Get embedding for a single text (default implementation provided)

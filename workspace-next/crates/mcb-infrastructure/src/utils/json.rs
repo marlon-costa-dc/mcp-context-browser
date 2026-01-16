@@ -15,14 +15,21 @@ use std::collections::HashMap;
 /// assert_eq!(value, "value");
 /// ```
 ///
-/// With this cleaner API:
+/// # Example
+///
 /// ```rust
 /// use serde_json::json;
 /// use mcb_infrastructure::utils::JsonExt;
 ///
-/// let meta = json!({"key": "value"});
+/// let meta = json!({"key": "value", "count": 42, "enabled": true});
 /// let value = meta.str_or("key", "default");
 /// assert_eq!(value, "value");
+///
+/// let count = meta.i64_or("count", 0);
+/// assert_eq!(count, 42);
+///
+/// let enabled = meta.bool_or("enabled", false);
+/// assert!(enabled);
 /// ```
 pub trait JsonExt {
     /// Get string value or default (replaces .get().and_then(as_str).unwrap_or)

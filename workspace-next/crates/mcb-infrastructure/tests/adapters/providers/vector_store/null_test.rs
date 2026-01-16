@@ -1,6 +1,6 @@
 //! Tests for NullVectorStoreProvider
 
-use mcb_domain::ports::providers::VectorStoreProvider;
+use mcb_domain::ports::providers::{VectorStoreAdmin, VectorStoreProvider};
 use mcb_infrastructure::adapters::providers::vector_store::NullVectorStoreProvider;
 
 #[tokio::test]

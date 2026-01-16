@@ -6,8 +6,9 @@
 //! - CI summary for GitHub Actions annotations
 
 use crate::{
-    DependencyViolation, DocumentationViolation, NamingViolation, OrganizationViolation,
-    PatternViolation, QualityViolation, Severity, SolidViolation, TestViolation,
+    DependencyViolation, DocumentationViolation, KissViolation, NamingViolation,
+    OrganizationViolation, PatternViolation, QualityViolation, Severity, ShakuViolation,
+    SolidViolation, TestViolation,
 };
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -37,6 +38,10 @@ pub struct ValidationReport {
     pub solid_violations: Vec<SolidViolation>,
     /// Organization violations (file placement, centralization)
     pub organization_violations: Vec<OrganizationViolation>,
+    /// KISS principle violations (complexity)
+    pub kiss_violations: Vec<KissViolation>,
+    /// DI/Shaku violations
+    pub shaku_violations: Vec<ShakuViolation>,
 }
 
 /// Summary of validation results
@@ -60,6 +65,10 @@ pub struct ValidationSummary {
     pub solid_count: usize,
     /// Number of organization violations
     pub organization_count: usize,
+    /// Number of KISS principle violations
+    pub kiss_count: usize,
+    /// Number of DI/Shaku violations
+    pub shaku_count: usize,
     /// Whether validation passed (no error-level violations)
     pub passed: bool,
 }
@@ -79,7 +88,10 @@ impl Reporter {
 
         output.push_str("=== Architecture Validation Report ===\n\n");
         output.push_str(&format!("Timestamp: {}\n", report.timestamp));
-        output.push_str(&format!("Workspace: {}\n\n", report.workspace_root.display()));
+        output.push_str(&format!(
+            "Workspace: {}\n\n",
+            report.workspace_root.display()
+        ));
 
         // Summary
         output.push_str("--- Summary ---\n");
@@ -118,6 +130,14 @@ impl Reporter {
         output.push_str(&format!(
             "  Organization:   {}\n",
             report.summary.organization_count
+        ));
+        output.push_str(&format!(
+            "  KISS:           {}\n",
+            report.summary.kiss_count
+        ));
+        output.push_str(&format!(
+            "  DI/Shaku:       {}\n",
+            report.summary.shaku_count
         ));
         output.push('\n');
 
@@ -200,6 +220,24 @@ impl Reporter {
             output.push('\n');
         }
 
+        // KISS violations
+        if !report.kiss_violations.is_empty() {
+            output.push_str("--- KISS Violations ---\n");
+            for v in &report.kiss_violations {
+                output.push_str(&format!("  [{:?}] {}\n", v.severity(), v));
+            }
+            output.push('\n');
+        }
+
+        // DI/Shaku violations
+        if !report.shaku_violations.is_empty() {
+            output.push_str("--- DI/Shaku Violations ---\n");
+            for v in &report.shaku_violations {
+                output.push_str(&format!("  [{:?}] {}\n", v.severity(), v));
+            }
+            output.push('\n');
+        }
+
         output
     }
 
@@ -223,34 +261,24 @@ impl Reporter {
             "| Dependency | {} |\n",
             report.summary.dependency_count
         ));
-        output.push_str(&format!(
-            "| Quality | {} |\n",
-            report.summary.quality_count
-        ));
+        output.push_str(&format!("| Quality | {} |\n", report.summary.quality_count));
         output.push_str(&format!(
             "| Patterns | {} |\n",
             report.summary.pattern_count
         ));
-        output.push_str(&format!(
-            "| Tests | {} |\n",
-            report.summary.test_count
-        ));
+        output.push_str(&format!("| Tests | {} |\n", report.summary.test_count));
         output.push_str(&format!(
             "| Documentation | {} |\n",
             report.summary.documentation_count
         ));
-        output.push_str(&format!(
-            "| Naming | {} |\n",
-            report.summary.naming_count
-        ));
-        output.push_str(&format!(
-            "| SOLID | {} |\n",
-            report.summary.solid_count
-        ));
+        output.push_str(&format!("| Naming | {} |\n", report.summary.naming_count));
+        output.push_str(&format!("| SOLID | {} |\n", report.summary.solid_count));
         output.push_str(&format!(
             "| Organization | {} |\n",
             report.summary.organization_count
         ));
+        output.push_str(&format!("| KISS | {} |\n", report.summary.kiss_count));
+        output.push_str(&format!("| DI/Shaku | {} |\n", report.summary.shaku_count));
         output.push_str(&format!(
             "| **Total** | **{}** |\n",
             report.summary.total_violations
@@ -303,6 +331,18 @@ impl Reporter {
         }
 
         for v in &report.organization_violations {
+            if v.severity() == Severity::Error {
+                errors.push(format!("::error ::{}", v));
+            }
+        }
+
+        for v in &report.kiss_violations {
+            if v.severity() == Severity::Error {
+                errors.push(format!("::error ::{}", v));
+            }
+        }
+
+        for v in &report.shaku_violations {
             if v.severity() == Severity::Error {
                 errors.push(format!("::error ::{}", v));
             }
@@ -362,6 +402,16 @@ impl Reporter {
             .iter()
             .filter(|v| v.severity() == Severity::Error)
             .count();
+        count += report
+            .kiss_violations
+            .iter()
+            .filter(|v| v.severity() == Severity::Error)
+            .count();
+        count += report
+            .shaku_violations
+            .iter()
+            .filter(|v| v.severity() == Severity::Error)
+            .count();
 
         count
     }
@@ -410,6 +460,16 @@ impl Reporter {
             .iter()
             .filter(|v| v.severity() == Severity::Warning)
             .count();
+        count += report
+            .kiss_violations
+            .iter()
+            .filter(|v| v.severity() == Severity::Warning)
+            .count();
+        count += report
+            .shaku_violations
+            .iter()
+            .filter(|v| v.severity() == Severity::Warning)
+            .count();
 
         count
     }
@@ -433,6 +493,8 @@ mod tests {
                 naming_count: 0,
                 solid_count: 0,
                 organization_count: 0,
+                kiss_count: 0,
+                shaku_count: 0,
                 passed: true,
             },
             dependency_violations: vec![],
@@ -443,6 +505,8 @@ mod tests {
             naming_violations: vec![],
             solid_violations: vec![],
             organization_violations: vec![],
+            kiss_violations: vec![],
+            shaku_violations: vec![],
         }
     }
 
@@ -479,18 +543,22 @@ mod tests {
     #[test]
     fn test_error_counting() {
         let mut report = create_empty_report();
-        report.quality_violations.push(QualityViolation::UnwrapInProduction {
-            file: PathBuf::from("/test.rs"),
-            line: 1,
-            context: "test".to_string(),
-            severity: Severity::Error,
-        });
-        report.quality_violations.push(QualityViolation::TodoComment {
-            file: PathBuf::from("/test.rs"),
-            line: 2,
-            content: "TODO".to_string(),
-            severity: Severity::Info,
-        });
+        report
+            .quality_violations
+            .push(QualityViolation::UnwrapInProduction {
+                file: PathBuf::from("/test.rs"),
+                line: 1,
+                context: "test".to_string(),
+                severity: Severity::Error,
+            });
+        report
+            .quality_violations
+            .push(QualityViolation::TodoComment {
+                file: PathBuf::from("/test.rs"),
+                line: 2,
+                content: "TODO".to_string(),
+                severity: Severity::Info,
+            });
 
         assert_eq!(Reporter::count_errors(&report), 1);
         assert_eq!(Reporter::count_warnings(&report), 0);

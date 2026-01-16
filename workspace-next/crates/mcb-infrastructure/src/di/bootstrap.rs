@@ -3,16 +3,18 @@
 //! Provides the main dependency injection container that wires together
 //! all infrastructure components following Clean Architecture principles.
 
-use crate::adapters::providers::embedding::NullEmbeddingProvider;
-use crate::adapters::providers::vector_store::InMemoryVectorStoreProvider;
+use crate::adapters::admin::{AtomicPerformanceMetrics, DefaultIndexingOperations};
+use crate::adapters::providers::{EmbeddingProviderFactory, VectorStoreProviderFactory};
 use crate::cache::provider::SharedCacheProvider;
 use crate::cache::CacheProviderFactory;
 use crate::config::AppConfig;
 use crate::crypto::CryptoService;
 use crate::health::{checkers, HealthRegistry};
 use mcb_domain::error::Result;
+use mcb_domain::ports::admin::{IndexingOperationsInterface, PerformanceMetricsInterface};
 use mcb_domain::ports::providers::{EmbeddingProvider, VectorStoreProvider};
 use std::sync::Arc;
+use tracing::info;
 
 /// Core infrastructure components container
 #[derive(Clone)]
@@ -23,6 +25,8 @@ pub struct InfrastructureComponents {
     pub config: AppConfig,
     pub embedding_provider: Arc<dyn EmbeddingProvider>,
     pub vector_store_provider: Arc<dyn VectorStoreProvider>,
+    pub performance_metrics: Arc<dyn PerformanceMetricsInterface>,
+    pub indexing_operations: Arc<dyn IndexingOperationsInterface>,
 }
 
 impl InfrastructureComponents {
@@ -59,16 +63,33 @@ impl InfrastructureComponents {
         // (This would be expanded based on actual database configuration)
 
         // Create embedding provider based on configuration
-        // For now, use NullEmbeddingProvider as default (can be enhanced to
-        // create different providers based on config.embedding.provider)
         let embedding_provider: Arc<dyn EmbeddingProvider> =
-            Arc::new(NullEmbeddingProvider::new());
+            if let Some((name, embedding_config)) = config.embedding.iter().next() {
+                info!(provider = name, "Creating embedding provider from config");
+                EmbeddingProviderFactory::create(embedding_config, None)?
+            } else {
+                info!("No embedding provider configured, using null provider");
+                EmbeddingProviderFactory::create_null()
+            };
 
         // Create vector store provider based on configuration
-        // For now, use InMemoryVectorStoreProvider as default (can be enhanced to
-        // create different providers based on config.vector_store.provider)
         let vector_store_provider: Arc<dyn VectorStoreProvider> =
-            Arc::new(InMemoryVectorStoreProvider::new());
+            if let Some((name, vector_config)) = config.vector_store.iter().next() {
+                info!(
+                    provider = name,
+                    "Creating vector store provider from config"
+                );
+                VectorStoreProviderFactory::create(vector_config, Some(&crypto))?
+            } else {
+                info!("No vector store provider configured, using in-memory provider");
+                VectorStoreProviderFactory::create_in_memory()
+            };
+
+        // Create admin service implementations
+        let performance_metrics: Arc<dyn PerformanceMetricsInterface> =
+            Arc::new(AtomicPerformanceMetrics::new());
+        let indexing_operations: Arc<dyn IndexingOperationsInterface> =
+            Arc::new(DefaultIndexingOperations::new());
 
         Ok(Self {
             cache,
@@ -77,6 +98,8 @@ impl InfrastructureComponents {
             config,
             embedding_provider,
             vector_store_provider,
+            performance_metrics,
+            indexing_operations,
         })
     }
 
@@ -108,6 +131,16 @@ impl InfrastructureComponents {
     /// Get the vector store provider
     pub fn vector_store_provider(&self) -> &Arc<dyn VectorStoreProvider> {
         &self.vector_store_provider
+    }
+
+    /// Get the performance metrics tracker
+    pub fn performance_metrics(&self) -> &Arc<dyn PerformanceMetricsInterface> {
+        &self.performance_metrics
+    }
+
+    /// Get the indexing operations tracker
+    pub fn indexing_operations(&self) -> &Arc<dyn IndexingOperationsInterface> {
+        &self.indexing_operations
     }
 }
 

@@ -31,7 +31,7 @@ pub async fn run_server(config_path: Option<&Path>) -> Result<(), Box<dyn std::e
         .with_indexing_service(container.indexing_service())
         .with_context_service(container.context_service())
         .with_search_service(container.search_service())
-        .build();
+        .try_build()?;
 
     info!("MCP server initialized successfully");
     server.serve_stdio().await

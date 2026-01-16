@@ -1,12 +1,18 @@
-//! Server Operations
+//! Server Operations (Stub)
 //!
 //! High-level server operations and workflows.
-//! Orchestrates complex server-side operations.
+//! Currently a placeholder - operations are handled by domain services
+//! via `IndexingServiceInterface` and `SearchServiceInterface`.
+//!
+//! Future implementation may add:
+//! - Batch operation support
+//! - Operation queuing
+//! - Progress tracking
 
-/// Server operations coordinator
-pub struct ServerOperations {
-    // Placeholder for server operations
-}
+#![allow(dead_code)]
+
+/// Server operations coordinator (placeholder)
+pub struct ServerOperations;
 
 impl Default for ServerOperations {
     fn default() -> Self {
@@ -17,6 +23,6 @@ impl Default for ServerOperations {
 impl ServerOperations {
     /// Create new server operations
     pub fn new() -> Self {
-        Self {}
+        Self
     }
 }
