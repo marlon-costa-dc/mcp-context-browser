@@ -23,6 +23,8 @@ path = "src/main.rs"
 [dependencies]
 # Domain layer - core contracts and types
 mcb-domain = { path = "../mcb-domain" }
+# Infrastructure layer - configuration and DI
+mcb-infrastructure = { path = "../mcb-infrastructure" }
 
 # Core async runtime
 tokio = { workspace = true }
@@ -72,6 +74,8 @@ uuid = { workspace = true }
 
 # Schema generation for MCP
 schemars = { workspace = true }
+# Input validation
+validator = { workspace = true }
 
 # Advanced Multi-Provider Strategy
 prometheus = { workspace = true }

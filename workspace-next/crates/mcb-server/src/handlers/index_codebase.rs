@@ -2,67 +2,71 @@
 //!
 //! Handles the index_codebase MCP tool call using the domain indexing service.
 
-use crate::handlers::IndexCodebaseArgs;
-use crate::McpServer;
-use rmcp::model::CallToolRequest;
+use rmcp::handler::server::wrapper::Parameters;
+use rmcp::model::CallToolResult;
+use rmcp::ErrorData as McpError;
 use std::path::Path;
-use tracing::{info, instrument};
+use std::sync::Arc;
+use std::time::Instant;
+use validator::Validate;
 
-/// Handle the index_codebase tool call
-#[instrument(skip(server), fields(path = %request.arguments["path"]))]
-pub async fn handle_index_codebase(
-    server: &McpServer,
-    request: CallToolRequest,
-) -> Result<rmcp::model::CallToolResponse, rmcp::Error> {
-    let args: IndexCodebaseArgs = serde_json::from_value(request.arguments)
-        .map_err(|e| rmcp::Error::invalid_params(format!("Invalid arguments: {}", e)))?;
+use mcb_domain::domain_services::search::IndexingServiceInterface;
 
-    info!("Indexing codebase at path: {}", args.path);
+use crate::args::IndexCodebaseArgs;
+use crate::formatter::ResponseFormatter;
 
-    // Validate the path exists
-    let path = Path::new(&args.path);
-    if !path.exists() {
-        return Err(rmcp::Error::invalid_params(format!("Path does not exist: {}", args.path)));
-    }
-
-    if !path.is_dir() {
-        return Err(rmcp::Error::invalid_params(format!("Path is not a directory: {}", args.path)));
-    }
-
-    // Use the indexing service from the domain layer
-    let result = server
-        .indexing_service()
-        .index_codebase(path, args.force, args.languages.as_deref())
-        .await
-        .map_err(|e| {
-            rmcp::Error::internal_error(format!("Indexing failed: {}", e))
-        })?;
-
-    // Format result for MCP response
-    let content = format_indexing_result(&result);
-
-    Ok(rmcp::model::CallToolResponse {
-        content: vec![rmcp::model::Content::text(content)],
-        is_error: None,
-    })
+/// Handler for codebase indexing operations
+pub struct IndexCodebaseHandler {
+    indexing_service: Arc<dyn IndexingServiceInterface>,
 }
 
-/// Format indexing result into a human-readable string
-fn format_indexing_result(result: &mcb_domain::IndexingResult) -> String {
-    let mut output = String::new();
-
-    output.push_str(&format!("Indexing completed successfully!\n\n"));
-    output.push_str(&format!("📁 Codebase: {}\n", result.codebase_path.display()));
-    output.push_str(&format!("📊 Files processed: {}\n", result.files_processed));
-    output.push_str(&format!("🔍 Chunks created: {}\n", result.chunks_created));
-    output.push_str(&format!("⏱️  Duration: {:.2}s\n", result.duration.as_secs_f64()));
-
-    if !result.errors.is_empty() {
-        output.push_str(&format!("\n⚠️  Errors encountered: {}\n", result.errors.len()));
-        for error in &result.errors {
-            output.push_str(&format!("   - {}\n", error));
-        }
+impl IndexCodebaseHandler {
+    /// Create a new index_codebase handler
+    pub fn new(indexing_service: Arc<dyn IndexingServiceInterface>) -> Self {
+        Self { indexing_service }
     }
 
-    output
+    /// Handle the index_codebase tool request
+    pub async fn handle(
+        &self,
+        Parameters(args): Parameters<IndexCodebaseArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        if let Err(e) = args.validate() {
+            return Err(McpError::invalid_params(
+                format!("Invalid arguments: {}", e),
+                None,
+            ));
+        }
+
+        let path = Path::new(&args.path);
+        if !path.exists() {
+            return Ok(ResponseFormatter::format_indexing_error(
+                "Specified path does not exist",
+                path,
+            ));
+        }
+
+        if !path.is_dir() {
+            return Ok(ResponseFormatter::format_indexing_error(
+                "Specified path is not a directory",
+                path,
+            ));
+        }
+
+        let collection = args.collection.as_deref().unwrap_or("default");
+        let timer = Instant::now();
+
+        match self
+            .indexing_service
+            .index_codebase(path, collection)
+            .await
+        {
+            Ok(result) => Ok(ResponseFormatter::format_indexing_success(
+                &result,
+                path,
+                timer.elapsed(),
+            )),
+            Err(e) => Ok(ResponseFormatter::format_indexing_error(&e.to_string(), path)),
+        }
+    }
 }

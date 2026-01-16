@@ -5,7 +5,7 @@
 
 use crate::McpServer;
 use rmcp::transport::stdio;
-use rmcp::ServerHandler;
+use rmcp::ServiceExt;
 use tracing::info;
 
 /// Extension trait for McpServer to add stdio serving capability

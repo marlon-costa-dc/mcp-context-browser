@@ -4,7 +4,7 @@
 //! Ensures all required dependencies are provided before server construction.
 
 use std::sync::Arc;
-use mcb_domain::ports::{
+use mcb_domain::{
     IndexingServiceInterface, ContextServiceInterface, SearchServiceInterface,
 };
 use crate::McpServer;

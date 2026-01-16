@@ -4,19 +4,25 @@
 //! Follows Clean Architecture principles with dependency injection.
 
 use std::sync::Arc;
-use async_trait::async_trait;
-use rmcp::model::{ServerCapabilities, ServerInfo};
-use rmcp::{ServerHandler, Service, Tool};
-use tracing::{info, error, instrument};
 
-use mcb_domain::ports::{
-    IndexingServiceInterface, ContextServiceInterface, SearchServiceInterface,
+use rmcp::model::{
+    CallToolResult, Implementation, ListToolsResult, PaginatedRequestParam, ProtocolVersion,
+    ServerCapabilities, ServerInfo,
 };
+use rmcp::ErrorData as McpError;
+use rmcp::ServerHandler;
+
+use mcb_domain::{ContextServiceInterface, IndexingServiceInterface, SearchServiceInterface};
+
+use crate::handlers::{
+    ClearIndexHandler, GetIndexingStatusHandler, IndexCodebaseHandler, SearchCodeHandler,
+};
+use crate::tools::{create_tool_list, route_tool_call, ToolHandlers};
 
 /// Core MCP server implementation
 ///
 /// This server implements the MCP protocol for semantic code search.
-/// It depends only on domain ports and receives all dependencies through
+/// It depends only on domain services and receives all dependencies through
 /// constructor injection following Clean Architecture principles.
 #[derive(Clone)]
 pub struct McpServer {
@@ -26,52 +32,38 @@ pub struct McpServer {
     context_service: Arc<dyn ContextServiceInterface>,
     /// Service for semantic code search
     search_service: Arc<dyn SearchServiceInterface>,
-    /// Server information
-    server_info: ServerInfo,
+    /// Handler for indexing operations
+    index_codebase_handler: Arc<IndexCodebaseHandler>,
+    /// Handler for search operations
+    search_code_handler: Arc<SearchCodeHandler>,
+    /// Handler for indexing status operations
+    get_indexing_status_handler: Arc<GetIndexingStatusHandler>,
+    /// Handler for index clearing operations
+    clear_index_handler: Arc<ClearIndexHandler>,
 }
 
 impl McpServer {
     /// Create a new MCP server with injected dependencies
-    ///
-    /// # Arguments
-    /// * `indexing_service` - Service for indexing codebases
-    /// * `context_service` - Service for providing code context
-    /// * `search_service` - Service for semantic code search
-    ///
-    /// # Returns
-    /// A new McpServer instance with injected dependencies
     pub fn new(
         indexing_service: Arc<dyn IndexingServiceInterface>,
         context_service: Arc<dyn ContextServiceInterface>,
         search_service: Arc<dyn SearchServiceInterface>,
     ) -> Self {
-        let server_info = ServerInfo {
-            name: "mcp-context-browser".to_string(),
-            version: env!("CARGO_PKG_VERSION").to_string(),
-        };
+        let index_codebase_handler = Arc::new(IndexCodebaseHandler::new(indexing_service.clone()));
+        let search_code_handler = Arc::new(SearchCodeHandler::new(search_service.clone()));
+        let get_indexing_status_handler = Arc::new(GetIndexingStatusHandler::new(
+            indexing_service.clone(),
+        ));
+        let clear_index_handler = Arc::new(ClearIndexHandler::new(indexing_service.clone()));
 
         Self {
             indexing_service,
             context_service,
             search_service,
-            server_info,
-        }
-    }
-
-    /// Get server information
-    pub fn get_info(&self) -> &ServerInfo {
-        &self.server_info
-    }
-
-    /// Get server capabilities
-    pub fn get_capabilities(&self) -> ServerCapabilities {
-        ServerCapabilities {
-            tools: Some(rmcp::model::ServerCapabilitiesTools {
-                list_changed: Some(true),
-            }),
-            prompts: None,
-            resources: None,
-            logging: None,
+            index_codebase_handler,
+            search_code_handler,
+            get_indexing_status_handler,
+            clear_index_handler,
         }
     }
 
@@ -91,65 +83,56 @@ impl McpServer {
     }
 }
 
-#[async_trait]
 impl ServerHandler for McpServer {
-    /// Handle server initialization
-    async fn initialize(&self) -> Result<(), rmcp::Error> {
-        info!("MCP Context Browser server initialized");
-        Ok(())
+    /// Get server information and capabilities
+    fn get_info(&self) -> ServerInfo {
+        ServerInfo {
+            protocol_version: ProtocolVersion::V_2024_11_05,
+            capabilities: ServerCapabilities::builder().enable_tools().build(),
+            server_info: Implementation {
+                name: "MCP Context Browser".to_string(),
+                version: env!("CARGO_PKG_VERSION").to_string(),
+                ..Default::default()
+            },
+            instructions: Some(
+                "MCP Context Browser - Semantic Code Search\n\n\
+                 AI-powered code understanding for semantic search across large codebases.\n\n\
+                 Tools:\n\
+                 - index_codebase: Build a semantic index for a directory\n\
+                 - search_code: Query indexed code using natural language\n\
+                 - get_indexing_status: Inspect indexing progress\n\
+                 - clear_index: Clear a collection before re-indexing\n"
+                    .to_string(),
+            ),
+        }
     }
 
-    /// Get available tools
-    async fn tools(&self) -> Result<Vec<Tool>, rmcp::Error> {
-        Ok(vec![
-            Tool {
-                name: "search_code".to_string(),
-                description: "Search for code using semantic similarity and lexical matching".to_string(),
-                input_schema: schemars::schema_for!(crate::handlers::SearchCodeArgs),
-            },
-            Tool {
-                name: "index_codebase".to_string(),
-                description: "Index a codebase for semantic search".to_string(),
-                input_schema: schemars::schema_for!(crate::handlers::IndexCodebaseArgs),
-            },
-            Tool {
-                name: "get_indexing_status".to_string(),
-                description: "Get the current indexing status".to_string(),
-                input_schema: schemars::schema_for!(crate::handlers::GetIndexingStatusArgs),
-            },
-            Tool {
-                name: "clear_index".to_string(),
-                description: "Clear the search index".to_string(),
-                input_schema: schemars::schema_for!(crate::handlers::ClearIndexArgs),
-            },
-        ])
+    /// List available tools
+    async fn list_tools(
+        &self,
+        _pagination: Option<PaginatedRequestParam>,
+        _context: rmcp::service::RequestContext<rmcp::RoleServer>,
+    ) -> Result<ListToolsResult, McpError> {
+        let tools = create_tool_list()?;
+        Ok(ListToolsResult {
+            tools,
+            meta: Default::default(),
+            next_cursor: None,
+        })
     }
 
-    /// Handle tool calls
-    #[instrument(skip(self), fields(tool = %request.name))]
+    /// Call a tool
     async fn call_tool(
         &self,
-        request: rmcp::model::CallToolRequest,
-    ) -> Result<rmcp::model::CallToolResponse, rmcp::Error> {
-        info!("Handling tool call: {}", request.name);
-
-        match request.name.as_str() {
-            "search_code" => {
-                crate::handlers::search_code::handle_search_code(self, request).await
-            }
-            "index_codebase" => {
-                crate::handlers::index_codebase::handle_index_codebase(self, request).await
-            }
-            "get_indexing_status" => {
-                crate::handlers::get_indexing_status::handle_get_indexing_status(self, request).await
-            }
-            "clear_index" => {
-                crate::handlers::clear_index::handle_clear_index(self, request).await
-            }
-            _ => {
-                error!("Unknown tool: {}", request.name);
-                Err(rmcp::Error::invalid_request(format!("Unknown tool: {}", request.name)))
-            }
-        }
+        request: rmcp::model::CallToolRequestParam,
+        _context: rmcp::service::RequestContext<rmcp::RoleServer>,
+    ) -> Result<CallToolResult, McpError> {
+        let handlers = ToolHandlers {
+            index_codebase: Arc::clone(&self.index_codebase_handler),
+            search_code: Arc::clone(&self.search_code_handler),
+            get_indexing_status: Arc::clone(&self.get_indexing_status_handler),
+            clear_index: Arc::clone(&self.clear_index_handler),
+        };
+        route_tool_call(request, &handlers).await
     }
 }

@@ -53,6 +53,7 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
 pub mod admin;
+pub mod args;
 pub mod auth;
 pub mod builder;
 pub mod components;

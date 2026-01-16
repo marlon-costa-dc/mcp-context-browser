@@ -2,42 +2,45 @@
 //!
 //! Handles the clear_index MCP tool call using the domain indexing service.
 
-use crate::handlers::ClearIndexArgs;
-use crate::McpServer;
-use rmcp::model::CallToolRequest;
-use tracing::{info, instrument, warn};
+use rmcp::handler::server::wrapper::Parameters;
+use rmcp::model::CallToolResult;
+use rmcp::ErrorData as McpError;
+use std::sync::Arc;
+use validator::Validate;
 
-/// Handle the clear_index tool call
-#[instrument(skip(server))]
-pub async fn handle_clear_index(
-    server: &McpServer,
-    request: CallToolRequest,
-) -> Result<rmcp::model::CallToolResponse, rmcp::Error> {
-    let args: ClearIndexArgs = serde_json::from_value(request.arguments)
-        .map_err(|e| rmcp::Error::invalid_params(format!("Invalid arguments: {}", e)))?;
+use mcb_domain::domain_services::search::IndexingServiceInterface;
 
-    if !args.confirm {
-        warn!("Clear index operation not confirmed");
-        return Err(rmcp::Error::invalid_params(
-            "Operation must be confirmed by setting confirm=true"
-        ));
+use crate::args::ClearIndexArgs;
+use crate::formatter::ResponseFormatter;
+
+/// Handler for index clearing operations
+pub struct ClearIndexHandler {
+    indexing_service: Arc<dyn IndexingServiceInterface>,
+}
+
+impl ClearIndexHandler {
+    /// Create a new clear_index handler
+    pub fn new(indexing_service: Arc<dyn IndexingServiceInterface>) -> Self {
+        Self { indexing_service }
     }
 
-    info!("Clearing search index");
+    /// Handle the clear_index tool request
+    pub async fn handle(
+        &self,
+        Parameters(args): Parameters<ClearIndexArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        if let Err(e) = args.validate() {
+            return Err(McpError::invalid_params(
+                format!("Invalid arguments: {}", e),
+                None,
+            ));
+        }
 
-    // Use the indexing service from the domain layer
-    server
-        .indexing_service()
-        .clear_index()
-        .await
-        .map_err(|e| {
-            rmcp::Error::internal_error(format!("Failed to clear index: {}", e))
-        })?;
+        self.indexing_service
+            .clear_collection(&args.collection)
+            .await
+            .map_err(|e| McpError::internal_error(format!("Failed to clear index: {}", e), None))?;
 
-    let content = "✅ Search index cleared successfully.".to_string();
-
-    Ok(rmcp::model::CallToolResponse {
-        content: vec![rmcp::model::Content::text(content)],
-        is_error: None,
-    })
+        Ok(ResponseFormatter::format_clear_index(&args.collection))
+    }
 }

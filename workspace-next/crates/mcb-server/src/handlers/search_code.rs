@@ -2,66 +2,56 @@
 //!
 //! Handles the search_code MCP tool call using the domain search service.
 
-use crate::handlers::SearchCodeArgs;
-use crate::McpServer;
-use mcb_domain::SearchResult;
-use rmcp::model::CallToolRequest;
-use tracing::{info, instrument};
+use rmcp::handler::server::wrapper::Parameters;
+use rmcp::model::CallToolResult;
+use rmcp::ErrorData as McpError;
+use std::sync::Arc;
+use std::time::Instant;
+use validator::Validate;
 
-/// Handle the search_code tool call
-#[instrument(skip(server), fields(query = %request.arguments["query"]))]
-pub async fn handle_search_code(
-    server: &McpServer,
-    request: CallToolRequest,
-) -> Result<rmcp::model::CallToolResponse, rmcp::Error> {
-    let args: SearchCodeArgs = serde_json::from_value(request.arguments)
-        .map_err(|e| rmcp::Error::invalid_params(format!("Invalid arguments: {}", e)))?;
+use mcb_domain::domain_services::search::SearchServiceInterface;
 
-    info!("Searching code with query: {}", args.query);
+use crate::args::SearchCodeArgs;
+use crate::formatter::ResponseFormatter;
 
-    // Use the search service from the domain layer
-    let search_results = server
-        .search_service()
-        .search(&args.query, args.limit, args.file_path.as_deref(), args.language.as_deref())
-        .await
-        .map_err(|e| {
-            rmcp::Error::internal_error(format!("Search failed: {}", e))
-        })?;
-
-    // Format results for MCP response
-    let content = format_search_results(&search_results);
-
-    Ok(rmcp::model::CallToolResponse {
-        content: vec![rmcp::model::Content::text(content)],
-        is_error: None,
-    })
+/// Handler for code search operations
+pub struct SearchCodeHandler {
+    search_service: Arc<dyn SearchServiceInterface>,
 }
 
-/// Format search results into a human-readable string
-fn format_search_results(results: &[SearchResult]) -> String {
-    if results.is_empty() {
-        return "No results found.".to_string();
+impl SearchCodeHandler {
+    /// Create a new search_code handler
+    pub fn new(search_service: Arc<dyn SearchServiceInterface>) -> Self {
+        Self { search_service }
     }
 
-    let mut output = format!("Found {} results:\n\n", results.len());
-
-    for (i, result) in results.iter().enumerate() {
-        output.push_str(&format!(
-            "{}. **{}** ({})\n",
-            i + 1,
-            result.file_path,
-            result.language
-        ));
-
-        if let Some(ref snippet) = result.snippet {
-            output.push_str(&format!("   ```{}\n   {}\n   ```\n", result.language, snippet));
+    /// Handle the search_code tool request
+    pub async fn handle(
+        &self,
+        Parameters(mut args): Parameters<SearchCodeArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        args.query = args.query.trim().to_string();
+        if let Err(e) = args.validate() {
+            return Err(McpError::invalid_params(
+                format!("Invalid arguments: {}", e),
+                None,
+            ));
         }
 
-        output.push_str(&format!(
-            "   Score: {:.3}, Line: {}\n\n",
-            result.score, result.start_line
-        ));
-    }
+        let collection = args.collection.as_deref().unwrap_or("default");
+        let timer = Instant::now();
 
-    output
+        let results = self
+            .search_service
+            .search(collection, &args.query, args.limit)
+            .await
+            .map_err(|e| McpError::internal_error(format!("Search failed: {}", e), None))?;
+
+        ResponseFormatter::format_search_response(
+            &args.query,
+            &results,
+            timer.elapsed(),
+            args.limit,
+        )
+    }
 }
