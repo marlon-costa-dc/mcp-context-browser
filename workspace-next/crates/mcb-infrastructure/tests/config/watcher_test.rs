@@ -1,0 +1,85 @@
+//! Configuration Watcher Tests
+
+use mcb_infrastructure::config::loader::ConfigLoader;
+use mcb_infrastructure::config::watcher::{ConfigWatcher, ConfigWatcherBuilder};
+use mcb_infrastructure::config::AppConfig;
+use mcb_infrastructure::constants::DEFAULT_HTTP_PORT;
+use tempfile::TempDir;
+
+#[tokio::test]
+async fn test_config_watcher_creation() {
+    let temp_dir = TempDir::new().unwrap();
+    let config_path = temp_dir.path().join("test_config.toml");
+
+    // Create initial config file
+    let initial_config = AppConfig::default();
+    let loader = ConfigLoader::new();
+    loader.save_to_file(&initial_config, &config_path).unwrap();
+
+    let watcher = ConfigWatcher::new(config_path, initial_config)
+        .await
+        .unwrap();
+    let config = watcher.get_config().await;
+
+    assert_eq!(config.server.port, DEFAULT_HTTP_PORT);
+}
+
+#[tokio::test]
+async fn test_manual_reload() {
+    let temp_dir = TempDir::new().unwrap();
+    let config_path = temp_dir.path().join("test_config.toml");
+
+    let initial_config = AppConfig::default();
+    let loader = ConfigLoader::new();
+    loader.save_to_file(&initial_config, &config_path).unwrap();
+
+    let watcher = ConfigWatcher::new(config_path.clone(), initial_config)
+        .await
+        .unwrap();
+
+    // Modify config file
+    let mut new_config = AppConfig::default();
+    new_config.server.port = 9999;
+    loader.save_to_file(&new_config, &config_path).unwrap();
+
+    // Reload manually
+    let reloaded_config = watcher.reload().await.unwrap();
+    assert_eq!(reloaded_config.server.port, 9999);
+
+    // Check current config was updated
+    let current_config = watcher.get_config().await;
+    assert_eq!(current_config.server.port, 9999);
+}
+
+#[test]
+fn test_watcher_builder() {
+    let temp_dir = TempDir::new().unwrap();
+    let config_path = temp_dir.path().join("test_config.toml");
+
+    let builder = ConfigWatcherBuilder::new()
+        .with_config_path(&config_path)
+        .with_initial_config(AppConfig::default());
+
+    // Builder should validate that config file exists
+    let result = tokio::runtime::Runtime::new()
+        .unwrap()
+        .block_on(builder.build());
+
+    assert!(result.is_err()); // File doesn't exist yet
+}
+
+#[test]
+fn test_should_reload_config() {
+    use notify::{
+        event::{DataChange, ModifyKind},
+        Event, EventKind,
+    };
+
+    // Should reload on data modification
+    let modify_event = Event::new(EventKind::Modify(ModifyKind::Data(DataChange::Any)));
+    assert!(ConfigWatcher::should_reload_config(&modify_event));
+
+    // Should not reload on other events
+    let access_event = Event::new(EventKind::Access(notify::event::AccessKind::Read));
+    assert!(!ConfigWatcher::should_reload_config(&access_event));
+}

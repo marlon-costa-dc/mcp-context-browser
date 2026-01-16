@@ -67,8 +67,3 @@ impl HttpResponseUtils {
         Self::json_response(response, provider_name).await
     }
 }
-
-#[cfg(test)]
-mod tests {
-    // HTTP response tests would require mocking - tested via integration tests
-}

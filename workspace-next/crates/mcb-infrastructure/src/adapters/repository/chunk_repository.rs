@@ -210,10 +210,3 @@ impl ChunkRepository for VectorStoreChunkRepository {
         })
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    // TODO: Add unit tests with mock providers
-}

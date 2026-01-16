@@ -147,6 +147,19 @@ pub const BACKUP_FILE_EXTENSION: &str = ".backup";
 pub const TEMP_FILE_PREFIX: &str = "mcb_temp_";
 
 // ============================================================================
+// FILESYSTEM VECTOR STORE CONSTANTS
+// ============================================================================
+
+/// Maximum vectors per shard file in filesystem vector store
+pub const FILESYSTEM_VECTOR_STORE_MAX_PER_SHARD: usize = 100_000;
+
+/// Index cache size (number of index entries to keep in memory)
+pub const FILESYSTEM_VECTOR_STORE_INDEX_CACHE_SIZE: usize = 10_000;
+
+/// Bytes per dimension for vector storage (f32 = 4 bytes)
+pub const FILESYSTEM_BYTES_PER_DIMENSION: usize = 4;
+
+// ============================================================================
 // DATABASE CONSTANTS
 // ============================================================================
 

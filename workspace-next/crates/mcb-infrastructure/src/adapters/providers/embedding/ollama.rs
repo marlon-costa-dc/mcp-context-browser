@@ -166,4 +166,3 @@ impl EmbeddingProvider for OllamaEmbeddingProvider {
         "ollama"
     }
 }
-

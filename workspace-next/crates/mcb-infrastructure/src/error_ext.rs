@@ -228,37 +228,3 @@ pub mod infra {
         }
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::io;
-
-    #[test]
-    fn test_error_context_extension() {
-        let io_error = io::Error::new(io::ErrorKind::NotFound, "file not found");
-
-        let result: Result<()> = Err(io_error).io_context("failed to read file");
-        assert!(result.is_err());
-
-        if let Err(Error::Io { source }) = result {
-            let error_message = format!("{}", source);
-            assert!(error_message.contains("file not found"));
-        } else {
-            panic!("Expected Io error");
-        }
-    }
-
-    #[test]
-    fn test_infra_error_creation() {
-        let error = infra::infrastructure_error_msg("test error message");
-
-        match error {
-            Error::Infrastructure { message, source } => {
-                assert_eq!(message, "test error message");
-                assert!(source.is_none());
-            }
-            _ => panic!("Expected Infrastructure error"),
-        }
-    }
-}

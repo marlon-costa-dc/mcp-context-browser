@@ -70,13 +70,18 @@ pub mod repositories;
 pub mod value_objects;
 
 // Re-export commonly used types for convenience
+pub use constants::{
+    INDEXING_BATCH_SIZE, INDEXING_CHUNKS_MAX_PER_FILE, INDEXING_CHUNK_MIN_LENGTH,
+    INDEXING_CHUNK_MIN_LINES,
+};
 pub use domain_services::{
-    CodeChunker, ContextServiceInterface, IndexingServiceInterface, SearchServiceInterface,
+    ChunkingOptions, ChunkingResult, CodeChunker, ContextServiceInterface,
+    IndexingServiceInterface, SearchServiceInterface,
 };
 pub use entities::*;
 pub use error::{Error, Result};
 pub use events::{DomainEvent, EventPublisher};
-pub use repositories::{ChunkRepository, SearchRepository};
+pub use repositories::{ChunkRepository, RepositoryStats, SearchRepository};
 pub use value_objects::{
     Embedding, EmbeddingConfig, EmbeddingProviderKind, Language, OperationType, SearchResult,
     VectorStoreConfig, VectorStoreProviderKind,

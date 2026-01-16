@@ -54,3 +54,4 @@ chrono = { workspace = true }
 [dev-dependencies]
 # Testing utilities
 tempfile = "3.10"
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }

@@ -21,7 +21,7 @@ pub mod indexing;
 pub mod search;
 
 // Re-export domain service interfaces
-pub use chunking::CodeChunker;
+pub use chunking::{ChunkingOptions, ChunkingResult, CodeChunker};
 pub use search::{
     ChunkingOrchestratorInterface, ContextServiceInterface, IndexingResult,
     IndexingServiceInterface, IndexingStatus, SearchServiceInterface,

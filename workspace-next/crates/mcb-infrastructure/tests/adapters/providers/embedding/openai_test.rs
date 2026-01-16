@@ -2,7 +2,9 @@
 
 use mcb_infrastructure::adapters::http_client::test_utils::NullHttpClientPool;
 use mcb_infrastructure::adapters::providers::OpenAIEmbeddingProvider;
-use mcb_infrastructure::constants::{EMBEDDING_DIMENSION_OPENAI_LARGE, EMBEDDING_DIMENSION_OPENAI_SMALL};
+use mcb_infrastructure::constants::{
+    EMBEDDING_DIMENSION_OPENAI_LARGE, EMBEDDING_DIMENSION_OPENAI_SMALL,
+};
 use std::sync::Arc;
 use std::time::Duration;
 

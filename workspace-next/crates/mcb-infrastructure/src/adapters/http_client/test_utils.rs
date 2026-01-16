@@ -60,4 +60,3 @@ impl HttpClientProvider for NullHttpClientPool {
         false
     }
 }
-

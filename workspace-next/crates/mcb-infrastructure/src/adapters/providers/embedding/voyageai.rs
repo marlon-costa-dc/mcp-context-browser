@@ -170,4 +170,3 @@ impl EmbeddingProvider for VoyageAIEmbeddingProvider {
         "voyageai"
     }
 }
-

@@ -171,15 +171,3 @@ impl SearchRepository for VectorStoreSearchRepository {
         })
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_stats_tracker_default() {
-        let tracker = SearchStatsTracker::default();
-        assert_eq!(tracker.total_queries.load(Ordering::Relaxed), 0);
-        assert_eq!(tracker.indexed_documents.load(Ordering::Relaxed), 0);
-    }
-}

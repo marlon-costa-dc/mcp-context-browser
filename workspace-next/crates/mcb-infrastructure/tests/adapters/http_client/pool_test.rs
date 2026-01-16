@@ -2,7 +2,9 @@
 //!
 //! Tests for the HTTP client pool implementation.
 
-use mcb_infrastructure::adapters::http_client::{HttpClientConfig, HttpClientPool, HttpClientProvider};
+use mcb_infrastructure::adapters::http_client::{
+    HttpClientConfig, HttpClientPool, HttpClientProvider,
+};
 use std::time::Duration;
 
 #[test]

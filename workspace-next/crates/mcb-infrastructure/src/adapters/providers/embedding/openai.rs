@@ -277,4 +277,3 @@ impl EmbeddingProvider for OpenAIEmbeddingProvider {
         "openai"
     }
 }
-

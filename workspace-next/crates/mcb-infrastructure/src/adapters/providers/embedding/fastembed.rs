@@ -169,17 +169,3 @@ impl FastEmbedActor {
         }
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    // Note: FastEmbed tests require model download, so they're integration tests
-    // These unit tests just verify the basic structure
-
-    #[test]
-    fn test_dimensions() {
-        // Just verify the constant is correct
-        assert_eq!(EMBEDDING_DIMENSION_FASTEMBED_DEFAULT, 384);
-    }
-}

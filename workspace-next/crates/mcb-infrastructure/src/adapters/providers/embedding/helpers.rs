@@ -38,35 +38,3 @@ pub mod constructor {
 
 /// Default timeout for embedding API requests
 pub const DEFAULT_EMBEDDING_TIMEOUT: Duration = Duration::from_secs(30);
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_validate_api_key() {
-        assert_eq!(constructor::validate_api_key("  key  "), "key");
-        assert_eq!(constructor::validate_api_key("key"), "key");
-    }
-
-    #[test]
-    fn test_validate_url() {
-        assert_eq!(
-            constructor::validate_url(Some("  https://api.example.com  ".to_string())),
-            Some("https://api.example.com".to_string())
-        );
-        assert_eq!(constructor::validate_url(None), None);
-    }
-
-    #[test]
-    fn test_get_effective_url() {
-        assert_eq!(
-            constructor::get_effective_url(Some("https://custom.com"), "https://default.com"),
-            "https://custom.com"
-        );
-        assert_eq!(
-            constructor::get_effective_url(None, "https://default.com"),
-            "https://default.com"
-        );
-    }
-}

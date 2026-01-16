@@ -6,106 +6,102 @@ mod tests {
     use mcb_domain::{DomainEvent, EventPublisher};
     use std::sync::Mutex;
 
-    // Mock event for testing
-    #[derive(Debug, Clone, PartialEq)]
-    struct TestEvent {
-        id: String,
-        message: String,
-        timestamp: i64,
-    }
-
-    impl DomainEvent for TestEvent {
-        fn event_type(&self) -> &str {
-            "test_event"
-        }
-
-        fn event_id(&self) -> &str {
-            &self.id
-        }
-
-        fn aggregate_id(&self) -> &str {
-            "test-aggregate"
-        }
-
-        fn occurred_at(&self) -> i64 {
-            self.timestamp
-        }
-    }
-
     // Mock event publisher for testing
     struct MockEventPublisher {
-        published_events: Mutex<Vec<Box<dyn DomainEvent>>>,
+        published_events: Mutex<Vec<DomainEvent>>,
+        subscriber_count: usize,
     }
 
     impl MockEventPublisher {
         fn new() -> Self {
             Self {
                 published_events: Mutex::new(Vec::new()),
+                subscriber_count: 1,
             }
         }
 
-        fn get_published_events(&self) -> Vec<Box<dyn DomainEvent>> {
+        fn with_no_subscribers() -> Self {
+            Self {
+                published_events: Mutex::new(Vec::new()),
+                subscriber_count: 0,
+            }
+        }
+
+        fn get_published_events(&self) -> Vec<DomainEvent> {
             self.published_events.lock().unwrap().clone()
         }
     }
 
     #[async_trait]
     impl EventPublisher for MockEventPublisher {
-        async fn publish(&self, event: Box<dyn DomainEvent>) -> mcb_domain::Result<()> {
+        async fn publish(&self, event: DomainEvent) -> mcb_domain::Result<()> {
             self.published_events.lock().unwrap().push(event);
             Ok(())
         }
 
-        async fn publish_batch(&self, events: Vec<Box<dyn DomainEvent>>) -> mcb_domain::Result<()> {
-            let mut published = self.published_events.lock().unwrap();
-            for event in events {
-                published.push(event);
-            }
-            Ok(())
+        fn has_subscribers(&self) -> bool {
+            self.subscriber_count > 0
         }
     }
 
     #[test]
     fn test_domain_event_creation() {
-        let event = TestEvent {
-            id: "event-123".to_string(),
-            message: "Test event message".to_string(),
-            timestamp: 1640995200,
+        let event = DomainEvent::IndexRebuild {
+            collection: Some("test-collection".to_string()),
         };
 
-        assert_eq!(event.event_type(), "test_event");
-        assert_eq!(event.event_id(), "event-123");
-        assert_eq!(event.aggregate_id(), "test-aggregate");
-        assert_eq!(event.occurred_at(), 1640995200);
+        // Test that event can be created and debugged
+        let debug_str = format!("{:?}", event);
+        assert!(debug_str.contains("IndexRebuild"));
+        assert!(debug_str.contains("test-collection"));
     }
 
     #[test]
-    fn test_domain_event_debug() {
-        let event = TestEvent {
-            id: "debug-event".to_string(),
-            message: "Debug message".to_string(),
-            timestamp: 1641081600,
+    fn test_domain_event_variants() {
+        // Test each event variant
+        let index_rebuild = DomainEvent::IndexRebuild {
+            collection: Some("my-collection".to_string()),
         };
 
-        let debug_str = format!("{:?}", event);
-        assert!(debug_str.contains("TestEvent"));
-        assert!(debug_str.contains("debug-event"));
-        assert!(debug_str.contains("Debug message"));
+        let sync_completed = DomainEvent::SyncCompleted {
+            path: "/path/to/code".to_string(),
+            files_changed: 42,
+        };
+
+        let cache_invalidate = DomainEvent::CacheInvalidate {
+            namespace: Some("embeddings".to_string()),
+        };
+
+        let snapshot_created = DomainEvent::SnapshotCreated {
+            root_path: "/code".to_string(),
+            file_count: 100,
+        };
+
+        let file_changes = DomainEvent::FileChangesDetected {
+            root_path: "/code".to_string(),
+            added: 5,
+            modified: 10,
+            removed: 2,
+        };
+
+        // Just verify they can be created
+        assert!(matches!(index_rebuild, DomainEvent::IndexRebuild { .. }));
+        assert!(matches!(sync_completed, DomainEvent::SyncCompleted { .. }));
+        assert!(matches!(cache_invalidate, DomainEvent::CacheInvalidate { .. }));
+        assert!(matches!(snapshot_created, DomainEvent::SnapshotCreated { .. }));
+        assert!(matches!(file_changes, DomainEvent::FileChangesDetected { .. }));
     }
 
     #[test]
     fn test_domain_event_clone() {
-        let event1 = TestEvent {
-            id: "clone-test".to_string(),
-            message: "Original message".to_string(),
-            timestamp: 1641168000,
+        let event1 = DomainEvent::SyncCompleted {
+            path: "/code".to_string(),
+            files_changed: 10,
         };
 
         let event2 = event1.clone();
 
-        assert_eq!(event1.id, event2.id);
-        assert_eq!(event1.message, event2.message);
-        assert_eq!(event1.timestamp, event2.timestamp);
+        assert_eq!(event1, event2);
     }
 
     #[test]
@@ -115,72 +111,80 @@ mod tests {
         assert!(events.is_empty());
     }
 
+    #[test]
+    fn test_has_subscribers() {
+        let publisher_with_subs = MockEventPublisher::new();
+        assert!(publisher_with_subs.has_subscribers());
+
+        let publisher_no_subs = MockEventPublisher::with_no_subscribers();
+        assert!(!publisher_no_subs.has_subscribers());
+    }
+
     #[tokio::test]
     async fn test_publish_single_event() {
         let publisher = MockEventPublisher::new();
 
-        let event = TestEvent {
-            id: "published-event".to_string(),
-            message: "Event to publish".to_string(),
-            timestamp: 1641254400,
+        let event = DomainEvent::IndexRebuild {
+            collection: Some("test".to_string()),
         };
 
-        let result = publisher.publish(Box::new(event)).await;
+        let result = publisher.publish(event).await;
         assert!(result.is_ok());
 
         let published_events = publisher.get_published_events();
         assert_eq!(published_events.len(), 1);
 
-        // Note: We can't easily downcast the trait object to test the exact content,
-        // but we can verify it was published
+        assert!(matches!(
+            &published_events[0],
+            DomainEvent::IndexRebuild { collection } if collection == &Some("test".to_string())
+        ));
     }
 
     #[tokio::test]
-    async fn test_publish_batch_events() {
+    async fn test_publish_multiple_events() {
         let publisher = MockEventPublisher::new();
 
         let events = vec![
-            Box::new(TestEvent {
-                id: "batch-event-1".to_string(),
-                message: "First batch event".to_string(),
-                timestamp: 1641340800,
-            }) as Box<dyn DomainEvent>,
-            Box::new(TestEvent {
-                id: "batch-event-2".to_string(),
-                message: "Second batch event".to_string(),
-                timestamp: 1641427200,
-            }) as Box<dyn DomainEvent>,
+            DomainEvent::IndexRebuild {
+                collection: Some("coll-1".to_string()),
+            },
+            DomainEvent::SyncCompleted {
+                path: "/path".to_string(),
+                files_changed: 5,
+            },
+            DomainEvent::CacheInvalidate { namespace: None },
         ];
 
-        let result = publisher.publish_batch(events).await;
-        assert!(result.is_ok());
+        for event in events {
+            publisher.publish(event).await.unwrap();
+        }
 
         let published_events = publisher.get_published_events();
-        assert_eq!(published_events.len(), 2);
+        assert_eq!(published_events.len(), 3);
     }
 
     #[test]
     fn test_event_publisher_trait_object() {
         // Test that we can use EventPublisher as a trait object
         let publisher: Box<dyn EventPublisher> = Box::new(MockEventPublisher::new());
-        // Just test that the trait object can be created
-        assert!(true);
+        assert!(publisher.has_subscribers());
     }
 
     #[tokio::test]
-    async fn test_event_publisher_error_handling() {
-        // Since our mock always returns Ok, we can't easily test error cases
-        // In a real implementation, we would test error conditions
-        let publisher = MockEventPublisher::new();
-
-        let event = TestEvent {
-            id: "error-test".to_string(),
-            message: "Testing error handling".to_string(),
-            timestamp: 1641513600,
+    async fn test_event_serialization() {
+        // Events should be serializable (for transport/logging)
+        let event = DomainEvent::FileChangesDetected {
+            root_path: "/code".to_string(),
+            added: 1,
+            modified: 2,
+            removed: 3,
         };
 
-        // Our mock always succeeds, so this should work
-        let result = publisher.publish(Box::new(event)).await;
-        assert!(result.is_ok());
+        let json = serde_json::to_string(&event).unwrap();
+        assert!(json.contains("FileChangesDetected"));
+        assert!(json.contains("/code"));
+
+        let deserialized: DomainEvent = serde_json::from_str(&json).unwrap();
+        assert_eq!(event, deserialized);
     }
 }

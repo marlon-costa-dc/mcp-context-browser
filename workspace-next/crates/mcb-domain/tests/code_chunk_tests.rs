@@ -5,7 +5,7 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::entities::CodeChunk;
+    use mcb_domain::CodeChunk;
 
     #[test]
     fn test_code_chunk_creation() {
