@@ -4,7 +4,6 @@
 
 use crate::config::data::*;
 use mcb_domain::error::Result;
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Configuration source priority

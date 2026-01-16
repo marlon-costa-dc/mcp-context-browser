@@ -9,6 +9,7 @@ use rmcp::ServiceExt;
 use tracing::info;
 
 /// Extension trait for McpServer to add stdio serving capability
+#[allow(async_fn_in_trait)]
 pub trait StdioServerExt {
     /// Serve the MCP server over stdio transport
     async fn serve_stdio(self) -> Result<(), Box<dyn std::error::Error>>;

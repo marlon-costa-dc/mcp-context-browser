@@ -2,7 +2,6 @@
 //!
 //! Manages configuration for embedding and vector store providers.
 
-use crate::config::data::*;
 use mcb_domain::error::{Error, Result};
 use mcb_domain::value_objects::{EmbeddingConfig, VectorStoreConfig};
 use std::collections::HashMap;

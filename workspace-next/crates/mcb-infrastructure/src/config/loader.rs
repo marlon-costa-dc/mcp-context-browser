@@ -8,7 +8,7 @@ use crate::constants::*;
 use crate::error_ext::ErrorContext;
 use crate::logging::log_config_loaded;
 use mcb_domain::error::{Error, Result};
-use config::{Config, ConfigError, Environment, File};
+use config::{Config, Environment, File};
 use std::path::{Path, PathBuf};
 use std::env;
 

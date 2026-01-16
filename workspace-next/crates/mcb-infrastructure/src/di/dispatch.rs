@@ -26,12 +26,14 @@ impl ComponentDispatcher {
     }
 
     /// Create cache provider
+    #[allow(dead_code)]
     async fn create_cache_provider(&self) -> Result<crate::cache::provider::SharedCacheProvider> {
         let factory = DefaultCacheProviderFactory::new(self.config.cache.clone());
         factory.create_cache_provider().await
     }
 
     /// Create crypto service
+    #[allow(dead_code)]
     async fn create_crypto_service(&self) -> Result<crate::crypto::CryptoService> {
         let master_key = if self.config.auth.jwt_secret.len() >= 32 {
             self.config.auth.jwt_secret.clone().into_bytes()
@@ -44,6 +46,7 @@ impl ComponentDispatcher {
     }
 
     /// Create health registry
+    #[allow(dead_code)]
     async fn create_health_registry(&self) -> Result<crate::health::HealthRegistry> {
         let factory = DefaultHealthRegistryFactory::new();
         factory.create_health_registry().await

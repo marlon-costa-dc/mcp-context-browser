@@ -4,13 +4,9 @@
 
 use crate::cache::config::{CacheEntryConfig, CacheStats};
 use crate::cache::provider::CacheProvider;
-use crate::constants::*;
-use async_trait::async_trait;
 use mcb_domain::error::{Error, Result};
 use redis::{aio::MultiplexedConnection, AsyncCommands, Client};
 use serde::{de::DeserializeOwned, Serialize};
-use std::collections::HashMap;
-use std::time::Duration;
 
 /// Redis cache provider
 #[derive(Clone)]
@@ -51,6 +47,7 @@ impl RedisCacheProvider {
     }
 
     /// Serialize a value to bytes
+    #[allow(dead_code)]
     fn serialize_value<V: Serialize>(value: &V) -> Result<Vec<u8>> {
         serde_json::to_vec(value).map_err(|e| Error::Infrastructure {
             message: format!("Failed to serialize cache value: {}", e),
@@ -59,6 +56,7 @@ impl RedisCacheProvider {
     }
 
     /// Deserialize bytes to a value
+    #[allow(dead_code)]
     fn deserialize_value<V: DeserializeOwned>(bytes: &[u8]) -> Result<V> {
         serde_json::from_slice(bytes).map_err(|e| Error::Infrastructure {
             message: format!("Failed to deserialize cache value: {}", e),

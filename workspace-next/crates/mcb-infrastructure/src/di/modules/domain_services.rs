@@ -67,7 +67,9 @@ impl DomainServicesFactory {
 /// Context service implementation
 pub struct ContextServiceImpl {
     cache: SharedCacheProvider,
+    #[allow(dead_code)]
     crypto: CryptoService,
+    #[allow(dead_code)]
     config: AppConfig,
 }
 
@@ -104,14 +106,13 @@ impl ContextServiceInterface for ContextServiceImpl {
 
     async fn search_similar(
         &self,
-        collection: &str,
-        query: &str,
+        _collection: &str,
+        _query: &str,
         limit: usize,
     ) -> Result<Vec<SearchResult>> {
         // Simple implementation: return cached chunks that contain the query
         // In a real implementation, this would use vector similarity search
-        let pattern = format!("chunk:{}:*", collection);
-        let mut results = Vec::new();
+        let results: Vec<SearchResult> = Vec::new();
 
         // For now, return empty results as we don't have a full implementation
         // This would need integration with vector stores and embeddings
@@ -172,7 +173,9 @@ impl ContextServiceInterface for ContextServiceImpl {
 
 /// Search service implementation
 pub struct SearchServiceImpl {
+    #[allow(dead_code)]
     cache: SharedCacheProvider,
+    #[allow(dead_code)]
     config: AppConfig,
 }
 
@@ -186,13 +189,13 @@ impl SearchServiceImpl {
 impl SearchServiceInterface for SearchServiceImpl {
     async fn search(
         &self,
-        collection: &str,
-        query: &str,
+        _collection: &str,
+        _query: &str,
         limit: usize,
     ) -> Result<Vec<SearchResult>> {
         // Simple text-based search implementation
         // In a real implementation, this would use semantic search with embeddings
-        let mut results = Vec::new();
+        let results: Vec<SearchResult> = Vec::new();
 
         // For demonstration, return empty results
         // A full implementation would:
@@ -207,8 +210,11 @@ impl SearchServiceInterface for SearchServiceImpl {
 
 /// Indexing service implementation
 pub struct IndexingServiceImpl {
+    #[allow(dead_code)]
     cache: SharedCacheProvider,
+    #[allow(dead_code)]
     crypto: CryptoService,
+    #[allow(dead_code)]
     config: AppConfig,
     context_service: Arc<dyn ContextServiceInterface>,
 }
@@ -232,12 +238,9 @@ impl IndexingServiceInterface for IndexingServiceImpl {
         collection: &str,
     ) -> Result<mcb_domain::domain_services::search::IndexingResult> {
         use tokio::fs;
-        use futures::future::join_all;
 
         // Initialize collection
         self.context_service.initialize(collection).await?;
-
-        let start_time = std::time::Instant::now();
         let mut files_processed = 0;
         let mut chunks_created = 0;
         let mut files_skipped = 0;

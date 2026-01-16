@@ -2,11 +2,10 @@
 //!
 //! Factory for creating cache provider instances based on configuration.
 
-use crate::cache::config::*;
-use crate::cache::provider::{SharedCacheProvider, CacheProviderType};
+use crate::cache::provider::SharedCacheProvider;
 use crate::cache::providers::*;
 use crate::config::data::*;
-use mcb_domain::error::{Error, Result};
+use mcb_domain::error::Result;
 
 /// Cache provider factory
 #[derive(Clone)]

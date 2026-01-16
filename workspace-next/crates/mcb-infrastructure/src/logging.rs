@@ -4,10 +4,9 @@
 //! This module configures structured logging with JSON output, log levels, and file rotation.
 
 use crate::config::data::LoggingConfig;
-use crate::constants::*;
 use mcb_domain::error::{Error, Result};
 use std::path::PathBuf;
-use tracing::{info, warn, error, debug, trace, Level};
+use tracing::{info, warn, error, debug, Level};
 use tracing_subscriber::{
     fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Registry,
 };

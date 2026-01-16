@@ -5,12 +5,9 @@
 use crate::cache::config::{CacheEntryConfig, CacheStats};
 use crate::cache::provider::CacheProvider;
 use crate::constants::*;
-use async_trait::async_trait;
 use mcb_domain::error::Result;
 use moka::future::Cache;
 use serde::{de::DeserializeOwned, Serialize};
-use std::hash::Hash;
-use std::sync::Arc;
 use std::time::Duration;
 
 /// Moka-based in-memory cache provider
@@ -46,6 +43,7 @@ impl MokaCacheProvider {
     }
 
     /// Serialize a value to bytes
+    #[allow(dead_code)]
     fn serialize_value<V: Serialize>(value: &V) -> Result<Vec<u8>> {
         serde_json::to_vec(value).map_err(|e| mcb_domain::error::Error::Cache {
             message: format!("Failed to serialize cache value: {}", e),
@@ -53,6 +51,7 @@ impl MokaCacheProvider {
     }
 
     /// Deserialize bytes to a value
+    #[allow(dead_code)]
     fn deserialize_value<V: DeserializeOwned>(bytes: &[u8]) -> Result<V> {
         serde_json::from_slice(bytes).map_err(|e| mcb_domain::error::Error::Cache {
             message: format!("Failed to deserialize cache value: {}", e),

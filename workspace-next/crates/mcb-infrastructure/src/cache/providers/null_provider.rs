@@ -5,7 +5,6 @@
 
 use crate::cache::config::{CacheEntryConfig, CacheStats};
 use crate::cache::provider::CacheProvider;
-use async_trait::async_trait;
 use mcb_domain::error::Result;
 
 /// Null cache provider that doesn't store anything
