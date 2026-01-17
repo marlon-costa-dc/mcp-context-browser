@@ -55,6 +55,77 @@ pub enum ShakuViolation {
         file: PathBuf,
         severity: Severity,
     },
+
+    /// Adapter implementation missing #[derive(Component)]
+    MissingComponentDerive {
+        file: PathBuf,
+        line: usize,
+        struct_name: String,
+        implemented_trait: String,
+        severity: Severity,
+    },
+
+    /// Adapter missing #[shaku(interface = ...)] attribute
+    MissingShakuInterface {
+        file: PathBuf,
+        line: usize,
+        struct_name: String,
+        implemented_trait: Option<String>,
+        severity: Severity,
+    },
+
+    /// Port trait missing Interface + Send + Sync bounds
+    PortMissingInterfaceBound {
+        file: PathBuf,
+        line: usize,
+        trait_name: String,
+        missing_bounds: Vec<String>,
+        severity: Severity,
+    },
+
+    /// Handler injecting concrete type instead of Arc<dyn Trait>
+    HandlerInjectingConcreteType {
+        file: PathBuf,
+        line: usize,
+        field_name: String,
+        concrete_type: String,
+        expected_pattern: String,
+        severity: Severity,
+    },
+
+    /// Injected field missing #[shaku(inject)] attribute
+    MissingShakuInject {
+        file: PathBuf,
+        line: usize,
+        field_name: String,
+        field_type: String,
+        severity: Severity,
+    },
+
+    /// Null/Dev provider used in production entry point (main.rs, bootstrap.rs)
+    DevNullInProduction {
+        file: PathBuf,
+        line: usize,
+        type_name: String,
+        severity: Severity,
+    },
+
+    /// Fallback chain that silently uses Null provider
+    FallbackChain {
+        file: PathBuf,
+        line: usize,
+        pattern: String,
+        severity: Severity,
+    },
+
+    /// Conditional fake in production using cfg feature
+    ConditionalFakeInProduction {
+        file: PathBuf,
+        line: usize,
+        feature_name: String,
+        fake_type: String,
+        severity: Severity,
+    },
 }
 
 impl ShakuViolation {
@@ -65,6 +136,14 @@ impl ShakuViolation {
             Self::FakeImplementation { severity, .. } => *severity,
             Self::DualInitializationPath { severity, .. } => *severity,
             Self::NullProviderFile { severity, .. } => *severity,
+            Self::MissingComponentDerive { severity, .. } => *severity,
+            Self::MissingShakuInterface { severity, .. } => *severity,
+            Self::PortMissingInterfaceBound { severity, .. } => *severity,
+            Self::HandlerInjectingConcreteType { severity, .. } => *severity,
+            Self::MissingShakuInject { severity, .. } => *severity,
+            Self::DevNullInProduction { severity, .. } => *severity,
+            Self::FallbackChain { severity, .. } => *severity,
+            Self::ConditionalFakeInProduction { severity, .. } => *severity,
         }
     }
 }
@@ -139,6 +218,136 @@ impl std::fmt::Display for ShakuViolation {
                     file.display()
                 )
             }
+            Self::MissingComponentDerive {
+                file,
+                line,
+                struct_name,
+                implemented_trait,
+                ..
+            } => {
+                write!(
+                    f,
+                    "Shaku: {} implements {} but missing #[derive(Component)]: {}:{}",
+                    struct_name,
+                    implemented_trait,
+                    file.display(),
+                    line
+                )
+            }
+            Self::MissingShakuInterface {
+                file,
+                line,
+                struct_name,
+                implemented_trait,
+                ..
+            } => {
+                let trait_info = implemented_trait
+                    .as_ref()
+                    .map(|t| format!(" (implements {})", t))
+                    .unwrap_or_default();
+                write!(
+                    f,
+                    "Shaku: {} missing #[shaku(interface = ...)]{}: {}:{}",
+                    struct_name,
+                    trait_info,
+                    file.display(),
+                    line
+                )
+            }
+            Self::PortMissingInterfaceBound {
+                file,
+                line,
+                trait_name,
+                missing_bounds,
+                ..
+            } => {
+                write!(
+                    f,
+                    "Port: {} missing bounds [{}] for Shaku DI: {}:{}",
+                    trait_name,
+                    missing_bounds.join(", "),
+                    file.display(),
+                    line
+                )
+            }
+            Self::HandlerInjectingConcreteType {
+                file,
+                line,
+                field_name,
+                concrete_type,
+                expected_pattern,
+                ..
+            } => {
+                write!(
+                    f,
+                    "Handler: {} uses concrete {} instead of {}: {}:{}",
+                    field_name,
+                    concrete_type,
+                    expected_pattern,
+                    file.display(),
+                    line
+                )
+            }
+            Self::MissingShakuInject {
+                file,
+                line,
+                field_name,
+                field_type,
+                ..
+            } => {
+                write!(
+                    f,
+                    "Shaku: {} ({}) missing #[shaku(inject)]: {}:{}",
+                    field_name,
+                    field_type,
+                    file.display(),
+                    line
+                )
+            }
+            Self::DevNullInProduction {
+                file,
+                line,
+                type_name,
+                ..
+            } => {
+                write!(
+                    f,
+                    "DI: Null/Dev provider {} in production entry point: {}:{}",
+                    type_name,
+                    file.display(),
+                    line
+                )
+            }
+            Self::FallbackChain {
+                file,
+                line,
+                pattern,
+                ..
+            } => {
+                write!(
+                    f,
+                    "DI: Fallback chain silently uses Null provider: {}:{} - {}",
+                    file.display(),
+                    line,
+                    pattern
+                )
+            }
+            Self::ConditionalFakeInProduction {
+                file,
+                line,
+                feature_name,
+                fake_type,
+                ..
+            } => {
+                write!(
+                    f,
+                    "DI: Conditional fake {} behind feature '{}': {}:{}",
+                    fake_type,
+                    feature_name,
+                    file.display(),
+                    line
+                )
+            }
         }
     }
 }
@@ -166,6 +375,12 @@ impl ShakuValidator {
         violations.extend(self.validate_fake_implementations()?);
         violations.extend(self.validate_null_provider_files()?);
         violations.extend(self.validate_dual_initialization()?);
+        violations.extend(self.validate_dev_null_in_production()?);
+        violations.extend(self.validate_fallback_chains()?);
+        violations.extend(self.validate_conditional_fakes()?);
+        violations.extend(self.validate_port_bounds()?);
+        violations.extend(self.validate_adapter_decorators()?);
+        violations.extend(self.validate_handler_injections()?);
         Ok(violations)
     }
 
@@ -198,11 +413,19 @@ impl ShakuValidator {
                     continue;
                 }
 
-                // Skip DI bootstrap files (they're allowed to instantiate)
+                // Skip DI bootstrap, factory, and module files (they're allowed to instantiate)
                 let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+                let path_str = path.to_string_lossy();
                 if file_name == "bootstrap.rs"
                     || file_name == "module.rs"
                     || file_name == "container.rs"
+                    || file_name == "factory.rs"
+                    || file_name == "builder.rs"
+                    || file_name == "implementation.rs"
+                    || file_name == "provider.rs"  // Provider aggregators create instances
+                    || file_name == "providers.rs"  // Provider config creates providers
+                    || path_str.contains("/di/modules/")  // All DI module files
+                    || path_str.contains("/di/factory/")  // All DI factory files
                 {
                     continue;
                 }
@@ -297,12 +520,18 @@ impl ShakuValidator {
                     continue;
                 }
 
-                // Skip null.rs files (handled separately)
+                // Skip files where Null/Fake types are legitimately defined or re-exported
                 let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
                 if file_name == "null.rs"
                     || file_name == "mock.rs"
                     || file_name == "fake.rs"
                     || file_name == "stub.rs"
+                    || file_name == "null_provider.rs"  // Null provider definitions
+                    || file_name == "mod.rs"  // Re-export modules
+                    || file_name == "factory.rs"  // Factory files create providers
+                    || file_name == "lib.rs"  // Crate roots re-export
+                    || file_name == "provider.rs"  // Provider aggregators
+                    || file_name == "providers.rs"  // Provider lists/enums
                 {
                     continue;
                 }
@@ -349,8 +578,16 @@ impl ShakuValidator {
                         let name = cap.get(2).map(|m| m.as_str()).unwrap_or("");
                         let full_name = format!("{}{}", prefix, name);
 
-                        // Skip if it's in an import statement (definitions are elsewhere)
-                        if !trimmed.starts_with("use ") && !trimmed.starts_with("mod ") {
+                        // Skip if it's in an import/re-export statement (definitions are elsewhere)
+                        let is_import_or_reexport = trimmed.starts_with("use ")
+                            || trimmed.starts_with("mod ")
+                            || trimmed.starts_with("pub use ")
+                            || trimmed.starts_with("pub mod ")
+                            || trimmed.contains("::null::")
+                            || trimmed.contains("::fake::")
+                            || trimmed.contains("::mock::");
+
+                        if !is_import_or_reexport {
                             violations.push(ShakuViolation::FakeImplementation {
                                 file: path.to_path_buf(),
                                 line: line_num + 1,
@@ -460,6 +697,496 @@ impl ShakuValidator {
 
         Ok(violations)
     }
+
+    /// Check for Null/Fake providers in production entry points (main.rs, bootstrap.rs, server.rs)
+    pub fn validate_dev_null_in_production(&self) -> Result<Vec<ShakuViolation>> {
+        let mut violations = Vec::new();
+        // Pattern: NullXxx, FakeXxx, MockXxx, DevXxx providers
+        let null_pattern =
+            Regex::new(r"\b(Null|Fake|Mock|Dev|Dummy)([A-Z][a-zA-Z0-9_]*(?:Provider|Service|Repository))")
+                .expect("Invalid regex");
+
+        // Production entry point files
+        let production_files = ["main.rs", "bootstrap.rs", "server.rs", "init.rs"];
+
+        for src_dir in self.config.get_scan_dirs()? {
+            // Skip mcb-validate itself
+            if src_dir.to_string_lossy().contains("mcb-validate") {
+                continue;
+            }
+
+            for entry in WalkDir::new(&src_dir)
+                .into_iter()
+                .filter_map(|e| e.ok())
+                .filter(|e| e.path().extension().is_some_and(|ext| ext == "rs"))
+            {
+                let path = entry.path();
+                let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+
+                // Only check production entry point files
+                if !production_files.contains(&file_name) {
+                    continue;
+                }
+
+                // Skip test directories
+                if path.to_string_lossy().contains("/tests/") {
+                    continue;
+                }
+
+                let content = std::fs::read_to_string(path)?;
+                let lines: Vec<&str> = content.lines().collect();
+
+                for (line_num, line) in lines.iter().enumerate() {
+                    let trimmed = line.trim();
+
+                    // Skip comments
+                    if trimmed.starts_with("//") {
+                        continue;
+                    }
+
+                    // Check for null/fake providers
+                    if let Some(cap) = null_pattern.captures(line) {
+                        let prefix = cap.get(1).map(|m| m.as_str()).unwrap_or("");
+                        let name = cap.get(2).map(|m| m.as_str()).unwrap_or("");
+                        let full_name = format!("{}{}", prefix, name);
+
+                        // Skip if it's in an import or type definition (we want usages)
+                        if !trimmed.starts_with("use ") && !trimmed.starts_with("type ") {
+                            violations.push(ShakuViolation::DevNullInProduction {
+                                file: path.to_path_buf(),
+                                line: line_num + 1,
+                                type_name: full_name,
+                                severity: Severity::Error,
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(violations)
+    }
+
+    /// Check for fallback chains that silently use Null providers
+    pub fn validate_fallback_chains(&self) -> Result<Vec<ShakuViolation>> {
+        let mut violations = Vec::new();
+        // Patterns: .unwrap_or_else(|| Null...), .or_else(|_| Null...), .unwrap_or(Null...)
+        let fallback_patterns = [
+            Regex::new(r"unwrap_or_else\s*\(\s*\|\s*\|?\s*\w*(Null|Fake|Mock)[A-Z]")
+                .expect("Invalid regex"),
+            Regex::new(r"or_else\s*\(\s*\|_?\|?\s*\w*(Null|Fake|Mock)[A-Z]")
+                .expect("Invalid regex"),
+            Regex::new(r"unwrap_or\s*\(\s*(Null|Fake|Mock)[A-Z]")
+                .expect("Invalid regex"),
+        ];
+
+        for src_dir in self.config.get_scan_dirs()? {
+            // Skip mcb-validate itself
+            if src_dir.to_string_lossy().contains("mcb-validate") {
+                continue;
+            }
+
+            for entry in WalkDir::new(&src_dir)
+                .into_iter()
+                .filter_map(|e| e.ok())
+                .filter(|e| e.path().extension().is_some_and(|ext| ext == "rs"))
+            {
+                let path = entry.path();
+                let path_str = path.to_string_lossy();
+
+                // Skip test files
+                if path_str.contains("/tests/") || path_str.contains("_test.rs") {
+                    continue;
+                }
+
+                // Skip null/fake provider definition files
+                let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+                if file_name == "null.rs" || file_name == "fake.rs" || file_name == "mock.rs" {
+                    continue;
+                }
+
+                let content = std::fs::read_to_string(path)?;
+                let lines: Vec<&str> = content.lines().collect();
+
+                // Track test modules to skip
+                let mut in_test_module = false;
+                let mut test_brace_depth: i32 = 0;
+                let mut brace_depth: i32 = 0;
+
+                for (line_num, line) in lines.iter().enumerate() {
+                    let trimmed = line.trim();
+
+                    // Track test module boundaries
+                    if trimmed.contains("#[cfg(test)]") {
+                        in_test_module = true;
+                        test_brace_depth = brace_depth;
+                    }
+
+                    // Skip comments
+                    if trimmed.starts_with("//") {
+                        continue;
+                    }
+
+                    // Track brace depth
+                    brace_depth += line.chars().filter(|c| *c == '{').count() as i32;
+                    brace_depth -= line.chars().filter(|c| *c == '}').count() as i32;
+
+                    // Exit test module when braces close
+                    if in_test_module && brace_depth < test_brace_depth {
+                        in_test_module = false;
+                    }
+
+                    // Skip test modules
+                    if in_test_module {
+                        continue;
+                    }
+
+                    // Check for fallback patterns
+                    for pattern in &fallback_patterns {
+                        if pattern.is_match(line) {
+                            violations.push(ShakuViolation::FallbackChain {
+                                file: path.to_path_buf(),
+                                line: line_num + 1,
+                                pattern: trimmed.chars().take(80).collect(),
+                                severity: Severity::Info,
+                            });
+                            break; // Only report once per line
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(violations)
+    }
+
+    /// Check for conditional fakes using cfg features
+    pub fn validate_conditional_fakes(&self) -> Result<Vec<ShakuViolation>> {
+        let mut violations = Vec::new();
+        // Pattern: #[cfg(feature = "mock")] or #[cfg(feature = "test")] or #[cfg(feature = "fake")]
+        let cfg_pattern =
+            Regex::new(r#"#\[cfg\(feature\s*=\s*"(mock|test|fake|dev|stub)"\)\]"#)
+                .expect("Invalid regex");
+        let fake_type_pattern =
+            Regex::new(r"\b(Null|Fake|Mock|Dummy|Stub)([A-Z][a-zA-Z0-9_]*)")
+                .expect("Invalid regex");
+
+        for src_dir in self.config.get_scan_dirs()? {
+            // Skip mcb-validate itself
+            if src_dir.to_string_lossy().contains("mcb-validate") {
+                continue;
+            }
+
+            for entry in WalkDir::new(&src_dir)
+                .into_iter()
+                .filter_map(|e| e.ok())
+                .filter(|e| e.path().extension().is_some_and(|ext| ext == "rs"))
+            {
+                let path = entry.path();
+                let path_str = path.to_string_lossy();
+
+                // Skip test files and directories
+                if path_str.contains("/tests/") || path_str.contains("_test.rs") {
+                    continue;
+                }
+
+                let content = std::fs::read_to_string(path)?;
+                let lines: Vec<&str> = content.lines().collect();
+
+                let mut pending_cfg_feature: Option<(usize, String)> = None;
+
+                for (line_num, line) in lines.iter().enumerate() {
+                    let trimmed = line.trim();
+
+                    // Check for cfg feature attribute
+                    if let Some(cap) = cfg_pattern.captures(trimmed) {
+                        let feature = cap.get(1).map(|m| m.as_str()).unwrap_or("");
+                        pending_cfg_feature = Some((line_num + 1, feature.to_string()));
+                        continue;
+                    }
+
+                    // If we have a pending cfg feature, check if next line has fake type
+                    if let Some((cfg_line, feature)) = pending_cfg_feature.take() {
+                        if let Some(cap) = fake_type_pattern.captures(trimmed) {
+                            let prefix = cap.get(1).map(|m| m.as_str()).unwrap_or("");
+                            let name = cap.get(2).map(|m| m.as_str()).unwrap_or("");
+                            let full_name = format!("{}{}", prefix, name);
+
+                            violations.push(ShakuViolation::ConditionalFakeInProduction {
+                                file: path.to_path_buf(),
+                                line: cfg_line,
+                                feature_name: feature,
+                                fake_type: full_name,
+                                severity: Severity::Warning,
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(violations)
+    }
+
+    /// Validate port traits have required bounds for Shaku DI (Interface + Send + Sync)
+    pub fn validate_port_bounds(&self) -> Result<Vec<ShakuViolation>> {
+        let mut violations = Vec::new();
+        let trait_pattern =
+            Regex::new(r"(?:pub\s+)?trait\s+([A-Z][a-zA-Z0-9_]*)\s*(?::\s*([^{]+))?\s*\{")
+                .expect("Invalid regex");
+
+        for crate_dir in self.config.get_source_dirs()? {
+            let crate_name = crate_dir.file_name().and_then(|s| s.to_str()).unwrap_or("");
+            if crate_name != "mcb-domain" {
+                continue;
+            }
+
+            let src_dir = crate_dir.join("src");
+            if !src_dir.exists() {
+                continue;
+            }
+
+            for entry in WalkDir::new(&src_dir)
+                .into_iter()
+                .filter_map(|e| e.ok())
+                .filter(|e| e.path().extension().is_some_and(|ext| ext == "rs"))
+            {
+                let path = entry.path();
+                let path_str = path.to_string_lossy();
+                if !path_str.contains("/ports/") {
+                    continue;
+                }
+
+                let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+                if file_name == "mod.rs" {
+                    continue;
+                }
+
+                let content = std::fs::read_to_string(path)?;
+                for (line_num, line) in content.lines().enumerate() {
+                    if let Some(cap) = trait_pattern.captures(line) {
+                        let trait_name = cap.get(1).map(|m| m.as_str()).unwrap_or("");
+                        let bounds = cap.get(2).map(|m| m.as_str()).unwrap_or("");
+                        let mut missing_bounds = Vec::new();
+                        if !bounds.contains("Interface") {
+                            missing_bounds.push("Interface".to_string());
+                        }
+                        if !bounds.contains("Send") {
+                            missing_bounds.push("Send".to_string());
+                        }
+                        if !bounds.contains("Sync") {
+                            missing_bounds.push("Sync".to_string());
+                        }
+                        if !missing_bounds.is_empty() {
+                            violations.push(ShakuViolation::PortMissingInterfaceBound {
+                                file: path.to_path_buf(),
+                                line: line_num + 1,
+                                trait_name: trait_name.to_string(),
+                                missing_bounds,
+                                severity: Severity::Warning,
+                            });
+                        }
+                    }
+                }
+            }
+        }
+        Ok(violations)
+    }
+
+    /// Validate infrastructure adapters have proper Shaku decorators
+    pub fn validate_adapter_decorators(&self) -> Result<Vec<ShakuViolation>> {
+        let mut violations = Vec::new();
+        let struct_pattern =
+            Regex::new(r"(?:pub\s+)?struct\s+([A-Z][a-zA-Z0-9_]*)").expect("Invalid regex");
+        let impl_trait_pattern =
+            Regex::new(r"impl\s+([A-Z][a-zA-Z0-9_]*)\s+for\s+([A-Z][a-zA-Z0-9_]*)")
+                .expect("Invalid regex");
+
+        for crate_dir in self.config.get_source_dirs()? {
+            let crate_name = crate_dir.file_name().and_then(|s| s.to_str()).unwrap_or("");
+            if crate_name != "mcb-infrastructure" {
+                continue;
+            }
+
+            let src_dir = crate_dir.join("src");
+            if !src_dir.exists() {
+                continue;
+            }
+
+            for entry in WalkDir::new(&src_dir)
+                .into_iter()
+                .filter_map(|e| e.ok())
+                .filter(|e| e.path().extension().is_some_and(|ext| ext == "rs"))
+            {
+                let path = entry.path();
+                let path_str = path.to_string_lossy();
+                if !path_str.contains("/adapters/") {
+                    continue;
+                }
+
+                let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+                if file_name == "mod.rs" || file_name == "null.rs" {
+                    continue;
+                }
+
+                let content = std::fs::read_to_string(path)?;
+                let lines: Vec<&str> = content.lines().collect();
+
+                for (line_num, line) in lines.iter().enumerate() {
+                    if let Some(cap) = struct_pattern.captures(line) {
+                        let struct_name = cap.get(1).map(|m| m.as_str()).unwrap_or("");
+                        if !struct_name.ends_with("Provider")
+                            && !struct_name.ends_with("Service")
+                            && !struct_name.ends_with("Repository")
+                            && !struct_name.ends_with("Adapter")
+                        {
+                            continue;
+                        }
+
+                        let mut has_derive_component = false;
+                        let mut has_shaku_interface = false;
+                        for prev_line_idx in (line_num.saturating_sub(10)..line_num).rev() {
+                            let prev_line = lines[prev_line_idx];
+                            if prev_line.contains("#[derive(") && prev_line.contains("Component") {
+                                has_derive_component = true;
+                            }
+                            if prev_line.contains("#[shaku(interface") {
+                                has_shaku_interface = true;
+                            }
+                            if prev_line.contains("struct ") || prev_line.contains("fn ") {
+                                break;
+                            }
+                        }
+
+                        let mut implemented_trait = None;
+                        for check_line in lines.iter() {
+                            if let Some(impl_cap) = impl_trait_pattern.captures(check_line) {
+                                let impl_struct = impl_cap.get(2).map(|m| m.as_str()).unwrap_or("");
+                                if impl_struct == struct_name {
+                                    implemented_trait = Some(
+                                        impl_cap.get(1).map(|m| m.as_str()).unwrap_or("").to_string(),
+                                    );
+                                    break;
+                                }
+                            }
+                        }
+
+                        if !has_derive_component {
+                            violations.push(ShakuViolation::MissingComponentDerive {
+                                file: path.to_path_buf(),
+                                line: line_num + 1,
+                                struct_name: struct_name.to_string(),
+                                implemented_trait: implemented_trait
+                                    .clone()
+                                    .unwrap_or_else(|| "unknown".to_string()),
+                                severity: Severity::Warning,
+                            });
+                        }
+
+                        if !has_shaku_interface && implemented_trait.is_some() {
+                            violations.push(ShakuViolation::MissingShakuInterface {
+                                file: path.to_path_buf(),
+                                line: line_num + 1,
+                                struct_name: struct_name.to_string(),
+                                implemented_trait,
+                                severity: Severity::Warning,
+                            });
+                        }
+                    }
+                }
+            }
+        }
+        Ok(violations)
+    }
+
+    /// Validate handlers use trait injection (Arc<dyn Trait>) not concrete types
+    pub fn validate_handler_injections(&self) -> Result<Vec<ShakuViolation>> {
+        let mut violations = Vec::new();
+        let arc_concrete_pattern =
+            Regex::new(r"(\w+):\s*Arc<([A-Z][a-zA-Z0-9_]+)>").expect("Invalid regex");
+        let arc_dyn_pattern =
+            Regex::new(r"Arc<dyn\s+[A-Z][a-zA-Z0-9_]+>").expect("Invalid regex");
+
+        for crate_dir in self.config.get_source_dirs()? {
+            let crate_name = crate_dir.file_name().and_then(|s| s.to_str()).unwrap_or("");
+            if crate_name != "mcb-server" {
+                continue;
+            }
+
+            let src_dir = crate_dir.join("src");
+            if !src_dir.exists() {
+                continue;
+            }
+
+            for entry in WalkDir::new(&src_dir)
+                .into_iter()
+                .filter_map(|e| e.ok())
+                .filter(|e| e.path().extension().is_some_and(|ext| ext == "rs"))
+            {
+                let path = entry.path();
+                let path_str = path.to_string_lossy();
+                if !path_str.contains("/handlers/") {
+                    continue;
+                }
+
+                let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+                if file_name == "mod.rs" {
+                    continue;
+                }
+
+                let content = std::fs::read_to_string(path)?;
+                let mut in_struct = false;
+                let mut struct_brace_depth: i32 = 0;
+                let mut brace_depth: i32 = 0;
+
+                for (line_num, line) in content.lines().enumerate() {
+                    brace_depth += line.chars().filter(|c| *c == '{').count() as i32;
+                    brace_depth -= line.chars().filter(|c| *c == '}').count() as i32;
+
+                    if line.contains("struct ") && line.contains('{') {
+                        in_struct = true;
+                        struct_brace_depth = brace_depth;
+                    }
+                    if in_struct && brace_depth < struct_brace_depth {
+                        in_struct = false;
+                    }
+                    if !in_struct {
+                        continue;
+                    }
+                    if arc_dyn_pattern.is_match(line) {
+                        continue;
+                    }
+
+                    if let Some(cap) = arc_concrete_pattern.captures(line) {
+                        let field_name = cap.get(1).map(|m| m.as_str()).unwrap_or("");
+                        let concrete_type = cap.get(2).map(|m| m.as_str()).unwrap_or("");
+                        if concrete_type == "RwLock"
+                            || concrete_type == "Mutex"
+                            || concrete_type == "String"
+                            || concrete_type == "str"
+                        {
+                            continue;
+                        }
+                        if concrete_type.ends_with("Service")
+                            || concrete_type.ends_with("Provider")
+                            || concrete_type.ends_with("Repository")
+                            || concrete_type.ends_with("Handler")
+                        {
+                            violations.push(ShakuViolation::HandlerInjectingConcreteType {
+                                file: path.to_path_buf(),
+                                line: line_num + 1,
+                                field_name: field_name.to_string(),
+                                concrete_type: concrete_type.to_string(),
+                                expected_pattern: format!("Arc<dyn {}>", concrete_type),
+                                severity: Severity::Warning,
+                            });
+                        }
+                    }
+                }
+            }
+        }
+        Ok(violations)
+    }
 }
 
 #[cfg(test)]
@@ -469,9 +1196,27 @@ mod tests {
     use tempfile::TempDir;
 
     fn create_test_crate(temp: &TempDir, name: &str, content: &str) {
+        create_test_crate_with_file(temp, name, "lib.rs", content);
+    }
+
+    fn create_test_crate_with_file(temp: &TempDir, name: &str, file_name: &str, content: &str) {
+        // Create workspace Cargo.toml if it doesn't exist
+        let workspace_cargo = temp.path().join("Cargo.toml");
+        if !workspace_cargo.exists() {
+            fs::write(
+                &workspace_cargo,
+                r#"
+[workspace]
+members = ["crates/*"]
+"#,
+            )
+            .unwrap();
+        }
+
+        // Create crate structure
         let crate_dir = temp.path().join("crates").join(name).join("src");
         fs::create_dir_all(&crate_dir).unwrap();
-        fs::write(crate_dir.join("lib.rs"), content).unwrap();
+        fs::write(crate_dir.join(file_name), content).unwrap();
 
         let cargo_dir = temp.path().join("crates").join(name);
         fs::write(
@@ -491,9 +1236,11 @@ version = "0.1.0"
     #[test]
     fn test_direct_instantiation() {
         let temp = TempDir::new().unwrap();
-        create_test_crate(
+        // Use service.rs instead of lib.rs since lib.rs is skipped by validator
+        create_test_crate_with_file(
             &temp,
             "mcb-test",
+            "service.rs",
             r#"
 pub fn setup() {
     let service = MyService::new();
@@ -511,9 +1258,11 @@ pub fn setup() {
     #[test]
     fn test_fake_implementation() {
         let temp = TempDir::new().unwrap();
-        create_test_crate(
+        // Use service.rs instead of lib.rs since lib.rs is skipped by validator
+        create_test_crate_with_file(
             &temp,
             "mcb-test",
+            "service.rs",
             r#"
 pub fn setup() {
     let provider: Arc<dyn Provider> = Arc::new(NullProvider::new());

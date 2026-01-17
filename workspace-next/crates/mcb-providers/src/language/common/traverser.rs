@@ -20,6 +20,15 @@ struct ChunkParams<'a> {
     chunk_index: usize,
 }
 
+/// Context for extracting a chunk from a node
+struct ExtractionContext<'a> {
+    content: &'a str,
+    file_name: &'a str,
+    depth: usize,
+    rule: &'a NodeExtractionRule,
+    chunk_index: usize,
+}
+
 /// Generic AST node traverser with configurable rules
 pub struct AstTraverser<'a> {
     rules: &'a [NodeExtractionRule],
@@ -63,41 +72,14 @@ impl<'a> AstTraverser<'a> {
 
             // Check if this node matches any extraction rule
             for rule in self.rules {
-                if rule.node_types.contains(&node_type.to_string()) {
-                    let (code, context) = if rule.include_context {
-                        Self::extract_node_with_context(node, content, 3)
-                    } else {
-                        (Self::extract_node_content(node, content).ok(), None)
-                    };
-
-                    if let Some(code) = code {
-                        if code.len() >= rule.min_length && code.lines().count() >= rule.min_lines {
-                            let chunk_params = ChunkParams {
-                                content: code,
-                                file_name,
-                                node_type,
-                                depth,
-                                priority: rule.priority,
-                                chunk_index: chunks.len(),
-                            };
-                            let mut chunk = self.create_chunk_from_node(node, chunk_params);
-
-                            // Add context metadata if available
-                            if let Some(context_lines) = context {
-                                if let Some(metadata) = chunk.metadata.as_object_mut() {
-                                    metadata.insert(
-                                        "context_lines".to_string(),
-                                        serde_json::json!(context_lines),
-                                    );
-                                }
-                            }
-
-                            chunks.push(chunk);
-
-                            if chunks.len() >= self.max_chunks {
-                                return;
-                            }
-                        }
+                if !rule.node_types.contains(&node_type.to_string()) {
+                    continue;
+                }
+                let ctx = ExtractionContext { content, file_name, depth, rule, chunk_index: chunks.len() };
+                if let Some(chunk) = self.try_extract_chunk(node, ctx) {
+                    chunks.push(chunk);
+                    if chunks.len() >= self.max_chunks {
+                        return;
                     }
                 }
             }
@@ -164,6 +146,39 @@ impl<'a> AstTraverser<'a> {
         let context = lines[context_start..context_end].join("\n");
 
         (Some(context), Some(context_lines))
+    }
+
+    /// Try to extract a chunk from a node matching a rule
+    fn try_extract_chunk(&self, node: tree_sitter::Node, ctx: ExtractionContext) -> Option<CodeChunk> {
+        let (code, context) = if ctx.rule.include_context {
+            Self::extract_node_with_context(node, ctx.content, 3)
+        } else {
+            (Self::extract_node_content(node, ctx.content).ok(), None)
+        };
+
+        let code = code?;
+        if code.len() < ctx.rule.min_length || code.lines().count() < ctx.rule.min_lines {
+            return None;
+        }
+
+        let chunk_params = ChunkParams {
+            content: code,
+            file_name: ctx.file_name,
+            node_type: node.kind(),
+            depth: ctx.depth,
+            priority: ctx.rule.priority,
+            chunk_index: ctx.chunk_index,
+        };
+        let mut chunk = self.create_chunk_from_node(node, chunk_params);
+
+        // Add context metadata if available
+        if let Some(context_lines) = context {
+            if let Some(metadata) = chunk.metadata.as_object_mut() {
+                metadata.insert("context_lines".to_string(), serde_json::json!(context_lines));
+            }
+        }
+
+        Some(chunk)
     }
 
     fn create_chunk_from_node(&self, node: tree_sitter::Node, params: ChunkParams) -> CodeChunk {

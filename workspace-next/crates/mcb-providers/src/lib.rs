@@ -71,3 +71,8 @@ pub mod events;
 ///
 /// Implements `LanguageChunkingProvider` trait for AST-based code parsing.
 pub mod language;
+
+/// Code chunking adapter implementations
+///
+/// Implements `CodeChunker` trait with AST-based intelligent chunking using tree-sitter.
+pub mod chunking;

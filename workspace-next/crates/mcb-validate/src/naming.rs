@@ -45,6 +45,24 @@ pub enum NamingViolation {
         expected_case: String,
         severity: Severity,
     },
+
+    /// File suffix doesn't match component type
+    BadFileSuffix {
+        path: PathBuf,
+        component_type: String,
+        current_suffix: String,
+        expected_suffix: String,
+        severity: Severity,
+    },
+
+    /// File name doesn't follow CA naming convention
+    BadCaNaming {
+        path: PathBuf,
+        detected_type: String,
+        issue: String,
+        suggestion: String,
+        severity: Severity,
+    },
 }
 
 impl NamingViolation {
@@ -54,6 +72,8 @@ impl NamingViolation {
             Self::BadFunctionName { severity, .. } => *severity,
             Self::BadConstantName { severity, .. } => *severity,
             Self::BadModuleName { severity, .. } => *severity,
+            Self::BadFileSuffix { severity, .. } => *severity,
+            Self::BadCaNaming { severity, .. } => *severity,
         }
     }
 }
@@ -121,6 +141,38 @@ impl std::fmt::Display for NamingViolation {
                     expected_case
                 )
             }
+            Self::BadFileSuffix {
+                path,
+                component_type,
+                current_suffix,
+                expected_suffix,
+                ..
+            } => {
+                write!(
+                    f,
+                    "Bad file suffix: {} ({}) has suffix '{}' but expected '{}'",
+                    path.display(),
+                    component_type,
+                    current_suffix,
+                    expected_suffix
+                )
+            }
+            Self::BadCaNaming {
+                path,
+                detected_type,
+                issue,
+                suggestion,
+                ..
+            } => {
+                write!(
+                    f,
+                    "CA naming: {} ({}): {} - {}",
+                    path.display(),
+                    detected_type,
+                    issue,
+                    suggestion
+                )
+            }
         }
     }
 }
@@ -148,6 +200,8 @@ impl NamingValidator {
         violations.extend(self.validate_function_names()?);
         violations.extend(self.validate_constant_names()?);
         violations.extend(self.validate_module_names()?);
+        violations.extend(self.validate_file_suffixes()?);
+        violations.extend(self.validate_ca_naming()?);
         Ok(violations)
     }
 
@@ -371,6 +425,213 @@ impl NamingValidator {
         }
 
         Ok(violations)
+    }
+
+    /// Validate file suffixes match component types per CA naming conventions
+    pub fn validate_file_suffixes(&self) -> Result<Vec<NamingViolation>> {
+        let mut violations = Vec::new();
+
+        for crate_dir in self.get_crate_dirs()? {
+            let src_dir = crate_dir.join("src");
+            if !src_dir.exists() {
+                continue;
+            }
+
+            let crate_name = crate_dir
+                .file_name()
+                .and_then(|s| s.to_str())
+                .unwrap_or("");
+
+            for entry in WalkDir::new(&src_dir)
+                .into_iter()
+                .filter_map(|e| e.ok())
+                .filter(|e| e.path().extension().is_some_and(|ext| ext == "rs"))
+            {
+                let path = entry.path();
+                let file_name = path
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("");
+
+                // Skip standard files
+                if file_name == "lib" || file_name == "mod" || file_name == "main" {
+                    continue;
+                }
+
+                let path_str = path.to_string_lossy();
+
+                // Check repository files should have _repository suffix
+                if path_str.contains("/repositories/") || path_str.contains("/adapters/repository/")
+                {
+                    if !file_name.ends_with("_repository") && file_name != "mod" {
+                        violations.push(NamingViolation::BadFileSuffix {
+                            path: path.to_path_buf(),
+                            component_type: "Repository".to_string(),
+                            current_suffix: self.get_suffix(file_name).to_string(),
+                            expected_suffix: "_repository".to_string(),
+                            severity: Severity::Warning,
+                        });
+                    }
+                }
+
+                // Check handler files in server crate
+                if crate_name == "mcb-server" && path_str.contains("/handlers/") {
+                    // Handlers should have descriptive names (snake_case tool names)
+                    // but NOT have _handler suffix (that's redundant with directory)
+                    if file_name.ends_with("_handler") {
+                        violations.push(NamingViolation::BadFileSuffix {
+                            path: path.to_path_buf(),
+                            component_type: "Handler".to_string(),
+                            current_suffix: "_handler".to_string(),
+                            expected_suffix: "<tool_name> (no _handler suffix in handlers/ dir)"
+                                .to_string(),
+                            severity: Severity::Info,
+                        });
+                    }
+                }
+
+                // Check service files should have _service suffix if in services directory
+                if path_str.contains("/services/") || path_str.contains("/domain_services/") {
+                    if !file_name.ends_with("_service") && file_name != "mod" {
+                        violations.push(NamingViolation::BadFileSuffix {
+                            path: path.to_path_buf(),
+                            component_type: "Service".to_string(),
+                            current_suffix: self.get_suffix(file_name).to_string(),
+                            expected_suffix: "_service".to_string(),
+                            severity: Severity::Info,
+                        });
+                    }
+                }
+
+                // Check factory files
+                if file_name.contains("factory") && !file_name.ends_with("_factory") {
+                    violations.push(NamingViolation::BadFileSuffix {
+                        path: path.to_path_buf(),
+                        component_type: "Factory".to_string(),
+                        current_suffix: self.get_suffix(file_name).to_string(),
+                        expected_suffix: "_factory".to_string(),
+                        severity: Severity::Info,
+                    });
+                }
+            }
+        }
+
+        Ok(violations)
+    }
+
+    /// Validate Clean Architecture naming conventions
+    pub fn validate_ca_naming(&self) -> Result<Vec<NamingViolation>> {
+        let mut violations = Vec::new();
+
+        for crate_dir in self.get_crate_dirs()? {
+            let src_dir = crate_dir.join("src");
+            if !src_dir.exists() {
+                continue;
+            }
+
+            let crate_name = crate_dir
+                .file_name()
+                .and_then(|s| s.to_str())
+                .unwrap_or("");
+
+            for entry in WalkDir::new(&src_dir)
+                .into_iter()
+                .filter_map(|e| e.ok())
+                .filter(|e| e.path().extension().is_some_and(|ext| ext == "rs"))
+            {
+                let path = entry.path();
+                let file_name = path
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("");
+                let path_str = path.to_string_lossy();
+
+                // Skip standard files
+                if file_name == "lib" || file_name == "mod" || file_name == "main" {
+                    continue;
+                }
+
+                // Domain crate: port traits should be in ports/
+                if crate_name == "mcb-domain" {
+                    // Files with "provider" in name should be in ports/providers/
+                    if file_name.contains("provider")
+                        && !path_str.contains("/ports/providers/")
+                        && !path_str.contains("/ports/")
+                    {
+                        violations.push(NamingViolation::BadCaNaming {
+                            path: path.to_path_buf(),
+                            detected_type: "Provider Port".to_string(),
+                            issue: "Provider file outside ports/ directory".to_string(),
+                            suggestion: "Move to ports/providers/".to_string(),
+                            severity: Severity::Warning,
+                        });
+                    }
+
+                    // Files with "repository" in name should be in repositories/
+                    if file_name.contains("repository") && !path_str.contains("/repositories/") {
+                        violations.push(NamingViolation::BadCaNaming {
+                            path: path.to_path_buf(),
+                            detected_type: "Repository Port".to_string(),
+                            issue: "Repository file outside repositories/ directory".to_string(),
+                            suggestion: "Move to repositories/".to_string(),
+                            severity: Severity::Warning,
+                        });
+                    }
+                }
+
+                // Infrastructure crate: adapters should be in adapters/
+                if crate_name == "mcb-infrastructure" {
+                    // Implementation files should be in adapters/
+                    if (file_name.ends_with("_impl") || file_name.contains("adapter"))
+                        && !path_str.contains("/adapters/")
+                    {
+                        violations.push(NamingViolation::BadCaNaming {
+                            path: path.to_path_buf(),
+                            detected_type: "Adapter".to_string(),
+                            issue: "Adapter/implementation file outside adapters/ directory"
+                                .to_string(),
+                            suggestion: "Move to adapters/".to_string(),
+                            severity: Severity::Warning,
+                        });
+                    }
+
+                    // DI modules should be in di/
+                    if file_name.contains("module") && !path_str.contains("/di/") {
+                        violations.push(NamingViolation::BadCaNaming {
+                            path: path.to_path_buf(),
+                            detected_type: "DI Module".to_string(),
+                            issue: "Module file outside di/ directory".to_string(),
+                            suggestion: "Move to di/modules/".to_string(),
+                            severity: Severity::Info,
+                        });
+                    }
+                }
+
+                // Server crate: handlers should be in handlers/
+                if crate_name == "mcb-server" {
+                    if file_name.contains("handler") && !path_str.contains("/handlers/") {
+                        violations.push(NamingViolation::BadCaNaming {
+                            path: path.to_path_buf(),
+                            detected_type: "Handler".to_string(),
+                            issue: "Handler file outside handlers/ directory".to_string(),
+                            suggestion: "Move to handlers/".to_string(),
+                            severity: Severity::Warning,
+                        });
+                    }
+                }
+            }
+        }
+
+        Ok(violations)
+    }
+
+    /// Extract suffix from file name (part after last underscore)
+    fn get_suffix<'a>(&self, name: &'a str) -> &'a str {
+        if let Some(pos) = name.rfind('_') {
+            &name[pos..]
+        } else {
+            ""
+        }
     }
 
     /// Check if name is CamelCase

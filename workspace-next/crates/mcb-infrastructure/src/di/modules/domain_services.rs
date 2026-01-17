@@ -3,11 +3,10 @@
 //! Provides domain service implementations that can be injected into the server.
 //! These services implement domain interfaces using infrastructure components.
 
-use crate::adapters::chunking::{language_from_extension, IntelligentChunker};
+use mcb_providers::chunking::{language_from_extension, IntelligentChunker};
 use crate::cache::provider::SharedCacheProvider;
 use crate::config::AppConfig;
 use crate::crypto::CryptoService;
-use crate::health::HealthRegistry;
 use mcb_domain::domain_services::search::{
     ContextServiceInterface, IndexingServiceInterface, SearchServiceInterface,
 };
@@ -37,7 +36,6 @@ impl DomainServicesFactory {
     pub async fn create_services(
         cache: SharedCacheProvider,
         crypto: CryptoService,
-        _health: HealthRegistry,
         config: AppConfig,
         embedding_provider: Arc<dyn EmbeddingProvider>,
         vector_store_provider: Arc<dyn VectorStoreProvider>,
@@ -305,6 +303,54 @@ impl IndexingServiceImpl {
             chunker: IntelligentChunker::new(),
         }
     }
+
+    /// Discover files recursively from a path
+    async fn discover_files(&self, path: &Path, errors: &mut Vec<String>) -> Vec<std::path::PathBuf> {
+        use tokio::fs;
+
+        let mut files = Vec::new();
+        let mut dirs_to_visit = vec![path.to_path_buf()];
+
+        while let Some(dir_path) = dirs_to_visit.pop() {
+            let mut entries = match fs::read_dir(&dir_path).await {
+                Ok(entries) => entries,
+                Err(e) => {
+                    errors.push(format!("Failed to read directory {}: {}", dir_path.display(), e));
+                    continue;
+                }
+            };
+
+            while let Ok(Some(entry)) = entries.next_entry().await {
+                let entry_path = entry.path();
+                if entry_path.is_dir() {
+                    if Self::should_visit_dir(&entry_path) {
+                        dirs_to_visit.push(entry_path);
+                    }
+                } else if Self::is_supported_file(&entry_path) {
+                    files.push(entry_path);
+                }
+            }
+        }
+        files
+    }
+
+    /// Check if directory should be visited during indexing
+    fn should_visit_dir(path: &Path) -> bool {
+        !path.ends_with(".git")
+            && !path.ends_with("node_modules")
+            && !path.ends_with("target")
+            && !path.ends_with("__pycache__")
+    }
+
+    /// Check if file has a supported extension
+    fn is_supported_file(path: &Path) -> bool {
+        path.extension()
+            .map(|ext| {
+                let ext_str = ext.to_string_lossy().to_lowercase();
+                matches!(ext_str.as_str(), "rs" | "py" | "js" | "ts" | "java" | "cpp" | "c" | "go")
+            })
+            .unwrap_or(false)
+    }
 }
 
 #[async_trait::async_trait]
@@ -316,76 +362,34 @@ impl IndexingServiceInterface for IndexingServiceImpl {
     ) -> Result<mcb_domain::domain_services::search::IndexingResult> {
         use tokio::fs;
 
-        // Initialize collection
         self.context_service.initialize(collection).await?;
-        let mut files_processed = 0;
-        let mut chunks_created = 0;
-        let mut files_skipped = 0;
         let mut errors = Vec::new();
 
         // Discover files recursively
-        let mut files_to_process = Vec::new();
-        let mut dirs_to_visit = vec![path.to_path_buf()];
+        let files_to_process = self.discover_files(path, &mut errors).await;
 
-        while let Some(dir_path) = dirs_to_visit.pop() {
-            let mut entries = match fs::read_dir(&dir_path).await {
-                Ok(entries) => entries,
+        // Process files and collect results
+        let mut files_processed = 0;
+        let mut chunks_created = 0;
+        let mut files_skipped = 0;
+
+        for file_path in files_to_process {
+            let content = match fs::read_to_string(&file_path).await {
+                Ok(c) => c,
                 Err(e) => {
-                    errors.push(format!(
-                        "Failed to read directory {}: {}",
-                        dir_path.display(),
-                        e
-                    ));
+                    errors.push(format!("Failed to read {}: {}", file_path.display(), e));
+                    files_skipped += 1;
                     continue;
                 }
             };
 
-            while let Ok(Some(entry)) = entries.next_entry().await {
-                let path = entry.path();
-
-                if path.is_dir() {
-                    // Skip common directories
-                    if !path.ends_with(".git")
-                        && !path.ends_with("node_modules")
-                        && !path.ends_with("target")
-                        && !path.ends_with("__pycache__")
-                    {
-                        dirs_to_visit.push(path);
-                    }
-                } else if let Some(ext) = path.extension() {
-                    // Process supported file types
-                    let ext_str = ext.to_string_lossy().to_lowercase();
-                    if matches!(
-                        ext_str.as_str(),
-                        "rs" | "py" | "js" | "ts" | "java" | "cpp" | "c" | "go"
-                    ) {
-                        files_to_process.push(path);
-                    }
-                }
+            let chunks = self.chunk_file_content(&content, &file_path);
+            if let Err(e) = self.context_service.store_chunks(collection, &chunks).await {
+                errors.push(format!("Failed to store chunks for {}: {}", file_path.display(), e));
+                continue;
             }
-        }
-
-        // Process files sequentially (simpler, avoids async borrowing issues)
-        for file_path in files_to_process {
-            match fs::read_to_string(&file_path).await {
-                Ok(content) => {
-                    let chunks = self.chunk_file_content(&content, &file_path);
-                    if let Err(e) = self.context_service.store_chunks(collection, &chunks).await {
-                        errors.push(format!(
-                            "Failed to store chunks for {}: {}",
-                            file_path.display(),
-                            e
-                        ));
-                    } else {
-                        files_processed += 1;
-                        chunks_created += chunks.len();
-                    }
-                }
-                Err(e) => {
-                    errors.push(format!("Failed to read {}: {}", file_path.display(), e));
-                    files_skipped += 1;
-                }
-            }
+            files_processed += 1;
+            chunks_created += chunks.len();
         }
 
         Ok(mcb_domain::domain_services::search::IndexingResult {

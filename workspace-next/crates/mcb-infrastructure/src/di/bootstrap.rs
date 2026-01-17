@@ -2,9 +2,12 @@
 //!
 //! Provides the main dependency injection container that wires together
 //! all infrastructure components following Clean Architecture principles.
+//!
+//! **ARCHITECTURE**:
+//! - Provider implementations: mcb-providers (SOURCE OF TRUTH)
+//! - Admin adapters: crate::adapters::admin
+//! - This module: ONLY wiring logic via Shaku DI
 
-use crate::adapters::admin::{AtomicPerformanceMetrics, DefaultIndexingOperations};
-use crate::adapters::providers::{EmbeddingProviderFactory, VectorStoreProviderFactory};
 use crate::cache::provider::SharedCacheProvider;
 use crate::cache::CacheProviderFactory;
 use crate::config::AppConfig;
@@ -12,9 +15,15 @@ use crate::crypto::CryptoService;
 use crate::health::{checkers, HealthRegistry};
 use mcb_domain::error::Result;
 use mcb_domain::ports::admin::{IndexingOperationsInterface, PerformanceMetricsInterface};
-use mcb_domain::ports::providers::{EmbeddingProvider, VectorStoreProvider};
+use mcb_domain::ports::providers::{CryptoProvider, EmbeddingProvider, VectorStoreProvider};
 use std::sync::Arc;
 use tracing::info;
+
+// Provider factories (wiring layer - uses mcb-providers internally)
+use super::factory::{EmbeddingProviderFactory, VectorStoreProviderFactory};
+
+// Admin service implementations (infrastructure concerns implementing domain ports)
+use super::admin::{AtomicPerformanceMetrics, DefaultIndexingOperations};
 
 /// Trait for accessing storage components (cache, crypto)
 pub trait StorageComponentsAccess {
@@ -155,7 +164,9 @@ impl InfrastructureComponents {
                 provider = name,
                 "Creating vector store provider from config"
             );
-            VectorStoreProviderFactory::create(vector_config, Some(crypto))
+            // Wrap CryptoService as Arc<dyn CryptoProvider> for DI
+            let crypto_provider: Arc<dyn CryptoProvider> = Arc::new(crypto.clone());
+            VectorStoreProviderFactory::create(vector_config, Some(crypto_provider))
         } else {
             info!("No vector store provider configured, using in-memory provider");
             Ok(VectorStoreProviderFactory::create_in_memory())
@@ -258,7 +269,6 @@ impl FullContainer {
         let domain_services = super::modules::DomainServicesFactory::create_services(
             infrastructure.cache().clone(),
             infrastructure.crypto().clone(),
-            infrastructure.health().clone(),
             config,
             infrastructure.embedding_provider().clone(),
             infrastructure.vector_store_provider().clone(),

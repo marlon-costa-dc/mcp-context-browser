@@ -25,12 +25,17 @@
 //! let report = validator.validate_all()?;
 //! ```
 
+pub mod async_patterns;
 pub mod dependency;
 pub mod documentation;
+pub mod error_boundary;
+pub mod implementation;
 pub mod kiss;
 pub mod naming;
 pub mod organization;
 pub mod patterns;
+pub mod performance;
+pub mod pmat;
 pub mod quality;
 pub mod refactoring;
 pub mod reporter;
@@ -43,6 +48,7 @@ use thiserror::Error;
 
 pub use dependency::{DependencyValidator, DependencyViolation};
 pub use documentation::{DocumentationValidator, DocumentationViolation};
+pub use implementation::{ImplementationQualityValidator, ImplementationViolation};
 pub use kiss::{KissValidator, KissViolation};
 pub use naming::{NamingValidator, NamingViolation};
 pub use organization::{OrganizationValidator, OrganizationViolation};
@@ -50,9 +56,18 @@ pub use patterns::{PatternValidator, PatternViolation};
 pub use quality::{QualityValidator, QualityViolation};
 pub use reporter::{Reporter, ValidationReport, ValidationSummary};
 pub use shaku::{ShakuValidator, ShakuViolation};
+
+// Re-export ComponentType for strict directory validation
+// Used by organization and shaku validators
 pub use solid::{SolidValidator, SolidViolation};
 pub use refactoring::{RefactoringValidator, RefactoringViolation};
 pub use tests_org::{TestValidator, TestViolation};
+
+// New validators for PMAT integration
+pub use async_patterns::{AsyncPatternValidator, AsyncViolation};
+pub use error_boundary::{ErrorBoundaryValidator, ErrorBoundaryViolation};
+pub use performance::{PerformanceValidator, PerformanceViolation};
+pub use pmat::{PmatValidator, PmatViolation};
 
 // Re-export ValidationConfig for multi-directory support
 // ValidationConfig is defined in this module
@@ -240,6 +255,51 @@ pub enum Severity {
     Info,
 }
 
+/// Component type for strict directory validation
+///
+/// Used to categorize code components by their architectural role,
+/// enabling strict enforcement of where each type should reside.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum ComponentType {
+    /// Domain port trait (interface definition)
+    Port,
+    /// Domain entity with identity
+    Entity,
+    /// Domain value object (immutable)
+    ValueObject,
+    /// Domain service interface
+    DomainService,
+    /// Infrastructure adapter implementation
+    Adapter,
+    /// Repository implementation
+    Repository,
+    /// Server/transport layer handler
+    Handler,
+    /// Configuration type
+    Config,
+    /// Factory for creating components
+    Factory,
+    /// DI module definition
+    DiModule,
+}
+
+impl std::fmt::Display for ComponentType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Port => write!(f, "Port"),
+            Self::Entity => write!(f, "Entity"),
+            Self::ValueObject => write!(f, "ValueObject"),
+            Self::DomainService => write!(f, "DomainService"),
+            Self::Adapter => write!(f, "Adapter"),
+            Self::Repository => write!(f, "Repository"),
+            Self::Handler => write!(f, "Handler"),
+            Self::Config => write!(f, "Config"),
+            Self::Factory => write!(f, "Factory"),
+            Self::DiModule => write!(f, "DiModule"),
+        }
+    }
+}
+
 /// Main validator that orchestrates all validation checks
 pub struct ArchitectureValidator {
     config: ValidationConfig,
@@ -254,6 +314,12 @@ pub struct ArchitectureValidator {
     kiss: KissValidator,
     shaku: ShakuValidator,
     refactoring: RefactoringValidator,
+    implementation: ImplementationQualityValidator,
+    // New validators for PMAT integration
+    performance: PerformanceValidator,
+    async_patterns: AsyncPatternValidator,
+    error_boundary: ErrorBoundaryValidator,
+    pmat: PmatValidator,
 }
 
 impl ArchitectureValidator {
@@ -292,6 +358,12 @@ impl ArchitectureValidator {
             kiss: KissValidator::with_config(config.clone()),
             shaku: ShakuValidator::with_config(config.clone()),
             refactoring: RefactoringValidator::with_config(config.clone()),
+            implementation: ImplementationQualityValidator::with_config(config.clone()),
+            // New validators for PMAT integration
+            performance: PerformanceValidator::with_config(config.clone()),
+            async_patterns: AsyncPatternValidator::with_config(config.clone()),
+            error_boundary: ErrorBoundaryValidator::with_config(config.clone()),
+            pmat: PmatValidator::with_config(config.clone()),
             config: ValidationConfig {
                 workspace_root: root,
                 ..config
@@ -322,6 +394,12 @@ impl ArchitectureValidator {
         let kiss_violations = self.kiss.validate_all()?;
         let shaku_violations = self.shaku.validate_all()?;
         let refactoring_violations = self.refactoring.validate_all()?;
+        let implementation_violations = self.implementation.validate_all()?;
+        // New validators for PMAT integration
+        let performance_violations = self.performance.validate_all()?;
+        let async_violations = self.async_patterns.validate_all()?;
+        let error_boundary_violations = self.error_boundary.validate_all()?;
+        let pmat_violations = self.pmat.validate_all()?;
 
         let total = dependency_violations.len()
             + quality_violations.len()
@@ -333,7 +411,12 @@ impl ArchitectureValidator {
             + organization_violations.len()
             + kiss_violations.len()
             + shaku_violations.len()
-            + refactoring_violations.len();
+            + refactoring_violations.len()
+            + implementation_violations.len()
+            + performance_violations.len()
+            + async_violations.len()
+            + error_boundary_violations.len()
+            + pmat_violations.len();
 
         let summary = ValidationSummary {
             total_violations: total,
@@ -348,6 +431,11 @@ impl ArchitectureValidator {
             kiss_count: kiss_violations.len(),
             shaku_count: shaku_violations.len(),
             refactoring_count: refactoring_violations.len(),
+            implementation_count: implementation_violations.len(),
+            performance_count: performance_violations.len(),
+            async_count: async_violations.len(),
+            error_boundary_count: error_boundary_violations.len(),
+            pmat_count: pmat_violations.len(),
             passed: total == 0,
         };
 
@@ -366,6 +454,11 @@ impl ArchitectureValidator {
             kiss_violations,
             shaku_violations,
             refactoring_violations,
+            implementation_violations,
+            performance_violations,
+            async_violations,
+            error_boundary_violations,
+            pmat_violations,
         })
     }
 
@@ -422,6 +515,31 @@ impl ArchitectureValidator {
     /// Run only refactoring completeness validation
     pub fn validate_refactoring(&mut self) -> Result<Vec<RefactoringViolation>> {
         self.refactoring.validate_all()
+    }
+
+    /// Run only implementation quality validation
+    pub fn validate_implementation(&mut self) -> Result<Vec<ImplementationViolation>> {
+        self.implementation.validate_all()
+    }
+
+    /// Run only performance pattern validation
+    pub fn validate_performance(&self) -> Result<Vec<PerformanceViolation>> {
+        self.performance.validate_all()
+    }
+
+    /// Run only async pattern validation
+    pub fn validate_async_patterns(&self) -> Result<Vec<AsyncViolation>> {
+        self.async_patterns.validate_all()
+    }
+
+    /// Run only error boundary validation
+    pub fn validate_error_boundary(&self) -> Result<Vec<ErrorBoundaryViolation>> {
+        self.error_boundary.validate_all()
+    }
+
+    /// Run only PMAT integration validation
+    pub fn validate_pmat(&self) -> Result<Vec<PmatViolation>> {
+        self.pmat.validate_all()
     }
 }
 

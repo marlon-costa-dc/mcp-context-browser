@@ -104,15 +104,9 @@ impl OpenAIEmbeddingProvider {
             _ => 8192, // Default fallback
         }
     }
-}
 
-#[async_trait]
-impl EmbeddingProvider for OpenAIEmbeddingProvider {
-    async fn embed_batch(&self, texts: &[String]) -> Result<Vec<Embedding>> {
-        if texts.is_empty() {
-            return Ok(Vec::new());
-        }
-
+    /// Send embedding request and get response data
+    async fn fetch_embeddings(&self, texts: &[String]) -> Result<serde_json::Value> {
         let payload = serde_json::json!({
             "input": texts,
             "model": self.model,
@@ -136,8 +130,34 @@ impl EmbeddingProvider for OpenAIEmbeddingProvider {
                 }
             })?;
 
-        let response_data: serde_json::Value =
-            HttpResponseUtils::check_and_parse(response, "OpenAI").await?;
+        HttpResponseUtils::check_and_parse(response, "OpenAI").await
+    }
+
+    /// Parse embedding vector from response data
+    fn parse_embedding(&self, index: usize, item: &serde_json::Value) -> Result<Embedding> {
+        let embedding_vec = item["embedding"]
+            .as_array()
+            .ok_or_else(|| Error::embedding(format!("Invalid embedding format for text {}", index)))?
+            .iter()
+            .map(|v| v.as_f64().unwrap_or(0.0) as f32)
+            .collect::<Vec<f32>>();
+
+        Ok(Embedding {
+            vector: embedding_vec,
+            model: self.model.clone(),
+            dimensions: self.dimensions(),
+        })
+    }
+}
+
+#[async_trait]
+impl EmbeddingProvider for OpenAIEmbeddingProvider {
+    async fn embed_batch(&self, texts: &[String]) -> Result<Vec<Embedding>> {
+        if texts.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let response_data = self.fetch_embeddings(texts).await?;
 
         let data = response_data["data"].as_array().ok_or_else(|| {
             Error::embedding("Invalid response format: missing data array".to_string())
@@ -151,28 +171,10 @@ impl EmbeddingProvider for OpenAIEmbeddingProvider {
             )));
         }
 
-        let embeddings = data
-            .iter()
+        data.iter()
             .enumerate()
-            .map(|(i, item)| {
-                let embedding_vec = item["embedding"]
-                    .as_array()
-                    .ok_or_else(|| {
-                        Error::embedding(format!("Invalid embedding format for text {}", i))
-                    })?
-                    .iter()
-                    .map(|v| v.as_f64().unwrap_or(0.0) as f32)
-                    .collect::<Vec<f32>>();
-
-                Ok(Embedding {
-                    vector: embedding_vec,
-                    model: self.model.clone(),
-                    dimensions: self.dimensions(),
-                })
-            })
-            .collect::<Result<Vec<_>>>()?;
-
-        Ok(embeddings)
+            .map(|(i, item)| self.parse_embedding(i, item))
+            .collect()
     }
 
     fn dimensions(&self) -> usize {

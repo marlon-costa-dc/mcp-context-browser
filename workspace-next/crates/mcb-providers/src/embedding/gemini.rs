@@ -114,6 +114,55 @@ impl GeminiEmbeddingProvider {
     pub fn base_url(&self) -> String {
         self.effective_base_url()
     }
+
+    /// Fetch embedding for a single text
+    async fn fetch_single_embedding(&self, text: &str) -> Result<serde_json::Value> {
+        let payload = serde_json::json!({
+            "content": { "parts": [{ "text": text }] }
+        });
+
+        let url = format!(
+            "{}/v1beta/models/{}:embedContent?key={}",
+            self.effective_base_url(),
+            self.api_model_name(),
+            self.api_key
+        );
+
+        let response = self
+            .http_client
+            .post(&url)
+            .header("Content-Type", CONTENT_TYPE_JSON)
+            .timeout(self.timeout)
+            .json(&payload)
+            .send()
+            .await
+            .map_err(|e| {
+                if e.is_timeout() {
+                    Error::embedding(format!("{} {:?}", crate::constants::ERROR_MSG_REQUEST_TIMEOUT, self.timeout))
+                } else {
+                    Error::embedding(format!("HTTP request failed: {}", e))
+                }
+            })?;
+
+        HttpResponseUtils::check_and_parse(response, "Gemini").await
+    }
+
+    /// Parse embedding from response data
+    fn parse_embedding(&self, response_data: &serde_json::Value) -> Result<Embedding> {
+        let embedding_vec = response_data["embedding"]["values"]
+            .as_array()
+            .ok_or_else(|| Error::embedding("Invalid response format: missing embedding values".to_string()))?
+            .iter()
+            .map(|v| v.as_f64().unwrap_or(0.0) as f32)
+            .collect::<Vec<f32>>();
+
+        let dimensions = embedding_vec.len();
+        Ok(Embedding {
+            vector: embedding_vec,
+            model: self.model.clone(),
+            dimensions,
+        })
+    }
 }
 
 #[async_trait]
@@ -123,64 +172,11 @@ impl EmbeddingProvider for GeminiEmbeddingProvider {
             return Ok(Vec::new());
         }
 
-        let mut results = Vec::new();
-
-        // Gemini API currently doesn't support batch embedding in a single request
+        // Gemini API doesn't support batch embedding - process sequentially
+        let mut results = Vec::with_capacity(texts.len());
         for text in texts {
-            let payload = serde_json::json!({
-                "content": {
-                    "parts": [
-                        {
-                            "text": text
-                        }
-                    ]
-                }
-            });
-
-            let base_url = self.effective_base_url();
-            let url = format!(
-                "{}/v1beta/models/{}:embedContent?key={}",
-                base_url,
-                self.api_model_name(),
-                self.api_key
-            );
-
-            let response = self
-                .http_client
-                .post(&url)
-                .header("Content-Type", CONTENT_TYPE_JSON)
-                .timeout(self.timeout)
-                .json(&payload)
-                .send()
-                .await
-                .map_err(|e| {
-                    if e.is_timeout() {
-                        Error::embedding(format!("{} {:?}", crate::constants::ERROR_MSG_REQUEST_TIMEOUT, self.timeout))
-                    } else {
-                        Error::embedding(format!("HTTP request failed: {}", e))
-                    }
-                })?;
-
-            let response_data: serde_json::Value =
-                HttpResponseUtils::check_and_parse(response, "Gemini").await?;
-
-            let embedding_vec = response_data["embedding"]["values"]
-                .as_array()
-                .ok_or_else(|| {
-                    Error::embedding(
-                        "Invalid response format: missing embedding values".to_string(),
-                    )
-                })?
-                .iter()
-                .map(|v| v.as_f64().unwrap_or(0.0) as f32)
-                .collect::<Vec<f32>>();
-
-            let dimensions = embedding_vec.len();
-            results.push(Embedding {
-                vector: embedding_vec,
-                model: self.model.clone(),
-                dimensions,
-            });
+            let response_data = self.fetch_single_embedding(text).await?;
+            results.push(self.parse_embedding(&response_data)?);
         }
 
         Ok(results)

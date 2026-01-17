@@ -6,9 +6,10 @@
 //! - CI summary for GitHub Actions annotations
 
 use crate::{
-    DependencyViolation, DocumentationViolation, KissViolation, NamingViolation,
-    OrganizationViolation, PatternViolation, QualityViolation, RefactoringViolation, Severity,
-    ShakuViolation, SolidViolation, TestViolation,
+    AsyncViolation, DependencyViolation, DocumentationViolation, ErrorBoundaryViolation,
+    ImplementationViolation, KissViolation, NamingViolation, OrganizationViolation,
+    PatternViolation, PerformanceViolation, PmatViolation, QualityViolation, RefactoringViolation,
+    Severity, ShakuViolation, SolidViolation, TestViolation,
 };
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -44,6 +45,16 @@ pub struct ValidationReport {
     pub shaku_violations: Vec<ShakuViolation>,
     /// Refactoring completeness violations
     pub refactoring_violations: Vec<RefactoringViolation>,
+    /// Implementation quality violations
+    pub implementation_violations: Vec<ImplementationViolation>,
+    /// Performance pattern violations
+    pub performance_violations: Vec<PerformanceViolation>,
+    /// Async pattern violations
+    pub async_violations: Vec<AsyncViolation>,
+    /// Error boundary violations
+    pub error_boundary_violations: Vec<ErrorBoundaryViolation>,
+    /// PMAT integration violations
+    pub pmat_violations: Vec<PmatViolation>,
 }
 
 /// Summary of validation results
@@ -73,6 +84,16 @@ pub struct ValidationSummary {
     pub shaku_count: usize,
     /// Number of refactoring completeness violations
     pub refactoring_count: usize,
+    /// Number of implementation quality violations
+    pub implementation_count: usize,
+    /// Number of performance pattern violations
+    pub performance_count: usize,
+    /// Number of async pattern violations
+    pub async_count: usize,
+    /// Number of error boundary violations
+    pub error_boundary_count: usize,
+    /// Number of PMAT integration violations
+    pub pmat_count: usize,
     /// Whether validation passed (no error-level violations)
     pub passed: bool,
 }
@@ -146,6 +167,26 @@ impl Reporter {
         output.push_str(&format!(
             "  Refactoring:    {}\n",
             report.summary.refactoring_count
+        ));
+        output.push_str(&format!(
+            "  Implementation: {}\n",
+            report.summary.implementation_count
+        ));
+        output.push_str(&format!(
+            "  Performance:    {}\n",
+            report.summary.performance_count
+        ));
+        output.push_str(&format!(
+            "  Async:          {}\n",
+            report.summary.async_count
+        ));
+        output.push_str(&format!(
+            "  ErrorBoundary:  {}\n",
+            report.summary.error_boundary_count
+        ));
+        output.push_str(&format!(
+            "  PMAT:           {}\n",
+            report.summary.pmat_count
         ));
         output.push('\n');
 
@@ -255,6 +296,51 @@ impl Reporter {
             output.push('\n');
         }
 
+        // Implementation violations
+        if !report.implementation_violations.is_empty() {
+            output.push_str("--- Implementation Quality Violations ---\n");
+            for v in &report.implementation_violations {
+                output.push_str(&format!("  [{:?}] {}\n", v.severity(), v));
+            }
+            output.push('\n');
+        }
+
+        // Performance violations
+        if !report.performance_violations.is_empty() {
+            output.push_str("--- Performance Violations ---\n");
+            for v in &report.performance_violations {
+                output.push_str(&format!("  [{:?}] {}\n", v.severity(), v));
+            }
+            output.push('\n');
+        }
+
+        // Async pattern violations
+        if !report.async_violations.is_empty() {
+            output.push_str("--- Async Pattern Violations ---\n");
+            for v in &report.async_violations {
+                output.push_str(&format!("  [{:?}] {}\n", v.severity(), v));
+            }
+            output.push('\n');
+        }
+
+        // Error boundary violations
+        if !report.error_boundary_violations.is_empty() {
+            output.push_str("--- Error Boundary Violations ---\n");
+            for v in &report.error_boundary_violations {
+                output.push_str(&format!("  [{:?}] {}\n", v.severity(), v));
+            }
+            output.push('\n');
+        }
+
+        // PMAT violations
+        if !report.pmat_violations.is_empty() {
+            output.push_str("--- PMAT Violations ---\n");
+            for v in &report.pmat_violations {
+                output.push_str(&format!("  [{:?}] {}\n", v.severity(), v));
+            }
+            output.push('\n');
+        }
+
         output
     }
 
@@ -299,6 +385,26 @@ impl Reporter {
         output.push_str(&format!(
             "| Refactoring | {} |\n",
             report.summary.refactoring_count
+        ));
+        output.push_str(&format!(
+            "| Implementation | {} |\n",
+            report.summary.implementation_count
+        ));
+        output.push_str(&format!(
+            "| Performance | {} |\n",
+            report.summary.performance_count
+        ));
+        output.push_str(&format!(
+            "| Async | {} |\n",
+            report.summary.async_count
+        ));
+        output.push_str(&format!(
+            "| ErrorBoundary | {} |\n",
+            report.summary.error_boundary_count
+        ));
+        output.push_str(&format!(
+            "| PMAT | {} |\n",
+            report.summary.pmat_count
         ));
         output.push_str(&format!(
             "| **Total** | **{}** |\n",
@@ -375,6 +481,36 @@ impl Reporter {
             }
         }
 
+        for v in &report.implementation_violations {
+            if v.severity() == Severity::Error {
+                errors.push(format!("::error ::{}", v));
+            }
+        }
+
+        for v in &report.performance_violations {
+            if v.severity() == Severity::Error {
+                errors.push(format!("::error ::{}", v));
+            }
+        }
+
+        for v in &report.async_violations {
+            if v.severity() == Severity::Error {
+                errors.push(format!("::error ::{}", v));
+            }
+        }
+
+        for v in &report.error_boundary_violations {
+            if v.severity() == Severity::Error {
+                errors.push(format!("::error ::{}", v));
+            }
+        }
+
+        for v in &report.pmat_violations {
+            if v.severity() == Severity::Error {
+                errors.push(format!("::error ::{}", v));
+            }
+        }
+
         if !errors.is_empty() {
             output.push_str("\n### Errors\n\n");
             for e in errors {
@@ -444,6 +580,31 @@ impl Reporter {
             .iter()
             .filter(|v| v.severity() == Severity::Error)
             .count();
+        count += report
+            .implementation_violations
+            .iter()
+            .filter(|v| v.severity() == Severity::Error)
+            .count();
+        count += report
+            .performance_violations
+            .iter()
+            .filter(|v| v.severity() == Severity::Error)
+            .count();
+        count += report
+            .async_violations
+            .iter()
+            .filter(|v| v.severity() == Severity::Error)
+            .count();
+        count += report
+            .error_boundary_violations
+            .iter()
+            .filter(|v| v.severity() == Severity::Error)
+            .count();
+        count += report
+            .pmat_violations
+            .iter()
+            .filter(|v| v.severity() == Severity::Error)
+            .count();
 
         count
     }
@@ -507,6 +668,31 @@ impl Reporter {
             .iter()
             .filter(|v| v.severity() == Severity::Warning)
             .count();
+        count += report
+            .implementation_violations
+            .iter()
+            .filter(|v| v.severity() == Severity::Warning)
+            .count();
+        count += report
+            .performance_violations
+            .iter()
+            .filter(|v| v.severity() == Severity::Warning)
+            .count();
+        count += report
+            .async_violations
+            .iter()
+            .filter(|v| v.severity() == Severity::Warning)
+            .count();
+        count += report
+            .error_boundary_violations
+            .iter()
+            .filter(|v| v.severity() == Severity::Warning)
+            .count();
+        count += report
+            .pmat_violations
+            .iter()
+            .filter(|v| v.severity() == Severity::Warning)
+            .count();
 
         count
     }
@@ -533,6 +719,11 @@ mod tests {
                 kiss_count: 0,
                 shaku_count: 0,
                 refactoring_count: 0,
+                implementation_count: 0,
+                performance_count: 0,
+                async_count: 0,
+                error_boundary_count: 0,
+                pmat_count: 0,
                 passed: true,
             },
             dependency_violations: vec![],
@@ -546,6 +737,11 @@ mod tests {
             kiss_violations: vec![],
             shaku_violations: vec![],
             refactoring_violations: vec![],
+            implementation_violations: vec![],
+            performance_violations: vec![],
+            async_violations: vec![],
+            error_boundary_violations: vec![],
+            pmat_violations: vec![],
         }
     }
 

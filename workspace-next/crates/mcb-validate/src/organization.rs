@@ -6,7 +6,7 @@
 //! - File placement (files in correct architectural layers)
 //! - Declaration collision detection
 
-use crate::{Result, Severity, ValidationConfig};
+use crate::{ComponentType, Result, Severity, ValidationConfig};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -135,6 +135,40 @@ pub enum OrganizationViolation {
         import_statement: String,
         severity: Severity,
     },
+
+    /// Strict directory violation - component in wrong directory for its type
+    StrictDirectoryViolation {
+        file: PathBuf,
+        component_type: ComponentType,
+        current_directory: String,
+        expected_directory: String,
+        severity: Severity,
+    },
+
+    /// Domain layer contains implementation (should be trait-only)
+    DomainLayerImplementation {
+        file: PathBuf,
+        line: usize,
+        impl_type: String,
+        type_name: String,
+        severity: Severity,
+    },
+
+    /// Handler file outside handlers directory
+    HandlerOutsideHandlers {
+        file: PathBuf,
+        line: usize,
+        handler_name: String,
+        severity: Severity,
+    },
+
+    /// Port trait outside ports directory
+    PortOutsidePorts {
+        file: PathBuf,
+        line: usize,
+        trait_name: String,
+        severity: Severity,
+    },
 }
 
 impl OrganizationViolation {
@@ -154,6 +188,10 @@ impl OrganizationViolation {
             Self::DualLayerDefinition { severity, .. } => *severity,
             Self::ServerCreatingServices { severity, .. } => *severity,
             Self::ApplicationImportsServer { severity, .. } => *severity,
+            Self::StrictDirectoryViolation { severity, .. } => *severity,
+            Self::DomainLayerImplementation { severity, .. } => *severity,
+            Self::HandlerOutsideHandlers { severity, .. } => *severity,
+            Self::PortOutsidePorts { severity, .. } => *severity,
         }
     }
 }
@@ -381,6 +419,66 @@ impl std::fmt::Display for OrganizationViolation {
                     import_statement
                 )
             }
+            Self::StrictDirectoryViolation {
+                file,
+                component_type,
+                current_directory,
+                expected_directory,
+                ..
+            } => {
+                write!(
+                    f,
+                    "CA: {} in wrong directory: {} is in '{}' but should be in '{}'",
+                    component_type,
+                    file.display(),
+                    current_directory,
+                    expected_directory
+                )
+            }
+            Self::DomainLayerImplementation {
+                file,
+                line,
+                impl_type,
+                type_name,
+                ..
+            } => {
+                write!(
+                    f,
+                    "CA: Domain layer has {} for {}: {}:{} (domain should be trait-only)",
+                    impl_type,
+                    type_name,
+                    file.display(),
+                    line
+                )
+            }
+            Self::HandlerOutsideHandlers {
+                file,
+                line,
+                handler_name,
+                ..
+            } => {
+                write!(
+                    f,
+                    "CA: Handler {} outside handlers directory: {}:{}",
+                    handler_name,
+                    file.display(),
+                    line
+                )
+            }
+            Self::PortOutsidePorts {
+                file,
+                line,
+                trait_name,
+                ..
+            } => {
+                write!(
+                    f,
+                    "CA: Port trait {} outside ports directory: {}:{}",
+                    trait_name,
+                    file.display(),
+                    line
+                )
+            }
         }
     }
 }
@@ -408,8 +506,12 @@ impl OrganizationValidator {
         violations.extend(self.validate_duplicate_strings()?);
         violations.extend(self.validate_file_placement()?);
         violations.extend(self.validate_trait_placement()?);
-        violations.extend(self.validate_declaration_collisions()?);
+        // NOTE: validate_declaration_collisions() removed - RefactoringValidator handles
+        // duplicate definitions with better categorization (known migration pairs, severity)
         violations.extend(self.validate_layer_violations()?);
+        // Strict CA directory and layer compliance
+        violations.extend(self.validate_strict_directory()?);
+        violations.extend(self.validate_domain_traits_only()?);
         Ok(violations)
     }
 
@@ -930,6 +1032,10 @@ impl OrganizationValidator {
     }
 
     /// Check for declaration collisions (same name defined in multiple places)
+    ///
+    /// DEPRECATED: Use RefactoringValidator::validate_duplicate_definitions() instead.
+    /// It provides better categorization with known migration pairs and severity levels.
+    #[allow(dead_code)]
     pub fn validate_declaration_collisions(&self) -> Result<Vec<OrganizationViolation>> {
         let mut violations = Vec::new();
         let mut declarations: HashMap<String, Vec<(PathBuf, usize, String)>> = HashMap::new();
@@ -1146,6 +1252,251 @@ impl OrganizationValidator {
     #[allow(dead_code)]
     fn is_legacy_path(&self, path: &std::path::Path) -> bool {
         self.config.is_legacy_path(path)
+    }
+
+    /// Validate strict directory placement based on component type
+    ///
+    /// Enforces that components are in their expected directories:
+    /// - Port traits in `domain/ports/`
+    /// - Adapters in `infrastructure/adapters/`
+    /// - Handlers in `server/handlers/`
+    /// - Repositories in appropriate locations
+    pub fn validate_strict_directory(&self) -> Result<Vec<OrganizationViolation>> {
+        let mut violations = Vec::new();
+
+        // Patterns for detecting component types
+        let port_trait_pattern = Regex::new(
+            r"(?:pub\s+)?trait\s+([A-Z][a-zA-Z0-9_]*(?:Provider|Service|Repository|Interface))\s*:"
+        ).expect("Invalid regex");
+        let handler_struct_pattern = Regex::new(
+            r"(?:pub\s+)?struct\s+([A-Z][a-zA-Z0-9_]*Handler)"
+        ).expect("Invalid regex");
+        let adapter_impl_pattern = Regex::new(
+            r"impl\s+(?:async\s+)?([A-Z][a-zA-Z0-9_]*(?:Provider|Repository))\s+for\s+([A-Z][a-zA-Z0-9_]*)"
+        ).expect("Invalid regex");
+
+        for src_dir in self.config.get_scan_dirs()? {
+            // Skip mcb-validate itself
+            if src_dir.to_string_lossy().contains("mcb-validate") {
+                continue;
+            }
+
+            let is_domain_crate = src_dir.to_string_lossy().contains("domain");
+            let is_infrastructure_crate = src_dir.to_string_lossy().contains("infrastructure");
+            let is_server_crate = src_dir.to_string_lossy().contains("server");
+
+            for entry in WalkDir::new(&src_dir)
+                .into_iter()
+                .filter_map(|e| e.ok())
+                .filter(|e| e.path().extension().is_some_and(|ext| ext == "rs"))
+            {
+                let path = entry.path();
+                let path_str = path.to_string_lossy();
+
+                // Skip test files
+                if path_str.contains("/tests/") || path_str.contains("_test.rs") {
+                    continue;
+                }
+
+                // Skip mod.rs and lib.rs (aggregator files)
+                let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+                if file_name == "mod.rs" || file_name == "lib.rs" {
+                    continue;
+                }
+
+                let content = std::fs::read_to_string(path)?;
+
+                // Check for port traits outside ports directory
+                if is_domain_crate {
+                    for (line_num, line) in content.lines().enumerate() {
+                        if let Some(cap) = port_trait_pattern.captures(line) {
+                            let trait_name = cap.get(1).map(|m| m.as_str()).unwrap_or("");
+
+                            // Must be in ports directory
+                            if !path_str.contains("/ports/") {
+                                violations.push(OrganizationViolation::PortOutsidePorts {
+                                    file: path.to_path_buf(),
+                                    line: line_num + 1,
+                                    trait_name: trait_name.to_string(),
+                                    severity: Severity::Warning,
+                                });
+                            }
+                        }
+                    }
+                }
+
+                // Check for handlers outside handlers directory
+                if is_server_crate {
+                    for (line_num, line) in content.lines().enumerate() {
+                        if let Some(cap) = handler_struct_pattern.captures(line) {
+                            let handler_name = cap.get(1).map(|m| m.as_str()).unwrap_or("");
+
+                            // Must be in handlers directory
+                            if !path_str.contains("/handlers/") {
+                                violations.push(OrganizationViolation::HandlerOutsideHandlers {
+                                    file: path.to_path_buf(),
+                                    line: line_num + 1,
+                                    handler_name: handler_name.to_string(),
+                                    severity: Severity::Warning,
+                                });
+                            }
+                        }
+                    }
+                }
+
+                // Check for adapter implementations outside adapters directory
+                if is_infrastructure_crate {
+                    for (_line_num, line) in content.lines().enumerate() {
+                        if let Some(cap) = adapter_impl_pattern.captures(line) {
+                            let _trait_name = cap.get(1).map(|m| m.as_str()).unwrap_or("");
+                            let _impl_name = cap.get(2).map(|m| m.as_str()).unwrap_or("");
+
+                            // Must be in adapters directory (unless it's a DI module or factory)
+                            if !path_str.contains("/adapters/")
+                                && !path_str.contains("/di/")
+                                && !file_name.contains("factory")
+                                && !file_name.contains("bootstrap")
+                            {
+                                let current_dir = path.parent()
+                                    .map(|p| p.to_string_lossy().to_string())
+                                    .unwrap_or_default();
+
+                                violations.push(OrganizationViolation::StrictDirectoryViolation {
+                                    file: path.to_path_buf(),
+                                    component_type: ComponentType::Adapter,
+                                    current_directory: current_dir,
+                                    expected_directory: "infrastructure/adapters/".to_string(),
+                                    severity: Severity::Warning,
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(violations)
+    }
+
+    /// Validate domain layer is trait-only (no impl blocks with business logic)
+    ///
+    /// Domain layer should only contain:
+    /// - Trait definitions
+    /// - Struct/enum data definitions
+    /// - Simple constructors and accessors
+    /// - Derived impls (Default, Clone, etc.)
+    pub fn validate_domain_traits_only(&self) -> Result<Vec<OrganizationViolation>> {
+        let mut violations = Vec::new();
+
+        // Pattern for impl blocks with methods
+        let impl_block_pattern = Regex::new(
+            r"impl\s+([A-Z][a-zA-Z0-9_]*)\s*\{"
+        ).expect("Invalid regex");
+        let method_pattern = Regex::new(
+            r"(?:pub\s+)?(?:async\s+)?fn\s+([a-z_][a-z0-9_]*)\s*\("
+        ).expect("Invalid regex");
+
+        // Allowed method names (constructors, accessors, conversions)
+        let allowed_methods = [
+            "new", "default", "from", "into", "as_ref", "as_mut",
+            "clone", "fmt", "eq", "cmp", "hash", "partial_cmp",
+            "is_empty", "len", "iter", "into_iter",
+        ];
+
+        for src_dir in self.config.get_scan_dirs()? {
+            // Only check domain crate
+            if !src_dir.to_string_lossy().contains("domain") {
+                continue;
+            }
+
+            for entry in WalkDir::new(&src_dir)
+                .into_iter()
+                .filter_map(|e| e.ok())
+                .filter(|e| e.path().extension().is_some_and(|ext| ext == "rs"))
+            {
+                let path = entry.path();
+                let path_str = path.to_string_lossy();
+
+                // Skip test files
+                if path_str.contains("/tests/") || path_str.contains("_test.rs") {
+                    continue;
+                }
+
+                // Skip ports (trait definitions expected there)
+                if path_str.contains("/ports/") {
+                    continue;
+                }
+
+                let content = std::fs::read_to_string(path)?;
+                let lines: Vec<&str> = content.lines().collect();
+
+                let mut in_impl_block = false;
+                let mut impl_name = String::new();
+                let mut brace_depth = 0;
+                let mut impl_start_brace = 0;
+
+                for (line_num, line) in lines.iter().enumerate() {
+                    let trimmed = line.trim();
+
+                    // Skip comments
+                    if trimmed.starts_with("//") {
+                        continue;
+                    }
+
+                    // Track impl blocks
+                    if let Some(cap) = impl_block_pattern.captures(line) {
+                        if !trimmed.contains("trait ") {
+                            in_impl_block = true;
+                            impl_name = cap.get(1).map(|m| m.as_str()).unwrap_or("").to_string();
+                            impl_start_brace = brace_depth;
+                        }
+                    }
+
+                    // Track brace depth
+                    brace_depth += line.chars().filter(|c| *c == '{').count() as i32;
+                    brace_depth -= line.chars().filter(|c| *c == '}').count() as i32;
+
+                    // Exit impl block when braces close
+                    if in_impl_block && brace_depth <= impl_start_brace {
+                        in_impl_block = false;
+                    }
+
+                    // Check methods in impl blocks
+                    if in_impl_block {
+                        if let Some(cap) = method_pattern.captures(line) {
+                            let method_name = cap.get(1).map(|m| m.as_str()).unwrap_or("");
+
+                            // Skip allowed methods
+                            if allowed_methods.contains(&method_name) {
+                                continue;
+                            }
+
+                            // Skip if method name starts with allowed prefix
+                            if method_name.starts_with("get_")
+                                || method_name.starts_with("is_")
+                                || method_name.starts_with("has_")
+                                || method_name.starts_with("to_")
+                                || method_name.starts_with("as_")
+                                || method_name.starts_with("with_")
+                            {
+                                continue;
+                            }
+
+                            // This looks like business logic in domain layer
+                            violations.push(OrganizationViolation::DomainLayerImplementation {
+                                file: path.to_path_buf(),
+                                line: line_num + 1,
+                                impl_type: "method".to_string(),
+                                type_name: format!("{}::{}", impl_name, method_name),
+                                severity: Severity::Info,
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(violations)
     }
 }
 

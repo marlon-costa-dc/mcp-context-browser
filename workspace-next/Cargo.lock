@@ -2945,6 +2945,7 @@ dependencies = [
  "itertools 0.14.0",
  "jsonwebtoken",
  "mcb-domain",
+ "mcb-providers",
  "metrics",
  "metrics-exporter-prometheus",
  "moka",

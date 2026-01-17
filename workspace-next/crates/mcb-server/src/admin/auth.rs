@@ -166,7 +166,7 @@ pub async fn admin_auth_middleware(
 }
 
 /// Check if a route should bypass authentication
-fn is_unauthenticated_route(path: &str) -> bool {
+pub fn is_unauthenticated_route(path: &str) -> bool {
     matches!(path, "/live" | "/ready")
 }
 
@@ -181,52 +181,4 @@ pub fn with_admin_auth(
         Arc::new(auth_config),
         admin_auth_middleware,
     ))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_admin_auth_config_default() {
-        let config = AdminAuthConfig::default();
-        assert!(!config.enabled);
-        assert_eq!(config.header_name, "X-Admin-Key");
-        assert!(config.api_key.is_none());
-    }
-
-    #[test]
-    fn test_admin_auth_config_validation() {
-        let config = AdminAuthConfig {
-            enabled: true,
-            header_name: "X-Admin-Key".to_string(),
-            api_key: Some("secret-key".to_string()),
-        };
-
-        assert!(config.validate_key("secret-key"));
-        assert!(!config.validate_key("wrong-key"));
-        assert!(config.is_configured());
-    }
-
-    #[test]
-    fn test_admin_auth_config_no_key() {
-        let config = AdminAuthConfig {
-            enabled: true,
-            header_name: "X-Admin-Key".to_string(),
-            api_key: None,
-        };
-
-        assert!(!config.validate_key("any-key"));
-        assert!(!config.is_configured());
-    }
-
-    #[test]
-    fn test_is_unauthenticated_route() {
-        assert!(is_unauthenticated_route("/live"));
-        assert!(is_unauthenticated_route("/ready"));
-        assert!(!is_unauthenticated_route("/health"));
-        assert!(!is_unauthenticated_route("/config"));
-        assert!(!is_unauthenticated_route("/metrics"));
-        assert!(!is_unauthenticated_route("/shutdown"));
-    }
 }

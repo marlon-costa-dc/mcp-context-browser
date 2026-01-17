@@ -30,6 +30,7 @@
 pub mod api;
 pub mod auth;
 pub mod config;
+pub mod config_handlers;
 pub mod handlers;
 pub mod models;
 pub mod propagation;

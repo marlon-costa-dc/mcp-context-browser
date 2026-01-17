@@ -7,9 +7,10 @@ use axum::{
     Router,
 };
 
+use super::config_handlers::{get_config, reload_config, update_config_section};
 use super::handlers::{
-    extended_health_check, get_config, get_indexing_status, get_metrics, health_check,
-    liveness_check, readiness_check, reload_config, shutdown, update_config_section, AdminState,
+    extended_health_check, get_indexing_status, get_metrics, health_check,
+    liveness_check, readiness_check, shutdown, AdminState,
 };
 
 /// Create the admin API router

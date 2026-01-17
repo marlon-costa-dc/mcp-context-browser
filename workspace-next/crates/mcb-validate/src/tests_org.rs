@@ -41,6 +41,28 @@ pub enum TestViolation {
         function_name: String,
         severity: Severity,
     },
+    /// Trivial assertion that always passes (assert!(true), assert_eq!(1, 1))
+    TrivialAssertion {
+        file: PathBuf,
+        line: usize,
+        function_name: String,
+        assertion: String,
+        severity: Severity,
+    },
+    /// Test only uses .unwrap() as assertion (crash = pass)
+    UnwrapOnlyAssertion {
+        file: PathBuf,
+        line: usize,
+        function_name: String,
+        severity: Severity,
+    },
+    /// Test body is only comments (no code)
+    CommentOnlyTest {
+        file: PathBuf,
+        line: usize,
+        function_name: String,
+        severity: Severity,
+    },
 }
 
 impl TestViolation {
@@ -50,6 +72,9 @@ impl TestViolation {
             Self::BadTestFileName { severity, .. } => *severity,
             Self::BadTestFunctionName { severity, .. } => *severity,
             Self::TestWithoutAssertion { severity, .. } => *severity,
+            Self::TrivialAssertion { severity, .. } => *severity,
+            Self::UnwrapOnlyAssertion { severity, .. } => *severity,
+            Self::CommentOnlyTest { severity, .. } => *severity,
         }
     }
 }
@@ -105,6 +130,50 @@ impl std::fmt::Display for TestViolation {
                     function_name
                 )
             }
+            Self::TrivialAssertion {
+                file,
+                line,
+                function_name,
+                assertion,
+                ..
+            } => {
+                write!(
+                    f,
+                    "Trivial assertion: {}:{} - {} uses '{}' (always passes)",
+                    file.display(),
+                    line,
+                    function_name,
+                    assertion
+                )
+            }
+            Self::UnwrapOnlyAssertion {
+                file,
+                line,
+                function_name,
+                ..
+            } => {
+                write!(
+                    f,
+                    "Unwrap-only test: {}:{} - {} has no real assertion, only .unwrap()",
+                    file.display(),
+                    line,
+                    function_name
+                )
+            }
+            Self::CommentOnlyTest {
+                file,
+                line,
+                function_name,
+                ..
+            } => {
+                write!(
+                    f,
+                    "Comment-only test: {}:{} - {} has no executable code",
+                    file.display(),
+                    line,
+                    function_name
+                )
+            }
         }
     }
 }
@@ -131,6 +200,7 @@ impl TestValidator {
         violations.extend(self.validate_no_inline_tests()?);
         violations.extend(self.validate_test_naming()?);
         violations.extend(self.validate_test_function_naming()?);
+        violations.extend(self.validate_test_quality()?);
         Ok(violations)
     }
 
@@ -335,6 +405,165 @@ impl TestValidator {
                                         line: fn_line_idx + 1,
                                         function_name: fn_name.to_string(),
                                         severity: Severity::Warning,
+                                    });
+                                }
+
+                                break;
+                            }
+                            fn_line_idx += 1;
+                        }
+                    }
+                    i += 1;
+                }
+            }
+        }
+
+        Ok(violations)
+    }
+
+    /// Validate test quality (trivial assertions, unwrap-only, comment-only)
+    pub fn validate_test_quality(&self) -> Result<Vec<TestViolation>> {
+        let mut violations = Vec::new();
+
+        // Trivial assertion patterns
+        let trivial_patterns = [
+            (r"assert!\s*\(\s*true\s*\)", "assert!(true)"),
+            (r"assert!\s*\(\s*!false\s*\)", "assert!(!false)"),
+            (r"assert_eq!\s*\(\s*true\s*,\s*true\s*\)", "assert_eq!(true, true)"),
+            (r"assert_eq!\s*\(\s*1\s*,\s*1\s*\)", "assert_eq!(1, 1)"),
+            (r"assert_ne!\s*\(\s*1\s*,\s*2\s*\)", "assert_ne!(1, 2)"),
+            (r"assert_ne!\s*\(\s*true\s*,\s*false\s*\)", "assert_ne!(true, false)"),
+        ];
+
+        let compiled_trivial: Vec<_> = trivial_patterns
+            .iter()
+            .filter_map(|(p, desc)| Regex::new(p).ok().map(|r| (r, *desc)))
+            .collect();
+
+        let test_attr_pattern = Regex::new(r"#\[(?:tokio::)?test\]").ok();
+        let fn_pattern = Regex::new(r"(?:async\s+)?fn\s+([a-z_][a-z0-9_]*)\s*\(").ok();
+        let real_assert_pattern = Regex::new(r"assert!|assert_eq!|assert_ne!").ok();
+        let unwrap_pattern = Regex::new(r"\.unwrap\(|\.expect\(").ok();
+
+        for crate_dir in self.get_crate_dirs()? {
+            let tests_dir = crate_dir.join("tests");
+            if !tests_dir.exists() {
+                continue;
+            }
+
+            for entry in WalkDir::new(&tests_dir)
+                .into_iter()
+                .filter_map(|e| e.ok())
+                .filter(|e| e.path().extension().is_some_and(|ext| ext == "rs"))
+            {
+                let content = std::fs::read_to_string(entry.path())?;
+                let lines: Vec<&str> = content.lines().collect();
+
+                let mut i = 0;
+                while i < lines.len() {
+                    let line = lines[i];
+
+                    // Check for test attribute
+                    let is_test_attr = test_attr_pattern
+                        .as_ref()
+                        .map(|p| p.is_match(line))
+                        .unwrap_or(false);
+
+                    if is_test_attr {
+                        // Find the function definition
+                        let mut fn_line_idx = i + 1;
+                        while fn_line_idx < lines.len() {
+                            let potential_fn = lines[fn_line_idx];
+                            let fn_cap = fn_pattern.as_ref().and_then(|p| p.captures(potential_fn));
+
+                            if let Some(cap) = fn_cap {
+                                let fn_name = cap.get(1).map(|m| m.as_str()).unwrap_or("");
+                                let fn_start = fn_line_idx;
+
+                                // Collect function body
+                                let mut body_lines: Vec<(usize, &str)> = Vec::new();
+                                let mut brace_depth = 0;
+                                let mut started = false;
+
+                                for (idx, check_line) in lines.iter().enumerate().skip(fn_line_idx) {
+                                    if check_line.contains('{') {
+                                        started = true;
+                                    }
+                                    if started {
+                                        brace_depth += check_line.chars().filter(|c| *c == '{').count() as i32;
+                                        brace_depth -= check_line.chars().filter(|c| *c == '}').count() as i32;
+                                        body_lines.push((idx, check_line));
+                                        if brace_depth <= 0 {
+                                            break;
+                                        }
+                                    }
+                                }
+
+                                // Check for trivial assertions
+                                for (line_idx, body_line) in &body_lines {
+                                    for (pattern, desc) in &compiled_trivial {
+                                        if pattern.is_match(body_line) {
+                                            violations.push(TestViolation::TrivialAssertion {
+                                                file: entry.path().to_path_buf(),
+                                                line: line_idx + 1,
+                                                function_name: fn_name.to_string(),
+                                                assertion: desc.to_string(),
+                                                severity: Severity::Warning,
+                                            });
+                                        }
+                                    }
+                                }
+
+                                // Check for unwrap-only tests (has unwrap but no real assertion)
+                                let has_unwrap = unwrap_pattern
+                                    .as_ref()
+                                    .map(|p| body_lines.iter().any(|(_, l)| p.is_match(l)))
+                                    .unwrap_or(false);
+                                let has_real_assert = real_assert_pattern
+                                    .as_ref()
+                                    .map(|p| body_lines.iter().any(|(_, l)| p.is_match(l)))
+                                    .unwrap_or(false);
+
+                                if has_unwrap && !has_real_assert {
+                                    violations.push(TestViolation::UnwrapOnlyAssertion {
+                                        file: entry.path().to_path_buf(),
+                                        line: fn_start + 1,
+                                        function_name: fn_name.to_string(),
+                                        severity: Severity::Warning,
+                                    });
+                                }
+
+                                // Check for comment-only tests
+                                let _meaningful_lines: Vec<_> = body_lines
+                                    .iter()
+                                    .filter(|(_, l)| {
+                                        let trimmed = l.trim();
+                                        !trimmed.is_empty()
+                                            && !trimmed.starts_with("//")
+                                            && !trimmed.starts_with("{")
+                                            && !trimmed.starts_with("}")
+                                            && trimmed != "{"
+                                            && trimmed != "}"
+                                    })
+                                    .collect();
+
+                                // If no meaningful lines (only comments/braces), it's comment-only
+                                let all_comments = body_lines.iter().all(|(_, l)| {
+                                    let trimmed = l.trim();
+                                    trimmed.is_empty()
+                                        || trimmed.starts_with("//")
+                                        || trimmed == "{"
+                                        || trimmed == "}"
+                                        || trimmed.starts_with("fn ")
+                                        || trimmed.starts_with("async fn ")
+                                });
+
+                                if all_comments && body_lines.len() > 2 {
+                                    violations.push(TestViolation::CommentOnlyTest {
+                                        file: entry.path().to_path_buf(),
+                                        line: fn_start + 1,
+                                        function_name: fn_name.to_string(),
+                                        severity: Severity::Error,
                                     });
                                 }
 
