@@ -1,122 +1,62 @@
-//! Infrastructure DI Module
+//! Infrastructure Module Implementation - Core Services
 //!
-//! Defines how infrastructure components are wired together using Shaku.
-//! This module follows Clean Architecture by keeping infrastructure
-//! components isolated and injectable.
+//! This module provides core infrastructure services that other modules depend on.
+//! It follows the Shaku strict pattern with no external dependencies.
+//!
+//! ## Services Provided
+//!
+//! - Cache provider for data caching
+//! - Crypto service for encryption/decryption
+//! - Health registry for system health monitoring
+//! - Auth service for authentication
+//! - Event bus for internal messaging
+//! - System metrics collector for performance monitoring
+//! - Snapshot provider for state persistence
+//! - Sync provider for data synchronization
 
-use crate::cache::provider::SharedCacheProvider;
-use crate::cache::CacheProviderFactory;
-use crate::config::AppConfig;
+use shaku::module;
+
+// Import concrete implementations
+use crate::cache::provider::CacheProviderImpl;
 use crate::crypto::CryptoService;
-use crate::health::{HealthRegistry, checkers};
-use mcb_domain::error::Result;
-use shaku::{module, Component, Interface, Module, ModuleBuildContext};
-use std::sync::Arc;
+use crate::health::HealthRegistry;
+use crate::infrastructure::auth::AuthServiceImpl;
+use crate::infrastructure::events::EventBusImpl;
+use crate::infrastructure::metrics::system::SystemMetricsCollectorImpl;
+use crate::infrastructure::snapshot::SnapshotProviderImpl;
+use crate::infrastructure::sync::SyncProviderImpl;
 
-/// Infrastructure components interface
-#[derive(Component)]
-#[shaku(interface = InfrastructureProvider)]
-pub struct InfrastructureProviderImpl {
-    pub cache_provider: SharedCacheProvider,
-    pub crypto_service: CryptoService,
-    pub health_registry: HealthRegistry,
-    pub app_config: AppConfig,
-}
+// Import traits
+use super::traits::InfrastructureModule;
 
-/// Infrastructure provider interface
+/// Infrastructure module implementation following Shaku strict pattern.
 ///
-/// # Example
+/// This module provides core infrastructure services with no external dependencies.
+/// All services are concrete implementations that can be resolved at runtime.
 ///
-/// ```ignore
-/// use mcb_infrastructure::di::InfrastructureProvider;
+/// ## Component Registration
 ///
-/// // Get from DI container
-/// let infra: Arc<dyn InfrastructureProvider> = container.resolve();
+/// Uses `#[derive(Component)]` and `#[shaku(interface = ...)]` for all services.
+/// Services with dependencies use `#[shaku(inject)]` for dependency injection.
 ///
-/// // Access services
-/// let cache = infra.cache();
-/// let crypto = infra.crypto();
-/// let health = infra.health();
-/// let config = infra.config();
+/// ## Construction
+///
+/// ```rust,ignore
+/// let infrastructure = InfrastructureModuleImpl::builder().build();
 /// ```
-pub trait InfrastructureProvider: Interface {
-    fn cache(&self) -> &SharedCacheProvider;
-    fn crypto(&self) -> &CryptoService;
-    fn health(&self) -> &HealthRegistry;
-    fn config(&self) -> &AppConfig;
-}
-
-impl InfrastructureProvider for InfrastructureProviderImpl {
-    fn cache(&self) -> &SharedCacheProvider {
-        &self.cache_provider
-    }
-
-    fn crypto(&self) -> &CryptoService {
-        &self.crypto_service
-    }
-
-    fn health(&self) -> &HealthRegistry {
-        &self.health_registry
-    }
-
-    fn config(&self) -> &AppConfig {
-        &self.app_config
+module! {
+    pub InfrastructureModuleImpl: InfrastructureModule {
+        components = [
+            // Core infrastructure services
+            CacheProviderImpl,
+            CryptoService,
+            HealthRegistry,
+            AuthServiceImpl,
+            EventBusImpl,
+            SystemMetricsCollectorImpl,
+            SnapshotProviderImpl,
+            SyncProviderImpl
+        ],
+        providers = []
     }
 }
-
-/// Infrastructure module
-#[module]
-pub struct InfrastructureModule {
-    config: AppConfig,
-}
-
-impl InfrastructureModule {
-    /// Create a new infrastructure module
-    pub fn new(config: AppConfig) -> Self {
-        Self { config }
-    }
-}
-
-impl<Ctx: ModuleBuildContext> Module<Ctx> for InfrastructureModule {
-    fn build_context(self, ctx: &mut Ctx) -> Result<(), shaku::Error> {
-        // Create cache provider
-        let cache_provider = if self.config.infrastructure.cache.enabled {
-            CacheProviderFactory::create_from_config(&self.config.infrastructure.cache)
-                .map_err(|e| shaku::Error::Other(format!("Cache provider creation failed: {}", e)))?
-        } else {
-            CacheProviderFactory::create_null()
-        };
-
-        // Create crypto service
-        let secret = &self.config.auth.jwt.secret;
-        let master_key = if secret.len() >= 32 {
-            secret.as_bytes()[..32].to_vec()
-        } else {
-            CryptoService::generate_master_key()
-        };
-
-        let crypto_service = CryptoService::new(master_key)
-            .map_err(|e| shaku::Error::Other(format!("Crypto service creation failed: {}", e)))?;
-
-        // Create health registry
-        let health_registry = HealthRegistry::new();
-
-        // Register built-in health checkers
-        let system_checker = checkers::SystemHealthChecker::new();
-        ctx.block_on(async {
-            health_registry.register_checker("system".to_string(), system_checker).await;
-        });
-
-        // Create infrastructure provider
-        let provider = InfrastructureProviderImpl {
-            cache_provider,
-            crypto_service,
-            health_registry,
-            app_config: self.config,
-        };
-
-        ctx.build_component(provider)?;
-        Ok(())
-    }
-}
-

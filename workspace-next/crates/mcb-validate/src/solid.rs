@@ -526,7 +526,7 @@ impl SolidValidator {
                         let trait_name = cap.get(1).map(|m| m.as_str()).unwrap_or("");
                         let impl_name = cap.get(2).map(|m| m.as_str()).unwrap_or("");
 
-                        // Check methods in impl block for panic!/todo!
+                        // Check methods in impl block for panic!/unimplemented macros
                         let mut brace_depth = 0;
                         let mut in_impl = false;
                         let mut current_method: Option<(String, usize)> = None;

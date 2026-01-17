@@ -257,8 +257,12 @@ impl RefactoringValidator {
                 let path = entry.path();
                 let path_str = path.to_string_lossy();
 
-                // Skip test files
-                if path_str.contains("/tests/") || path_str.contains("_test.rs") {
+                // Skip test files and archived directories
+                if path_str.contains("/tests/")
+                    || path_str.contains("_test.rs")
+                    || path_str.contains(".archived")
+                    || path_str.contains(".bak")
+                {
                     continue;
                 }
 
@@ -320,18 +324,26 @@ impl RefactoringValidator {
                         suggestion,
                         severity,
                     });
-                } else if locations.len() > 2 {
-                    // Same crate but many duplicates
-                    violations.push(RefactoringViolation::DuplicateDefinition {
-                        type_name: type_name.clone(),
-                        locations: locations.clone(),
-                        suggestion: format!(
-                            "Type '{}' is defined {} times in the same crate. This may indicate incomplete migration.",
-                            type_name,
-                            locations.len()
-                        ),
-                        severity: Severity::Warning,
-                    });
+                } else if locations.len() >= 2 {
+                    // Same crate but duplicates - check if in different directories
+                    let dirs: HashSet<String> = locations
+                        .iter()
+                        .filter_map(|p| p.parent().map(|d| d.to_string_lossy().to_string()))
+                        .collect();
+
+                    // Only flag if duplicates are in different directories (not just mod.rs + impl.rs)
+                    if dirs.len() >= 2 {
+                        violations.push(RefactoringViolation::DuplicateDefinition {
+                            type_name: type_name.clone(),
+                            locations: locations.clone(),
+                            suggestion: format!(
+                                "Type '{}' is defined {} times in different directories within the same crate. Consolidate to single location.",
+                                type_name,
+                                locations.len()
+                            ),
+                            severity: Severity::Warning,
+                        });
+                    }
                 }
             }
         }

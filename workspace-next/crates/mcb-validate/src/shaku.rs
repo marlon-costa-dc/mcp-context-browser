@@ -126,6 +126,33 @@ pub enum ShakuViolation {
         fake_type: String,
         severity: Severity,
     },
+
+    /// Enum containing concrete provider types (violates OCP)
+    ConcreteTypesInEnum {
+        file: PathBuf,
+        line: usize,
+        enum_name: String,
+        concrete_types: Vec<String>,
+        severity: Severity,
+    },
+
+    /// Forbidden import of concrete type from mcb-providers in infrastructure/server
+    CrossCrateConcreteImport {
+        file: PathBuf,
+        line: usize,
+        imported_type: String,
+        source_crate: String,
+        severity: Severity,
+    },
+
+    /// Service creating its own dependencies via ::new()
+    ServiceCreatingDependency {
+        file: PathBuf,
+        line: usize,
+        service_name: String,
+        created_type: String,
+        severity: Severity,
+    },
 }
 
 impl ShakuViolation {
@@ -144,6 +171,9 @@ impl ShakuViolation {
             Self::DevNullInProduction { severity, .. } => *severity,
             Self::FallbackChain { severity, .. } => *severity,
             Self::ConditionalFakeInProduction { severity, .. } => *severity,
+            Self::ConcreteTypesInEnum { severity, .. } => *severity,
+            Self::CrossCrateConcreteImport { severity, .. } => *severity,
+            Self::ServiceCreatingDependency { severity, .. } => *severity,
         }
     }
 }
@@ -348,6 +378,54 @@ impl std::fmt::Display for ShakuViolation {
                     line
                 )
             }
+            Self::ConcreteTypesInEnum {
+                file,
+                line,
+                enum_name,
+                concrete_types,
+                ..
+            } => {
+                write!(
+                    f,
+                    "OCP: Enum {} contains concrete types [{}] - use Arc<dyn Trait>: {}:{}",
+                    enum_name,
+                    concrete_types.join(", "),
+                    file.display(),
+                    line
+                )
+            }
+            Self::CrossCrateConcreteImport {
+                file,
+                line,
+                imported_type,
+                source_crate,
+                ..
+            } => {
+                write!(
+                    f,
+                    "DI: Forbidden concrete import {} from {} - use traits from mcb-domain: {}:{}",
+                    imported_type,
+                    source_crate,
+                    file.display(),
+                    line
+                )
+            }
+            Self::ServiceCreatingDependency {
+                file,
+                line,
+                service_name,
+                created_type,
+                ..
+            } => {
+                write!(
+                    f,
+                    "DI: Service {} creates dependency {} via ::new() - inject via parameter: {}:{}",
+                    service_name,
+                    created_type,
+                    file.display(),
+                    line
+                )
+            }
         }
     }
 }
@@ -381,6 +459,9 @@ impl ShakuValidator {
         violations.extend(self.validate_port_bounds()?);
         violations.extend(self.validate_adapter_decorators()?);
         violations.extend(self.validate_handler_injections()?);
+        violations.extend(self.validate_concrete_in_enum()?);
+        violations.extend(self.validate_cross_crate_imports()?);
+        violations.extend(self.validate_service_dependencies()?);
         Ok(violations)
     }
 
@@ -1188,6 +1269,250 @@ impl ShakuValidator {
                                 expected_pattern: format!("Arc<dyn {}>", concrete_type),
                                 severity: Severity::Warning,
                             });
+                        }
+                    }
+                }
+            }
+        }
+        Ok(violations)
+    }
+
+    /// Check for enums containing concrete provider types (violates OCP)
+    pub fn validate_concrete_in_enum(&self) -> Result<Vec<ShakuViolation>> {
+        let mut violations = Vec::new();
+        // Pattern: enum Name { Variant(ConcreteType), ... }
+        let enum_pattern = Regex::new(r"(?:pub\s+)?enum\s+([A-Z][a-zA-Z0-9_]*)").expect("Invalid regex");
+        let variant_pattern = Regex::new(r"([A-Z][a-zA-Z0-9_]*)\s*\(([A-Z][a-zA-Z0-9_]*)\)").expect("Invalid regex");
+
+        for src_dir in self.config.get_scan_dirs()? {
+            // Skip mcb-validate and mcb-providers (where concrete types are defined)
+            let src_str = src_dir.to_string_lossy();
+            if src_str.contains("mcb-validate") || src_str.contains("mcb-providers") {
+                continue;
+            }
+
+            for entry in WalkDir::new(&src_dir)
+                .into_iter()
+                .filter_map(|e| e.ok())
+                .filter(|e| e.path().extension().is_some_and(|ext| ext == "rs"))
+            {
+                let path = entry.path();
+                let path_str = path.to_string_lossy();
+
+                // Skip test files
+                if path_str.contains("/tests/") || path_str.contains("_test.rs") {
+                    continue;
+                }
+
+                let content = std::fs::read_to_string(path)?;
+                let lines: Vec<&str> = content.lines().collect();
+
+                let mut in_enum = false;
+                let mut enum_name = String::new();
+                let mut enum_line = 0;
+                let mut concrete_types: Vec<String> = Vec::new();
+                let mut brace_depth: i32 = 0;
+                let mut enum_brace_depth: i32 = 0;
+
+                for (line_num, line) in lines.iter().enumerate() {
+                    // Track brace depth
+                    brace_depth += line.chars().filter(|c| *c == '{').count() as i32;
+                    brace_depth -= line.chars().filter(|c| *c == '}').count() as i32;
+
+                    // Detect enum start
+                    if let Some(cap) = enum_pattern.captures(line) {
+                        in_enum = true;
+                        enum_name = cap.get(1).map(|m| m.as_str()).unwrap_or("").to_string();
+                        enum_line = line_num + 1;
+                        enum_brace_depth = brace_depth;
+                        concrete_types.clear();
+                    }
+
+                    // Detect enum end
+                    if in_enum && brace_depth < enum_brace_depth {
+                        // Report if we found concrete provider types
+                        if !concrete_types.is_empty() {
+                            violations.push(ShakuViolation::ConcreteTypesInEnum {
+                                file: path.to_path_buf(),
+                                line: enum_line,
+                                enum_name: enum_name.clone(),
+                                concrete_types: concrete_types.clone(),
+                                severity: Severity::Warning,
+                            });
+                        }
+                        in_enum = false;
+                    }
+
+                    // Look for variant with concrete provider type
+                    if in_enum {
+                        for cap in variant_pattern.captures_iter(line) {
+                            let type_name = cap.get(2).map(|m| m.as_str()).unwrap_or("");
+                            // Check if it's a concrete provider/service type
+                            if type_name.ends_with("Provider")
+                                || type_name.ends_with("Service")
+                                || type_name.ends_with("Repository")
+                            {
+                                concrete_types.push(type_name.to_string());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Ok(violations)
+    }
+
+    /// Check for forbidden cross-crate concrete imports from mcb-providers in infrastructure/server
+    pub fn validate_cross_crate_imports(&self) -> Result<Vec<ShakuViolation>> {
+        let mut violations = Vec::new();
+        // Pattern: use mcb_providers::xxx::ConcreteType;
+        let import_pattern = Regex::new(r"use\s+mcb_providers::([a-z_]+)::([A-Z][a-zA-Z0-9_,\s]*)").expect("Invalid regex");
+        let type_pattern = Regex::new(r"([A-Z][a-zA-Z0-9_]+)").expect("Invalid regex");
+
+        for src_dir in self.config.get_scan_dirs()? {
+            let src_str = src_dir.to_string_lossy();
+            // Only check mcb-infrastructure and mcb-server (not mcb-providers or mcb-domain)
+            if !src_str.contains("mcb-infrastructure") && !src_str.contains("mcb-server") {
+                continue;
+            }
+
+            for entry in WalkDir::new(&src_dir)
+                .into_iter()
+                .filter_map(|e| e.ok())
+                .filter(|e| e.path().extension().is_some_and(|ext| ext == "rs"))
+            {
+                let path = entry.path();
+                let path_str = path.to_string_lossy();
+
+                // Skip test files
+                if path_str.contains("/tests/") || path_str.contains("_test.rs") {
+                    continue;
+                }
+
+                let content = std::fs::read_to_string(path)?;
+
+                for (line_num, line) in content.lines().enumerate() {
+                    if let Some(cap) = import_pattern.captures(line) {
+                        let _module = cap.get(1).map(|m| m.as_str()).unwrap_or("");
+                        let types_str = cap.get(2).map(|m| m.as_str()).unwrap_or("");
+
+                        // Extract individual type names
+                        for type_cap in type_pattern.captures_iter(types_str) {
+                            let type_name = type_cap.get(1).map(|m| m.as_str()).unwrap_or("");
+                            // Check if it's a concrete type (not a trait)
+                            if type_name.ends_with("Provider")
+                                || type_name.ends_with("Service")
+                                || type_name.ends_with("Repository")
+                                || type_name.ends_with("Chunker")
+                            {
+                                violations.push(ShakuViolation::CrossCrateConcreteImport {
+                                    file: path.to_path_buf(),
+                                    line: line_num + 1,
+                                    imported_type: type_name.to_string(),
+                                    source_crate: "mcb_providers".to_string(),
+                                    severity: Severity::Warning,
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Ok(violations)
+    }
+
+    /// Check for services creating their own dependencies via ::new()
+    pub fn validate_service_dependencies(&self) -> Result<Vec<ShakuViolation>> {
+        let mut violations = Vec::new();
+        // Pattern: field: Type::new() inside impl Service::new()
+        let impl_new_pattern = Regex::new(r"impl\s+([A-Z][a-zA-Z0-9_]*(?:Impl|Service))\s*\{").expect("Invalid regex");
+        let fn_new_pattern = Regex::new(r"pub\s+fn\s+new\s*\(").expect("Invalid regex");
+        let dependency_new_pattern = Regex::new(r"([a-z_]+):\s*([A-Z][a-zA-Z0-9_]+)::new\s*\(").expect("Invalid regex");
+
+        for src_dir in self.config.get_scan_dirs()? {
+            // Skip mcb-validate
+            if src_dir.to_string_lossy().contains("mcb-validate") {
+                continue;
+            }
+
+            for entry in WalkDir::new(&src_dir)
+                .into_iter()
+                .filter_map(|e| e.ok())
+                .filter(|e| e.path().extension().is_some_and(|ext| ext == "rs"))
+            {
+                let path = entry.path();
+                let path_str = path.to_string_lossy();
+
+                // Skip test files
+                if path_str.contains("/tests/") || path_str.contains("_test.rs") {
+                    continue;
+                }
+
+                // Skip factory files (they're supposed to create instances)
+                let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+                if file_name == "factory.rs" || file_name == "bootstrap.rs" {
+                    continue;
+                }
+
+                let content = std::fs::read_to_string(path)?;
+                let lines: Vec<&str> = content.lines().collect();
+
+                let mut in_impl = false;
+                let mut in_fn_new = false;
+                let mut current_service = String::new();
+                let mut brace_depth: i32 = 0;
+                let mut impl_brace_depth: i32 = 0;
+                let mut fn_brace_depth: i32 = 0;
+
+                for (line_num, line) in lines.iter().enumerate() {
+                    // Track brace depth
+                    brace_depth += line.chars().filter(|c| *c == '{').count() as i32;
+                    brace_depth -= line.chars().filter(|c| *c == '}').count() as i32;
+
+                    // Detect impl ServiceImpl {
+                    if let Some(cap) = impl_new_pattern.captures(line) {
+                        in_impl = true;
+                        current_service = cap.get(1).map(|m| m.as_str()).unwrap_or("").to_string();
+                        impl_brace_depth = brace_depth;
+                    }
+
+                    // Detect end of impl
+                    if in_impl && brace_depth < impl_brace_depth {
+                        in_impl = false;
+                        in_fn_new = false;
+                    }
+
+                    // Detect fn new() inside impl
+                    if in_impl && fn_new_pattern.is_match(line) {
+                        in_fn_new = true;
+                        fn_brace_depth = brace_depth;
+                    }
+
+                    // Detect end of fn new
+                    if in_fn_new && brace_depth < fn_brace_depth {
+                        in_fn_new = false;
+                    }
+
+                    // Look for dependency::new() inside fn new()
+                    if in_fn_new {
+                        if let Some(cap) = dependency_new_pattern.captures(line) {
+                            let _field = cap.get(1).map(|m| m.as_str()).unwrap_or("");
+                            let dep_type = cap.get(2).map(|m| m.as_str()).unwrap_or("");
+
+                            // Check if it's creating a service/provider/chunker
+                            if dep_type.ends_with("Provider")
+                                || dep_type.ends_with("Service")
+                                || dep_type.ends_with("Repository")
+                                || dep_type.ends_with("Chunker")
+                            {
+                                violations.push(ShakuViolation::ServiceCreatingDependency {
+                                    file: path.to_path_buf(),
+                                    line: line_num + 1,
+                                    service_name: current_service.clone(),
+                                    created_type: dep_type.to_string(),
+                                    severity: Severity::Warning,
+                                });
+                            }
                         }
                     }
                 }

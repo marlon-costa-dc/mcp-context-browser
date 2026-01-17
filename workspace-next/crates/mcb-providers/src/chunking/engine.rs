@@ -5,8 +5,11 @@
 
 use super::constants::CHUNK_SIZE_GENERIC;
 use super::language_helpers::{is_language_supported, language_from_extension};
-use super::languages::*;
-use super::processor::LanguageProcessor;
+use crate::language::{
+    CProcessor, CSharpProcessor, CppProcessor, GoProcessor, JavaProcessor, JavaScriptProcessor,
+    KotlinProcessor, LanguageProcessor, PhpProcessor, PythonProcessor, RubyProcessor,
+    RustProcessor, SwiftProcessor,
+};
 use async_trait::async_trait;
 use mcb_domain::domain_services::chunking::{ChunkingOptions, ChunkingResult, CodeChunker};
 use mcb_domain::entities::CodeChunk;

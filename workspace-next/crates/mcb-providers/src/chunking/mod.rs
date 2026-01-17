@@ -19,31 +19,28 @@
 //!
 //! This adapter implements the `CodeChunker` port trait from mcb-domain,
 //! providing the actual AST-based chunking implementation using tree-sitter.
+//!
+//! Language-specific processors are provided by the `crate::language` module.
 
-// Configuration and constants
-pub mod config;
+// Chunking-specific constants
 pub mod constants;
 
 // Language detection utilities
 pub mod language_helpers;
 
-// Core chunking components
+// Core chunking engine
 pub mod engine;
-pub mod fallback;
-pub mod processor;
-pub mod traverser;
-
-// Language-specific processors
-pub mod languages;
 
 // Public re-exports
-pub use config::{LanguageConfig, NodeExtractionRule, NodeExtractionRuleBuilder};
 pub use constants::*;
 pub use engine::IntelligentChunker;
 pub use language_helpers::{
     get_chunk_size, is_language_supported, language_from_extension, supported_languages,
 };
-pub use processor::LanguageProcessor;
 
-// Re-export language processors
-pub use languages::*;
+// Re-export language processors from the language module
+pub use crate::language::{
+    BaseProcessor, CProcessor, CSharpProcessor, CppProcessor, GoProcessor, JavaProcessor,
+    JavaScriptProcessor, KotlinProcessor, LanguageConfig, LanguageProcessor, NodeExtractionRule,
+    PhpProcessor, PythonProcessor, RubyProcessor, RustProcessor, SwiftProcessor,
+};
