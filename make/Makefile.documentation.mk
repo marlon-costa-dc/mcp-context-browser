@@ -7,7 +7,7 @@
 
 .PHONY: docs docs-build docs-serve docs-check docs-fix docs-setup docs-sync docs-metrics
 .PHONY: adr-new adr-list adr-check
-.PHONY: lint-md fix-md validate-all pre-commit
+.PHONY: lint-md fix-md validate-docs-all pre-commit
 .PHONY: rust-docs doc module-docs diagrams info
 
 # Path to mdbook (uses cargo-installed binary)
@@ -98,10 +98,10 @@ fix-md: ## Fix markdown issues (auto-fix)
 # Unified Validation
 # -----------------------------------------------------------------------------
 
-validate-all: ## Run all documentation validations
+validate-docs-all: ## Run all documentation validations
 	@./scripts/docs/validate.sh all
 
-pre-commit: lint-md validate-all ## Run all pre-commit documentation checks
+pre-commit: lint-md validate-docs-all ## Run all pre-commit documentation checks
 	@echo "✅ Pre-commit documentation checks passed"
 
 # -----------------------------------------------------------------------------

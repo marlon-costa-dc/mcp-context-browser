@@ -11,6 +11,22 @@
 
 MCP Context Browser is a Model Context Protocol (MCP) server that provides persistent multimodal context storage and access for AI agents. It allows AI applications (like Claude, Cursor, VS Code, etc.) to consult and update context information in real-time through a standardized API. The project's objective is to offer an extensible enterprise-grade architecture, with support for multiple data providers, caching, and an administrative panel for monitoring.
 
+## Installation
+
+### From source (recommended)
+
+Prerequisites: Rust toolchain (1.89+), `make`, and a POSIX shell.
+
+```bash
+# Build release binary
+make build-release
+
+# Install as a user systemd service (installs to ~/.claude/servers/claude-context-mcp)
+make install
+```
+
+For a faster dev install, use `make install-debug`. If you prefer to run without systemd, build with `make build-release` and run `target/release/mcp-context-browser` directly.
+
 ### Main Features
 
 -   **Modular Architecture**: Built in Rust with multiple crates, separating functionalities (core, providers, event bus, etc.) and facilitating expansion.

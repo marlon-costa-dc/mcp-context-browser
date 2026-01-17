@@ -34,6 +34,7 @@ pub mod validator_trait;
 
 // === Configuration System (Phase 5) ===
 pub mod config;
+pub mod scan;
 
 // === Rule Registry (Phase 3) ===
 pub mod rules;

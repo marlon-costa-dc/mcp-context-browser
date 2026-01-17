@@ -29,7 +29,7 @@ include make/Makefile.aliases.mk
 .PHONY: validate validate-report validate-summary validate-arch
 .PHONY: validate-deps validate-quality validate-patterns validate-tests validate-docs validate-naming
 .PHONY: validate-solid validate-org validate-kiss validate-shaku validate-refactor
-.PHONY: validate-all validate-config check-full ci-quality
+.PHONY: validate-all validate-docs-all validate-config check-full ci-quality
 .PHONY: pmat-tdg pmat-diag pmat-entropy pmat-defects pmat-gate pmat-explain pmat-clean
 .PHONY: lint-md fix-md
 .PHONY: docs docs-build docs-serve docs-check docs-fix docs-setup docs-metrics docs-sync info doc

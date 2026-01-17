@@ -6,13 +6,13 @@
 //! - File placement (files in correct architectural layers)
 //! - Declaration collision detection
 
+use crate::scan::{for_each_crate_rs_path, for_each_scan_rs_path, is_test_path};
 use crate::violation_trait::{Violation, ViolationCategory};
 use crate::{ComponentType, Result, Severity, ValidationConfig};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
-use walkdir::WalkDir;
 
 /// Organization violation types
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -692,7 +692,7 @@ impl OrganizationValidator {
             "1000000",
         ];
 
-        self.for_each_crate_rs_path(|path, _src_dir, _crate_name| {
+        for_each_crate_rs_path(&self.config, |path, _src_dir, _crate_name| {
             // Skip constants.rs files (they're allowed to have numbers)
             let file_name = path.file_name().and_then(|n| n.to_str());
             if file_name.is_some_and(|n| n.contains("constant") || n.contains("config")) {
@@ -701,7 +701,7 @@ impl OrganizationValidator {
 
             // Skip test files
             let path_str = path.to_string_lossy();
-            if Self::is_test_path(&path_str) {
+            if is_test_path(&path_str) {
                 return Ok(());
             }
 
@@ -799,7 +799,7 @@ impl OrganizationValidator {
         // Pattern for string literals (15+ chars to reduce noise)
         let string_pattern = Regex::new(r#""([^"\\]{15,})""#).expect("Invalid regex");
 
-        self.for_each_crate_rs_path(|path, _src_dir, _crate_name| {
+        for_each_crate_rs_path(&self.config, |path, _src_dir, _crate_name| {
             // Skip constants files (they define string constants)
             let file_name = path.file_name().and_then(|n| n.to_str());
             if file_name.is_some_and(|n| n.contains("constant")) {
@@ -808,7 +808,7 @@ impl OrganizationValidator {
 
             // Skip test files
             let path_str = path.to_string_lossy();
-            if Self::is_test_path(&path_str) {
+            if is_test_path(&path_str) {
                 return Ok(());
             }
 
@@ -903,7 +903,7 @@ impl OrganizationValidator {
     pub fn validate_file_placement(&self) -> Result<Vec<OrganizationViolation>> {
         let mut violations = Vec::new();
 
-        self.for_each_crate_rs_path(|path, src_dir, crate_name| {
+        for_each_crate_rs_path(&self.config, |path, src_dir, crate_name| {
             let rel_path = path.strip_prefix(src_dir).ok();
             let path_str = path.to_string_lossy();
             let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
@@ -1021,7 +1021,7 @@ impl OrganizationValidator {
             "Component", // DI component traits
         ];
 
-        self.for_each_crate_rs_path(|path, _src_dir, crate_name| {
+        for_each_crate_rs_path(&self.config, |path, _src_dir, crate_name| {
             // Skip domain crate (traits are allowed there)
             if crate_name.contains("domain") {
                 return Ok(());
@@ -1040,7 +1040,7 @@ impl OrganizationValidator {
             }
 
             // Skip test files
-            if Self::is_test_path(&path_str) {
+            if is_test_path(&path_str) {
                 return Ok(());
             }
 
@@ -1147,7 +1147,7 @@ impl OrganizationValidator {
         let trait_pattern =
             Regex::new(r"(?:pub\s+)?trait\s+([A-Z][a-zA-Z0-9_]*)").expect("Invalid regex");
 
-        self.for_each_crate_rs_path(|path, _src_dir, _crate_name| {
+        for_each_crate_rs_path(&self.config, |path, _src_dir, _crate_name| {
             let content = std::fs::read_to_string(path)?;
 
             for (line_num, line) in content.lines().enumerate() {
@@ -1232,11 +1232,11 @@ impl OrganizationValidator {
         let server_import_pattern =
             Regex::new(r"use\s+(?:crate::|super::)*server::").expect("Invalid regex");
 
-        self.for_each_scan_dir_rs_path(true, |path, _src_dir| {
+        for_each_scan_rs_path(&self.config, true, |path, _src_dir| {
             let path_str = path.to_string_lossy();
 
             // Skip test files
-            if Self::is_test_path(&path_str) {
+            if is_test_path(&path_str) {
                 return Ok(());
             }
 
@@ -1325,59 +1325,6 @@ impl OrganizationValidator {
         Ok(violations)
     }
 
-    fn get_crate_dirs(&self) -> Result<Vec<PathBuf>> {
-        self.config.get_source_dirs()
-    }
-
-    fn for_each_crate_rs_path<F>(&self, mut f: F) -> Result<()>
-    where
-        F: FnMut(&std::path::Path, &std::path::Path, &str) -> Result<()>,
-    {
-        for crate_dir in self.get_crate_dirs()? {
-            let src_dir = crate_dir.join("src");
-            if !src_dir.exists() {
-                continue;
-            }
-
-            let crate_name = crate_dir.file_name().and_then(|n| n.to_str()).unwrap_or("");
-
-            for entry in WalkDir::new(&src_dir)
-                .into_iter()
-                .filter_map(|e| e.ok())
-                .filter(|e| e.path().extension().is_some_and(|ext| ext == "rs"))
-            {
-                f(entry.path(), &src_dir, crate_name)?;
-            }
-        }
-
-        Ok(())
-    }
-
-    fn for_each_scan_dir_rs_path<F>(&self, skip_validate_crate: bool, mut f: F) -> Result<()>
-    where
-        F: FnMut(&std::path::Path, &std::path::Path) -> Result<()>,
-    {
-        for src_dir in self.config.get_scan_dirs()? {
-            if skip_validate_crate && src_dir.to_string_lossy().contains("mcb-validate") {
-                continue;
-            }
-
-            for entry in WalkDir::new(&src_dir)
-                .into_iter()
-                .filter_map(|e| e.ok())
-                .filter(|e| e.path().extension().is_some_and(|ext| ext == "rs"))
-            {
-                f(entry.path(), &src_dir)?;
-            }
-        }
-
-        Ok(())
-    }
-
-    fn is_test_path(path: &str) -> bool {
-        path.contains("_test.rs") || path.contains("/tests/")
-    }
-
     /// Check if a path is from legacy/additional source directories
     #[allow(dead_code)]
     fn is_legacy_path(&self, path: &std::path::Path) -> bool {
@@ -1405,7 +1352,7 @@ impl OrganizationValidator {
             r"impl\s+(?:async\s+)?([A-Z][a-zA-Z0-9_]*(?:Provider|Repository))\s+for\s+([A-Z][a-zA-Z0-9_]*)"
         ).expect("Invalid regex");
 
-        self.for_each_scan_dir_rs_path(true, |path, src_dir| {
+        for_each_scan_rs_path(&self.config, true, |path, src_dir| {
             let is_domain_crate = src_dir.to_string_lossy().contains("domain");
             let is_infrastructure_crate = src_dir.to_string_lossy().contains("infrastructure");
             let is_server_crate = src_dir.to_string_lossy().contains("server");
@@ -1413,7 +1360,7 @@ impl OrganizationValidator {
             let path_str = path.to_string_lossy();
 
             // Skip test files
-            if Self::is_test_path(&path_str) {
+            if is_test_path(&path_str) {
                 return Ok(());
             }
 
@@ -1569,7 +1516,7 @@ impl OrganizationValidator {
             "from_", "into_", "as_", "to_", "get_", "is_", "has_", "with_",
         ];
 
-        self.for_each_scan_dir_rs_path(false, |path, src_dir| {
+        for_each_scan_rs_path(&self.config, false, |path, src_dir| {
             // Only check domain crate
             if !src_dir.to_string_lossy().contains("domain") {
                 return Ok(());
@@ -1578,7 +1525,7 @@ impl OrganizationValidator {
             let path_str = path.to_string_lossy();
 
             // Skip test files
-            if Self::is_test_path(&path_str) {
+            if is_test_path(&path_str) {
                 return Ok(());
             }
 
