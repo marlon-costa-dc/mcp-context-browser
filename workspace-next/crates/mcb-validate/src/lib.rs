@@ -33,7 +33,10 @@ pub mod validator_trait;
 pub mod generic_reporter;
 
 // === New Validators (using new system) ===
-pub mod architecture;
+pub mod clean_architecture;
+pub mod layer_flow;
+pub mod port_adapter;
+pub mod visibility;
 
 // === Legacy Validators (being migrated to new system) ===
 pub mod async_patterns;
@@ -63,7 +66,10 @@ pub use validator_trait::{LegacyValidatorAdapter, Validator, ValidatorRegistry};
 pub use generic_reporter::{GenericReport, GenericReporter, GenericSummary, ViolationEntry};
 
 // Re-export new validators
-pub use architecture::{ArchitectureValidator, ArchitectureViolation};
+pub use clean_architecture::{CleanArchitectureValidator, CleanArchitectureViolation};
+pub use layer_flow::{LayerFlowValidator, LayerFlowViolation};
+pub use port_adapter::{PortAdapterValidator, PortAdapterViolation};
+pub use visibility::{VisibilityValidator, VisibilityViolation};
 
 // Re-export legacy validators
 pub use dependency::{DependencyValidator, DependencyViolation};
