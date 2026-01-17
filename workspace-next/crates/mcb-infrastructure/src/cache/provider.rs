@@ -6,8 +6,8 @@
 //! **ARCHITECTURE**: Uses `Arc<dyn CacheProvider>` directly to follow OCP.
 //! No enum wrapper - new cache providers can be added without modification.
 
-use mcb_domain::error::Result;
 use mcb_application::ports::providers::cache::{CacheEntryConfig, CacheProvider, CacheStats};
+use mcb_domain::error::Result;
 use std::fmt;
 use std::sync::Arc;
 
@@ -24,6 +24,7 @@ pub struct SharedCacheProvider {
     namespace: Option<String>,
 }
 
+// Construction and Configuration Methods
 impl SharedCacheProvider {
     /// Create a new shared cache provider
     ///
@@ -44,7 +45,10 @@ impl SharedCacheProvider {
     }
 
     /// Create a new shared cache provider with a default namespace
-    pub fn with_namespace<P: CacheProvider + 'static, S: Into<String>>(provider: P, namespace: S) -> Self {
+    pub fn with_namespace<P: CacheProvider + 'static, S: Into<String>>(
+        provider: P,
+        namespace: S,
+    ) -> Self {
         Self {
             provider: Arc::new(provider),
             namespace: Some(namespace.into()),
@@ -74,7 +78,10 @@ impl SharedCacheProvider {
             key.as_ref().to_string()
         }
     }
+}
 
+// Cache Operations Methods
+impl SharedCacheProvider {
     /// Get a typed value from the cache
     pub async fn get<T>(&self, key: &str) -> Result<Option<T>>
     where

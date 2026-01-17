@@ -20,8 +20,7 @@ use std::sync::Arc;
 ///
 /// Discards all published events without any side effects.
 /// Useful for testing when event publishing is not relevant.
-#[derive(Debug, Default)]
-#[derive(shaku::Component)]
+#[derive(Debug, Default, shaku::Component)]
 #[shaku(interface = EventPublisher)]
 pub struct NullEventPublisher;
 

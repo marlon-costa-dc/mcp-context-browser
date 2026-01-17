@@ -2,8 +2,8 @@
 
 use mcb_application::ports::providers::cache::CacheEntryConfig;
 use mcb_infrastructure::cache::provider::SharedCacheProvider;
-use mcb_providers::cache::NullCacheProvider;
 use mcb_infrastructure::cache::queue::{CacheAsideHelper, CacheBatchProcessor};
+use mcb_providers::cache::NullCacheProvider;
 
 #[tokio::test]
 async fn test_batch_processor_basic_operations() {

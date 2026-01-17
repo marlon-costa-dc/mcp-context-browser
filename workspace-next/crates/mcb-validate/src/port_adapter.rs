@@ -40,14 +40,56 @@ pub enum PortAdapterViolation {
 impl std::fmt::Display for PortAdapterViolation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::AdapterMissingPortImpl { adapter_name, file, line } => 
-                write!(f, "Adapter {} missing port impl at {}:{}", adapter_name, file.display(), line),
-            Self::AdapterUsesAdapter { adapter_name, other_adapter, file, line } => 
-                write!(f, "Adapter {} uses {} directly at {}:{}", adapter_name, other_adapter, file.display(), line),
-            Self::PortTooLarge { trait_name, method_count, file, line } => 
-                write!(f, "Port {} has {} methods (>10) at {}:{}", trait_name, method_count, file.display(), line),
-            Self::PortTooSmall { trait_name, method_count, file, line } => 
-                write!(f, "Port {} has {} method(s) at {}:{}", trait_name, method_count, file.display(), line),
+            Self::AdapterMissingPortImpl {
+                adapter_name,
+                file,
+                line,
+            } => write!(
+                f,
+                "Adapter {} missing port impl at {}:{}",
+                adapter_name,
+                file.display(),
+                line
+            ),
+            Self::AdapterUsesAdapter {
+                adapter_name,
+                other_adapter,
+                file,
+                line,
+            } => write!(
+                f,
+                "Adapter {} uses {} directly at {}:{}",
+                adapter_name,
+                other_adapter,
+                file.display(),
+                line
+            ),
+            Self::PortTooLarge {
+                trait_name,
+                method_count,
+                file,
+                line,
+            } => write!(
+                f,
+                "Port {} has {} methods (>10) at {}:{}",
+                trait_name,
+                method_count,
+                file.display(),
+                line
+            ),
+            Self::PortTooSmall {
+                trait_name,
+                method_count,
+                file,
+                line,
+            } => write!(
+                f,
+                "Port {} has {} method(s) at {}:{}",
+                trait_name,
+                method_count,
+                file.display(),
+                line
+            ),
         }
     }
 }
@@ -62,34 +104,48 @@ impl Violation for PortAdapterViolation {
         }
     }
 
-    fn category(&self) -> ViolationCategory { ViolationCategory::Architecture }
+    fn category(&self) -> ViolationCategory {
+        ViolationCategory::Architecture
+    }
 
     fn severity(&self) -> Severity {
         match self {
-            Self::AdapterMissingPortImpl { .. } | Self::AdapterUsesAdapter { .. } => Severity::Warning,
+            Self::AdapterMissingPortImpl { .. } | Self::AdapterUsesAdapter { .. } => {
+                Severity::Warning
+            }
             Self::PortTooLarge { .. } | Self::PortTooSmall { .. } => Severity::Info,
         }
     }
 
     fn file(&self) -> Option<&PathBuf> {
         match self {
-            Self::AdapterMissingPortImpl { file, .. } | Self::AdapterUsesAdapter { file, .. }
-            | Self::PortTooLarge { file, .. } | Self::PortTooSmall { file, .. } => Some(file),
+            Self::AdapterMissingPortImpl { file, .. }
+            | Self::AdapterUsesAdapter { file, .. }
+            | Self::PortTooLarge { file, .. }
+            | Self::PortTooSmall { file, .. } => Some(file),
         }
     }
 
     fn line(&self) -> Option<usize> {
         match self {
-            Self::AdapterMissingPortImpl { line, .. } | Self::AdapterUsesAdapter { line, .. }
-            | Self::PortTooLarge { line, .. } | Self::PortTooSmall { line, .. } => Some(*line),
+            Self::AdapterMissingPortImpl { line, .. }
+            | Self::AdapterUsesAdapter { line, .. }
+            | Self::PortTooLarge { line, .. }
+            | Self::PortTooSmall { line, .. } => Some(*line),
         }
     }
 
     fn suggestion(&self) -> Option<String> {
         match self {
-            Self::AdapterMissingPortImpl { .. } => Some("Implement a port trait from mcb-application/ports/".to_string()),
-            Self::AdapterUsesAdapter { .. } => Some("Depend on port traits, not concrete adapters".to_string()),
-            Self::PortTooLarge { .. } => Some("Consider splitting into smaller interfaces (ISP)".to_string()),
+            Self::AdapterMissingPortImpl { .. } => {
+                Some("Implement a port trait from mcb-application/ports/".to_string())
+            }
+            Self::AdapterUsesAdapter { .. } => {
+                Some("Depend on port traits, not concrete adapters".to_string())
+            }
+            Self::PortTooLarge { .. } => {
+                Some("Consider splitting into smaller interfaces (ISP)".to_string())
+            }
             Self::PortTooSmall { .. } => Some("May indicate over-fragmentation".to_string()),
         }
     }
@@ -99,11 +155,15 @@ impl Violation for PortAdapterViolation {
 pub struct PortAdapterValidator;
 
 impl Default for PortAdapterValidator {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl PortAdapterValidator {
-    pub fn new() -> Self { Self }
+    pub fn new() -> Self {
+        Self
+    }
 
     pub fn validate(&self, config: &ValidationConfig) -> Result<Vec<PortAdapterViolation>> {
         let mut violations = Vec::new();
@@ -112,17 +172,26 @@ impl PortAdapterValidator {
         Ok(violations)
     }
 
-    fn check_port_trait_sizes(&self, config: &ValidationConfig) -> Result<Vec<PortAdapterViolation>> {
+    fn check_port_trait_sizes(
+        &self,
+        config: &ValidationConfig,
+    ) -> Result<Vec<PortAdapterViolation>> {
         let mut violations = Vec::new();
-        let ports_dir = config.workspace_root.join("crates/mcb-application/src/ports");
-        if !ports_dir.exists() { return Ok(violations); }
+        let ports_dir = config
+            .workspace_root
+            .join("crates/mcb-application/src/ports");
+        if !ports_dir.exists() {
+            return Ok(violations);
+        }
 
         let trait_start_re = Regex::new(r"pub\s+trait\s+(\w+)").expect("Invalid regex");
         let fn_re = Regex::new(r"^\s*(?:async\s+)?fn\s+\w+").expect("Invalid regex");
 
         for entry in WalkDir::new(&ports_dir).into_iter().filter_map(|e| e.ok()) {
             let path = entry.path();
-            if !path.extension().is_some_and(|e| e == "rs") { continue; }
+            if !path.extension().is_some_and(|e| e == "rs") {
+                continue;
+            }
 
             let content = std::fs::read_to_string(path)?;
             let lines: Vec<&str> = content.lines().collect();
@@ -174,31 +243,50 @@ impl PortAdapterValidator {
         Ok(violations)
     }
 
-    fn check_adapter_direct_usage(&self, config: &ValidationConfig) -> Result<Vec<PortAdapterViolation>> {
+    fn check_adapter_direct_usage(
+        &self,
+        config: &ValidationConfig,
+    ) -> Result<Vec<PortAdapterViolation>> {
         let mut violations = Vec::new();
         let providers_dir = config.workspace_root.join("crates/mcb-providers/src");
-        if !providers_dir.exists() { return Ok(violations); }
+        if !providers_dir.exists() {
+            return Ok(violations);
+        }
 
         let adapter_suffixes = ["Provider", "Repository", "Adapter", "Client"];
-        let adapter_import_re = Regex::new(r"use\s+(?:crate|super)::(?:\w+::)*(\w+(?:Provider|Repository|Adapter|Client))").expect("Invalid regex");
+        let adapter_import_re = Regex::new(
+            r"use\s+(?:crate|super)::(?:\w+::)*(\w+(?:Provider|Repository|Adapter|Client))",
+        )
+        .expect("Invalid regex");
 
-        for entry in WalkDir::new(&providers_dir).into_iter().filter_map(|e| e.ok()) {
+        for entry in WalkDir::new(&providers_dir)
+            .into_iter()
+            .filter_map(|e| e.ok())
+        {
             let path = entry.path();
-            if !path.extension().is_some_and(|e| e == "rs") { continue; }
+            if !path.extension().is_some_and(|e| e == "rs") {
+                continue;
+            }
 
             let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-            if file_name == "mod.rs" || file_name == "lib.rs" { continue; }
+            if file_name == "mod.rs" || file_name == "lib.rs" {
+                continue;
+            }
 
             let content = std::fs::read_to_string(path)?;
             let current_adapter = file_name.trim_end_matches(".rs");
 
             for (line_num, line) in content.lines().enumerate() {
                 let trimmed = line.trim();
-                if trimmed.starts_with("//") { continue; }
+                if trimmed.starts_with("//") {
+                    continue;
+                }
 
                 if let Some(captures) = adapter_import_re.captures(line) {
                     let imported = captures.get(1).map(|m| m.as_str()).unwrap_or("");
-                    if imported.to_lowercase().contains(current_adapter) { continue; }
+                    if imported.to_lowercase().contains(current_adapter) {
+                        continue;
+                    }
 
                     for suffix in &adapter_suffixes {
                         if imported.ends_with(suffix) && !imported.starts_with("dyn") {

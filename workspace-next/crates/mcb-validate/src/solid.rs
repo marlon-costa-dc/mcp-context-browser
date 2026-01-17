@@ -7,6 +7,7 @@
 //! - ISP: Interface Segregation Principle (large traits)
 //! - DIP: Dependency Inversion Principle (concrete dependencies)
 
+use crate::violation_trait::{Violation, ViolationCategory};
 use crate::{Result, Severity, ValidationConfig};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -275,6 +276,79 @@ impl std::fmt::Display for SolidViolation {
     }
 }
 
+impl Violation for SolidViolation {
+    fn id(&self) -> &str {
+        match self {
+            Self::TooManyResponsibilities { .. } => "SOLID001",
+            Self::ExcessiveMatchArms { .. } => "SOLID002",
+            Self::TraitTooLarge { .. } => "SOLID003",
+            Self::ConcreteDependency { .. } => "SOLID004",
+            Self::MultipleUnrelatedStructs { .. } => "SOLID005",
+            Self::PartialTraitImplementation { .. } => "SOLID006",
+            Self::ImplTooManyMethods { .. } => "SOLID007",
+            Self::StringBasedDispatch { .. } => "SOLID008",
+        }
+    }
+
+    fn category(&self) -> ViolationCategory {
+        ViolationCategory::Solid
+    }
+
+    fn severity(&self) -> Severity {
+        match self {
+            Self::TooManyResponsibilities { severity, .. } => *severity,
+            Self::ExcessiveMatchArms { severity, .. } => *severity,
+            Self::TraitTooLarge { severity, .. } => *severity,
+            Self::ConcreteDependency { severity, .. } => *severity,
+            Self::MultipleUnrelatedStructs { severity, .. } => *severity,
+            Self::PartialTraitImplementation { severity, .. } => *severity,
+            Self::ImplTooManyMethods { severity, .. } => *severity,
+            Self::StringBasedDispatch { severity, .. } => *severity,
+        }
+    }
+
+    fn file(&self) -> Option<&PathBuf> {
+        match self {
+            Self::TooManyResponsibilities { file, .. } => Some(file),
+            Self::ExcessiveMatchArms { file, .. } => Some(file),
+            Self::TraitTooLarge { file, .. } => Some(file),
+            Self::ConcreteDependency { file, .. } => Some(file),
+            Self::MultipleUnrelatedStructs { file, .. } => Some(file),
+            Self::PartialTraitImplementation { file, .. } => Some(file),
+            Self::ImplTooManyMethods { file, .. } => Some(file),
+            Self::StringBasedDispatch { file, .. } => Some(file),
+        }
+    }
+
+    fn line(&self) -> Option<usize> {
+        match self {
+            Self::TooManyResponsibilities { line, .. } => Some(*line),
+            Self::ExcessiveMatchArms { line, .. } => Some(*line),
+            Self::TraitTooLarge { line, .. } => Some(*line),
+            Self::ConcreteDependency { line, .. } => Some(*line),
+            Self::MultipleUnrelatedStructs { .. } => None,
+            Self::PartialTraitImplementation { line, .. } => Some(*line),
+            Self::ImplTooManyMethods { line, .. } => Some(*line),
+            Self::StringBasedDispatch { line, .. } => Some(*line),
+        }
+    }
+
+    fn suggestion(&self) -> Option<String> {
+        match self {
+            Self::TooManyResponsibilities { suggestion, .. } => Some(suggestion.clone()),
+            Self::ExcessiveMatchArms { suggestion, .. } => Some(suggestion.clone()),
+            Self::TraitTooLarge { suggestion, .. } => Some(suggestion.clone()),
+            Self::ConcreteDependency { suggestion, .. } => Some(suggestion.clone()),
+            Self::MultipleUnrelatedStructs { suggestion, .. } => Some(suggestion.clone()),
+            Self::PartialTraitImplementation { .. } => {
+                Some("Implement the method properly or remove the trait implementation".to_string())
+            }
+            Self::ImplTooManyMethods { suggestion, .. } => Some(suggestion.clone()),
+            Self::StringBasedDispatch { suggestion, .. } => Some(suggestion.clone()),
+        }
+    }
+}
+
 /// SOLID principles validator
 pub struct SolidValidator {
     config: ValidationConfig,
@@ -346,7 +420,7 @@ impl SolidValidator {
                     || file_name == "requests.rs"
                     || file_name == "dto.rs"
                     || file_name == "entities.rs"
-                    || file_name == "admin.rs";  // Port files group related types
+                    || file_name == "admin.rs"; // Port files group related types
 
                 let content = std::fs::read_to_string(entry.path())?;
                 let lines: Vec<&str> = content.lines().collect();
@@ -581,8 +655,8 @@ impl SolidValidator {
         let mut violations = Vec::new();
         let impl_pattern =
             Regex::new(r"impl(?:<[^>]*>)?\s+([A-Z][a-zA-Z0-9_]*)").expect("Invalid regex");
-        let fn_pattern =
-            Regex::new(r"(?:pub\s+)?(?:async\s+)?fn\s+[a-z_][a-z0-9_]*\s*[<(]").expect("Invalid regex");
+        let fn_pattern = Regex::new(r"(?:pub\s+)?(?:async\s+)?fn\s+[a-z_][a-z0-9_]*\s*[<(]")
+            .expect("Invalid regex");
 
         for crate_dir in self.get_crate_dirs()? {
             let src_dir = crate_dir.join("src");
@@ -636,8 +710,7 @@ impl SolidValidator {
         let string_match_pattern =
             Regex::new(r#"match\s+\w+\.as_str\(\)|match\s+[&]?\w+\s*\{\s*"[^"]+"\s*=>"#)
                 .expect("Invalid regex");
-        let string_arm_pattern =
-            Regex::new(r#"^\s*"[^"]+"\s*=>"#).expect("Invalid regex");
+        let string_arm_pattern = Regex::new(r#"^\s*"[^"]+"\s*=>"#).expect("Invalid regex");
 
         for crate_dir in self.get_crate_dirs()? {
             let src_dir = crate_dir.join("src");
@@ -684,14 +757,17 @@ impl SolidValidator {
                     // Check for string-based match dispatch
                     if string_match_pattern.is_match(line) {
                         // Count string arms in the match
-                        let string_arm_count = self.count_string_match_arms(&lines, line_num, &string_arm_pattern);
+                        let string_arm_count =
+                            self.count_string_match_arms(&lines, line_num, &string_arm_pattern);
 
                         if string_arm_count >= 3 {
                             violations.push(SolidViolation::StringBasedDispatch {
                                 file: entry.path().to_path_buf(),
                                 line: line_num + 1,
                                 match_expression: trimmed.chars().take(60).collect(),
-                                suggestion: "Consider using enum types with FromStr or a registry pattern".to_string(),
+                                suggestion:
+                                    "Consider using enum types with FromStr or a registry pattern"
+                                        .to_string(),
                                 severity: Severity::Info,
                             });
                         }
@@ -731,7 +807,12 @@ impl SolidValidator {
     }
 
     /// Count string match arms
-    fn count_string_match_arms(&self, lines: &[&str], start_line: usize, string_arm_pattern: &Regex) -> usize {
+    fn count_string_match_arms(
+        &self,
+        lines: &[&str],
+        start_line: usize,
+        string_arm_pattern: &Regex,
+    ) -> usize {
         let mut brace_depth = 0;
         let mut in_match = false;
         let mut arm_count = 0;
@@ -970,6 +1051,24 @@ impl SolidValidator {
     #[allow(dead_code)]
     fn is_legacy_path(&self, path: &std::path::Path) -> bool {
         self.config.is_legacy_path(path)
+    }
+}
+
+impl crate::validator_trait::Validator for SolidValidator {
+    fn name(&self) -> &'static str {
+        "solid"
+    }
+
+    fn description(&self) -> &'static str {
+        "Validates SOLID principles"
+    }
+
+    fn validate(&self, _config: &ValidationConfig) -> anyhow::Result<Vec<Box<dyn Violation>>> {
+        let violations = self.validate_all()?;
+        Ok(violations
+            .into_iter()
+            .map(|v| Box::new(v) as Box<dyn Violation>)
+            .collect())
     }
 }
 

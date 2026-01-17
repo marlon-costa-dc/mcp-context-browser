@@ -76,7 +76,10 @@ impl ConfigPropagator {
     fn handle_event(event: &ConfigWatchEvent, callbacks: &[ConfigChangeCallback]) {
         match event {
             ConfigWatchEvent::Reloaded(config) => {
-                info!("Configuration reloaded, propagating to {} listeners", callbacks.len());
+                info!(
+                    "Configuration reloaded, propagating to {} listeners",
+                    callbacks.len()
+                );
                 debug!(
                     transport_mode = ?config.server.transport_mode,
                     cache_enabled = config.system.infrastructure.cache.enabled,

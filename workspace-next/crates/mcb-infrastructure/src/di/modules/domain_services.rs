@@ -12,14 +12,17 @@
 use crate::cache::provider::SharedCacheProvider;
 use crate::config::AppConfig;
 use crate::crypto::CryptoService;
-use mcb_application::use_cases::{ContextServiceImpl, IndexingServiceImpl, SearchServiceImpl};
 use mcb_application::domain_services::search::{
     ContextServiceInterface, IndexingServiceInterface, SearchServiceInterface,
 };
+use mcb_application::ports::providers::{
+    EmbeddingProvider, LanguageChunkingProvider, VectorStoreProvider,
+};
+use mcb_application::use_cases::{ContextServiceImpl, IndexingServiceImpl, SearchServiceImpl};
 use mcb_domain::error::Result;
-use mcb_application::ports::providers::{EmbeddingProvider, VectorStoreProvider};
 use shaku::HasComponent;
 use std::sync::Arc;
+
 use super::super::bootstrap::AppContainer;
 
 /// Domain services container
@@ -30,40 +33,50 @@ pub struct DomainServicesContainer {
     pub indexing_service: Arc<dyn IndexingServiceInterface>,
 }
 
+/// Dependencies for creating domain services
+///
+/// Groups all required dependencies into a single struct to reduce
+/// function parameter count (KISS principle).
+pub struct ServiceDependencies {
+    /// Cache provider for caching operations
+    pub cache: SharedCacheProvider,
+    /// Crypto service (reserved for future use)
+    pub crypto: CryptoService,
+    /// Application configuration (reserved for future use)
+    pub config: AppConfig,
+    /// Embedding provider for vector embeddings
+    pub embedding_provider: Arc<dyn EmbeddingProvider>,
+    /// Vector store provider for similarity search
+    pub vector_store_provider: Arc<dyn VectorStoreProvider>,
+    /// Language chunker for code processing
+    pub language_chunker: Arc<dyn LanguageChunkingProvider>,
+}
+
 /// Domain services factory - creates services with runtime dependencies
 pub struct DomainServicesFactory;
 
 impl DomainServicesFactory {
     /// Create domain services using infrastructure components
-    pub async fn create_services(
-        cache: SharedCacheProvider,
-        _crypto: CryptoService,
-        _config: AppConfig,
-        embedding_provider: Arc<dyn EmbeddingProvider>,
-        vector_store_provider: Arc<dyn VectorStoreProvider>,
-        language_chunker: Arc<dyn mcb_application::ports::providers::LanguageChunkingProvider>,
-    ) -> Result<DomainServicesContainer> {
+    pub async fn create_services(deps: ServiceDependencies) -> Result<DomainServicesContainer> {
         // Create context service with dependencies
-        let context_service: Arc<dyn ContextServiceInterface> = Arc::new(
-            mcb_application::use_cases::ContextServiceImpl::new(
-                cache.into(),
-                embedding_provider,
-                vector_store_provider,
-            )
-        );
+        let context_service: Arc<dyn ContextServiceInterface> =
+            Arc::new(mcb_application::use_cases::ContextServiceImpl::new(
+                deps.cache.into(),
+                deps.embedding_provider,
+                deps.vector_store_provider,
+            ));
 
         // Create search service with context service dependency
         let search_service: Arc<dyn SearchServiceInterface> = Arc::new(
-            mcb_application::use_cases::SearchServiceImpl::new(Arc::clone(&context_service))
+            mcb_application::use_cases::SearchServiceImpl::new(Arc::clone(&context_service)),
         );
 
         // Create indexing service with context service and language chunker dependency
-        let indexing_service: Arc<dyn IndexingServiceInterface> = Arc::new(
-            mcb_application::use_cases::IndexingServiceImpl::new(
+        let indexing_service: Arc<dyn IndexingServiceInterface> =
+            Arc::new(mcb_application::use_cases::IndexingServiceImpl::new(
                 Arc::clone(&context_service),
-                language_chunker,
-            )
-        );
+                deps.language_chunker,
+            ));
 
         Ok(DomainServicesContainer {
             context_service,
@@ -73,7 +86,9 @@ impl DomainServicesFactory {
     }
 
     /// Create indexing service from app container
-    pub async fn create_indexing_service(app_container: &AppContainer) -> Result<Arc<dyn IndexingServiceInterface>> {
+    pub async fn create_indexing_service(
+        app_container: &AppContainer,
+    ) -> Result<Arc<dyn IndexingServiceInterface>> {
         // Get dependencies from modules
         let _cache_provider = app_container.cache.resolve();
         let language_chunker = app_container.language.resolve();
@@ -88,7 +103,9 @@ impl DomainServicesFactory {
     }
 
     /// Create context service from app container
-    pub async fn create_context_service(app_container: &AppContainer) -> Result<Arc<dyn ContextServiceInterface>> {
+    pub async fn create_context_service(
+        app_container: &AppContainer,
+    ) -> Result<Arc<dyn ContextServiceInterface>> {
         // Get dependencies from modules
         let cache_provider = app_container.cache.resolve();
         let embedding_provider = app_container.embedding.resolve();
@@ -102,7 +119,9 @@ impl DomainServicesFactory {
     }
 
     /// Create search service from app container
-    pub async fn create_search_service(app_container: &AppContainer) -> Result<Arc<dyn SearchServiceInterface>> {
+    pub async fn create_search_service(
+        app_container: &AppContainer,
+    ) -> Result<Arc<dyn SearchServiceInterface>> {
         // Create context service first (dependency)
         let context_service = Self::create_context_service(app_container).await?;
 

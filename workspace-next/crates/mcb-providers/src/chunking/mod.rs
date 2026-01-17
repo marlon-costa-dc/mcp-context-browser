@@ -22,16 +22,31 @@
 
 // Re-export everything from the language module (single source of truth)
 pub use crate::language::{
+    // Helpers
+    get_chunk_size,
+    is_language_supported,
+    language_from_extension,
+    supported_languages,
+    // Base types
+    BaseProcessor,
+    // Language processors
+    CProcessor,
+    CSharpProcessor,
+    CppProcessor,
+    GoProcessor,
     // Engine
     IntelligentChunker,
-    // Helpers
-    get_chunk_size, is_language_supported, language_from_extension, supported_languages,
-    // Base types
-    BaseProcessor, LanguageConfig, LanguageProcessor, NodeExtractionRule,
-    // Language processors
-    CProcessor, CSharpProcessor, CppProcessor, GoProcessor, JavaProcessor,
-    JavaScriptProcessor, KotlinProcessor, PhpProcessor, PythonProcessor,
-    RubyProcessor, RustProcessor, SwiftProcessor,
+    JavaProcessor,
+    JavaScriptProcessor,
+    KotlinProcessor,
+    LanguageConfig,
+    LanguageProcessor,
+    NodeExtractionRule,
+    PhpProcessor,
+    PythonProcessor,
+    RubyProcessor,
+    RustProcessor,
+    SwiftProcessor,
 };
 
 // Re-export constants from language/common

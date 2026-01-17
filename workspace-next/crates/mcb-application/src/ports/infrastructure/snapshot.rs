@@ -4,10 +4,10 @@
 //! by the application layer. These are cross-cutting concerns that support
 //! business logic operations.
 
+use async_trait::async_trait;
 use mcb_domain::entities::codebase::{CodebaseSnapshot, SnapshotChanges};
 use mcb_domain::error::Result;
 use mcb_domain::value_objects::config::SyncBatch;
-use async_trait::async_trait;
 use shaku::Interface;
 use std::path::Path;
 use std::time::Duration;

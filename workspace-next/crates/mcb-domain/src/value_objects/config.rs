@@ -4,7 +4,9 @@
 //! and system settings. These configurations define how the system
 //! interacts with external services.
 
-use crate::value_objects::types::{CacheProviderKind, EmbeddingProviderKind, VectorStoreProviderKind};
+use crate::value_objects::types::{
+    CacheProviderKind, EmbeddingProviderKind, VectorStoreProviderKind,
+};
 use serde::{Deserialize, Serialize};
 
 /// Value Object: Embedding Provider Configuration

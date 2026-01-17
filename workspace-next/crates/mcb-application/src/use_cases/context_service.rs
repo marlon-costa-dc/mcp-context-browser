@@ -68,7 +68,9 @@ impl ContextServiceImpl {
 
     /// Check if collection exists in vector store
     async fn collection_exists(&self, collection: &str) -> Result<bool> {
-        self.vector_store_provider.collection_exists(collection).await
+        self.vector_store_provider
+            .collection_exists(collection)
+            .await
     }
 
     /// Set a cache value with default config
@@ -109,8 +111,11 @@ impl ContextServiceInterface for ContextServiceImpl {
             .await?;
 
         // Update collection metadata in cache
-        self.cache_set(&cache_keys::collection_meta(collection), &chunks.len().to_string())
-            .await
+        self.cache_set(
+            &cache_keys::collection_meta(collection),
+            &chunks.len().to_string(),
+        )
+        .await
     }
 
     async fn search_similar(
@@ -138,8 +143,12 @@ impl ContextServiceInterface for ContextServiceImpl {
         }
 
         // Clear cache metadata
-        self.cache.delete(&cache_keys::collection(collection)).await?;
-        self.cache.delete(&cache_keys::collection_meta(collection)).await?;
+        self.cache
+            .delete(&cache_keys::collection(collection))
+            .await?;
+        self.cache
+            .delete(&cache_keys::collection_meta(collection))
+            .await?;
         Ok(())
     }
 

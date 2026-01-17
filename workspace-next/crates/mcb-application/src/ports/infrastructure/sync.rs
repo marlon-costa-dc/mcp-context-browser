@@ -4,8 +4,8 @@
 //! This abstraction enables services to coordinate sync operations without
 //! coupling to specific debouncing, queueing, or file-watching implementations.
 
-use mcb_domain::error::Result;
 use async_trait::async_trait;
+use mcb_domain::error::Result;
 use shaku::Interface;
 use std::path::Path;
 use std::sync::Arc;

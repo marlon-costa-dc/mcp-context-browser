@@ -68,4 +68,6 @@ pub use swift::SwiftProcessor;
 
 // Re-export engine and helpers
 pub use engine::{IntelligentChunker, UniversalLanguageChunkingProvider};
-pub use helpers::{get_chunk_size, is_language_supported, language_from_extension, supported_languages};
+pub use helpers::{
+    get_chunk_size, is_language_supported, language_from_extension, supported_languages,
+};

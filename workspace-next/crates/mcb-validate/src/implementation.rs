@@ -278,7 +278,10 @@ impl ImplementationQualityValidator {
                     // Track function names
                     if let Some(ref re) = fn_pattern {
                         if let Some(cap) = re.captures(trimmed) {
-                            current_fn_name = cap.get(1).map(|m| m.as_str().to_string()).unwrap_or_default();
+                            current_fn_name = cap
+                                .get(1)
+                                .map(|m| m.as_str().to_string())
+                                .unwrap_or_default();
                         }
                     }
 
@@ -373,7 +376,10 @@ impl ImplementationQualityValidator {
                     // Track function names
                     if let Some(ref re) = fn_pattern {
                         if let Some(cap) = re.captures(trimmed) {
-                            current_fn_name = cap.get(1).map(|m| m.as_str().to_string()).unwrap_or_default();
+                            current_fn_name = cap
+                                .get(1)
+                                .map(|m| m.as_str().to_string())
+                                .unwrap_or_default();
                         }
                     }
 
@@ -418,7 +424,10 @@ impl ImplementationQualityValidator {
         let stub_patterns = [
             (r"todo!\s*\(", "todo"),
             (r"unimplemented!\s*\(", "unimplemented"),
-            (r#"panic!\s*\(\s*"not\s+implemented"#, "panic(not implemented)"),
+            (
+                r#"panic!\s*\(\s*"not\s+implemented"#,
+                "panic(not implemented)",
+            ),
             (r#"panic!\s*\(\s*"TODO"#, "panic(TODO)"),
         ];
 
@@ -464,7 +473,10 @@ impl ImplementationQualityValidator {
                     // Track function names
                     if let Some(ref re) = fn_pattern {
                         if let Some(cap) = re.captures(trimmed) {
-                            current_fn_name = cap.get(1).map(|m| m.as_str().to_string()).unwrap_or_default();
+                            current_fn_name = cap
+                                .get(1)
+                                .map(|m| m.as_str().to_string())
+                                .unwrap_or_default();
                         }
                     }
 
@@ -492,11 +504,11 @@ impl ImplementationQualityValidator {
         let mut violations = Vec::new();
 
         let catchall_patterns = [
-            r"_\s*=>\s*\{\s*\}",                // _ => {}
-            r"_\s*=>\s*\(\)",                   // _ => ()
-            r"_\s*=>\s*Ok\(\(\)\)",             // _ => Ok(())
-            r"_\s*=>\s*None",                   // _ => None
-            r"_\s*=>\s*continue",               // _ => continue (may be intentional)
+            r"_\s*=>\s*\{\s*\}",    // _ => {}
+            r"_\s*=>\s*\(\)",       // _ => ()
+            r"_\s*=>\s*Ok\(\(\)\)", // _ => Ok(())
+            r"_\s*=>\s*None",       // _ => None
+            r"_\s*=>\s*continue",   // _ => continue (may be intentional)
         ];
 
         let compiled_patterns: Vec<_> = catchall_patterns
@@ -559,9 +571,8 @@ impl ImplementationQualityValidator {
         let mut violations = Vec::new();
 
         // Pattern: method body is just self.inner.method(...) or self.field.method(...)
-        let passthrough_pattern = Regex::new(
-            r"self\.(\w+)\.(\w+)\s*\([^)]*\)(?:\s*\.await)?(?:\s*\?)?$"
-        ).ok();
+        let passthrough_pattern =
+            Regex::new(r"self\.(\w+)\.(\w+)\s*\([^)]*\)(?:\s*\.await)?(?:\s*\?)?$").ok();
 
         let fn_pattern = Regex::new(r"(?:pub\s+)?(?:async\s+)?fn\s+(\w+)").ok();
         let impl_pattern = Regex::new(r"impl(?:\s+\w+\s+for)?\s+(\w+)").ok();
@@ -618,14 +629,20 @@ impl ImplementationQualityValidator {
                     // Track impl blocks
                     if let Some(ref re) = impl_pattern {
                         if let Some(cap) = re.captures(trimmed) {
-                            current_struct_name = cap.get(1).map(|m| m.as_str().to_string()).unwrap_or_default();
+                            current_struct_name = cap
+                                .get(1)
+                                .map(|m| m.as_str().to_string())
+                                .unwrap_or_default();
                         }
                     }
 
                     // Track function definitions
                     if let Some(ref re) = fn_pattern {
                         if let Some(cap) = re.captures(trimmed) {
-                            current_fn_name = cap.get(1).map(|m| m.as_str().to_string()).unwrap_or_default();
+                            current_fn_name = cap
+                                .get(1)
+                                .map(|m| m.as_str().to_string())
+                                .unwrap_or_default();
                             fn_start_line = line_num + 1;
                             fn_body_lines.clear();
                             in_fn = true;
@@ -639,7 +656,10 @@ impl ImplementationQualityValidator {
                         brace_depth += open as i32 - close as i32;
 
                         // Collect non-empty, non-attribute lines in function body
-                        if !trimmed.is_empty() && !trimmed.starts_with("#[") && !trimmed.starts_with("fn ") {
+                        if !trimmed.is_empty()
+                            && !trimmed.starts_with("#[")
+                            && !trimmed.starts_with("fn ")
+                        {
                             fn_body_lines.push(trimmed.to_string());
                         }
 
@@ -648,7 +668,12 @@ impl ImplementationQualityValidator {
                             // Check if function body is just a single pass-through line
                             let meaningful_lines: Vec<_> = fn_body_lines
                                 .iter()
-                                .filter(|l| !l.starts_with("{") && !l.starts_with("}") && *l != "{" && *l != "}")
+                                .filter(|l| {
+                                    !l.starts_with("{")
+                                        && !l.starts_with("}")
+                                        && *l != "{"
+                                        && *l != "}"
+                                })
                                 .collect();
 
                             if meaningful_lines.len() == 1 {
@@ -658,15 +683,22 @@ impl ImplementationQualityValidator {
                                         let method = cap.get(2).map(|m| m.as_str()).unwrap_or("");
 
                                         // Only flag if method names match (pure delegation)
-                                        if method == current_fn_name || method.starts_with(&current_fn_name) {
-                                            violations.push(ImplementationViolation::PassThroughWrapper {
-                                                file: entry.path().to_path_buf(),
-                                                line: fn_start_line,
-                                                struct_name: current_struct_name.clone(),
-                                                method_name: current_fn_name.clone(),
-                                                delegated_to: format!("self.{}.{}()", field, method),
-                                                severity: Severity::Info,
-                                            });
+                                        if method == current_fn_name
+                                            || method.starts_with(&current_fn_name)
+                                        {
+                                            violations.push(
+                                                ImplementationViolation::PassThroughWrapper {
+                                                    file: entry.path().to_path_buf(),
+                                                    line: fn_start_line,
+                                                    struct_name: current_struct_name.clone(),
+                                                    method_name: current_fn_name.clone(),
+                                                    delegated_to: format!(
+                                                        "self.{}.{}()",
+                                                        field, method
+                                                    ),
+                                                    severity: Severity::Info,
+                                                },
+                                            );
                                         }
                                     }
                                 }
@@ -740,7 +772,10 @@ impl ImplementationQualityValidator {
                     // Track function definitions
                     if let Some(ref re) = fn_pattern {
                         if let Some(cap) = re.captures(trimmed) {
-                            current_fn_name = cap.get(1).map(|m| m.as_str().to_string()).unwrap_or_default();
+                            current_fn_name = cap
+                                .get(1)
+                                .map(|m| m.as_str().to_string())
+                                .unwrap_or_default();
                             fn_start_line = line_num + 1;
                             fn_body_lines.clear();
                             in_fn = true;
@@ -764,9 +799,11 @@ impl ImplementationQualityValidator {
                             let meaningful_lines: Vec<_> = fn_body_lines
                                 .iter()
                                 .filter(|l| {
-                                    !l.starts_with("{") && !l.starts_with("}")
-                                    && *l != "{" && *l != "}"
-                                    && !l.starts_with("fn ")
+                                    !l.starts_with("{")
+                                        && !l.starts_with("}")
+                                        && *l != "{"
+                                        && *l != "}"
+                                        && !l.starts_with("fn ")
                                 })
                                 .collect();
 
@@ -864,7 +901,10 @@ pub fn validate(&self) -> bool {
         let validator = ImplementationQualityValidator::new(temp.path());
         let violations = validator.validate_hardcoded_returns().unwrap();
 
-        assert!(!violations.is_empty(), "Should detect hardcoded return true");
+        assert!(
+            !violations.is_empty(),
+            "Should detect hardcoded return true"
+        );
     }
 
     #[test]
@@ -887,7 +927,11 @@ pub fn also_not_done(&self) {
         let validator = ImplementationQualityValidator::new(temp.path());
         let violations = validator.validate_stub_macros().unwrap();
 
-        assert_eq!(violations.len(), 2, "Should detect both todo! and unimplemented!");
+        assert_eq!(
+            violations.len(),
+            2,
+            "Should detect both todo! and unimplemented!"
+        );
     }
 
     #[test]
@@ -910,7 +954,10 @@ pub fn handle_event(&self, event: Event) {
         let validator = ImplementationQualityValidator::new(temp.path());
         let violations = validator.validate_empty_catch_alls().unwrap();
 
-        assert!(!violations.is_empty(), "Should detect empty catch-all _ => {{}}");
+        assert!(
+            !violations.is_empty(),
+            "Should detect empty catch-all _ => {{}}"
+        );
     }
 
     #[test]
@@ -927,20 +974,28 @@ pub fn do_nothing(&self) -> Result<(), Error> {
     Ok(())
 }
 "#,
-        ).unwrap();
+        )
+        .unwrap();
 
         fs::write(
-            temp.path().join("crates").join("mcb-test").join("Cargo.toml"),
+            temp.path()
+                .join("crates")
+                .join("mcb-test")
+                .join("Cargo.toml"),
             r#"
 [package]
 name = "mcb-test"
 version = "0.1.1"
 "#,
-        ).unwrap();
+        )
+        .unwrap();
 
         let validator = ImplementationQualityValidator::new(temp.path());
         let violations = validator.validate_empty_methods().unwrap();
 
-        assert!(violations.is_empty(), "Null provider files should be exempt");
+        assert!(
+            violations.is_empty(),
+            "Null provider files should be exempt"
+        );
     }
 }

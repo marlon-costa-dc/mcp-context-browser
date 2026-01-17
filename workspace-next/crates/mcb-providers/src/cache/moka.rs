@@ -19,8 +19,8 @@
 
 use crate::constants::CACHE_DEFAULT_SIZE_LIMIT;
 use async_trait::async_trait;
-use mcb_domain::error::{Error, Result};
 use mcb_application::ports::providers::cache::{CacheEntryConfig, CacheProvider, CacheStats};
+use mcb_domain::error::{Error, Result};
 use moka::future::Cache;
 use std::time::Duration;
 
@@ -127,8 +127,8 @@ impl CacheProvider for MokaCacheProvider {
         let entries = self.cache.entry_count();
 
         Ok(CacheStats {
-            hits: 0,       // Moka doesn't track hits/misses
-            misses: 0,     // Moka doesn't track hits/misses
+            hits: 0,   // Moka doesn't track hits/misses
+            misses: 0, // Moka doesn't track hits/misses
             entries,
             hit_rate: 0.0, // Unknown
             bytes_used: 0, // Unknown

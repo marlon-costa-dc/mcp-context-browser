@@ -33,20 +33,38 @@ impl RustProcessor {
     fn extraction_rules() -> Vec<NodeExtractionRule> {
         vec![
             NodeExtractionRule::primary(&[
-                "function_item", "struct_item", "enum_item", "impl_item", "trait_item",
+                "function_item",
+                "struct_item",
+                "enum_item",
+                "impl_item",
+                "trait_item",
             ]),
             NodeExtractionRule::secondary(&[
-                "mod_item", "macro_definition", "const_item", "static_item",
+                "mod_item",
+                "macro_definition",
+                "const_item",
+                "static_item",
             ]),
             NodeExtractionRule::tertiary(&["type_item", "use_declaration"]),
         ]
     }
 
     fn fallback_patterns() -> Vec<String> {
-        ["fn ", "struct ", "impl ", "pub fn ", "pub struct ", "enum ", "trait ", "mod ", "const ", "static "]
-            .iter()
-            .map(|p| format!("^{}", p))
-            .collect()
+        [
+            "fn ",
+            "struct ",
+            "impl ",
+            "pub fn ",
+            "pub struct ",
+            "enum ",
+            "trait ",
+            "mod ",
+            "const ",
+            "static ",
+        ]
+        .iter()
+        .map(|p| format!("^{}", p))
+        .collect()
     }
 }
 

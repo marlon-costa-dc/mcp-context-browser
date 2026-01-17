@@ -19,10 +19,10 @@
 //! let encrypted = EncryptedVectorStoreProvider::new(inner_provider, crypto_service);
 //! ```
 
-use mcb_application::ports::providers::{CryptoProvider, EncryptedData};
 use async_trait::async_trait;
-use mcb_domain::error::{Error, Result};
+use mcb_application::ports::providers::{CryptoProvider, EncryptedData};
 use mcb_application::ports::providers::{VectorStoreAdmin, VectorStoreProvider};
+use mcb_domain::error::{Error, Result};
 use mcb_domain::value_objects::{Embedding, SearchResult};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -226,11 +226,10 @@ pub fn decrypt_metadata(
 
     let decrypted_bytes = crypto.decrypt(&encrypted_data)?;
 
-    let decrypted_str =
-        String::from_utf8(decrypted_bytes).map_err(|e| Error::Infrastructure {
-            message: format!("Failed to decode decrypted data as UTF-8: {}", e),
-            source: Some(Box::new(e)),
-        })?;
+    let decrypted_str = String::from_utf8(decrypted_bytes).map_err(|e| Error::Infrastructure {
+        message: format!("Failed to decode decrypted data as UTF-8: {}", e),
+        source: Some(Box::new(e)),
+    })?;
 
     serde_json::from_str(&decrypted_str).map_err(|e| Error::Infrastructure {
         message: format!("Failed to parse decrypted metadata: {}", e),

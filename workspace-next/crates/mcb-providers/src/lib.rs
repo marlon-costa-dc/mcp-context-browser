@@ -32,10 +32,10 @@
 //! ```
 
 // Re-export mcb-domain types commonly used with providers
-pub use mcb_domain::error::{Error, Result};
 pub use mcb_application::ports::providers::{
     CacheProvider, EmbeddingProvider, LanguageChunkingProvider, VectorStoreProvider,
 };
+pub use mcb_domain::error::{Error, Result};
 
 // Re-export CryptoProvider from domain (for encrypted vector store)
 #[cfg(feature = "vectorstore-encrypted")]

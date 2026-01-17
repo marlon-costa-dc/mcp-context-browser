@@ -2,8 +2,8 @@
 //!
 //! Defines the contract for collecting system metrics.
 
-use mcb_domain::error::Result;
 use async_trait::async_trait;
+use mcb_domain::error::Result;
 use shaku::Interface;
 
 /// System metrics data

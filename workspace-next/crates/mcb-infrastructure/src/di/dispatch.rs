@@ -24,13 +24,16 @@ impl ComponentDispatcher {
 
     /// Dispatch and initialize all infrastructure components
     pub async fn dispatch(&self) -> Result<DiContainer> {
-        DiContainerBuilder::with_config(self.config.clone()).build().await
+        DiContainerBuilder::with_config(self.config.clone())
+            .build()
+            .await
     }
 
     /// Create cache provider
     #[allow(dead_code)]
     async fn create_cache_provider(&self) -> Result<crate::cache::provider::SharedCacheProvider> {
-        let factory = DefaultCacheProviderFactory::new(self.config.system.infrastructure.cache.clone());
+        let factory =
+            DefaultCacheProviderFactory::new(self.config.system.infrastructure.cache.clone());
         factory.create_cache_provider().await
     }
 

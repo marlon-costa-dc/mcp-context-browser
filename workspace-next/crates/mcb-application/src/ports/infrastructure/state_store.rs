@@ -2,8 +2,8 @@
 //!
 //! Defines the contract for simple key-value state persistence.
 
-use mcb_domain::error::Result;
 use async_trait::async_trait;
+use mcb_domain::error::Result;
 use shaku::Interface;
 
 /// State store interface for key-value persistence

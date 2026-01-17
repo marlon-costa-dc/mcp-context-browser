@@ -228,7 +228,10 @@ async fn handle_tools_list(_state: &HttpTransportState, request: &McpRequest) ->
                 })
                 .collect();
 
-            McpResponse::success(request.id.clone(), serde_json::json!({ "tools": tools_json }))
+            McpResponse::success(
+                request.id.clone(),
+                serde_json::json!({ "tools": tools_json }),
+            )
         }
         Err(e) => {
             error!(error = ?e, "Failed to list tools");
@@ -248,7 +251,10 @@ fn parse_tool_call_params(
     let tool_name = params
         .get("name")
         .and_then(|v| v.as_str())
-        .ok_or((JSONRPC_INVALID_PARAMS, "Missing 'name' parameter for tools/call"))?
+        .ok_or((
+            JSONRPC_INVALID_PARAMS,
+            "Missing 'name' parameter for tools/call",
+        ))?
         .to_string();
 
     let arguments = params.get("arguments").and_then(|v| v.as_object().cloned());

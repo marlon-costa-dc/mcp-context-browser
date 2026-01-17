@@ -45,10 +45,7 @@ pub enum PmatViolation {
         severity: Severity,
     },
     /// PMAT tool not available
-    PmatUnavailable {
-        message: String,
-        severity: Severity,
-    },
+    PmatUnavailable { message: String, severity: Severity },
     /// PMAT execution error
     PmatError {
         command: String,
@@ -371,10 +368,7 @@ impl PmatValidator {
         let workspace_root = &self.config.workspace_root;
 
         let output = Command::new("pmat")
-            .args([
-                "tdg",
-                workspace_root.to_str().unwrap_or("."),
-            ])
+            .args(["tdg", workspace_root.to_str().unwrap_or(".")])
             .output();
 
         match output {

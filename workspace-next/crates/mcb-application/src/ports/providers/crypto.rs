@@ -10,8 +10,8 @@
 //! - Implementations live in mcb-infrastructure (CryptoService)
 //! - Providers depend on the abstraction, not the concrete implementation
 
-use mcb_domain::error::Result;
 use async_trait::async_trait;
+use mcb_domain::error::Result;
 use serde::{Deserialize, Serialize};
 use shaku::Interface;
 use std::fmt;

@@ -7,6 +7,7 @@
 .PHONY: validate-kiss validate-shaku validate-refactor
 .PHONY: validate-all validate-legacy validate-config
 .PHONY: check-full ci
+.PHONY: quality quality-tdg quality-diag quality-entropy quality-defects quality-gate
 
 # Build all crates
 build:
@@ -171,3 +172,67 @@ validate-refactor:
 	@echo "Detects: orphan imports, duplicate definitions, missing tests, stale re-exports"
 	@cargo test --package mcb-validate test_validate_workspace_refactoring -- --nocapture 2>&1 | \
 		grep -v "^running\|^test \|Compiling\|Finished"
+
+# ============================================
+# PMAT Quality Analysis Targets
+# ============================================
+
+# Full quality analysis (recommended daily check)
+quality: quality-tdg quality-diag
+	@echo ""
+	@echo "╔══════════════════════════════════════════════════════════════╗"
+	@echo "║                   Quality Analysis Complete                   ║"
+	@echo "╚══════════════════════════════════════════════════════════════╝"
+
+# Technical Debt Grade - most reliable overall metric (target: A+)
+quality-tdg:
+	@echo "╔══════════════════════════════════════════════════════════════╗"
+	@echo "║              TDG - Technical Debt Grade                       ║"
+	@echo "╚══════════════════════════════════════════════════════════════╝"
+	@pmat tdg --format table 2>&1
+
+# Project diagnostics - actionable setup issues
+quality-diag:
+	@echo "╔══════════════════════════════════════════════════════════════╗"
+	@echo "║              Project Diagnostics                              ║"
+	@echo "╚══════════════════════════════════════════════════════════════╝"
+	@pmat project-diag --format summary 2>&1
+
+# Only show failures from diagnostics (for CI)
+quality-diag-fail:
+	@pmat project-diag --failures-only 2>&1
+
+# Pattern entropy analysis - identifies repeated code patterns
+quality-entropy:
+	@echo "╔══════════════════════════════════════════════════════════════╗"
+	@echo "║              Entropy Analysis (Pattern Detection)             ║"
+	@echo "╚══════════════════════════════════════════════════════════════╝"
+	@pmat analyze entropy --format detailed --top-violations 10 2>&1
+
+# Known defects scan (unwrap, expect, panic patterns)
+quality-defects:
+	@echo "╔══════════════════════════════════════════════════════════════╗"
+	@echo "║              Known Defects Scan                               ║"
+	@echo "╚══════════════════════════════════════════════════════════════╝"
+	@pmat analyze defects 2>&1
+
+# Quality gate - comprehensive but may have false positives
+quality-gate:
+	@echo "╔══════════════════════════════════════════════════════════════╗"
+	@echo "║              Quality Gate (All Checks)                        ║"
+	@echo "╚══════════════════════════════════════════════════════════════╝"
+	@pmat quality-gate --format summary 2>&1
+
+# TDG with function-level explanation (for debugging complexity)
+quality-explain:
+	@echo "╔══════════════════════════════════════════════════════════════╗"
+	@echo "║              TDG Explain (Function Breakdown)                 ║"
+	@echo "╚══════════════════════════════════════════════════════════════╝"
+	@pmat tdg --explain --threshold 10 2>&1
+
+# Clean target directory (reduces disk usage)
+quality-clean:
+	@echo "Cleaning target directory..."
+	@du -sh target 2>/dev/null || echo "No target directory"
+	@cargo clean
+	@echo "Target directory cleaned"

@@ -15,9 +15,9 @@
 //! They receive their dependencies (ports) through constructor injection.
 
 pub mod context_service;
-pub mod search_service;
 pub mod indexing_service;
+pub mod search_service;
 
 pub use context_service::*;
-pub use search_service::*;
 pub use indexing_service::*;
+pub use search_service::*;

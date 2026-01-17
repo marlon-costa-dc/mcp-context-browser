@@ -3,9 +3,9 @@
 //! Null implementations of snapshot and state store ports for testing.
 
 use async_trait::async_trait;
+use mcb_application::ports::infrastructure::{SnapshotProvider, StateStoreProvider};
 use mcb_domain::entities::codebase::{CodebaseSnapshot, SnapshotChanges};
 use mcb_domain::error::Result;
-use mcb_application::ports::infrastructure::{SnapshotProvider, StateStoreProvider};
 use std::collections::HashMap;
 use std::path::Path;
 

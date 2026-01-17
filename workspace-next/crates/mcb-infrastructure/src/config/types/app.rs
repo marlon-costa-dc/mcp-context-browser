@@ -16,8 +16,8 @@ pub use super::{
     operations::OperationsConfig,
     resilience::ResilienceConfig,
     server::{
-        ServerConfig, ServerCorsConfig, ServerNetworkConfig, ServerSslConfig,
-        ServerTimeoutConfig, TransportMode,
+        ServerConfig, ServerCorsConfig, ServerNetworkConfig, ServerSslConfig, ServerTimeoutConfig,
+        TransportMode,
     },
     snapshot::SnapshotConfig,
     sync::SyncConfig,

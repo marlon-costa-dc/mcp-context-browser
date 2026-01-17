@@ -5,8 +5,8 @@
 
 use async_trait::async_trait;
 
-use mcb_domain::error::Result;
 use mcb_application::ports::EmbeddingProvider;
+use mcb_domain::error::Result;
 use mcb_domain::value_objects::Embedding;
 
 use crate::constants::EMBEDDING_DIMENSION_NULL;

@@ -394,18 +394,12 @@ impl Reporter {
             "| Performance | {} |\n",
             report.summary.performance_count
         ));
-        output.push_str(&format!(
-            "| Async | {} |\n",
-            report.summary.async_count
-        ));
+        output.push_str(&format!("| Async | {} |\n", report.summary.async_count));
         output.push_str(&format!(
             "| ErrorBoundary | {} |\n",
             report.summary.error_boundary_count
         ));
-        output.push_str(&format!(
-            "| PMAT | {} |\n",
-            report.summary.pmat_count
-        ));
+        output.push_str(&format!("| PMAT | {} |\n", report.summary.pmat_count));
         output.push_str(&format!(
             "| **Total** | **{}** |\n",
             report.summary.total_violations

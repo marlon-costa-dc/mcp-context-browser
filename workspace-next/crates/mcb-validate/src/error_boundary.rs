@@ -134,7 +134,8 @@ impl ErrorBoundaryValidator {
         // Pattern: ? operator without .context() or .with_context()
         // This is a heuristic - we look for lines with ? but no context method
         let question_mark_pattern = Regex::new(r"\?\s*;?\s*$").expect("Invalid regex");
-        let context_pattern = Regex::new(r"\.(context|with_context|map_err)\s*\(").expect("Invalid regex");
+        let context_pattern =
+            Regex::new(r"\.(context|with_context|map_err)\s*\(").expect("Invalid regex");
 
         // Files that are likely error boundary crossing points
         let boundary_paths = ["handlers/", "adapters/", "services/"];
@@ -180,7 +181,8 @@ impl ErrorBoundaryValidator {
                     }
 
                     // Check for ? without context
-                    if question_mark_pattern.is_match(trimmed) && !context_pattern.is_match(trimmed) {
+                    if question_mark_pattern.is_match(trimmed) && !context_pattern.is_match(trimmed)
+                    {
                         // Skip simple Result propagation
                         if trimmed.starts_with("return ") || trimmed.contains("Ok(") {
                             continue;
@@ -241,7 +243,11 @@ impl ErrorBoundaryValidator {
                 }
 
                 // Skip error definition files
-                let file_name = entry.path().file_name().and_then(|n| n.to_str()).unwrap_or("");
+                let file_name = entry
+                    .path()
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("");
                 if file_name == "error.rs" || file_name.starts_with("error") {
                     continue;
                 }
@@ -292,9 +298,15 @@ impl ErrorBoundaryValidator {
 
         // Patterns that indicate internal errors being exposed
         let leak_patterns = [
-            (r#"format!\s*\(\s*"\{\:?\?\}""#, "Debug formatting in response"),
+            (
+                r#"format!\s*\(\s*"\{\:?\?\}""#,
+                "Debug formatting in response",
+            ),
             (r#"\.to_string\(\)\s*\)"#, "Error .to_string() in response"),
-            (r#"serde_json::json!\s*\(\s*\{\s*"error"\s*:\s*format!"#, "Internal error in JSON response"),
+            (
+                r#"serde_json::json!\s*\(\s*\{\s*"error"\s*:\s*format!"#,
+                "Internal error in JSON response",
+            ),
         ];
 
         let compiled_leaks: Vec<_> = leak_patterns
@@ -317,7 +329,8 @@ impl ErrorBoundaryValidator {
                 }
 
                 // Only check handler files
-                let is_handler = path_str.contains("/handlers/") || path_str.contains("_handler.rs");
+                let is_handler =
+                    path_str.contains("/handlers/") || path_str.contains("_handler.rs");
                 if !is_handler {
                     continue;
                 }
@@ -369,14 +382,23 @@ mod tests {
     use tempfile::TempDir;
 
     fn create_test_crate_structure(temp: &TempDir, crate_name: &str, path: &str, content: &str) {
-        let file_path = temp.path().join("crates").join(crate_name).join("src").join(path);
+        let file_path = temp
+            .path()
+            .join("crates")
+            .join(crate_name)
+            .join("src")
+            .join(path);
         if let Some(parent) = file_path.parent() {
             fs::create_dir_all(parent).unwrap();
         }
         fs::write(&file_path, content).unwrap();
 
         // Create Cargo.toml
-        let cargo_path = temp.path().join("crates").join(crate_name).join("Cargo.toml");
+        let cargo_path = temp
+            .path()
+            .join("crates")
+            .join(crate_name)
+            .join("Cargo.toml");
         if !cargo_path.exists() {
             fs::write(
                 cargo_path,
@@ -412,7 +434,10 @@ pub async fn handle_request() -> Result<(), Error> {
         let validator = ErrorBoundaryValidator::new(temp.path());
         let violations = validator.validate_error_context().unwrap();
 
-        assert!(!violations.is_empty(), "Should detect missing error context");
+        assert!(
+            !violations.is_empty(),
+            "Should detect missing error context"
+        );
     }
 
     #[test]
@@ -434,7 +459,10 @@ pub fn domain_function() -> Result<(), std::io::Error> {
         let validator = ErrorBoundaryValidator::new(temp.path());
         let violations = validator.validate_layer_error_types().unwrap();
 
-        assert!(!violations.is_empty(), "Should detect infrastructure error in domain");
+        assert!(
+            !violations.is_empty(),
+            "Should detect infrastructure error in domain"
+        );
     }
 
     #[test]

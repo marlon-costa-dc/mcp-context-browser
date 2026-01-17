@@ -3,12 +3,7 @@
 //! HTTP handlers for admin API endpoints including health checks,
 //! performance metrics, indexing status, and runtime configuration management.
 
-use axum::{
-    extract::State,
-    http::StatusCode,
-    response::IntoResponse,
-    Json,
-};
+use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use mcb_application::ports::admin::{
     DependencyHealth, DependencyHealthCheck, ExtendedHealthResponse, IndexingOperation,
     IndexingOperationsInterface, PerformanceMetricsData, PerformanceMetricsInterface,
@@ -174,11 +169,19 @@ pub struct ShutdownResponse {
 
 impl ShutdownResponse {
     fn error(message: impl Into<String>, timeout: u64) -> Self {
-        Self { initiated: false, message: message.into(), timeout_secs: timeout }
+        Self {
+            initiated: false,
+            message: message.into(),
+            timeout_secs: timeout,
+        }
     }
 
     fn success(message: impl Into<String>, timeout: u64) -> Self {
-        Self { initiated: true, message: message.into(), timeout_secs: timeout }
+        Self {
+            initiated: true,
+            message: message.into(),
+            timeout_secs: timeout,
+        }
     }
 }
 
@@ -196,11 +199,23 @@ pub async fn shutdown(
     Json(request): Json<ShutdownRequest>,
 ) -> impl IntoResponse {
     let Some(coordinator) = &state.shutdown_coordinator else {
-        return (StatusCode::SERVICE_UNAVAILABLE, Json(ShutdownResponse::error("Shutdown coordinator not available", 0)));
+        return (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(ShutdownResponse::error(
+                "Shutdown coordinator not available",
+                0,
+            )),
+        );
     };
 
     if coordinator.is_shutting_down() {
-        return (StatusCode::CONFLICT, Json(ShutdownResponse::error("Shutdown already in progress", state.shutdown_timeout_secs)));
+        return (
+            StatusCode::CONFLICT,
+            Json(ShutdownResponse::error(
+                "Shutdown already in progress",
+                state.shutdown_timeout_secs,
+            )),
+        );
     }
 
     let timeout_secs = request.timeout_secs.unwrap_or(state.shutdown_timeout_secs);
@@ -208,14 +223,23 @@ pub async fn shutdown(
     if request.immediate {
         info!("Immediate shutdown requested");
         coordinator.signal_shutdown();
-        return (StatusCode::OK, Json(ShutdownResponse::success("Immediate shutdown initiated", 0)));
+        return (
+            StatusCode::OK,
+            Json(ShutdownResponse::success("Immediate shutdown initiated", 0)),
+        );
     }
 
     info!(timeout_secs = timeout_secs, "Graceful shutdown requested");
     spawn_graceful_shutdown(Arc::clone(coordinator), timeout_secs);
 
-    let msg = format!("Graceful shutdown initiated, server will stop in {} seconds", timeout_secs);
-    (StatusCode::OK, Json(ShutdownResponse::success(msg, timeout_secs)))
+    let msg = format!(
+        "Graceful shutdown initiated, server will stop in {} seconds",
+        timeout_secs
+    );
+    (
+        StatusCode::OK,
+        Json(ShutdownResponse::success(msg, timeout_secs)),
+    )
 }
 
 fn spawn_graceful_shutdown(coord: Arc<dyn ShutdownCoordinator>, timeout: u64) {
@@ -314,7 +338,10 @@ fn build_cache_health(metrics: &PerformanceMetricsData, now: u64) -> DependencyH
         } else {
             DependencyHealth::Unknown
         },
-        message: Some(format!("Cache hit rate: {:.1}%", metrics.cache_hit_rate * 100.0)),
+        message: Some(format!(
+            "Cache hit rate: {:.1}%",
+            metrics.cache_hit_rate * 100.0
+        )),
         latency_ms: None,
         last_check: now,
     }
@@ -343,4 +370,3 @@ fn calculate_overall_health(dependencies: &[DependencyHealthCheck]) -> Dependenc
         DependencyHealth::Healthy
     }
 }
-

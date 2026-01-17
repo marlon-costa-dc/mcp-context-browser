@@ -7,6 +7,7 @@
 //! - Dual initialization paths (both DI and manual)
 //! - Services not wired to the system
 
+use crate::violation_trait::{Violation, ViolationCategory};
 use crate::{Result, Severity, ValidationConfig};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -51,10 +52,7 @@ pub enum ShakuViolation {
     },
 
     /// File named null.rs in production code
-    NullProviderFile {
-        file: PathBuf,
-        severity: Severity,
-    },
+    NullProviderFile { file: PathBuf, severity: Severity },
 
     /// Adapter implementation missing #[derive(Component)]
     MissingComponentDerive {
@@ -430,6 +428,128 @@ impl std::fmt::Display for ShakuViolation {
     }
 }
 
+impl Violation for ShakuViolation {
+    fn id(&self) -> &str {
+        match self {
+            Self::DirectInstantiation { .. } => "SHAKU001",
+            Self::UnregisteredService { .. } => "SHAKU002",
+            Self::FakeImplementation { .. } => "SHAKU003",
+            Self::DualInitializationPath { .. } => "SHAKU004",
+            Self::NullProviderFile { .. } => "SHAKU005",
+            Self::MissingComponentDerive { .. } => "SHAKU006",
+            Self::MissingShakuInterface { .. } => "SHAKU007",
+            Self::PortMissingInterfaceBound { .. } => "SHAKU008",
+            Self::HandlerInjectingConcreteType { .. } => "SHAKU009",
+            Self::MissingShakuInject { .. } => "SHAKU010",
+            Self::DevNullInProduction { .. } => "SHAKU011",
+            Self::FallbackChain { .. } => "SHAKU012",
+            Self::ConditionalFakeInProduction { .. } => "SHAKU013",
+            Self::ConcreteTypesInEnum { .. } => "SHAKU014",
+            Self::CrossCrateConcreteImport { .. } => "SHAKU015",
+            Self::ServiceCreatingDependency { .. } => "SHAKU016",
+        }
+    }
+
+    fn category(&self) -> ViolationCategory {
+        ViolationCategory::DependencyInjection
+    }
+
+    fn severity(&self) -> Severity {
+        ShakuViolation::severity(self)
+    }
+
+    fn file(&self) -> Option<&PathBuf> {
+        match self {
+            Self::DirectInstantiation { file, .. } => Some(file),
+            Self::UnregisteredService { file, .. } => Some(file),
+            Self::FakeImplementation { file, .. } => Some(file),
+            Self::DualInitializationPath { file, .. } => Some(file),
+            Self::NullProviderFile { file, .. } => Some(file),
+            Self::MissingComponentDerive { file, .. } => Some(file),
+            Self::MissingShakuInterface { file, .. } => Some(file),
+            Self::PortMissingInterfaceBound { file, .. } => Some(file),
+            Self::HandlerInjectingConcreteType { file, .. } => Some(file),
+            Self::MissingShakuInject { file, .. } => Some(file),
+            Self::DevNullInProduction { file, .. } => Some(file),
+            Self::FallbackChain { file, .. } => Some(file),
+            Self::ConditionalFakeInProduction { file, .. } => Some(file),
+            Self::ConcreteTypesInEnum { file, .. } => Some(file),
+            Self::CrossCrateConcreteImport { file, .. } => Some(file),
+            Self::ServiceCreatingDependency { file, .. } => Some(file),
+        }
+    }
+
+    fn line(&self) -> Option<usize> {
+        match self {
+            Self::DirectInstantiation { line, .. } => Some(*line),
+            Self::UnregisteredService { line, .. } => Some(*line),
+            Self::FakeImplementation { line, .. } => Some(*line),
+            Self::DualInitializationPath { line, .. } => Some(*line),
+            Self::NullProviderFile { .. } => None,
+            Self::MissingComponentDerive { line, .. } => Some(*line),
+            Self::MissingShakuInterface { line, .. } => Some(*line),
+            Self::PortMissingInterfaceBound { line, .. } => Some(*line),
+            Self::HandlerInjectingConcreteType { line, .. } => Some(*line),
+            Self::MissingShakuInject { line, .. } => Some(*line),
+            Self::DevNullInProduction { line, .. } => Some(*line),
+            Self::FallbackChain { line, .. } => Some(*line),
+            Self::ConditionalFakeInProduction { line, .. } => Some(*line),
+            Self::ConcreteTypesInEnum { line, .. } => Some(*line),
+            Self::CrossCrateConcreteImport { line, .. } => Some(*line),
+            Self::ServiceCreatingDependency { line, .. } => Some(*line),
+        }
+    }
+
+    fn suggestion(&self) -> Option<String> {
+        match self {
+            Self::DirectInstantiation { suggestion, .. } => Some(suggestion.clone()),
+            Self::UnregisteredService { .. } => {
+                Some("Add #[derive(Component)] and register with DI container".to_string())
+            }
+            Self::FakeImplementation { .. } => {
+                Some("Use real implementation or move to test code".to_string())
+            }
+            Self::DualInitializationPath { .. } => {
+                Some("Use either DI container or manual instantiation, not both".to_string())
+            }
+            Self::NullProviderFile { .. } => {
+                Some("Move to mcb-providers crate or /testing/ directory".to_string())
+            }
+            Self::MissingComponentDerive { .. } => Some("Add #[derive(Component)]".to_string()),
+            Self::MissingShakuInterface {
+                implemented_trait, ..
+            } => implemented_trait
+                .as_ref()
+                .map(|t| format!("Add #[shaku(interface = {})]", t)),
+            Self::PortMissingInterfaceBound { missing_bounds, .. } => {
+                Some(format!("Add bounds: {}", missing_bounds.join(" + ")))
+            }
+            Self::HandlerInjectingConcreteType {
+                expected_pattern, ..
+            } => Some(format!("Use {} instead", expected_pattern)),
+            Self::MissingShakuInject { .. } => Some("Add #[shaku(inject)]".to_string()),
+            Self::DevNullInProduction { .. } => {
+                Some("Use real implementation in production entry points".to_string())
+            }
+            Self::FallbackChain { .. } => {
+                Some("Use explicit error handling instead of silent fallback".to_string())
+            }
+            Self::ConditionalFakeInProduction { .. } => {
+                Some("Move conditional fake to test-only code".to_string())
+            }
+            Self::ConcreteTypesInEnum { .. } => {
+                Some("Use Arc<dyn Trait> instead of concrete types".to_string())
+            }
+            Self::CrossCrateConcreteImport { .. } => {
+                Some("Import traits from mcb-domain instead".to_string())
+            }
+            Self::ServiceCreatingDependency { .. } => {
+                Some("Inject dependency via constructor parameter".to_string())
+            }
+        }
+    }
+}
+
 /// DI/Shaku validator
 pub struct ShakuValidator {
     config: ValidationConfig,
@@ -469,9 +589,10 @@ impl ShakuValidator {
     pub fn validate_direct_instantiation(&self) -> Result<Vec<ShakuViolation>> {
         let mut violations = Vec::new();
         // Pattern: SomeService::new() or SomeProvider::new() or SomeRepository::new()
-        let new_pattern =
-            Regex::new(r"([A-Z][a-zA-Z0-9_]*(?:Service|Provider|Repository|Handler|Manager))::new\s*\(")
-                .expect("Invalid regex");
+        let new_pattern = Regex::new(
+            r"([A-Z][a-zA-Z0-9_]*(?:Service|Provider|Repository|Handler|Manager))::new\s*\(",
+        )
+        .expect("Invalid regex");
 
         for src_dir in self.config.get_scan_dirs()? {
             // Skip mcb-validate itself
@@ -509,7 +630,8 @@ impl ShakuValidator {
                     || file_name == "server.rs"  // Server composition roots
                     || file_name == "main.rs"  // Application entry point
                     || path_str.contains("/di/modules/")  // All DI module files - ALLOWED for Shaku modules
-                    || path_str.contains("/di/factory/")  // All DI factory files - ALLOWED for factories
+                    || path_str.contains("/di/factory/")
+                // All DI factory files - ALLOWED for factories
                 {
                     continue;
                 }
@@ -578,9 +700,8 @@ impl ShakuValidator {
     pub fn validate_fake_implementations(&self) -> Result<Vec<ShakuViolation>> {
         let mut violations = Vec::new();
         // Pattern: NullXxx, FakeXxx, MockXxx, DummyXxx
-        let fake_pattern =
-            Regex::new(r"\b(Null|Fake|Mock|Dummy|Stub)([A-Z][a-zA-Z0-9_]*)")
-                .expect("Invalid regex");
+        let fake_pattern = Regex::new(r"\b(Null|Fake|Mock|Dummy|Stub)([A-Z][a-zA-Z0-9_]*)")
+            .expect("Invalid regex");
 
         for src_dir in self.config.get_scan_dirs()? {
             // Skip mcb-validate itself
@@ -617,7 +738,8 @@ impl ShakuValidator {
                     || file_name == "lib.rs"  // Crate roots re-export
                     || file_name == "provider.rs"  // Provider aggregators
                     || file_name == "providers.rs"  // Provider lists/enums
-                    || path_str.contains("/di/modules/")  // Shaku DI modules use null providers as defaults
+                    || path_str.contains("/di/modules/")
+                // Shaku DI modules use null providers as defaults
                 {
                     continue;
                 }
@@ -798,9 +920,10 @@ impl ShakuValidator {
     pub fn validate_dev_null_in_production(&self) -> Result<Vec<ShakuViolation>> {
         let mut violations = Vec::new();
         // Pattern: NullXxx, FakeXxx, MockXxx, DevXxx providers
-        let null_pattern =
-            Regex::new(r"\b(Null|Fake|Mock|Dev|Dummy)([A-Z][a-zA-Z0-9_]*(?:Provider|Service|Repository))")
-                .expect("Invalid regex");
+        let null_pattern = Regex::new(
+            r"\b(Null|Fake|Mock|Dev|Dummy)([A-Z][a-zA-Z0-9_]*(?:Provider|Service|Repository))",
+        )
+        .expect("Invalid regex");
 
         // Production entry point files
         let production_files = ["main.rs", "bootstrap.rs", "server.rs", "init.rs"];
@@ -872,8 +995,7 @@ impl ShakuValidator {
                 .expect("Invalid regex"),
             Regex::new(r"or_else\s*\(\s*\|_?\|?\s*\w*(Null|Fake|Mock)[A-Z]")
                 .expect("Invalid regex"),
-            Regex::new(r"unwrap_or\s*\(\s*(Null|Fake|Mock)[A-Z]")
-                .expect("Invalid regex"),
+            Regex::new(r"unwrap_or\s*\(\s*(Null|Fake|Mock)[A-Z]").expect("Invalid regex"),
         ];
 
         for src_dir in self.config.get_scan_dirs()? {
@@ -965,12 +1087,10 @@ impl ShakuValidator {
     pub fn validate_conditional_fakes(&self) -> Result<Vec<ShakuViolation>> {
         let mut violations = Vec::new();
         // Pattern: #[cfg(feature = "mock")] or #[cfg(feature = "test")] or #[cfg(feature = "fake")]
-        let cfg_pattern =
-            Regex::new(r#"#\[cfg\(feature\s*=\s*"(mock|test|fake|dev|stub)"\)\]"#)
-                .expect("Invalid regex");
-        let fake_type_pattern =
-            Regex::new(r"\b(Null|Fake|Mock|Dummy|Stub)([A-Z][a-zA-Z0-9_]*)")
-                .expect("Invalid regex");
+        let cfg_pattern = Regex::new(r#"#\[cfg\(feature\s*=\s*"(mock|test|fake|dev|stub)"\)\]"#)
+            .expect("Invalid regex");
+        let fake_type_pattern = Regex::new(r"\b(Null|Fake|Mock|Dummy|Stub)([A-Z][a-zA-Z0-9_]*)")
+            .expect("Invalid regex");
 
         for src_dir in self.config.get_scan_dirs()? {
             // Skip mcb-validate itself
@@ -1165,7 +1285,11 @@ impl ShakuValidator {
                                 let impl_struct = impl_cap.get(2).map(|m| m.as_str()).unwrap_or("");
                                 if impl_struct == struct_name {
                                     implemented_trait = Some(
-                                        impl_cap.get(1).map(|m| m.as_str()).unwrap_or("").to_string(),
+                                        impl_cap
+                                            .get(1)
+                                            .map(|m| m.as_str())
+                                            .unwrap_or("")
+                                            .to_string(),
                                     );
                                     break;
                                 }
@@ -1205,8 +1329,7 @@ impl ShakuValidator {
         let mut violations = Vec::new();
         let arc_concrete_pattern =
             Regex::new(r"(\w+):\s*Arc<([A-Z][a-zA-Z0-9_]+)>").expect("Invalid regex");
-        let arc_dyn_pattern =
-            Regex::new(r"Arc<dyn\s+[A-Z][a-zA-Z0-9_]+>").expect("Invalid regex");
+        let arc_dyn_pattern = Regex::new(r"Arc<dyn\s+[A-Z][a-zA-Z0-9_]+>").expect("Invalid regex");
 
         for crate_dir in self.config.get_source_dirs()? {
             let crate_name = crate_dir.file_name().and_then(|s| s.to_str()).unwrap_or("");
@@ -1293,8 +1416,10 @@ impl ShakuValidator {
     pub fn validate_concrete_in_enum(&self) -> Result<Vec<ShakuViolation>> {
         let mut violations = Vec::new();
         // Pattern: enum Name { Variant(ConcreteType), ... }
-        let enum_pattern = Regex::new(r"(?:pub\s+)?enum\s+([A-Z][a-zA-Z0-9_]*)").expect("Invalid regex");
-        let variant_pattern = Regex::new(r"([A-Z][a-zA-Z0-9_]*)\s*\(([A-Z][a-zA-Z0-9_]*)\)").expect("Invalid regex");
+        let enum_pattern =
+            Regex::new(r"(?:pub\s+)?enum\s+([A-Z][a-zA-Z0-9_]*)").expect("Invalid regex");
+        let variant_pattern =
+            Regex::new(r"([A-Z][a-zA-Z0-9_]*)\s*\(([A-Z][a-zA-Z0-9_]*)\)").expect("Invalid regex");
 
         for src_dir in self.config.get_scan_dirs()? {
             // Skip mcb-validate and mcb-providers (where concrete types are defined)
@@ -1383,7 +1508,8 @@ impl ShakuValidator {
     pub fn validate_cross_crate_imports(&self) -> Result<Vec<ShakuViolation>> {
         let mut violations = Vec::new();
         // Regex matches imports like: use mcb_providers::module::Type
-        let import_pattern = Regex::new(r"use\s+mcb_providers::([a-z_]+)::([A-Z][a-zA-Z0-9_,\s]*)").expect("Invalid regex");
+        let import_pattern = Regex::new(r"use\s+mcb_providers::([a-z_]+)::([A-Z][a-zA-Z0-9_,\s]*)")
+            .expect("Invalid regex");
         let type_pattern = Regex::new(r"([A-Z][a-zA-Z0-9_]+)").expect("Invalid regex");
 
         for src_dir in self.config.get_scan_dirs()? {
@@ -1447,9 +1573,11 @@ impl ShakuValidator {
     pub fn validate_service_dependencies(&self) -> Result<Vec<ShakuViolation>> {
         let mut violations = Vec::new();
         // Pattern: field: Type::new() inside impl Service::new()
-        let impl_new_pattern = Regex::new(r"impl\s+([A-Z][a-zA-Z0-9_]*(?:Impl|Service))\s*\{").expect("Invalid regex");
+        let impl_new_pattern =
+            Regex::new(r"impl\s+([A-Z][a-zA-Z0-9_]*(?:Impl|Service))\s*\{").expect("Invalid regex");
         let fn_new_pattern = Regex::new(r"pub\s+fn\s+new\s*\(").expect("Invalid regex");
-        let dependency_new_pattern = Regex::new(r"([a-z_]+):\s*([A-Z][a-zA-Z0-9_]+)::new\s*\(").expect("Invalid regex");
+        let dependency_new_pattern =
+            Regex::new(r"([a-z_]+):\s*([A-Z][a-zA-Z0-9_]+)::new\s*\(").expect("Invalid regex");
 
         for src_dir in self.config.get_scan_dirs()? {
             // Skip mcb-validate
@@ -1546,6 +1674,24 @@ impl ShakuValidator {
             }
         }
         Ok(violations)
+    }
+}
+
+impl crate::validator_trait::Validator for ShakuValidator {
+    fn name(&self) -> &'static str {
+        "shaku"
+    }
+
+    fn description(&self) -> &'static str {
+        "Validates Shaku DI patterns"
+    }
+
+    fn validate(&self, _config: &ValidationConfig) -> anyhow::Result<Vec<Box<dyn Violation>>> {
+        let violations = self.validate_all()?;
+        Ok(violations
+            .into_iter()
+            .map(|v| Box::new(v) as Box<dyn Violation>)
+            .collect())
     }
 }
 
@@ -1660,6 +1806,9 @@ mod tests {
         let validator = ShakuValidator::new(temp.path());
         let violations = validator.validate_all().unwrap();
 
-        assert!(violations.is_empty(), "Test code should not trigger violations");
+        assert!(
+            violations.is_empty(),
+            "Test code should not trigger violations"
+        );
     }
 }

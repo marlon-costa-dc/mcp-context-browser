@@ -373,46 +373,14 @@ impl PerformanceValidator {
         let mut violations = Vec::new();
 
         let overuse_patterns = [
-            (
-                r"Arc<Arc<",
-                "Nested Arc<Arc<>>",
-                "Use single Arc instead",
-            ),
-            (
-                r"Mutex<bool>",
-                "Mutex<bool>",
-                "Use AtomicBool instead",
-            ),
-            (
-                r"Mutex<usize>",
-                "Mutex<usize>",
-                "Use AtomicUsize instead",
-            ),
-            (
-                r"Mutex<u32>",
-                "Mutex<u32>",
-                "Use AtomicU32 instead",
-            ),
-            (
-                r"Mutex<u64>",
-                "Mutex<u64>",
-                "Use AtomicU64 instead",
-            ),
-            (
-                r"Mutex<i32>",
-                "Mutex<i32>",
-                "Use AtomicI32 instead",
-            ),
-            (
-                r"Mutex<i64>",
-                "Mutex<i64>",
-                "Use AtomicI64 instead",
-            ),
-            (
-                r"RwLock<bool>",
-                "RwLock<bool>",
-                "Use AtomicBool instead",
-            ),
+            (r"Arc<Arc<", "Nested Arc<Arc<>>", "Use single Arc instead"),
+            (r"Mutex<bool>", "Mutex<bool>", "Use AtomicBool instead"),
+            (r"Mutex<usize>", "Mutex<usize>", "Use AtomicUsize instead"),
+            (r"Mutex<u32>", "Mutex<u32>", "Use AtomicU32 instead"),
+            (r"Mutex<u64>", "Mutex<u64>", "Use AtomicU64 instead"),
+            (r"Mutex<i32>", "Mutex<i32>", "Use AtomicI32 instead"),
+            (r"Mutex<i64>", "Mutex<i64>", "Use AtomicI64 instead"),
+            (r"RwLock<bool>", "RwLock<bool>", "Use AtomicBool instead"),
         ];
 
         let compiled_patterns: Vec<_> = overuse_patterns

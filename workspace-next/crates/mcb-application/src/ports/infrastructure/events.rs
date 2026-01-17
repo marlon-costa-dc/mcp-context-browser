@@ -2,8 +2,8 @@
 //!
 //! Defines the contract for event publish/subscribe services.
 
-use mcb_domain::error::Result;
 use async_trait::async_trait;
+use mcb_domain::error::Result;
 use shaku::Interface;
 
 /// Event bus provider interface for pub/sub

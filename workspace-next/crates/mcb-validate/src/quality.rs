@@ -6,6 +6,7 @@
 //! - File size limits (500 lines)
 //! - TODO/FIXME comment detection
 
+use crate::violation_trait::{Violation, ViolationCategory};
 use crate::{Result, Severity, ValidationConfig};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -136,6 +137,73 @@ impl std::fmt::Display for QualityViolation {
                 ..
             } => {
                 write!(f, "TODO/FIXME: {}:{} - {}", file.display(), line, content)
+            }
+        }
+    }
+}
+
+impl Violation for QualityViolation {
+    fn id(&self) -> &str {
+        match self {
+            Self::UnwrapInProduction { .. } => "QUAL001",
+            Self::ExpectInProduction { .. } => "QUAL002",
+            Self::PanicInProduction { .. } => "QUAL003",
+            Self::FileTooLarge { .. } => "QUAL004",
+            Self::TodoComment { .. } => "QUAL005",
+        }
+    }
+
+    fn category(&self) -> ViolationCategory {
+        ViolationCategory::Quality
+    }
+
+    fn severity(&self) -> Severity {
+        match self {
+            Self::UnwrapInProduction { severity, .. } => *severity,
+            Self::ExpectInProduction { severity, .. } => *severity,
+            Self::PanicInProduction { severity, .. } => *severity,
+            Self::FileTooLarge { severity, .. } => *severity,
+            Self::TodoComment { severity, .. } => *severity,
+        }
+    }
+
+    fn file(&self) -> Option<&std::path::PathBuf> {
+        match self {
+            Self::UnwrapInProduction { file, .. } => Some(file),
+            Self::ExpectInProduction { file, .. } => Some(file),
+            Self::PanicInProduction { file, .. } => Some(file),
+            Self::FileTooLarge { file, .. } => Some(file),
+            Self::TodoComment { file, .. } => Some(file),
+        }
+    }
+
+    fn line(&self) -> Option<usize> {
+        match self {
+            Self::UnwrapInProduction { line, .. } => Some(*line),
+            Self::ExpectInProduction { line, .. } => Some(*line),
+            Self::PanicInProduction { line, .. } => Some(*line),
+            Self::FileTooLarge { .. } => None,
+            Self::TodoComment { line, .. } => Some(*line),
+        }
+    }
+
+    fn suggestion(&self) -> Option<String> {
+        match self {
+            Self::UnwrapInProduction { .. } => {
+                Some("Use `?` operator or handle the error explicitly".to_string())
+            }
+            Self::ExpectInProduction { .. } => {
+                Some("Use `?` operator or handle the error explicitly".to_string())
+            }
+            Self::PanicInProduction { .. } => {
+                Some("Return an error instead of panicking".to_string())
+            }
+            Self::FileTooLarge { max_allowed, .. } => Some(format!(
+                "Split file into smaller modules (max {} lines)",
+                max_allowed
+            )),
+            Self::TodoComment { .. } => {
+                Some("Address the TODO/FIXME or create an issue to track it".to_string())
             }
         }
     }
@@ -388,6 +456,24 @@ impl QualityValidator {
     }
 }
 
+impl crate::validator_trait::Validator for QualityValidator {
+    fn name(&self) -> &'static str {
+        "quality"
+    }
+
+    fn description(&self) -> &'static str {
+        "Validates code quality (no unwrap/expect)"
+    }
+
+    fn validate(&self, _config: &ValidationConfig) -> anyhow::Result<Vec<Box<dyn Violation>>> {
+        let violations = self.validate_all()?;
+        Ok(violations
+            .into_iter()
+            .map(|v| Box::new(v) as Box<dyn Violation>)
+            .collect())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -526,7 +612,7 @@ mod tests {
         let temp = TempDir::new().unwrap();
         // Build test content dynamically to avoid SATD detection in this source file
         // The validator should still detect these patterns in the generated test crate
-        let todo_marker = ["TO", "DO"].join("");   // T-O-D-O
+        let todo_marker = ["TO", "DO"].join(""); // T-O-D-O
         let fixme_marker = ["FIX", "ME"].join(""); // F-I-X-M-E
         let msg1 = ["implement", "this"].join(" ");
         let msg2 = ["needs", "repair"].join(" ");

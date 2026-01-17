@@ -82,7 +82,10 @@ impl std::fmt::Display for CleanArchitectureViolation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::DomainContainsImplementation {
-                file, line, impl_type, ..
+                file,
+                line,
+                impl_type,
+                ..
             } => {
                 write!(
                     f,
@@ -226,12 +229,13 @@ impl Violation for CleanArchitectureViolation {
             Self::DomainContainsImplementation { .. } => {
                 Some("Move implementation logic to mcb-providers or mcb-infrastructure".to_string())
             }
-            Self::HandlerCreatesService { .. } => {
-                Some("Inject service via constructor/Shaku instead of creating directly".to_string())
-            }
-            Self::PortMissingComponentDerive { trait_name, .. } => {
-                Some(format!("Add #[derive(Component)] and #[shaku(interface = {})]", trait_name))
-            }
+            Self::HandlerCreatesService { .. } => Some(
+                "Inject service via constructor/Shaku instead of creating directly".to_string(),
+            ),
+            Self::PortMissingComponentDerive { trait_name, .. } => Some(format!(
+                "Add #[derive(Component)] and #[shaku(interface = {})]",
+                trait_name
+            )),
             Self::EntityMissingIdentity { .. } => {
                 Some("Add id: Uuid or similar identity field to entity".to_string())
             }
@@ -305,8 +309,7 @@ impl CleanArchitectureValidator {
             return Ok(violations);
         }
 
-        let provider_import_re =
-            Regex::new(r"use\s+mcb_providers(?:::|;)").expect("Invalid regex");
+        let provider_import_re = Regex::new(r"use\s+mcb_providers(?:::|;)").expect("Invalid regex");
 
         for entry in WalkDir::new(server_crate.join("src"))
             .into_iter()
@@ -318,12 +321,14 @@ impl CleanArchitectureValidator {
 
                 for (line_num, line) in content.lines().enumerate() {
                     if provider_import_re.is_match(line) {
-                        violations.push(CleanArchitectureViolation::ServerImportsProviderDirectly {
-                            file: path.to_path_buf(),
-                            line: line_num + 1,
-                            import_path: line.trim().to_string(),
-                            severity: Severity::Error,
-                        });
+                        violations.push(
+                            CleanArchitectureViolation::ServerImportsProviderDirectly {
+                                file: path.to_path_buf(),
+                                line: line_num + 1,
+                                import_path: line.trim().to_string(),
+                                severity: Severity::Error,
+                            },
+                        );
                     }
                 }
             }
@@ -430,8 +435,7 @@ impl CleanArchitectureValidator {
 
                 for (line_num, line) in lines.iter().enumerate() {
                     if let Some(captures) = struct_re.captures(line) {
-                        let struct_name =
-                            captures.get(1).map(|m| m.as_str()).unwrap_or("unknown");
+                        let struct_name = captures.get(1).map(|m| m.as_str()).unwrap_or("unknown");
 
                         // Skip if not an entity (e.g., helper structs)
                         if struct_name.ends_with("Builder")

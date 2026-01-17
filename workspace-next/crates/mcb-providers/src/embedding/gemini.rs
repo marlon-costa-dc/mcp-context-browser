@@ -7,8 +7,8 @@ use std::time::Duration;
 use async_trait::async_trait;
 use reqwest::Client;
 
-use mcb_domain::error::{Error, Result};
 use mcb_application::ports::EmbeddingProvider;
+use mcb_domain::error::{Error, Result};
 use mcb_domain::value_objects::Embedding;
 
 use crate::constants::{CONTENT_TYPE_JSON, EMBEDDING_DIMENSION_GEMINI};
@@ -138,7 +138,11 @@ impl GeminiEmbeddingProvider {
             .await
             .map_err(|e| {
                 if e.is_timeout() {
-                    Error::embedding(format!("{} {:?}", crate::constants::ERROR_MSG_REQUEST_TIMEOUT, self.timeout))
+                    Error::embedding(format!(
+                        "{} {:?}",
+                        crate::constants::ERROR_MSG_REQUEST_TIMEOUT,
+                        self.timeout
+                    ))
                 } else {
                     Error::embedding(format!("HTTP request failed: {}", e))
                 }
@@ -151,7 +155,9 @@ impl GeminiEmbeddingProvider {
     fn parse_embedding(&self, response_data: &serde_json::Value) -> Result<Embedding> {
         let embedding_vec = response_data["embedding"]["values"]
             .as_array()
-            .ok_or_else(|| Error::embedding("Invalid response format: missing embedding values".to_string()))?
+            .ok_or_else(|| {
+                Error::embedding("Invalid response format: missing embedding values".to_string())
+            })?
             .iter()
             .map(|v| v.as_f64().unwrap_or(0.0) as f32)
             .collect::<Vec<f32>>();

@@ -273,13 +273,17 @@ impl Default for UniversalLanguageChunkingProvider {
     }
 }
 
-impl mcb_application::ports::providers::LanguageChunkingProvider for UniversalLanguageChunkingProvider {
+impl mcb_application::ports::providers::LanguageChunkingProvider
+    for UniversalLanguageChunkingProvider
+{
     fn language(&self) -> mcb_domain::value_objects::Language {
         "universal".to_string()
     }
 
     fn extensions(&self) -> &[&'static str] {
-        &["rs", "py", "js", "ts", "java", "go", "c", "cpp", "cs", "rb", "php", "swift", "kt"]
+        &[
+            "rs", "py", "js", "ts", "java", "go", "c", "cpp", "cs", "rb", "php", "swift", "kt",
+        ]
     }
 
     fn chunk(&self, content: &str, file_path: &str) -> Vec<mcb_domain::entities::CodeChunk> {

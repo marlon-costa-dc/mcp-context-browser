@@ -12,12 +12,7 @@ async fn test_dashboard_returns_html() {
     let router = web_router();
 
     let response = router
-        .oneshot(
-            Request::builder()
-                .uri("/")
-                .body(Body::empty())
-                .unwrap(),
-        )
+        .oneshot(Request::builder().uri("/").body(Body::empty()).unwrap())
         .await
         .unwrap();
 

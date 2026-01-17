@@ -1,6 +1,6 @@
+use async_trait::async_trait;
 use mcb_domain::error::Result;
 use mcb_domain::value_objects::Embedding;
-use async_trait::async_trait;
 use shaku::Interface;
 
 /// AI Semantic Understanding Interface

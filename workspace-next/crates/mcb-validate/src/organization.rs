@@ -6,6 +6,7 @@
 //! - File placement (files in correct architectural layers)
 //! - Declaration collision detection
 
+use crate::violation_trait::{Violation, ViolationCategory};
 use crate::{ComponentType, Result, Severity, ValidationConfig};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -483,6 +484,147 @@ impl std::fmt::Display for OrganizationViolation {
     }
 }
 
+impl Violation for OrganizationViolation {
+    fn id(&self) -> &str {
+        match self {
+            Self::MagicNumber { .. } => "ORG001",
+            Self::DuplicateStringLiteral { .. } => "ORG002",
+            Self::DecentralizedConstant { .. } => "ORG003",
+            Self::TypeInWrongLayer { .. } => "ORG004",
+            Self::FileInWrongLocation { .. } => "ORG005",
+            Self::DeclarationCollision { .. } => "ORG006",
+            Self::TraitOutsidePorts { .. } => "ORG007",
+            Self::AdapterOutsideInfrastructure { .. } => "ORG008",
+            Self::ConstantsFileTooLarge { .. } => "ORG009",
+            Self::CommonMagicNumber { .. } => "ORG010",
+            Self::LargeFileWithoutModules { .. } => "ORG011",
+            Self::DualLayerDefinition { .. } => "ORG012",
+            Self::ServerCreatingServices { .. } => "ORG013",
+            Self::ApplicationImportsServer { .. } => "ORG014",
+            Self::StrictDirectoryViolation { .. } => "ORG015",
+            Self::DomainLayerImplementation { .. } => "ORG016",
+            Self::HandlerOutsideHandlers { .. } => "ORG017",
+            Self::PortOutsidePorts { .. } => "ORG018",
+        }
+    }
+
+    fn category(&self) -> ViolationCategory {
+        ViolationCategory::Organization
+    }
+
+    fn severity(&self) -> Severity {
+        match self {
+            Self::MagicNumber { severity, .. } => *severity,
+            Self::DuplicateStringLiteral { severity, .. } => *severity,
+            Self::DecentralizedConstant { severity, .. } => *severity,
+            Self::TypeInWrongLayer { severity, .. } => *severity,
+            Self::FileInWrongLocation { severity, .. } => *severity,
+            Self::DeclarationCollision { severity, .. } => *severity,
+            Self::TraitOutsidePorts { severity, .. } => *severity,
+            Self::AdapterOutsideInfrastructure { severity, .. } => *severity,
+            Self::ConstantsFileTooLarge { severity, .. } => *severity,
+            Self::CommonMagicNumber { severity, .. } => *severity,
+            Self::LargeFileWithoutModules { severity, .. } => *severity,
+            Self::DualLayerDefinition { severity, .. } => *severity,
+            Self::ServerCreatingServices { severity, .. } => *severity,
+            Self::ApplicationImportsServer { severity, .. } => *severity,
+            Self::StrictDirectoryViolation { severity, .. } => *severity,
+            Self::DomainLayerImplementation { severity, .. } => *severity,
+            Self::HandlerOutsideHandlers { severity, .. } => *severity,
+            Self::PortOutsidePorts { severity, .. } => *severity,
+        }
+    }
+
+    fn file(&self) -> Option<&PathBuf> {
+        match self {
+            Self::MagicNumber { file, .. } => Some(file),
+            Self::DuplicateStringLiteral { .. } => None, // Multiple files
+            Self::DecentralizedConstant { file, .. } => Some(file),
+            Self::TypeInWrongLayer { file, .. } => Some(file),
+            Self::FileInWrongLocation { file, .. } => Some(file),
+            Self::DeclarationCollision { .. } => None, // Multiple files
+            Self::TraitOutsidePorts { file, .. } => Some(file),
+            Self::AdapterOutsideInfrastructure { file, .. } => Some(file),
+            Self::ConstantsFileTooLarge { file, .. } => Some(file),
+            Self::CommonMagicNumber { file, .. } => Some(file),
+            Self::LargeFileWithoutModules { file, .. } => Some(file),
+            Self::DualLayerDefinition { .. } => None, // Multiple files
+            Self::ServerCreatingServices { file, .. } => Some(file),
+            Self::ApplicationImportsServer { file, .. } => Some(file),
+            Self::StrictDirectoryViolation { file, .. } => Some(file),
+            Self::DomainLayerImplementation { file, .. } => Some(file),
+            Self::HandlerOutsideHandlers { file, .. } => Some(file),
+            Self::PortOutsidePorts { file, .. } => Some(file),
+        }
+    }
+
+    fn line(&self) -> Option<usize> {
+        match self {
+            Self::MagicNumber { line, .. } => Some(*line),
+            Self::DuplicateStringLiteral { .. } => None, // Multiple lines
+            Self::DecentralizedConstant { line, .. } => Some(*line),
+            Self::TypeInWrongLayer { line, .. } => Some(*line),
+            Self::FileInWrongLocation { .. } => None, // File-level issue
+            Self::DeclarationCollision { .. } => None, // Multiple lines
+            Self::TraitOutsidePorts { line, .. } => Some(*line),
+            Self::AdapterOutsideInfrastructure { line, .. } => Some(*line),
+            Self::ConstantsFileTooLarge { .. } => None, // File-level issue
+            Self::CommonMagicNumber { line, .. } => Some(*line),
+            Self::LargeFileWithoutModules { .. } => None, // File-level issue
+            Self::DualLayerDefinition { .. } => None,     // Multiple files
+            Self::ServerCreatingServices { line, .. } => Some(*line),
+            Self::ApplicationImportsServer { line, .. } => Some(*line),
+            Self::StrictDirectoryViolation { .. } => None, // File-level issue
+            Self::DomainLayerImplementation { line, .. } => Some(*line),
+            Self::HandlerOutsideHandlers { line, .. } => Some(*line),
+            Self::PortOutsidePorts { line, .. } => Some(*line),
+        }
+    }
+
+    fn suggestion(&self) -> Option<String> {
+        match self {
+            Self::MagicNumber { suggestion, .. } => Some(suggestion.clone()),
+            Self::DuplicateStringLiteral { suggestion, .. } => Some(suggestion.clone()),
+            Self::DecentralizedConstant { suggestion, .. } => Some(suggestion.clone()),
+            Self::TypeInWrongLayer { expected_layer, .. } => {
+                Some(format!("Move type to {} layer", expected_layer))
+            }
+            Self::FileInWrongLocation {
+                expected_location, ..
+            } => Some(format!("Move file to {}", expected_location)),
+            Self::DeclarationCollision { .. } => {
+                Some("Consolidate declarations or use different names".to_string())
+            }
+            Self::TraitOutsidePorts { .. } => Some("Move trait to domain/ports".to_string()),
+            Self::AdapterOutsideInfrastructure { .. } => {
+                Some("Move adapter to infrastructure/adapters".to_string())
+            }
+            Self::ConstantsFileTooLarge { .. } => {
+                Some("Split constants file by domain".to_string())
+            }
+            Self::CommonMagicNumber { suggestion, .. } => Some(suggestion.clone()),
+            Self::LargeFileWithoutModules { suggestion, .. } => Some(suggestion.clone()),
+            Self::DualLayerDefinition { .. } => {
+                Some("Keep definition in one layer only".to_string())
+            }
+            Self::ServerCreatingServices { suggestion, .. } => Some(suggestion.clone()),
+            Self::ApplicationImportsServer { .. } => {
+                Some("Remove server import from application layer".to_string())
+            }
+            Self::StrictDirectoryViolation {
+                expected_directory, ..
+            } => Some(format!("Move to {}", expected_directory)),
+            Self::DomainLayerImplementation { .. } => {
+                Some("Move implementation to application or infrastructure layer".to_string())
+            }
+            Self::HandlerOutsideHandlers { .. } => {
+                Some("Move handler to server/handlers".to_string())
+            }
+            Self::PortOutsidePorts { .. } => Some("Move port trait to domain/ports".to_string()),
+        }
+    }
+}
+
 /// Organization validator
 pub struct OrganizationValidator {
     config: ValidationConfig,
@@ -830,7 +972,8 @@ impl OrganizationValidator {
                     && !file_name.contains("handler")
                     && !path_str.contains("/config/")
                     && !path_str.contains("/config.rs")
-                    && !path_str.contains("/admin/")  // Admin config handlers are valid
+                    && !path_str.contains("/admin/")
+                // Admin config handlers are valid
                 {
                     // Allow config.rs at root level
                     if rel_path.is_some_and(|p| p.components().count() > 1) {
@@ -1269,11 +1412,11 @@ impl OrganizationValidator {
 
         // Patterns for detecting component types
         let port_trait_pattern = Regex::new(
-            r"(?:pub\s+)?trait\s+([A-Z][a-zA-Z0-9_]*(?:Provider|Service|Repository|Interface))\s*:"
-        ).expect("Invalid regex");
-        let handler_struct_pattern = Regex::new(
-            r"(?:pub\s+)?struct\s+([A-Z][a-zA-Z0-9_]*Handler)"
-        ).expect("Invalid regex");
+            r"(?:pub\s+)?trait\s+([A-Z][a-zA-Z0-9_]*(?:Provider|Service|Repository|Interface))\s*:",
+        )
+        .expect("Invalid regex");
+        let handler_struct_pattern =
+            Regex::new(r"(?:pub\s+)?struct\s+([A-Z][a-zA-Z0-9_]*Handler)").expect("Invalid regex");
         let adapter_impl_pattern = Regex::new(
             r"impl\s+(?:async\s+)?([A-Z][a-zA-Z0-9_]*(?:Provider|Repository))\s+for\s+([A-Z][a-zA-Z0-9_]*)"
         ).expect("Invalid regex");
@@ -1379,11 +1522,13 @@ impl OrganizationValidator {
                                 || path_str.contains("/events/")
                                 || path_str.contains("/sync/")
                                 || path_str.contains("/config/")
+                                || path_str.contains("/infrastructure/")  // Null impls for DI
                                 || file_name.contains("factory")
                                 || file_name.contains("bootstrap");
 
                             if !in_allowed_dir {
-                                let current_dir = path.parent()
+                                let current_dir = path
+                                    .parent()
                                     .map(|p| p.to_string_lossy().to_string())
                                     .unwrap_or_default();
 
@@ -1415,25 +1560,40 @@ impl OrganizationValidator {
         let mut violations = Vec::new();
 
         // Pattern for impl blocks with methods
-        let impl_block_pattern = Regex::new(
-            r"impl\s+([A-Z][a-zA-Z0-9_]*)\s*\{"
-        ).expect("Invalid regex");
-        let method_pattern = Regex::new(
-            r"(?:pub\s+)?(?:async\s+)?fn\s+([a-z_][a-z0-9_]*)\s*\("
-        ).expect("Invalid regex");
+        let impl_block_pattern =
+            Regex::new(r"impl\s+([A-Z][a-zA-Z0-9_]*)\s*\{").expect("Invalid regex");
+        let method_pattern = Regex::new(r"(?:pub\s+)?(?:async\s+)?fn\s+([a-z_][a-z0-9_]*)\s*\(")
+            .expect("Invalid regex");
 
         // Allowed method names (constructors, accessors, conversions, simple getters)
         let allowed_methods = [
-            "new", "default", "from", "into", "as_ref", "as_mut",
-            "clone", "fmt", "eq", "cmp", "hash", "partial_cmp",
-            "is_empty", "len", "iter", "into_iter",
+            "new",
+            "default",
+            "from",
+            "into",
+            "as_ref",
+            "as_mut",
+            "clone",
+            "fmt",
+            "eq",
+            "cmp",
+            "hash",
+            "partial_cmp",
+            "is_empty",
+            "len",
+            "iter",
+            "into_iter",
             // Value object utility methods
-            "total_changes", "from_ast", "from_fallback",
+            "total_changes",
+            "from_ast",
+            "from_fallback",
             // Simple getters that start with common prefixes
         ];
         // Also allow any method starting with common prefixes (factory methods on value objects)
         // Note: These are checked inline below rather than via this array for performance
-        let _allowed_prefixes = ["from_", "into_", "as_", "to_", "get_", "is_", "has_", "with_"];
+        let _allowed_prefixes = [
+            "from_", "into_", "as_", "to_", "get_", "is_", "has_", "with_",
+        ];
 
         for src_dir in self.config.get_scan_dirs()? {
             // Only check domain crate
@@ -1531,6 +1691,24 @@ impl OrganizationValidator {
         }
 
         Ok(violations)
+    }
+}
+
+impl crate::validator_trait::Validator for OrganizationValidator {
+    fn name(&self) -> &'static str {
+        "organization"
+    }
+
+    fn description(&self) -> &'static str {
+        "Validates code organization patterns"
+    }
+
+    fn validate(&self, _config: &ValidationConfig) -> anyhow::Result<Vec<Box<dyn Violation>>> {
+        let violations = self.validate_all()?;
+        Ok(violations
+            .into_iter()
+            .map(|v| Box::new(v) as Box<dyn Violation>)
+            .collect())
     }
 }
 

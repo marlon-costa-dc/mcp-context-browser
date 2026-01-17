@@ -230,12 +230,7 @@ async fn test_liveness_probe() {
     let router = admin_router(state);
 
     let response = router
-        .oneshot(
-            Request::builder()
-                .uri("/live")
-                .body(Body::empty())
-                .unwrap(),
-        )
+        .oneshot(Request::builder().uri("/live").body(Body::empty()).unwrap())
         .await
         .unwrap();
 
@@ -316,5 +311,8 @@ async fn test_metrics_with_cache_hits() {
     let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
 
     let cache_hit_rate = json["cache_hit_rate"].as_f64().unwrap();
-    assert!((cache_hit_rate - 0.6).abs() < 0.01, "Expected ~60% cache hit rate");
+    assert!(
+        (cache_hit_rate - 0.6).abs() < 0.01,
+        "Expected ~60% cache hit rate"
+    );
 }

@@ -4,10 +4,10 @@
 //! enables services to chunk code files without coupling to specific AST parsing
 //! or language-specific implementations.
 
+use async_trait::async_trait;
 use mcb_domain::entities::CodeChunk;
 use mcb_domain::error::Result;
 use mcb_domain::value_objects::Language;
-use async_trait::async_trait;
 use shaku::Interface;
 use std::path::Path;
 use std::sync::Arc;
@@ -49,7 +49,12 @@ pub struct ChunkingResult {
 impl ChunkingResult {
     /// Create a new chunking result
     fn new(file_path: String, language: Language, chunks: Vec<CodeChunk>, used_ast: bool) -> Self {
-        Self { file_path, language, chunks, used_ast }
+        Self {
+            file_path,
+            language,
+            chunks,
+            used_ast,
+        }
     }
 
     /// Create a successful AST-based result

@@ -8,8 +8,8 @@ use std::time::Duration;
 use async_trait::async_trait;
 use reqwest::Client;
 
-use mcb_domain::error::{Error, Result};
 use mcb_application::ports::EmbeddingProvider;
+use mcb_domain::error::{Error, Result};
 use mcb_domain::value_objects::Embedding;
 
 use crate::constants::{
@@ -61,12 +61,7 @@ impl OllamaEmbeddingProvider {
     /// * `model` - Model name (e.g., "nomic-embed-text")
     /// * `timeout` - Request timeout duration
     /// * `http_client` - Reqwest HTTP client for making API requests
-    pub fn new(
-        base_url: String,
-        model: String,
-        timeout: Duration,
-        http_client: Client,
-    ) -> Self {
+    pub fn new(base_url: String, model: String, timeout: Duration, http_client: Client) -> Self {
         Self {
             base_url,
             model,
@@ -101,7 +96,10 @@ impl OllamaEmbeddingProvider {
 
         let response = self
             .http_client
-            .post(format!("{}/api/embeddings", self.base_url.trim_end_matches('/')))
+            .post(format!(
+                "{}/api/embeddings",
+                self.base_url.trim_end_matches('/')
+            ))
             .header("Content-Type", CONTENT_TYPE_JSON)
             .timeout(self.timeout)
             .json(&payload)
@@ -109,7 +107,11 @@ impl OllamaEmbeddingProvider {
             .await
             .map_err(|e| {
                 if e.is_timeout() {
-                    Error::embedding(format!("{} {:?}", crate::constants::ERROR_MSG_REQUEST_TIMEOUT, self.timeout))
+                    Error::embedding(format!(
+                        "{} {:?}",
+                        crate::constants::ERROR_MSG_REQUEST_TIMEOUT,
+                        self.timeout
+                    ))
                 } else {
                     Error::embedding(format!("HTTP request failed: {}", e))
                 }
@@ -122,7 +124,9 @@ impl OllamaEmbeddingProvider {
     fn parse_embedding(&self, response_data: &serde_json::Value) -> Result<Embedding> {
         let embedding_vec = response_data["embedding"]
             .as_array()
-            .ok_or_else(|| Error::embedding("Invalid response format: missing embedding array".to_string()))?
+            .ok_or_else(|| {
+                Error::embedding("Invalid response format: missing embedding array".to_string())
+            })?
             .iter()
             .map(|v| v.as_f64().unwrap_or(0.0) as f32)
             .collect::<Vec<f32>>();

@@ -32,19 +32,31 @@ impl HttpResponseUtils {
         let status = response.status();
 
         if !status.is_success() {
-            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+            let error_text = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "Unknown error".to_string());
             let code = status.as_u16();
 
             return Err(match code {
                 401 => embedding_error(provider_name, "authentication failed", &error_text),
                 429 => embedding_error(provider_name, "rate limit exceeded", &error_text),
-                500..=599 => embedding_error(provider_name, &format!("server error ({code})"), &error_text),
-                _ => embedding_error(provider_name, &format!("request failed ({code})"), &error_text),
+                500..=599 => embedding_error(
+                    provider_name,
+                    &format!("server error ({code})"),
+                    &error_text,
+                ),
+                _ => embedding_error(
+                    provider_name,
+                    &format!("request failed ({code})"),
+                    &error_text,
+                ),
             });
         }
 
-        response.json().await.map_err(|e| {
-            embedding_error(provider_name, "response parse failed", &e.to_string())
-        })
+        response
+            .json()
+            .await
+            .map_err(|e| embedding_error(provider_name, "response parse failed", &e.to_string()))
     }
 }

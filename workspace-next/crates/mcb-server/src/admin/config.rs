@@ -84,36 +84,76 @@ impl SanitizedConfig {
         }
     }
 
-    fn embedding_views(cfg: &HashMap<String, EmbeddingConfig>) -> HashMap<String, EmbeddingConfigView> {
-        cfg.iter().map(|(k, v)| (k.clone(), EmbeddingConfigView {
-            provider: format!("{:?}", v.provider), model: v.model.clone(), dimensions: v.dimensions, has_api_key: v.api_key.is_some(),
-        })).collect()
+    fn embedding_views(
+        cfg: &HashMap<String, EmbeddingConfig>,
+    ) -> HashMap<String, EmbeddingConfigView> {
+        cfg.iter()
+            .map(|(k, v)| {
+                (
+                    k.clone(),
+                    EmbeddingConfigView {
+                        provider: format!("{:?}", v.provider),
+                        model: v.model.clone(),
+                        dimensions: v.dimensions,
+                        has_api_key: v.api_key.is_some(),
+                    },
+                )
+            })
+            .collect()
     }
 
-    fn vector_store_views(cfg: &HashMap<String, VectorStoreConfig>) -> HashMap<String, VectorStoreConfigView> {
-        cfg.iter().map(|(k, v)| (k.clone(), VectorStoreConfigView {
-            provider: format!("{:?}", v.provider), dimensions: v.dimensions, collection: v.collection.clone(), has_address: v.address.is_some(),
-        })).collect()
+    fn vector_store_views(
+        cfg: &HashMap<String, VectorStoreConfig>,
+    ) -> HashMap<String, VectorStoreConfigView> {
+        cfg.iter()
+            .map(|(k, v)| {
+                (
+                    k.clone(),
+                    VectorStoreConfigView {
+                        provider: format!("{:?}", v.provider),
+                        dimensions: v.dimensions,
+                        collection: v.collection.clone(),
+                        has_address: v.address.is_some(),
+                    },
+                )
+            })
+            .collect()
     }
 
     fn logging_view(config: &AppConfig) -> LoggingConfigView {
         LoggingConfigView {
             level: config.logging.level.clone(),
             json_format: config.logging.json_format,
-            file_output: config.logging.file_output.as_ref().map(|p| p.display().to_string()),
+            file_output: config
+                .logging
+                .file_output
+                .as_ref()
+                .map(|p| p.display().to_string()),
         }
     }
 
     fn cache_view(c: &CacheConfig) -> CacheConfigView {
-        CacheConfigView { enabled: c.enabled, provider: format!("{:?}", c.provider), default_ttl_secs: c.default_ttl_secs, max_size: c.max_size }
+        CacheConfigView {
+            enabled: c.enabled,
+            provider: format!("{:?}", c.provider),
+            default_ttl_secs: c.default_ttl_secs,
+            max_size: c.max_size,
+        }
     }
 
     fn metrics_view(m: &MetricsConfig) -> MetricsConfigView {
-        MetricsConfigView { enabled: m.enabled, collection_interval_secs: m.collection_interval_secs }
+        MetricsConfigView {
+            enabled: m.enabled,
+            collection_interval_secs: m.collection_interval_secs,
+        }
     }
 
     fn limits_view(l: &LimitsConfig) -> LimitsConfigView {
-        LimitsConfigView { memory_limit: l.memory_limit, cpu_limit: l.cpu_limit, max_connections: l.max_connections }
+        LimitsConfigView {
+            memory_limit: l.memory_limit,
+            cpu_limit: l.cpu_limit,
+            max_connections: l.max_connections,
+        }
     }
 }
 
@@ -318,7 +358,12 @@ impl ConfigSectionUpdateResponse {
 
 /// Valid configuration sections for updates
 pub const VALID_SECTIONS: &[&str] = &[
-    "server", "logging", "cache", "metrics", "limits", "resilience",
+    "server",
+    "logging",
+    "cache",
+    "metrics",
+    "limits",
+    "resilience",
 ];
 
 /// Check if a section name is valid for updates

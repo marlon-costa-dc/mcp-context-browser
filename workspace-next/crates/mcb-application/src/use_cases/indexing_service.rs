@@ -3,10 +3,12 @@
 //! Application service for code indexing and ingestion operations.
 //! Orchestrates file discovery, chunking, and storage of code embeddings.
 
-use crate::domain_services::search::{ContextServiceInterface, IndexingServiceInterface, IndexingResult};
+use crate::domain_services::search::{
+    ContextServiceInterface, IndexingResult, IndexingServiceInterface,
+};
+use crate::ports::providers::LanguageChunkingProvider;
 use mcb_domain::entities::CodeChunk;
 use mcb_domain::error::Result;
-use crate::ports::providers::LanguageChunkingProvider;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -35,7 +37,8 @@ impl IndexingProgress {
     }
 
     fn record_error(&mut self, context: &str, path: &Path, error: impl std::fmt::Display) {
-        self.errors.push(format!("{} {}: {}", context, path.display(), error));
+        self.errors
+            .push(format!("{} {}: {}", context, path.display(), error));
     }
 
     fn into_result(self) -> IndexingResult {
@@ -72,7 +75,11 @@ impl IndexingServiceImpl {
     }
 
     /// Discover files recursively from a path
-    async fn discover_files(&self, path: &Path, progress: &mut IndexingProgress) -> Vec<std::path::PathBuf> {
+    async fn discover_files(
+        &self,
+        path: &Path,
+        progress: &mut IndexingProgress,
+    ) -> Vec<std::path::PathBuf> {
         use tokio::fs;
 
         let mut files = Vec::new();
@@ -119,7 +126,8 @@ impl IndexingServiceImpl {
 
     /// Chunk file content using intelligent AST-based chunking
     fn chunk_file_content(&self, content: &str, path: &Path) -> Vec<CodeChunk> {
-        self.language_chunker.chunk(content, &path.to_string_lossy())
+        self.language_chunker
+            .chunk(content, &path.to_string_lossy())
     }
 }
 

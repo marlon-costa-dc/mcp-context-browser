@@ -6,6 +6,7 @@
 //! - Constants: SCREAMING_SNAKE_CASE
 //! - Modules/Files: snake_case
 
+use crate::violation_trait::{Violation, ViolationCategory};
 use crate::{Result, Severity, ValidationConfig};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -173,6 +174,91 @@ impl std::fmt::Display for NamingViolation {
                     suggestion
                 )
             }
+        }
+    }
+}
+
+impl Violation for NamingViolation {
+    fn id(&self) -> &str {
+        match self {
+            Self::BadTypeName { .. } => "NAME001",
+            Self::BadFunctionName { .. } => "NAME002",
+            Self::BadConstantName { .. } => "NAME003",
+            Self::BadModuleName { .. } => "NAME004",
+            Self::BadFileSuffix { .. } => "NAME005",
+            Self::BadCaNaming { .. } => "NAME006",
+        }
+    }
+
+    fn category(&self) -> ViolationCategory {
+        ViolationCategory::Naming
+    }
+
+    fn severity(&self) -> Severity {
+        match self {
+            Self::BadTypeName { severity, .. } => *severity,
+            Self::BadFunctionName { severity, .. } => *severity,
+            Self::BadConstantName { severity, .. } => *severity,
+            Self::BadModuleName { severity, .. } => *severity,
+            Self::BadFileSuffix { severity, .. } => *severity,
+            Self::BadCaNaming { severity, .. } => *severity,
+        }
+    }
+
+    fn file(&self) -> Option<&PathBuf> {
+        match self {
+            Self::BadTypeName { file, .. } => Some(file),
+            Self::BadFunctionName { file, .. } => Some(file),
+            Self::BadConstantName { file, .. } => Some(file),
+            Self::BadModuleName { path, .. } => Some(path),
+            Self::BadFileSuffix { path, .. } => Some(path),
+            Self::BadCaNaming { path, .. } => Some(path),
+        }
+    }
+
+    fn line(&self) -> Option<usize> {
+        match self {
+            Self::BadTypeName { line, .. } => Some(*line),
+            Self::BadFunctionName { line, .. } => Some(*line),
+            Self::BadConstantName { line, .. } => Some(*line),
+            Self::BadModuleName { .. } => None,
+            Self::BadFileSuffix { .. } => None,
+            Self::BadCaNaming { .. } => None,
+        }
+    }
+
+    fn suggestion(&self) -> Option<String> {
+        match self {
+            Self::BadTypeName {
+                name,
+                expected_case,
+                ..
+            } => Some(format!("Rename '{}' to {} format", name, expected_case)),
+            Self::BadFunctionName {
+                name,
+                expected_case,
+                ..
+            } => Some(format!("Rename '{}' to {} format", name, expected_case)),
+            Self::BadConstantName {
+                name,
+                expected_case,
+                ..
+            } => Some(format!("Rename '{}' to {} format", name, expected_case)),
+            Self::BadModuleName {
+                path,
+                expected_case,
+                ..
+            } => {
+                let file_name = path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
+                Some(format!(
+                    "Rename '{}' to {} format",
+                    file_name, expected_case
+                ))
+            }
+            Self::BadFileSuffix {
+                expected_suffix, ..
+            } => Some(format!("Add '{}' suffix to file name", expected_suffix)),
+            Self::BadCaNaming { suggestion, .. } => Some(suggestion.clone()),
         }
     }
 }
@@ -437,10 +523,7 @@ impl NamingValidator {
                 continue;
             }
 
-            let crate_name = crate_dir
-                .file_name()
-                .and_then(|s| s.to_str())
-                .unwrap_or("");
+            let crate_name = crate_dir.file_name().and_then(|s| s.to_str()).unwrap_or("");
 
             for entry in WalkDir::new(&src_dir)
                 .into_iter()
@@ -448,10 +531,7 @@ impl NamingValidator {
                 .filter(|e| e.path().extension().is_some_and(|ext| ext == "rs"))
             {
                 let path = entry.path();
-                let file_name = path
-                    .file_stem()
-                    .and_then(|s| s.to_str())
-                    .unwrap_or("");
+                let file_name = path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
 
                 // Skip standard files
                 if file_name == "lib" || file_name == "mod" || file_name == "main" {
@@ -461,7 +541,8 @@ impl NamingValidator {
                 let path_str = path.to_string_lossy();
 
                 // Check repository files should have _repository suffix
-                if (path_str.contains("/repositories/") || path_str.contains("/adapters/repository/"))
+                if (path_str.contains("/repositories/")
+                    || path_str.contains("/adapters/repository/"))
                     && !file_name.ends_with("_repository")
                     && file_name != "mod"
                 {
@@ -538,10 +619,7 @@ impl NamingValidator {
                 continue;
             }
 
-            let crate_name = crate_dir
-                .file_name()
-                .and_then(|s| s.to_str())
-                .unwrap_or("");
+            let crate_name = crate_dir.file_name().and_then(|s| s.to_str()).unwrap_or("");
 
             for entry in WalkDir::new(&src_dir)
                 .into_iter()
@@ -549,10 +627,7 @@ impl NamingValidator {
                 .filter(|e| e.path().extension().is_some_and(|ext| ext == "rs"))
             {
                 let path = entry.path();
-                let file_name = path
-                    .file_stem()
-                    .and_then(|s| s.to_str())
-                    .unwrap_or("");
+                let file_name = path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
                 let path_str = path.to_string_lossy();
 
                 // Skip standard files
@@ -710,6 +785,24 @@ impl NamingValidator {
     #[allow(dead_code)]
     fn is_legacy_path(&self, path: &std::path::Path) -> bool {
         self.config.is_legacy_path(path)
+    }
+}
+
+impl crate::validator_trait::Validator for NamingValidator {
+    fn name(&self) -> &'static str {
+        "naming"
+    }
+
+    fn description(&self) -> &'static str {
+        "Validates naming conventions (CamelCase, snake_case, SCREAMING_SNAKE_CASE)"
+    }
+
+    fn validate(&self, _config: &ValidationConfig) -> anyhow::Result<Vec<Box<dyn Violation>>> {
+        let violations = self.validate_all()?;
+        Ok(violations
+            .into_iter()
+            .map(|v| Box::new(v) as Box<dyn Violation>)
+            .collect())
     }
 }
 

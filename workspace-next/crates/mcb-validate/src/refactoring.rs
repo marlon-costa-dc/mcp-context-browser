@@ -374,11 +374,21 @@ impl RefactoringValidator {
         // Check for patterns that suggest migration in progress
         // Types ending with Provider, Processor, etc. between known pairs
         let migration_type_patterns = [
-            "Provider", "Processor", "Handler", "Service", "Repository",
-            "Adapter", "Factory", "Publisher", "Subscriber",
+            "Provider",
+            "Processor",
+            "Handler",
+            "Service",
+            "Repository",
+            "Adapter",
+            "Factory",
+            "Publisher",
+            "Subscriber",
         ];
 
-        if migration_type_patterns.iter().any(|p| type_name.ends_with(p)) {
+        if migration_type_patterns
+            .iter()
+            .any(|p| type_name.ends_with(p))
+        {
             // Check if any known migration pair is involved
             for (crate_a, crate_b) in KNOWN_MIGRATION_PAIRS {
                 if crates.contains(*crate_a) || crates.contains(*crate_b) {
@@ -398,26 +408,53 @@ impl RefactoringValidator {
         // Files that don't need dedicated tests (re-exports, utilities, infrastructure)
         const SKIP_FILES: &[&str] = &[
             // Standard files
-            "mod", "lib", "main", "prelude", "constants", "types", "error", "errors",
-            "helpers", "utils", "common", "config", "builder", "factory",
+            "mod",
+            "lib",
+            "main",
+            "prelude",
+            "constants",
+            "types",
+            "error",
+            "errors",
+            "helpers",
+            "utils",
+            "common",
+            "config",
+            "builder",
+            "factory",
             // Domain service interfaces (tested via integration)
-            "indexing", "search_repository",
+            "indexing",
+            "search_repository",
             // Server infrastructure (tested via e2e/integration tests)
-            "metrics", "components", "operations", "rate_limit_middleware",
-            "security", "mcp_server", "init",
+            "metrics",
+            "components",
+            "operations",
+            "rate_limit_middleware",
+            "security",
+            "mcp_server",
+            "init",
         ];
 
         // Directory patterns that are tested via integration tests
         // These directories have tests in tests/{dir_name}/ subdirectories
         const SKIP_DIR_PATTERNS: &[&str] = &[
-            "providers", "adapters", "language", "embedding", "vector_store", "cache",
-            "hybrid_search", "events", "chunking", "http", "di",
-            "admin",     // Admin handlers have tests in tests/admin/
-            "handlers",  // Handlers have tests in tests/handlers/
-            "config",    // Config modules have tests in tests/config/
-            "tools",     // Tools have tests in tests/tools/
-            "utils",     // Utilities have tests in tests/utils/
-            "ports",     // Port traits have tests in tests/ports/
+            "providers",
+            "adapters",
+            "language",
+            "embedding",
+            "vector_store",
+            "cache",
+            "hybrid_search",
+            "events",
+            "chunking",
+            "http",
+            "di",
+            "admin",    // Admin handlers have tests in tests/admin/
+            "handlers", // Handlers have tests in tests/handlers/
+            "config",   // Config modules have tests in tests/config/
+            "tools",    // Tools have tests in tests/tools/
+            "utils",    // Utilities have tests in tests/utils/
+            "ports",    // Port traits have tests in tests/ports/
         ];
 
         for crate_dir in self.get_crate_dirs()? {
@@ -436,13 +473,9 @@ impl RefactoringValidator {
             // Collect existing test files and directories
             let mut test_files: std::collections::HashSet<String> =
                 std::collections::HashSet::new();
-            let mut test_dirs: std::collections::HashSet<String> =
-                std::collections::HashSet::new();
+            let mut test_dirs: std::collections::HashSet<String> = std::collections::HashSet::new();
 
-            for entry in WalkDir::new(&tests_dir)
-                .into_iter()
-                .filter_map(|e| e.ok())
-            {
+            for entry in WalkDir::new(&tests_dir).into_iter().filter_map(|e| e.ok()) {
                 let path = entry.path();
                 if path.is_file() && path.extension().is_some_and(|ext| ext == "rs") {
                     if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
@@ -469,10 +502,7 @@ impl RefactoringValidator {
                 .filter(|e| e.path().extension().is_some_and(|ext| ext == "rs"))
             {
                 let path = entry.path();
-                let file_name = path
-                    .file_stem()
-                    .and_then(|s| s.to_str())
-                    .unwrap_or("");
+                let file_name = path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
 
                 // Skip common files that don't need dedicated tests
                 if SKIP_FILES.contains(&file_name) {
@@ -527,7 +557,8 @@ impl RefactoringValidator {
     /// Check for mod declarations that reference non-existent files
     pub fn validate_mod_declarations(&self) -> Result<Vec<RefactoringViolation>> {
         let mut violations = Vec::new();
-        let mod_pattern = Regex::new(r"(?:pub\s+)?mod\s+([a-z_][a-z0-9_]*)(?:\s*;)").expect("Invalid regex");
+        let mod_pattern =
+            Regex::new(r"(?:pub\s+)?mod\s+([a-z_][a-z0-9_]*)(?:\s*;)").expect("Invalid regex");
 
         for src_dir in self.config.get_scan_dirs()? {
             // Skip mcb-validate itself
@@ -707,6 +738,9 @@ pub mod inline {
         let validator = RefactoringValidator::new(temp.path());
         let violations = validator.validate_mod_declarations().unwrap();
 
-        assert!(violations.is_empty(), "Inline modules should not trigger violations");
+        assert!(
+            violations.is_empty(),
+            "Inline modules should not trigger violations"
+        );
     }
 }

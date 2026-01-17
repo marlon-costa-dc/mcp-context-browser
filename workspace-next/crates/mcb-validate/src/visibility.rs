@@ -32,12 +32,39 @@ pub enum VisibilityViolation {
 impl std::fmt::Display for VisibilityViolation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::InternalHelperTooPublic { item_name, file, line } =>
-                write!(f, "Internal helper {} is pub at {}:{} - consider pub(crate)", item_name, file.display(), line),
-            Self::DomainTypeTooRestricted { type_name, file, line } =>
-                write!(f, "Domain type {} is pub(crate) at {}:{} - should be pub", type_name, file.display(), line),
-            Self::UtilityModuleTooPublic { module_name, file, line } =>
-                write!(f, "Utility module {} has pub items at {}:{}", module_name, file.display(), line),
+            Self::InternalHelperTooPublic {
+                item_name,
+                file,
+                line,
+            } => write!(
+                f,
+                "Internal helper {} is pub at {}:{} - consider pub(crate)",
+                item_name,
+                file.display(),
+                line
+            ),
+            Self::DomainTypeTooRestricted {
+                type_name,
+                file,
+                line,
+            } => write!(
+                f,
+                "Domain type {} is pub(crate) at {}:{} - should be pub",
+                type_name,
+                file.display(),
+                line
+            ),
+            Self::UtilityModuleTooPublic {
+                module_name,
+                file,
+                line,
+            } => write!(
+                f,
+                "Utility module {} has pub items at {}:{}",
+                module_name,
+                file.display(),
+                line
+            ),
         }
     }
 }
@@ -51,34 +78,46 @@ impl Violation for VisibilityViolation {
         }
     }
 
-    fn category(&self) -> ViolationCategory { ViolationCategory::Organization }
+    fn category(&self) -> ViolationCategory {
+        ViolationCategory::Organization
+    }
 
     fn severity(&self) -> Severity {
         match self {
-            Self::InternalHelperTooPublic { .. } | Self::UtilityModuleTooPublic { .. } => Severity::Info,
+            Self::InternalHelperTooPublic { .. } | Self::UtilityModuleTooPublic { .. } => {
+                Severity::Info
+            }
             Self::DomainTypeTooRestricted { .. } => Severity::Warning,
         }
     }
 
     fn file(&self) -> Option<&PathBuf> {
         match self {
-            Self::InternalHelperTooPublic { file, .. } | Self::DomainTypeTooRestricted { file, .. }
+            Self::InternalHelperTooPublic { file, .. }
+            | Self::DomainTypeTooRestricted { file, .. }
             | Self::UtilityModuleTooPublic { file, .. } => Some(file),
         }
     }
 
     fn line(&self) -> Option<usize> {
         match self {
-            Self::InternalHelperTooPublic { line, .. } | Self::DomainTypeTooRestricted { line, .. }
+            Self::InternalHelperTooPublic { line, .. }
+            | Self::DomainTypeTooRestricted { line, .. }
             | Self::UtilityModuleTooPublic { line, .. } => Some(*line),
         }
     }
 
     fn suggestion(&self) -> Option<String> {
         match self {
-            Self::InternalHelperTooPublic { .. } => Some("Use pub(crate) for internal helpers".to_string()),
-            Self::DomainTypeTooRestricted { .. } => Some("Domain types should use pub for external use".to_string()),
-            Self::UtilityModuleTooPublic { .. } => Some("Consider pub(crate) for utility modules".to_string()),
+            Self::InternalHelperTooPublic { .. } => {
+                Some("Use pub(crate) for internal helpers".to_string())
+            }
+            Self::DomainTypeTooRestricted { .. } => {
+                Some("Domain types should use pub for external use".to_string())
+            }
+            Self::UtilityModuleTooPublic { .. } => {
+                Some("Consider pub(crate) for utility modules".to_string())
+            }
         }
     }
 }
@@ -87,11 +126,15 @@ impl Violation for VisibilityViolation {
 pub struct VisibilityValidator;
 
 impl Default for VisibilityValidator {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl VisibilityValidator {
-    pub fn new() -> Self { Self }
+    pub fn new() -> Self {
+        Self
+    }
 
     pub fn validate(&self, config: &ValidationConfig) -> Result<Vec<VisibilityViolation>> {
         let mut violations = Vec::new();
@@ -100,7 +143,10 @@ impl VisibilityValidator {
         Ok(violations)
     }
 
-    fn check_internal_helpers(&self, config: &ValidationConfig) -> Result<Vec<VisibilityViolation>> {
+    fn check_internal_helpers(
+        &self,
+        config: &ValidationConfig,
+    ) -> Result<Vec<VisibilityViolation>> {
         let mut violations = Vec::new();
         let internal_dirs = [
             "crates/mcb-infrastructure/src/utils",
@@ -109,25 +155,34 @@ impl VisibilityValidator {
             "crates/mcb-application/src/utils",
         ];
 
-        let pub_item_re = Regex::new(r"^pub\s+(fn|struct|enum|type|const|static)\s+(\w+)").expect("Invalid regex");
+        let pub_item_re = Regex::new(r"^pub\s+(fn|struct|enum|type|const|static)\s+(\w+)")
+            .expect("Invalid regex");
         let pub_crate_re = Regex::new(r"^pub\(crate\)").expect("Invalid regex");
 
         for dir_path in &internal_dirs {
             let full_path = config.workspace_root.join(dir_path);
-            if !full_path.exists() { continue; }
+            if !full_path.exists() {
+                continue;
+            }
 
             for entry in WalkDir::new(&full_path).into_iter().filter_map(|e| e.ok()) {
                 let path = entry.path();
-                if !path.extension().is_some_and(|e| e == "rs") { continue; }
+                if !path.extension().is_some_and(|e| e == "rs") {
+                    continue;
+                }
 
                 let content = std::fs::read_to_string(path)?;
                 for (line_num, line) in content.lines().enumerate() {
                     let trimmed = line.trim();
-                    if pub_crate_re.is_match(trimmed) { continue; }
+                    if pub_crate_re.is_match(trimmed) {
+                        continue;
+                    }
 
                     if let Some(captures) = pub_item_re.captures(trimmed) {
                         let item_name = captures.get(2).map(|m| m.as_str()).unwrap_or("unknown");
-                        if item_name.starts_with("Error") || item_name == "Result" { continue; }
+                        if item_name.starts_with("Error") || item_name == "Result" {
+                            continue;
+                        }
 
                         violations.push(VisibilityViolation::InternalHelperTooPublic {
                             item_name: item_name.to_string(),
@@ -145,27 +200,47 @@ impl VisibilityValidator {
         let mut violations = Vec::new();
         let utility_patterns = ["common.rs", "helpers.rs", "internal.rs", "compat.rs"];
 
-        let pub_item_re = Regex::new(r"^pub\s+(fn|struct|enum|type)\s+(\w+)").expect("Invalid regex");
+        let pub_item_re =
+            Regex::new(r"^pub\s+(fn|struct|enum|type)\s+(\w+)").expect("Invalid regex");
         let pub_crate_re = Regex::new(r"^pub\(crate\)").expect("Invalid regex");
 
-        for crate_name in ["mcb-infrastructure", "mcb-providers", "mcb-server", "mcb-application"] {
-            let crate_src = config.workspace_root.join("crates").join(crate_name).join("src");
-            if !crate_src.exists() { continue; }
+        for crate_name in [
+            "mcb-infrastructure",
+            "mcb-providers",
+            "mcb-server",
+            "mcb-application",
+        ] {
+            let crate_src = config
+                .workspace_root
+                .join("crates")
+                .join(crate_name)
+                .join("src");
+            if !crate_src.exists() {
+                continue;
+            }
 
             for entry in WalkDir::new(&crate_src).into_iter().filter_map(|e| e.ok()) {
                 let path = entry.path();
-                if !path.extension().is_some_and(|e| e == "rs") { continue; }
+                if !path.extension().is_some_and(|e| e == "rs") {
+                    continue;
+                }
 
                 let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-                if !utility_patterns.iter().any(|p| file_name == *p) { continue; }
+                if !utility_patterns.iter().any(|p| file_name == *p) {
+                    continue;
+                }
 
                 let content = std::fs::read_to_string(path)?;
                 let mut pub_count = 0;
 
                 for line in content.lines() {
                     let trimmed = line.trim();
-                    if pub_crate_re.is_match(trimmed) { continue; }
-                    if pub_item_re.is_match(trimmed) { pub_count += 1; }
+                    if pub_crate_re.is_match(trimmed) {
+                        continue;
+                    }
+                    if pub_item_re.is_match(trimmed) {
+                        pub_count += 1;
+                    }
                 }
 
                 if pub_count > 3 {

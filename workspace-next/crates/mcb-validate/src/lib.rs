@@ -29,11 +29,14 @@
 pub mod violation_trait;
 #[macro_use]
 pub mod violation_macro;
-pub mod validator_trait;
 pub mod generic_reporter;
+pub mod validator_trait;
 
 // === Configuration System (Phase 5) ===
 pub mod config;
+
+// === Rule Registry (Phase 3) ===
+pub mod rules;
 
 // === New Validators (using new system) ===
 pub mod clean_architecture;
@@ -64,15 +67,18 @@ use std::path::{Path, PathBuf};
 use thiserror::Error;
 
 // Re-export new DRY violation system
-pub use violation_trait::{Violation, ViolationCategory, ViolationExt};
-pub use validator_trait::{LegacyValidatorAdapter, Validator, ValidatorRegistry};
 pub use generic_reporter::{GenericReport, GenericReporter, GenericSummary, ViolationEntry};
+pub use validator_trait::{LegacyValidatorAdapter, Validator, ValidatorRegistry};
+pub use violation_trait::{Violation, ViolationCategory, ViolationExt};
 
 // Re-export configuration system
 pub use config::{
     ArchitectureRulesConfig, FileConfig, GeneralConfig, OrganizationRulesConfig,
     QualityRulesConfig, RulesConfig, ShakuRulesConfig, SolidRulesConfig, ValidatorsConfig,
 };
+
+// Re-export rule registry
+pub use rules::{Rule, RuleRegistry};
 
 // Re-export new validators
 pub use clean_architecture::{CleanArchitectureValidator, CleanArchitectureViolation};
@@ -94,8 +100,8 @@ pub use shaku::{ShakuValidator, ShakuViolation};
 
 // Re-export ComponentType for strict directory validation
 // Used by organization and shaku validators
-pub use solid::{SolidValidator, SolidViolation};
 pub use refactoring::{RefactoringValidator, RefactoringViolation};
+pub use solid::{SolidValidator, SolidViolation};
 pub use tests_org::{TestValidator, TestViolation};
 
 // New validators for PMAT integration
@@ -615,7 +621,10 @@ impl ArchitectureValidator {
             .validate_all(&self.config)
             .map_err(|e| ValidationError::Config(e.to_string()))?;
 
-        Ok(GenericReporter::create_report(&violations, self.config.workspace_root.clone()))
+        Ok(GenericReporter::create_report(
+            &violations,
+            self.config.workspace_root.clone(),
+        ))
     }
 
     /// Validate specific validators by name using the registry
@@ -636,7 +645,10 @@ impl ArchitectureValidator {
             .validate_named(&self.config, names)
             .map_err(|e| ValidationError::Config(e.to_string()))?;
 
-        Ok(GenericReporter::create_report(&violations, self.config.workspace_root.clone()))
+        Ok(GenericReporter::create_report(
+            &violations,
+            self.config.workspace_root.clone(),
+        ))
     }
 
     /// Run both legacy and new validators, returning a combined report

@@ -20,8 +20,8 @@
 //! ```
 
 use async_trait::async_trait;
-use mcb_domain::error::{Error, Result};
 use mcb_application::ports::providers::cache::{CacheEntryConfig, CacheProvider, CacheStats};
+use mcb_domain::error::{Error, Result};
 use redis::{aio::MultiplexedConnection, AsyncCommands, Client};
 use std::sync::{Arc, RwLock};
 

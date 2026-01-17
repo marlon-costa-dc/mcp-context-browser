@@ -79,7 +79,9 @@ pub trait LanguageChunkingProvider: Interface + Send + Sync {
     /// # Arguments
     /// * `ext` - File extension without the dot (e.g., "rs", "py")
     fn supports_extension(&self, ext: &str) -> bool {
-        self.extensions().iter().any(|e| e.eq_ignore_ascii_case(ext))
+        self.extensions()
+            .iter()
+            .any(|e| e.eq_ignore_ascii_case(ext))
     }
 
     /// Get the maximum chunk size for this language

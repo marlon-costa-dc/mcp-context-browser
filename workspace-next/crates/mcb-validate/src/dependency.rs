@@ -8,6 +8,7 @@
 //! - mcb-server: mcb-domain, mcb-application, and mcb-infrastructure (transport layer)
 //! - mcb: All crates (facade that re-exports entire public API)
 
+use crate::violation_trait::{Violation, ViolationCategory};
 use crate::{Result, Severity, ValidationConfig};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -29,9 +30,24 @@ const ALLOWED_DEPS: &[(&str, &[&str])] = &[
     ("mcb-domain", &[]),
     ("mcb-application", &["mcb-domain"]),
     ("mcb-providers", &["mcb-domain", "mcb-application"]),
-    ("mcb-infrastructure", &["mcb-domain", "mcb-application", "mcb-providers"]),
-    ("mcb-server", &["mcb-domain", "mcb-application", "mcb-infrastructure"]),
-    ("mcb", &["mcb-domain", "mcb-application", "mcb-infrastructure", "mcb-server", "mcb-providers"]),
+    (
+        "mcb-infrastructure",
+        &["mcb-domain", "mcb-application", "mcb-providers"],
+    ),
+    (
+        "mcb-server",
+        &["mcb-domain", "mcb-application", "mcb-infrastructure"],
+    ),
+    (
+        "mcb",
+        &[
+            "mcb-domain",
+            "mcb-application",
+            "mcb-infrastructure",
+            "mcb-server",
+            "mcb-providers",
+        ],
+    ),
     ("mcb-validate", &[]),
 ];
 
@@ -113,6 +129,62 @@ impl std::fmt::Display for DependencyViolation {
     }
 }
 
+impl Violation for DependencyViolation {
+    fn id(&self) -> &str {
+        match self {
+            Self::ForbiddenCargoDepedency { .. } => "DEP001",
+            Self::ForbiddenUseStatement { .. } => "DEP002",
+            Self::CircularDependency { .. } => "DEP003",
+        }
+    }
+
+    fn category(&self) -> ViolationCategory {
+        ViolationCategory::Architecture
+    }
+
+    fn severity(&self) -> Severity {
+        match self {
+            Self::ForbiddenCargoDepedency { severity, .. } => *severity,
+            Self::ForbiddenUseStatement { severity, .. } => *severity,
+            Self::CircularDependency { severity, .. } => *severity,
+        }
+    }
+
+    fn file(&self) -> Option<&std::path::PathBuf> {
+        match self {
+            Self::ForbiddenCargoDepedency { location, .. } => Some(location),
+            Self::ForbiddenUseStatement { file, .. } => Some(file),
+            Self::CircularDependency { .. } => None,
+        }
+    }
+
+    fn line(&self) -> Option<usize> {
+        match self {
+            Self::ForbiddenUseStatement { line, .. } => Some(*line),
+            _ => None,
+        }
+    }
+
+    fn suggestion(&self) -> Option<String> {
+        match self {
+            Self::ForbiddenCargoDepedency {
+                crate_name,
+                forbidden_dep,
+                ..
+            } => Some(format!(
+                "Remove {} from {}/Cargo.toml",
+                forbidden_dep, crate_name
+            )),
+            Self::ForbiddenUseStatement { forbidden_dep, .. } => {
+                Some(format!("Access {} through allowed layer", forbidden_dep))
+            }
+            Self::CircularDependency { .. } => {
+                Some("Extract shared types to mcb-domain".to_string())
+            }
+        }
+    }
+}
+
 /// Dependency validator
 pub struct DependencyValidator {
     config: ValidationConfig,
@@ -155,7 +227,8 @@ impl DependencyValidator {
 
         for (crate_name, allowed) in &self.allowed_deps {
             let cargo_toml = self
-                .config.workspace_root
+                .config
+                .workspace_root
                 .join("crates")
                 .join(crate_name)
                 .join("Cargo.toml");
@@ -198,7 +271,8 @@ impl DependencyValidator {
 
         for (crate_name, allowed) in &self.allowed_deps {
             let crate_src = self
-                .config.workspace_root
+                .config
+                .workspace_root
                 .join("crates")
                 .join(crate_name)
                 .join("src");
@@ -262,7 +336,8 @@ impl DependencyValidator {
         // Build dependency graph from Cargo.toml files
         for crate_name in self.allowed_deps.keys() {
             let cargo_toml = self
-                .config.workspace_root
+                .config
+                .workspace_root
                 .join("crates")
                 .join(crate_name)
                 .join("Cargo.toml");
@@ -332,6 +407,24 @@ impl DependencyValidator {
 
         path.pop();
         None
+    }
+}
+
+impl crate::validator_trait::Validator for DependencyValidator {
+    fn name(&self) -> &'static str {
+        "dependency"
+    }
+
+    fn description(&self) -> &'static str {
+        "Validates Clean Architecture layer dependencies"
+    }
+
+    fn validate(&self, _config: &ValidationConfig) -> anyhow::Result<Vec<Box<dyn Violation>>> {
+        let violations = self.validate_all()?;
+        Ok(violations
+            .into_iter()
+            .map(|v| Box::new(v) as Box<dyn Violation>)
+            .collect())
     }
 }
 

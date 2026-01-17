@@ -4,8 +4,8 @@
 //! Useful for testing and disabling caching.
 
 use async_trait::async_trait;
-use mcb_domain::error::Result;
 use mcb_application::ports::providers::cache::{CacheEntryConfig, CacheProvider, CacheStats};
+use mcb_domain::error::Result;
 
 /// Null cache provider that doesn't store anything
 ///
@@ -20,8 +20,7 @@ use mcb_application::ports::providers::cache::{CacheEntryConfig, CacheProvider, 
 /// let provider = NullCacheProvider::new();
 /// // All operations succeed but nothing is cached
 /// ```
-#[derive(Debug, Clone)]
-#[derive(shaku::Component)]
+#[derive(Debug, Clone, shaku::Component)]
 #[shaku(interface = CacheProvider)]
 pub struct NullCacheProvider;
 

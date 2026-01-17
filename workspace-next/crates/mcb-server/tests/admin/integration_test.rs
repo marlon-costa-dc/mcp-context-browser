@@ -173,12 +173,7 @@ async fn test_full_admin_stack_integration() {
     // 9. Verify liveness probe (always OK)
     let response = router
         .clone()
-        .oneshot(
-            Request::builder()
-                .uri("/live")
-                .body(Body::empty())
-                .unwrap(),
-        )
+        .oneshot(Request::builder().uri("/live").body(Body::empty()).unwrap())
         .await
         .unwrap();
 

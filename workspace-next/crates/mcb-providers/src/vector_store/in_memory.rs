@@ -6,8 +6,8 @@
 use crate::utils::JsonExt;
 use async_trait::async_trait;
 use dashmap::DashMap;
-use mcb_domain::error::{Error, Result};
 use mcb_application::ports::providers::{VectorStoreAdmin, VectorStoreProvider};
+use mcb_domain::error::{Error, Result};
 use mcb_domain::value_objects::{Embedding, SearchResult};
 use serde_json::Value;
 use std::cmp::Ordering;

@@ -405,8 +405,8 @@ impl KissValidator {
     /// Check for builders with too many optional fields
     pub fn validate_builder_complexity(&self) -> Result<Vec<KissViolation>> {
         let mut violations = Vec::new();
-        let builder_pattern =
-            Regex::new(r"(?:pub\s+)?struct\s+([A-Z][a-zA-Z0-9_]*Builder)\s*").expect("Invalid regex");
+        let builder_pattern = Regex::new(r"(?:pub\s+)?struct\s+([A-Z][a-zA-Z0-9_]*Builder)\s*")
+            .expect("Invalid regex");
         let option_pattern = Regex::new(r"Option<").expect("Invalid regex");
 
         for src_dir in self.config.get_scan_dirs()? {
@@ -476,7 +476,8 @@ impl KissValidator {
                 // Track nesting depth
                 let mut nesting_depth: usize = 0;
                 let mut brace_depth: i32 = 0;
-                let mut reported_lines: std::collections::HashSet<usize> = std::collections::HashSet::new();
+                let mut reported_lines: std::collections::HashSet<usize> =
+                    std::collections::HashSet::new();
 
                 for (line_num, line) in lines.iter().enumerate() {
                     let trimmed = line.trim();
@@ -626,7 +627,8 @@ impl KissValidator {
         let mut brace_depth = 0;
         let mut in_struct = false;
         let mut field_count = 0;
-        let field_pattern = Regex::new(r"^\s*(?:pub\s+)?[a-z_][a-z0-9_]*\s*:").expect("Invalid regex");
+        let field_pattern =
+            Regex::new(r"^\s*(?:pub\s+)?[a-z_][a-z0-9_]*\s*:").expect("Invalid regex");
 
         for line in &lines[start_line..] {
             if line.contains('{') {
@@ -848,7 +850,10 @@ pub fn long_function() {{
 {}
 }}
 "#,
-            (0..60).map(|i| format!("    let x{} = {};", i, i)).collect::<Vec<_>>().join("\n")
+            (0..60)
+                .map(|i| format!("    let x{} = {};", i, i))
+                .collect::<Vec<_>>()
+                .join("\n")
         );
         create_test_crate(&temp, "mcb-test", &long_function);
 

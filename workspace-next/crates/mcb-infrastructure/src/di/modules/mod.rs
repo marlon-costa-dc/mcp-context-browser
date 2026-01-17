@@ -34,13 +34,13 @@ pub mod data_module;
 pub mod embedding_module;
 pub mod language_module;
 
+/// Admin services (marker module for future admin-specific services)
+pub mod admin;
 /// Infrastructure modules
 /// Core infrastructure services (auth, events, metrics, sync, snapshot)
 pub mod infrastructure;
 /// MCP server components (performance metrics, indexing operations)
 pub mod server;
-/// Admin services (marker module for future admin-specific services)
-pub mod admin;
 
 /// Domain services factory (runtime service creation with DI)
 pub mod domain_services;

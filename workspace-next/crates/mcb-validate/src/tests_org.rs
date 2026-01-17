@@ -5,6 +5,7 @@
 //! - Test file naming conventions
 //! - Test function naming conventions
 
+use crate::violation_trait::{Violation, ViolationCategory};
 use crate::{Result, Severity, ValidationConfig};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -173,6 +174,85 @@ impl std::fmt::Display for TestViolation {
                     line,
                     function_name
                 )
+            }
+        }
+    }
+}
+
+impl Violation for TestViolation {
+    fn id(&self) -> &str {
+        match self {
+            Self::InlineTestModule { .. } => "TEST001",
+            Self::BadTestFileName { .. } => "TEST002",
+            Self::BadTestFunctionName { .. } => "TEST003",
+            Self::TestWithoutAssertion { .. } => "TEST004",
+            Self::TrivialAssertion { .. } => "TEST005",
+            Self::UnwrapOnlyAssertion { .. } => "TEST006",
+            Self::CommentOnlyTest { .. } => "TEST007",
+        }
+    }
+
+    fn category(&self) -> ViolationCategory {
+        ViolationCategory::Testing
+    }
+
+    fn severity(&self) -> Severity {
+        match self {
+            Self::InlineTestModule { severity, .. } => *severity,
+            Self::BadTestFileName { severity, .. } => *severity,
+            Self::BadTestFunctionName { severity, .. } => *severity,
+            Self::TestWithoutAssertion { severity, .. } => *severity,
+            Self::TrivialAssertion { severity, .. } => *severity,
+            Self::UnwrapOnlyAssertion { severity, .. } => *severity,
+            Self::CommentOnlyTest { severity, .. } => *severity,
+        }
+    }
+
+    fn file(&self) -> Option<&std::path::PathBuf> {
+        match self {
+            Self::InlineTestModule { file, .. } => Some(file),
+            Self::BadTestFileName { file, .. } => Some(file),
+            Self::BadTestFunctionName { file, .. } => Some(file),
+            Self::TestWithoutAssertion { file, .. } => Some(file),
+            Self::TrivialAssertion { file, .. } => Some(file),
+            Self::UnwrapOnlyAssertion { file, .. } => Some(file),
+            Self::CommentOnlyTest { file, .. } => Some(file),
+        }
+    }
+
+    fn line(&self) -> Option<usize> {
+        match self {
+            Self::InlineTestModule { line, .. } => Some(*line),
+            Self::BadTestFileName { .. } => None,
+            Self::BadTestFunctionName { line, .. } => Some(*line),
+            Self::TestWithoutAssertion { line, .. } => Some(*line),
+            Self::TrivialAssertion { line, .. } => Some(*line),
+            Self::UnwrapOnlyAssertion { line, .. } => Some(*line),
+            Self::CommentOnlyTest { line, .. } => Some(*line),
+        }
+    }
+
+    fn suggestion(&self) -> Option<String> {
+        match self {
+            Self::InlineTestModule { .. } => {
+                Some("Move test module to tests/ directory".to_string())
+            }
+            Self::BadTestFileName { suggestion, .. } => Some(format!("Rename to {}", suggestion)),
+            Self::BadTestFunctionName { suggestion, .. } => {
+                Some(format!("Rename to {}", suggestion))
+            }
+            Self::TestWithoutAssertion { function_name, .. } => Some(format!(
+                "Add assertion to {} or use smoke test suffix",
+                function_name
+            )),
+            Self::TrivialAssertion { assertion, .. } => {
+                Some(format!("Replace {} with meaningful assertion", assertion))
+            }
+            Self::UnwrapOnlyAssertion { .. } => Some(
+                "Add explicit assert! or assert_eq! instead of relying on .unwrap()".to_string(),
+            ),
+            Self::CommentOnlyTest { .. } => {
+                Some("Add executable test code or remove the test".to_string())
             }
         }
     }
@@ -429,10 +509,16 @@ impl TestValidator {
         let trivial_patterns = [
             (r"assert!\s*\(\s*true\s*\)", "assert!(true)"),
             (r"assert!\s*\(\s*!false\s*\)", "assert!(!false)"),
-            (r"assert_eq!\s*\(\s*true\s*,\s*true\s*\)", "assert_eq!(true, true)"),
+            (
+                r"assert_eq!\s*\(\s*true\s*,\s*true\s*\)",
+                "assert_eq!(true, true)",
+            ),
             (r"assert_eq!\s*\(\s*1\s*,\s*1\s*\)", "assert_eq!(1, 1)"),
             (r"assert_ne!\s*\(\s*1\s*,\s*2\s*\)", "assert_ne!(1, 2)"),
-            (r"assert_ne!\s*\(\s*true\s*,\s*false\s*\)", "assert_ne!(true, false)"),
+            (
+                r"assert_ne!\s*\(\s*true\s*,\s*false\s*\)",
+                "assert_ne!(true, false)",
+            ),
         ];
 
         let compiled_trivial: Vec<_> = trivial_patterns
@@ -485,13 +571,16 @@ impl TestValidator {
                                 let mut brace_depth = 0;
                                 let mut started = false;
 
-                                for (idx, check_line) in lines.iter().enumerate().skip(fn_line_idx) {
+                                for (idx, check_line) in lines.iter().enumerate().skip(fn_line_idx)
+                                {
                                     if check_line.contains('{') {
                                         started = true;
                                     }
                                     if started {
-                                        brace_depth += check_line.chars().filter(|c| *c == '{').count() as i32;
-                                        brace_depth -= check_line.chars().filter(|c| *c == '}').count() as i32;
+                                        brace_depth +=
+                                            check_line.chars().filter(|c| *c == '{').count() as i32;
+                                        brace_depth -=
+                                            check_line.chars().filter(|c| *c == '}').count() as i32;
                                         body_lines.push((idx, check_line));
                                         if brace_depth <= 0 {
                                             break;
@@ -588,6 +677,24 @@ impl TestValidator {
     #[allow(dead_code)]
     fn is_legacy_path(&self, path: &std::path::Path) -> bool {
         self.config.is_legacy_path(path)
+    }
+}
+
+impl crate::validator_trait::Validator for TestValidator {
+    fn name(&self) -> &'static str {
+        "tests_org"
+    }
+
+    fn description(&self) -> &'static str {
+        "Validates test organization and quality"
+    }
+
+    fn validate(&self, _config: &ValidationConfig) -> anyhow::Result<Vec<Box<dyn Violation>>> {
+        let violations = self.validate_all()?;
+        Ok(violations
+            .into_iter()
+            .map(|v| Box::new(v) as Box<dyn Violation>)
+            .collect())
     }
 }
 

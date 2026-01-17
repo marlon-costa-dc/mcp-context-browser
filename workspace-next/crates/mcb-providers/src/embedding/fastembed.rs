@@ -7,8 +7,8 @@ use async_trait::async_trait;
 use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
 use tokio::sync::{mpsc, oneshot};
 
-use mcb_domain::error::{Error, Result};
 use mcb_application::ports::EmbeddingProvider;
+use mcb_domain::error::{Error, Result};
 use mcb_domain::value_objects::Embedding;
 
 use crate::constants::EMBEDDING_DIMENSION_FASTEMBED_DEFAULT;

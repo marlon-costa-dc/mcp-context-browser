@@ -82,7 +82,9 @@ impl GenericReporter {
         violations: &[Box<dyn Violation>],
         workspace_root: PathBuf,
     ) -> GenericReport {
-        let timestamp = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC").to_string();
+        let timestamp = chrono::Utc::now()
+            .format("%Y-%m-%d %H:%M:%S UTC")
+            .to_string();
 
         // Count by severity
         let errors = violations
@@ -142,7 +144,10 @@ impl GenericReporter {
 
         output.push_str("=== Architecture Validation Report ===\n\n");
         output.push_str(&format!("Timestamp: {}\n", report.timestamp));
-        output.push_str(&format!("Workspace: {}\n\n", report.workspace_root.display()));
+        output.push_str(&format!(
+            "Workspace: {}\n\n",
+            report.workspace_root.display()
+        ));
 
         // Summary
         output.push_str("--- Summary ---\n");

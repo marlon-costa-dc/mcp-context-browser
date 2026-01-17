@@ -14,10 +14,14 @@ pub struct ServerConfigUtils;
 impl ServerConfigUtils {
     /// Parse server address from configuration
     pub fn parse_address(config: &ServerConfig) -> Result<SocketAddr> {
-        let ip: IpAddr = config.network.host.parse().map_err(|_| Error::Configuration {
-            message: format!("Invalid server host: {}", config.network.host),
-            source: None,
-        })?;
+        let ip: IpAddr = config
+            .network
+            .host
+            .parse()
+            .map_err(|_| Error::Configuration {
+                message: format!("Invalid server host: {}", config.network.host),
+                source: None,
+            })?;
 
         Ok(SocketAddr::new(ip, config.network.port))
     }
@@ -26,7 +30,10 @@ impl ServerConfigUtils {
     pub fn get_server_url(config: &ServerConfig) -> String {
         let protocol = if config.ssl.https { "https" } else { "http" };
         // Use host:port directly - works for both IP addresses and domain names
-        format!("{}://{}:{}", protocol, config.network.host, config.network.port)
+        format!(
+            "{}://{}:{}",
+            protocol, config.network.host, config.network.port
+        )
     }
 
     /// Validate SSL configuration
@@ -50,7 +57,9 @@ impl ServerConfigUtils {
         }
 
         // Both paths validated above - use pattern match to avoid unwrap
-        if let (Some(cert_path), Some(key_path)) = (&config.ssl.ssl_cert_path, &config.ssl.ssl_key_path) {
+        if let (Some(cert_path), Some(key_path)) =
+            (&config.ssl.ssl_cert_path, &config.ssl.ssl_key_path)
+        {
             if !cert_path.exists() {
                 return Err(Error::Configuration {
                     message: format!(

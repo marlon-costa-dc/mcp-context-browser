@@ -9,8 +9,8 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use mcb_domain::error::{Error, Result};
 use mcb_application::ports::providers::{CryptoProvider, EmbeddingProvider, VectorStoreProvider};
+use mcb_domain::error::{Error, Result};
 use mcb_domain::value_objects::{EmbeddingConfig, VectorStoreConfig};
 use reqwest::Client;
 

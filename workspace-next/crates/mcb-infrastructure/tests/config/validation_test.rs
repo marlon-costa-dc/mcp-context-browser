@@ -2,8 +2,12 @@
 //!
 //! Tests for configuration validation across all config types.
 
-use mcb_infrastructure::config::data::{AuthConfig, CacheConfig, CacheProvider, ServerConfig, ServerSslConfig};
-use mcb_infrastructure::config::server::{ServerConfigBuilder, ServerConfigPresets, ServerConfigUtils};
+use mcb_infrastructure::config::data::{
+    AuthConfig, CacheConfig, CacheProvider, ServerConfig, ServerSslConfig,
+};
+use mcb_infrastructure::config::server::{
+    ServerConfigBuilder, ServerConfigPresets, ServerConfigUtils,
+};
 use std::path::PathBuf;
 
 #[test]
@@ -25,7 +29,10 @@ fn test_server_config_port_validation() {
     assert_eq!(high_port_config.network.port, 65535);
 
     // Verify address parsing works with different ports
-    let config = ServerConfigBuilder::new().host("127.0.0.1").port(8080).build();
+    let config = ServerConfigBuilder::new()
+        .host("127.0.0.1")
+        .port(8080)
+        .build();
     let addr = ServerConfigUtils::parse_address(&config).unwrap();
     assert_eq!(addr.port(), 8080);
 }
@@ -123,7 +130,10 @@ fn test_ssl_cert_required_for_https() {
     };
     let result = ServerConfigUtils::validate_ssl_config(&https_cert_only);
     assert!(result.is_err());
-    assert!(result.unwrap_err().to_string().contains("key path is required"));
+    assert!(result
+        .unwrap_err()
+        .to_string()
+        .contains("key path is required"));
 
     // HTTP config doesn't require SSL
     let mut http_config = ServerConfig::default();
@@ -141,11 +151,17 @@ fn test_default_config_is_valid() {
     // Default server config should be parseable
     let server_config = ServerConfig::default();
     let addr_result = ServerConfigUtils::parse_address(&server_config);
-    assert!(addr_result.is_ok(), "Default server config should have valid address");
+    assert!(
+        addr_result.is_ok(),
+        "Default server config should have valid address"
+    );
 
     // Default SSL config (HTTP) should be valid
     let ssl_result = ServerConfigUtils::validate_ssl_config(&server_config);
-    assert!(ssl_result.is_ok(), "Default server config (HTTP) should pass SSL validation");
+    assert!(
+        ssl_result.is_ok(),
+        "Default server config (HTTP) should pass SSL validation"
+    );
 
     // Presets should produce valid configs
     let dev_config = ServerConfigPresets::development();

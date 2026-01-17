@@ -6,8 +6,8 @@
 use async_trait::async_trait;
 use reqwest::Client;
 
-use mcb_domain::error::{Error, Result};
 use mcb_application::ports::EmbeddingProvider;
+use mcb_domain::error::{Error, Result};
 use mcb_domain::value_objects::Embedding;
 
 use crate::constants::{
@@ -119,7 +119,9 @@ impl VoyageAIEmbeddingProvider {
     fn parse_embedding(&self, index: usize, item: &serde_json::Value) -> Result<Embedding> {
         let embedding_vec = item["embedding"]
             .as_array()
-            .ok_or_else(|| Error::embedding(format!("Invalid embedding format for text {}", index)))?
+            .ok_or_else(|| {
+                Error::embedding(format!("Invalid embedding format for text {}", index))
+            })?
             .iter()
             .map(|v| v.as_f64().unwrap_or(0.0) as f32)
             .collect::<Vec<f32>>();

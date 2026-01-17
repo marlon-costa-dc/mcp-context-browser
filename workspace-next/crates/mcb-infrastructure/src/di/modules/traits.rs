@@ -23,7 +23,8 @@ pub trait InfrastructureModule:
     + HasComponent<dyn mcb_application::ports::infrastructure::SystemMetricsCollectorInterface>
     + HasComponent<dyn mcb_application::ports::infrastructure::SnapshotProvider>
     + HasComponent<dyn mcb_application::ports::infrastructure::SyncProvider>
-{}
+{
+}
 
 // ============================================================================
 // Server Module (MCP Server Components)
@@ -35,7 +36,8 @@ pub trait InfrastructureModule:
 pub trait ServerModule:
     HasComponent<dyn mcb_application::ports::admin::PerformanceMetricsInterface>
     + HasComponent<dyn mcb_application::ports::admin::IndexingOperationsInterface>
-{}
+{
+}
 
 // ============================================================================
 // Context Modules (Clean Architecture Pattern)

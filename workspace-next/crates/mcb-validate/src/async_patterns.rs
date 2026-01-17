@@ -460,15 +460,29 @@ impl AsyncPatternValidator {
 
         // Pattern: tokio::spawn without assigning to variable or awaiting
         let spawn_pattern = Regex::new(r"tokio::spawn\s*\(").expect("Invalid regex");
-        let assigned_spawn_pattern = Regex::new(r"let\s+\w+\s*=\s*tokio::spawn").expect("Invalid regex");
+        let assigned_spawn_pattern =
+            Regex::new(r"let\s+\w+\s*=\s*tokio::spawn").expect("Invalid regex");
         let fn_pattern = Regex::new(r"(?:pub\s+)?(?:async\s+)?fn\s+(\w+)").expect("Invalid regex");
 
         // Function name patterns that indicate intentional fire-and-forget spawns
         // Includes constructor patterns that often spawn background workers
         let background_fn_patterns = [
-            "spawn", "background", "graceful", "shutdown", "start", "run",
-            "worker", "daemon", "listener", "handler", "process",
-            "new", "with_", "init", "create", "build",  // Constructor patterns
+            "spawn",
+            "background",
+            "graceful",
+            "shutdown",
+            "start",
+            "run",
+            "worker",
+            "daemon",
+            "listener",
+            "handler",
+            "process",
+            "new",
+            "with_",
+            "init",
+            "create",
+            "build", // Constructor patterns
         ];
 
         for src_dir in self.config.get_scan_dirs()? {
@@ -506,7 +520,8 @@ impl AsyncPatternValidator {
 
                     // Track current function name
                     if let Some(cap) = fn_pattern.captures(line) {
-                        current_fn_name = cap.get(1).map(|m| m.as_str()).unwrap_or("").to_lowercase();
+                        current_fn_name =
+                            cap.get(1).map(|m| m.as_str()).unwrap_or("").to_lowercase();
                     }
 
                     // Check for unassigned spawn
@@ -600,7 +615,10 @@ async fn use_mutex() {
         let validator = AsyncPatternValidator::new(temp.path());
         let violations = validator.validate_mutex_types().unwrap();
 
-        assert!(!violations.is_empty(), "Should detect std::sync::Mutex in async code");
+        assert!(
+            !violations.is_empty(),
+            "Should detect std::sync::Mutex in async code"
+        );
     }
 
     #[test]

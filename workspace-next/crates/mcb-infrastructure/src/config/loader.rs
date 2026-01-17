@@ -196,7 +196,9 @@ fn validate_auth_config(config: &AppConfig) -> Result<()> {
 }
 
 fn validate_cache_config(config: &AppConfig) -> Result<()> {
-    if config.system.infrastructure.cache.enabled && config.system.infrastructure.cache.default_ttl_secs == 0 {
+    if config.system.infrastructure.cache.enabled
+        && config.system.infrastructure.cache.default_ttl_secs == 0
+    {
         return Err(Error::Configuration {
             message: "Cache TTL cannot be 0 when cache is enabled".to_string(),
             source: None,
@@ -222,7 +224,9 @@ fn validate_limits_config(config: &AppConfig) -> Result<()> {
 }
 
 fn validate_daemon_config(config: &AppConfig) -> Result<()> {
-    if config.operations_daemon.daemon.enabled && config.operations_daemon.daemon.max_restart_attempts == 0 {
+    if config.operations_daemon.daemon.enabled
+        && config.operations_daemon.daemon.max_restart_attempts == 0
+    {
         return Err(Error::Configuration {
             message: "Maximum restart attempts cannot be 0 when daemon is enabled".to_string(),
             source: None,

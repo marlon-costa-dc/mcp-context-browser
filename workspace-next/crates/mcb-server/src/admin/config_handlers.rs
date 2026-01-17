@@ -82,7 +82,10 @@ pub async fn reload_config(State(state): State<AdminState>) -> impl IntoResponse
     match watcher.reload().await {
         Ok(new_config) => {
             let sanitized = SanitizedConfig::from_app_config(&new_config);
-            (StatusCode::OK, Json(ConfigReloadResponse::success(sanitized)))
+            (
+                StatusCode::OK,
+                Json(ConfigReloadResponse::success(sanitized)),
+            )
         }
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -120,7 +123,10 @@ pub async fn update_config_section(
 
     // Write and reload
     match write_and_reload_config(&config_path, &updated_config, &watcher, &section).await {
-        Ok(sanitized) => (StatusCode::OK, Json(ConfigSectionUpdateResponse::success(&section, sanitized))),
+        Ok(sanitized) => (
+            StatusCode::OK,
+            Json(ConfigSectionUpdateResponse::success(&section, sanitized)),
+        ),
         Err(e) => config_update_error_response(&section, e),
     }
 }
@@ -136,8 +142,14 @@ fn validate_update_prerequisites(
         return Err(ConfigUpdateError::InvalidSection);
     }
 
-    let watcher = state.config_watcher.as_ref().ok_or(ConfigUpdateError::WatcherUnavailable)?;
-    let config_path = state.config_path.as_ref().ok_or(ConfigUpdateError::PathUnavailable)?;
+    let watcher = state
+        .config_watcher
+        .as_ref()
+        .ok_or(ConfigUpdateError::WatcherUnavailable)?;
+    let config_path = state
+        .config_path
+        .as_ref()
+        .ok_or(ConfigUpdateError::PathUnavailable)?;
 
     Ok((Arc::clone(watcher), config_path.clone()))
 }
@@ -151,8 +163,8 @@ fn read_update_config(
     let content = std::fs::read_to_string(config_path)
         .map_err(|e| ConfigUpdateError::ReadFailed(e.to_string()))?;
 
-    let mut config: toml::Value = toml::from_str(&content)
-        .map_err(|e| ConfigUpdateError::ParseFailed(e.to_string()))?;
+    let mut config: toml::Value =
+        toml::from_str(&content).map_err(|e| ConfigUpdateError::ParseFailed(e.to_string()))?;
 
     let toml_value = json_to_toml(values).ok_or(ConfigUpdateError::InvalidFormat)?;
 
@@ -164,7 +176,11 @@ fn read_update_config(
 }
 
 /// Merge new values into a config section
-fn merge_section(table: &mut toml::map::Map<String, toml::Value>, section: &str, new_value: toml::Value) {
+fn merge_section(
+    table: &mut toml::map::Map<String, toml::Value>,
+    section: &str,
+    new_value: toml::Value,
+) {
     let toml::Value::Table(new_table) = new_value else {
         table.insert(section.to_string(), new_value);
         return;
@@ -193,14 +209,19 @@ async fn write_and_reload_config(
     std::fs::write(config_path, content)
         .map_err(|e| ConfigUpdateError::WriteFailed(e.to_string()))?;
 
-    let new_config = watcher.reload().await
+    let new_config = watcher
+        .reload()
+        .await
         .map_err(|e| ConfigUpdateError::ReloadFailed(e.to_string()))?;
 
     Ok(SanitizedConfig::from_app_config(&new_config))
 }
 
 /// Convert ConfigUpdateError to HTTP response
-fn config_update_error_response(section: &str, error: ConfigUpdateError) -> (StatusCode, Json<ConfigSectionUpdateResponse>) {
+fn config_update_error_response(
+    section: &str,
+    error: ConfigUpdateError,
+) -> (StatusCode, Json<ConfigSectionUpdateResponse>) {
     match error {
         ConfigUpdateError::InvalidSection => (
             StatusCode::BAD_REQUEST,
@@ -212,31 +233,52 @@ fn config_update_error_response(section: &str, error: ConfigUpdateError) -> (Sta
         ),
         ConfigUpdateError::PathUnavailable => (
             StatusCode::SERVICE_UNAVAILABLE,
-            Json(ConfigSectionUpdateResponse::failure(section, "Configuration file path not available")),
+            Json(ConfigSectionUpdateResponse::failure(
+                section,
+                "Configuration file path not available",
+            )),
         ),
         ConfigUpdateError::ReadFailed(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ConfigSectionUpdateResponse::failure(section, format!("Failed to read configuration file: {}", e))),
+            Json(ConfigSectionUpdateResponse::failure(
+                section,
+                format!("Failed to read configuration file: {}", e),
+            )),
         ),
         ConfigUpdateError::ParseFailed(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ConfigSectionUpdateResponse::failure(section, format!("Failed to parse configuration file: {}", e))),
+            Json(ConfigSectionUpdateResponse::failure(
+                section,
+                format!("Failed to parse configuration file: {}", e),
+            )),
         ),
         ConfigUpdateError::InvalidFormat => (
             StatusCode::BAD_REQUEST,
-            Json(ConfigSectionUpdateResponse::failure(section, "Invalid configuration value format")),
+            Json(ConfigSectionUpdateResponse::failure(
+                section,
+                "Invalid configuration value format",
+            )),
         ),
         ConfigUpdateError::SerializeFailed(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ConfigSectionUpdateResponse::failure(section, format!("Failed to serialize configuration: {}", e))),
+            Json(ConfigSectionUpdateResponse::failure(
+                section,
+                format!("Failed to serialize configuration: {}", e),
+            )),
         ),
         ConfigUpdateError::WriteFailed(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ConfigSectionUpdateResponse::failure(section, format!("Failed to write configuration file: {}", e))),
+            Json(ConfigSectionUpdateResponse::failure(
+                section,
+                format!("Failed to write configuration file: {}", e),
+            )),
         ),
         ConfigUpdateError::ReloadFailed(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ConfigSectionUpdateResponse::failure(section, format!("Configuration updated but reload failed: {}", e))),
+            Json(ConfigSectionUpdateResponse::failure(
+                section,
+                format!("Configuration updated but reload failed: {}", e),
+            )),
         ),
     }
 }

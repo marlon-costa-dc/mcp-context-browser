@@ -2,8 +2,8 @@
 //!
 //! Defines the contract for distributed lock coordination services.
 
-use mcb_domain::error::Result;
 use async_trait::async_trait;
+use mcb_domain::error::Result;
 use shaku::Interface;
 
 /// Lock guard token returned when a lock is acquired

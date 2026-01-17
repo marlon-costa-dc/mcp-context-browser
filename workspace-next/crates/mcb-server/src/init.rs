@@ -102,15 +102,19 @@ pub async fn run_server(config_path: Option<&Path>) -> Result<(), Box<dyn std::e
     let crypto = CryptoService::new(CryptoService::generate_master_key())?;
 
     // Step 4: Create domain services with production providers
-    let services = mcb_infrastructure::di::modules::domain_services::DomainServicesFactory::create_services(
-        shared_cache,
+    let deps = mcb_infrastructure::di::modules::domain_services::ServiceDependencies {
+        cache: shared_cache,
         crypto,
         config,
         embedding_provider,
         vector_store_provider,
         language_chunker,
-    )
-    .await?;
+    };
+    let services =
+        mcb_infrastructure::di::modules::domain_services::DomainServicesFactory::create_services(
+            deps,
+        )
+        .await?;
 
     let indexing_service = services.indexing_service;
     let context_service = services.context_service;
@@ -257,10 +261,15 @@ fn create_embedding_provider(
 /// Uses the first configured vector store provider, or in-memory provider if none configured.
 fn create_vector_store_provider(
     config: &mcb_infrastructure::config::AppConfig,
-) -> Result<Arc<dyn mcb_application::ports::providers::VectorStoreProvider>, Box<dyn std::error::Error>>
-{
+) -> Result<
+    Arc<dyn mcb_application::ports::providers::VectorStoreProvider>,
+    Box<dyn std::error::Error>,
+> {
     if let Some((name, vector_config)) = config.providers.vector_store.iter().next() {
-        info!(provider = name, "Creating vector store provider from config");
+        info!(
+            provider = name,
+            "Creating vector store provider from config"
+        );
         // For encrypted provider, would need crypto - skip for now (use in-memory as fallback)
         VectorStoreProviderFactory::create(vector_config, None)
             .map_err(|e| -> Box<dyn std::error::Error> { Box::new(e) })

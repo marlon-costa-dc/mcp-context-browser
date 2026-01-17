@@ -9,8 +9,8 @@
 //! [`VectorStoreProvider`], enabling consistent provider registration
 //! and factory-based creation.
 
-use mcb_domain::error::Result;
 use async_trait::async_trait;
+use mcb_domain::error::Result;
 use serde::{Deserialize, Serialize};
 use shaku::Interface;
 use std::time::Duration;
@@ -229,7 +229,10 @@ pub trait CacheProvider: Interface + Send + Sync + std::fmt::Debug {
 #[async_trait]
 pub trait CacheProviderFactoryInterface: Interface + Send + Sync {
     /// Create a cache provider from configuration
-    async fn create_from_config(&self, config: &mcb_domain::value_objects::config::CacheConfig) -> Result<std::sync::Arc<dyn CacheProvider>>;
+    async fn create_from_config(
+        &self,
+        config: &mcb_domain::value_objects::config::CacheConfig,
+    ) -> Result<std::sync::Arc<dyn CacheProvider>>;
 
     /// Create a null cache provider for testing
     fn create_null(&self) -> std::sync::Arc<dyn CacheProvider>;

@@ -39,13 +39,13 @@ pub mod web;
 
 // Re-export main types
 pub use api::{AdminApi, AdminApiConfig};
+pub use auth::{with_admin_auth, AdminAuthConfig, AuthErrorResponse};
 pub use config::{
     ConfigReloadResponse, ConfigResponse, ConfigSectionUpdateRequest, ConfigSectionUpdateResponse,
     SanitizedConfig,
 };
-pub use auth::{AdminAuthConfig, AuthErrorResponse, with_admin_auth};
 pub use handlers::AdminState;
 pub use models::{AdminActionResponse, CollectionStats, ServerInfo};
 pub use propagation::{ConfigPropagator, PropagatorHandle};
-pub use routes::{admin_router, admin_router_with_auth, admin_router_with_prefix, admin_router_full};
+pub use routes::admin_router;
 pub use web::web_router;

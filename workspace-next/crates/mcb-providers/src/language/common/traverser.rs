@@ -75,7 +75,13 @@ impl<'a> AstTraverser<'a> {
                 if !rule.node_types.contains(&node_type.to_string()) {
                     continue;
                 }
-                let ctx = ExtractionContext { content, file_name, depth, rule, chunk_index: chunks.len() };
+                let ctx = ExtractionContext {
+                    content,
+                    file_name,
+                    depth,
+                    rule,
+                    chunk_index: chunks.len(),
+                };
                 if let Some(chunk) = self.try_extract_chunk(node, ctx) {
                     chunks.push(chunk);
                     if chunks.len() >= self.max_chunks {
@@ -149,7 +155,11 @@ impl<'a> AstTraverser<'a> {
     }
 
     /// Try to extract a chunk from a node matching a rule
-    fn try_extract_chunk(&self, node: tree_sitter::Node, ctx: ExtractionContext) -> Option<CodeChunk> {
+    fn try_extract_chunk(
+        &self,
+        node: tree_sitter::Node,
+        ctx: ExtractionContext,
+    ) -> Option<CodeChunk> {
         let (code, context) = if ctx.rule.include_context {
             Self::extract_node_with_context(node, ctx.content, 3)
         } else {
@@ -174,7 +184,10 @@ impl<'a> AstTraverser<'a> {
         // Add context metadata if available
         if let Some(context_lines) = context {
             if let Some(metadata) = chunk.metadata.as_object_mut() {
-                metadata.insert("context_lines".to_string(), serde_json::json!(context_lines));
+                metadata.insert(
+                    "context_lines".to_string(),
+                    serde_json::json!(context_lines),
+                );
             }
         }
 

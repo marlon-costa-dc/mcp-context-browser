@@ -5,6 +5,7 @@
 //! - Module-level documentation (//!)
 //! - Example code blocks for traits
 
+use crate::violation_trait::{Violation, ViolationCategory};
 use crate::{Result, Severity, ValidationConfig};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -79,6 +80,64 @@ impl std::fmt::Display for DocumentationViolation {
                     item_name
                 )
             }
+        }
+    }
+}
+
+impl Violation for DocumentationViolation {
+    fn id(&self) -> &str {
+        match self {
+            Self::MissingModuleDoc { .. } => "DOC001",
+            Self::MissingPubItemDoc { .. } => "DOC002",
+            Self::MissingExampleCode { .. } => "DOC003",
+        }
+    }
+
+    fn category(&self) -> ViolationCategory {
+        ViolationCategory::Documentation
+    }
+
+    fn severity(&self) -> Severity {
+        match self {
+            Self::MissingModuleDoc { severity, .. } => *severity,
+            Self::MissingPubItemDoc { severity, .. } => *severity,
+            Self::MissingExampleCode { severity, .. } => *severity,
+        }
+    }
+
+    fn file(&self) -> Option<&PathBuf> {
+        match self {
+            Self::MissingModuleDoc { file, .. } => Some(file),
+            Self::MissingPubItemDoc { file, .. } => Some(file),
+            Self::MissingExampleCode { file, .. } => Some(file),
+        }
+    }
+
+    fn line(&self) -> Option<usize> {
+        match self {
+            Self::MissingModuleDoc { .. } => None,
+            Self::MissingPubItemDoc { line, .. } => Some(*line),
+            Self::MissingExampleCode { line, .. } => Some(*line),
+        }
+    }
+
+    fn suggestion(&self) -> Option<String> {
+        match self {
+            Self::MissingModuleDoc { .. } => {
+                Some("Add //! module-level documentation at the top of the file".to_string())
+            }
+            Self::MissingPubItemDoc {
+                item_kind,
+                item_name,
+                ..
+            } => Some(format!(
+                "Add /// documentation for {} {}",
+                item_kind, item_name
+            )),
+            Self::MissingExampleCode { item_name, .. } => Some(format!(
+                "Add # Example section to {} documentation",
+                item_name
+            )),
         }
     }
 }
@@ -349,6 +408,24 @@ impl DocumentationValidator {
     #[allow(dead_code)]
     fn is_legacy_path(&self, path: &std::path::Path) -> bool {
         self.config.is_legacy_path(path)
+    }
+}
+
+impl crate::validator_trait::Validator for DocumentationValidator {
+    fn name(&self) -> &'static str {
+        "documentation"
+    }
+
+    fn description(&self) -> &'static str {
+        "Validates documentation standards"
+    }
+
+    fn validate(&self, _config: &ValidationConfig) -> anyhow::Result<Vec<Box<dyn Violation>>> {
+        let violations = self.validate_all()?;
+        Ok(violations
+            .into_iter()
+            .map(|v| Box::new(v) as Box<dyn Violation>)
+            .collect())
     }
 }
 

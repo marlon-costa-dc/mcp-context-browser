@@ -27,7 +27,6 @@
 
 use crate::Severity;
 use serde::Deserialize;
-use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 /// Root configuration loaded from `.mcb-validate.toml`
@@ -339,7 +338,7 @@ fn default_magic_allowlist() -> Vec<i64> {
     vec![
         0, 1, 2, 10, 100, 1000, // Common constants
         16384, 32768, 65536, // Buffer sizes
-        86400, 3600, 60,    // Time constants
+        86400, 3600, 60, // Time constants
     ]
 }
 
@@ -557,8 +556,12 @@ mod tests {
         let config = LayerBoundariesConfig::default();
         assert!(config.domain_internal_deps.is_empty());
         assert_eq!(config.application_internal_deps, vec!["mcb-domain"]);
-        assert!(config.server_internal_deps.contains(&"mcb-infrastructure".to_string()));
-        assert!(!config.server_internal_deps.contains(&"mcb-providers".to_string()));
+        assert!(config
+            .server_internal_deps
+            .contains(&"mcb-infrastructure".to_string()));
+        assert!(!config
+            .server_internal_deps
+            .contains(&"mcb-providers".to_string()));
     }
 
     #[test]

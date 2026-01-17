@@ -172,10 +172,7 @@ pub fn is_unauthenticated_route(path: &str) -> bool {
 /// Create a router with authentication middleware applied
 ///
 /// Returns a function that wraps a router with the authentication layer.
-pub fn with_admin_auth(
-    auth_config: AdminAuthConfig,
-    router: axum::Router,
-) -> axum::Router {
+pub fn with_admin_auth(auth_config: AdminAuthConfig, router: axum::Router) -> axum::Router {
     router.layer(axum::middleware::from_fn_with_state(
         Arc::new(auth_config),
         admin_auth_middleware,

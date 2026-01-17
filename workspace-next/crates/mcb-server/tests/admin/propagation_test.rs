@@ -27,15 +27,13 @@ async fn test_config_propagator_with_callback() {
 #[test]
 fn test_propagator_handle_is_running() {
     // Test that the handle properly tracks task state
-    let handle = tokio::runtime::Runtime::new()
-        .unwrap()
-        .block_on(async {
-            let handle = tokio::spawn(async {
-                // Simulate some work
-                tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
-            });
-            PropagatorHandle { handle }
+    let handle = tokio::runtime::Runtime::new().unwrap().block_on(async {
+        let handle = tokio::spawn(async {
+            // Simulate some work
+            tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
         });
+        PropagatorHandle { handle }
+    });
 
     // The task should either be running or have completed
     // is_running() returns a boolean, we verify it's callable and returns expected types
