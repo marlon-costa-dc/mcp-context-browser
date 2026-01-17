@@ -1,6 +1,9 @@
 //! Tests for sync infrastructure
 
-use mcb_infrastructure::infrastructure::sync::{NullSyncProvider, SyncProvider};
+use mcb_application::ports::infrastructure::snapshot::SyncProvider;
+use mcb_infrastructure::infrastructure::sync::NullSyncProvider;
+use std::path::Path;
+use std::time::Duration;
 
 #[test]
 fn test_null_sync_provider_creation() {
@@ -9,39 +12,41 @@ fn test_null_sync_provider_creation() {
     let _provider: Box<dyn SyncProvider> = Box::new(provider);
 }
 
-#[test]
-fn test_null_sync_provider_acquire_lock() {
+#[tokio::test]
+async fn test_null_sync_provider_should_debounce() {
     let provider = NullSyncProvider::new();
 
-    // Null implementation always returns None (no lock)
-    let result = provider.acquire_lock("test-resource", None);
+    // Null implementation always returns false (no debounce)
+    let result = provider.should_debounce(Path::new("/test")).await;
+    assert!(result.is_ok());
+    assert!(!result.unwrap());
+}
+
+#[tokio::test]
+async fn test_null_sync_provider_acquire_sync_slot() {
+    let provider = NullSyncProvider::new();
+
+    // Null implementation always returns None (no slot acquired)
+    let result = provider.acquire_sync_slot(Path::new("/test")).await;
     assert!(result.is_ok());
     assert!(result.unwrap().is_none());
 }
 
-#[test]
-fn test_null_sync_provider_release_lock() {
+#[tokio::test]
+async fn test_null_sync_provider_get_changed_files() {
     let provider = NullSyncProvider::new();
 
-    // Null implementation always succeeds
-    let result = provider.release_lock("non-existent-lock-id");
+    // Null implementation returns empty vec
+    let result = provider.get_changed_files(Path::new("/test")).await;
     assert!(result.is_ok());
+    assert!(result.unwrap().is_empty());
 }
 
 #[test]
-fn test_null_sync_provider_try_lock() {
-    let provider = NullSyncProvider::new();
-
-    // Null implementation always succeeds
-    let result = provider.try_lock("test-resource");
-    assert!(result.is_ok());
-}
-
-#[test]
-fn test_null_sync_provider_default() {
+fn test_null_sync_provider_intervals() {
     let provider = NullSyncProvider::default();
 
-    // Test that default implementation works
-    let result = provider.release_lock("test");
-    assert!(result.is_ok());
+    // Test that interval methods return expected defaults
+    assert_eq!(provider.sync_interval(), Duration::from_secs(60));
+    assert_eq!(provider.debounce_interval(), Duration::from_secs(5));
 }

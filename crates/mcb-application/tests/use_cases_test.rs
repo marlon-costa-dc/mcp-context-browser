@@ -35,13 +35,6 @@ fn test_types_are_send_sync() {
     assert_send_sync::<IndexingServiceImpl>();
     assert_send_sync::<SearchServiceImpl>();
 
-    // Verify that instances can be created and are actually Send + Sync
-    let context: Box<dyn Send + Sync> = Box::new(ContextServiceImpl::default());
-    let indexing: Box<dyn Send + Sync> = Box::new(IndexingServiceImpl::default());
-    let search: Box<dyn Send + Sync> = Box::new(SearchServiceImpl::default());
-
-    // Assert that we have valid instances that implement the traits
-    assert!(context.is::<ContextServiceImpl>());
-    assert!(indexing.is::<IndexingServiceImpl>());
-    assert!(search.is::<SearchServiceImpl>());
+    // Types are Send + Sync - compilation is sufficient proof
+    // Instantiation requires dependencies, so we only verify traits at compile time
 }

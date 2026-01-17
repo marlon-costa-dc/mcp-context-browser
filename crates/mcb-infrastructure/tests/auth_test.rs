@@ -1,6 +1,7 @@
 //! Tests for authentication infrastructure
 
-use mcb_infrastructure::infrastructure::auth::{AuthServiceInterface, NullAuthService};
+use mcb_application::ports::infrastructure::AuthServiceInterface;
+use mcb_infrastructure::infrastructure::auth::NullAuthService;
 
 #[test]
 fn test_null_auth_service_creation() {
@@ -9,30 +10,30 @@ fn test_null_auth_service_creation() {
     let _service: Box<dyn AuthServiceInterface> = Box::new(service);
 }
 
-#[test]
-fn test_null_auth_service_validate_token() {
+#[tokio::test]
+async fn test_null_auth_service_validate_token() {
     let service = NullAuthService::new();
 
     // Null implementation always returns true
-    let result = service.validate_token("any-token");
+    let result = service.validate_token("any-token").await;
     assert!(result.is_ok());
     assert!(result.unwrap());
 }
 
-#[test]
-fn test_null_auth_service_generate_token() {
+#[tokio::test]
+async fn test_null_auth_service_generate_token() {
     let service = NullAuthService::new();
 
-    let result = service.generate_token("test-subject");
+    let result = service.generate_token("test-subject").await;
     assert!(result.is_ok());
     assert_eq!(result.unwrap(), "null-token");
 }
 
-#[test]
-fn test_null_auth_service_default() {
+#[tokio::test]
+async fn test_null_auth_service_default() {
     let service = NullAuthService::default();
 
     // Test that default implementation works
-    let result = service.validate_token("token");
+    let result = service.validate_token("token").await;
     assert!(result.is_ok());
 }
