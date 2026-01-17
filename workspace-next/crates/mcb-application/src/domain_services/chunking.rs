@@ -47,24 +47,19 @@ pub struct ChunkingResult {
 }
 
 impl ChunkingResult {
+    /// Create a new chunking result
+    fn new(file_path: String, language: Language, chunks: Vec<CodeChunk>, used_ast: bool) -> Self {
+        Self { file_path, language, chunks, used_ast }
+    }
+
     /// Create a successful AST-based result
     pub fn from_ast(file_path: String, language: Language, chunks: Vec<CodeChunk>) -> Self {
-        Self {
-            file_path,
-            language,
-            chunks,
-            used_ast: true,
-        }
+        Self::new(file_path, language, chunks, true)
     }
 
     /// Create a fallback result (no AST parsing)
     pub fn from_fallback(file_path: String, language: Language, chunks: Vec<CodeChunk>) -> Self {
-        Self {
-            file_path,
-            language,
-            chunks,
-            used_ast: false,
-        }
+        Self::new(file_path, language, chunks, false)
     }
 }
 

@@ -3,12 +3,50 @@
 //! Application service for code indexing and ingestion operations.
 //! Orchestrates file discovery, chunking, and storage of code embeddings.
 
-use crate::domain_services::search::{ContextServiceInterface, IndexingServiceInterface};
+use crate::domain_services::search::{ContextServiceInterface, IndexingServiceInterface, IndexingResult};
 use mcb_domain::entities::CodeChunk;
 use mcb_domain::error::Result;
 use crate::ports::providers::LanguageChunkingProvider;
 use std::path::Path;
 use std::sync::Arc;
+
+/// Directories to skip during indexing
+const SKIP_DIRS: &[&str] = &[".git", "node_modules", "target", "__pycache__"];
+
+/// Supported file extensions for indexing
+const SUPPORTED_EXTENSIONS: &[&str] = &["rs", "py", "js", "ts", "java", "cpp", "c", "go"];
+
+/// Accumulator for indexing progress and errors
+struct IndexingProgress {
+    files_processed: usize,
+    chunks_created: usize,
+    files_skipped: usize,
+    errors: Vec<String>,
+}
+
+impl IndexingProgress {
+    fn new() -> Self {
+        Self {
+            files_processed: 0,
+            chunks_created: 0,
+            files_skipped: 0,
+            errors: Vec::new(),
+        }
+    }
+
+    fn record_error(&mut self, context: &str, path: &Path, error: impl std::fmt::Display) {
+        self.errors.push(format!("{} {}: {}", context, path.display(), error));
+    }
+
+    fn into_result(self) -> IndexingResult {
+        IndexingResult {
+            files_processed: self.files_processed,
+            chunks_created: self.chunks_created,
+            files_skipped: self.files_skipped,
+            errors: self.errors,
+        }
+    }
+}
 
 /// Indexing service implementation - orchestrates file discovery and chunking
 #[derive(shaku::Component)]
@@ -34,7 +72,7 @@ impl IndexingServiceImpl {
     }
 
     /// Discover files recursively from a path
-    async fn discover_files(&self, path: &Path, errors: &mut Vec<String>) -> Vec<std::path::PathBuf> {
+    async fn discover_files(&self, path: &Path, progress: &mut IndexingProgress) -> Vec<std::path::PathBuf> {
         use tokio::fs;
 
         let mut files = Vec::new();
@@ -44,7 +82,7 @@ impl IndexingServiceImpl {
             let mut entries = match fs::read_dir(&dir_path).await {
                 Ok(entries) => entries,
                 Err(e) => {
-                    errors.push(format!("Failed to read directory {}: {}", dir_path.display(), e));
+                    progress.record_error("Failed to read directory", &dir_path, e);
                     continue;
                 }
             };
@@ -65,84 +103,61 @@ impl IndexingServiceImpl {
 
     /// Check if directory should be visited during indexing
     fn should_visit_dir(path: &Path) -> bool {
-        !path.ends_with(".git")
-            && !path.ends_with("node_modules")
-            && !path.ends_with("target")
-            && !path.ends_with("__pycache__")
+        path.file_name()
+            .and_then(|name| name.to_str())
+            .map(|name| !SKIP_DIRS.contains(&name))
+            .unwrap_or(true)
     }
 
     /// Check if file has a supported extension
     fn is_supported_file(path: &Path) -> bool {
         path.extension()
-            .map(|ext| {
-                let ext_str = ext.to_string_lossy().to_lowercase();
-                matches!(ext_str.as_str(), "rs" | "py" | "js" | "ts" | "java" | "cpp" | "c" | "go")
-            })
+            .and_then(|ext| ext.to_str())
+            .map(|ext| SUPPORTED_EXTENSIONS.contains(&ext.to_lowercase().as_str()))
             .unwrap_or(false)
     }
 
     /// Chunk file content using intelligent AST-based chunking
     fn chunk_file_content(&self, content: &str, path: &Path) -> Vec<CodeChunk> {
-        let file_name = path.to_string_lossy().to_string();
-        self.language_chunker.chunk(content, &file_name)
+        self.language_chunker.chunk(content, &path.to_string_lossy())
     }
 }
 
 #[async_trait::async_trait]
 impl IndexingServiceInterface for IndexingServiceImpl {
-    async fn index_codebase(
-        &self,
-        path: &Path,
-        collection: &str,
-    ) -> Result<crate::domain_services::search::IndexingResult> {
+    async fn index_codebase(&self, path: &Path, collection: &str) -> Result<IndexingResult> {
         use tokio::fs;
 
         self.context_service.initialize(collection).await?;
-        let mut errors = Vec::new();
+        let mut progress = IndexingProgress::new();
 
-        // Discover files recursively
-        let files_to_process = self.discover_files(path, &mut errors).await;
+        // Discover and process files
+        let files = self.discover_files(path, &mut progress).await;
 
-        // Process files and collect results
-        let mut files_processed = 0;
-        let mut chunks_created = 0;
-        let mut files_skipped = 0;
-
-        for file_path in files_to_process {
+        for file_path in files {
             let content = match fs::read_to_string(&file_path).await {
                 Ok(c) => c,
                 Err(e) => {
-                    errors.push(format!("Failed to read {}: {}", file_path.display(), e));
-                    files_skipped += 1;
+                    progress.record_error("Failed to read", &file_path, e);
+                    progress.files_skipped += 1;
                     continue;
                 }
             };
 
             let chunks = self.chunk_file_content(&content, &file_path);
             if let Err(e) = self.context_service.store_chunks(collection, &chunks).await {
-                errors.push(format!("Failed to store chunks for {}: {}", file_path.display(), e));
+                progress.record_error("Failed to store chunks for", &file_path, e);
                 continue;
             }
-            files_processed += 1;
-            chunks_created += chunks.len();
+            progress.files_processed += 1;
+            progress.chunks_created += chunks.len();
         }
 
-        Ok(crate::domain_services::search::IndexingResult {
-            files_processed,
-            chunks_created,
-            files_skipped,
-            errors,
-        })
+        Ok(progress.into_result())
     }
 
     fn get_status(&self) -> crate::domain_services::search::IndexingStatus {
-        crate::domain_services::search::IndexingStatus {
-            is_indexing: false,
-            progress: 0.0,
-            current_file: None,
-            total_files: 0,
-            processed_files: 0,
-        }
+        crate::domain_services::search::IndexingStatus::default()
     }
 
     async fn clear_collection(&self, collection: &str) -> Result<()> {

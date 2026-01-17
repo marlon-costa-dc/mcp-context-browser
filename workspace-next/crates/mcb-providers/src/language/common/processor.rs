@@ -19,7 +19,8 @@ use mcb_domain::value_objects::Language;
 /// // Parse code with tree-sitter
 /// let mut parser = tree_sitter::Parser::new();
 /// parser.set_language(processor.get_language())?;
-/// let tree = parser.parse(content, None).unwrap();
+/// let tree = parser.parse(content, None)
+///     .ok_or_else(|| anyhow::anyhow!("Failed to parse content"))?;
 ///
 /// // Extract chunks using AST
 /// let chunks = processor.extract_chunks_with_tree_sitter(&tree, content, "main.rs", &Language::Rust);

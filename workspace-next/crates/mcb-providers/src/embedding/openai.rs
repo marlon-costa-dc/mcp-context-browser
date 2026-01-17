@@ -34,11 +34,10 @@ use crate::utils::HttpResponseUtils;
 /// use reqwest::Client;
 /// use std::time::Duration;
 ///
-/// fn example() {
+/// fn example() -> Result<(), Box<dyn std::error::Error>> {
 ///     let client = Client::builder()
 ///         .timeout(Duration::from_secs(30))
-///         .build()
-///         .unwrap();
+///         .build()?;
 ///     let provider = OpenAIEmbeddingProvider::new(
 ///         "sk-your-api-key".to_string(),
 ///         None,
@@ -46,6 +45,7 @@ use crate::utils::HttpResponseUtils;
 ///         Duration::from_secs(30),
 ///         client,
 ///     );
+///     Ok(())
 /// }
 /// ```
 #[derive(Component)]

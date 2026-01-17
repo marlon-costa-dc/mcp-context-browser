@@ -32,6 +32,9 @@ pub mod violation_macro;
 pub mod validator_trait;
 pub mod generic_reporter;
 
+// === Configuration System (Phase 5) ===
+pub mod config;
+
 // === New Validators (using new system) ===
 pub mod clean_architecture;
 pub mod layer_flow;
@@ -64,6 +67,12 @@ use thiserror::Error;
 pub use violation_trait::{Violation, ViolationCategory, ViolationExt};
 pub use validator_trait::{LegacyValidatorAdapter, Validator, ValidatorRegistry};
 pub use generic_reporter::{GenericReport, GenericReporter, GenericSummary, ViolationEntry};
+
+// Re-export configuration system
+pub use config::{
+    ArchitectureRulesConfig, FileConfig, GeneralConfig, OrganizationRulesConfig,
+    QualityRulesConfig, RulesConfig, ShakuRulesConfig, SolidRulesConfig, ValidatorsConfig,
+};
 
 // Re-export new validators
 pub use clean_architecture::{CleanArchitectureValidator, CleanArchitectureViolation};
@@ -576,6 +585,75 @@ impl ArchitectureValidator {
     /// Run only PMAT integration validation
     pub fn validate_pmat(&self) -> Result<Vec<PmatViolation>> {
         self.pmat.validate_all()
+    }
+
+    // ========== Registry-Based Validation (Phase 7) ==========
+
+    /// Create a ValidatorRegistry with the standard new validators
+    ///
+    /// This registry contains validators that implement the new `Validator` trait:
+    /// - CleanArchitectureValidator
+    /// - LayerFlowValidator
+    /// - PortAdapterValidator
+    /// - VisibilityValidator
+    pub fn new_validator_registry(&self) -> ValidatorRegistry {
+        ValidatorRegistry::standard_for(&self.config.workspace_root)
+    }
+
+    /// Validate using the new registry-based system
+    ///
+    /// This runs only the validators that have been migrated to the new
+    /// trait-based architecture. Use `validate_all()` for comprehensive
+    /// validation including legacy validators.
+    ///
+    /// # Returns
+    ///
+    /// A `GenericReport` containing all violations from registry validators.
+    pub fn validate_with_registry(&self) -> Result<GenericReport> {
+        let registry = self.new_validator_registry();
+        let violations = registry
+            .validate_all(&self.config)
+            .map_err(|e| ValidationError::Config(e.to_string()))?;
+
+        Ok(GenericReporter::create_report(&violations, self.config.workspace_root.clone()))
+    }
+
+    /// Validate specific validators by name using the registry
+    ///
+    /// # Arguments
+    ///
+    /// * `names` - Names of validators to run (e.g., &["clean_architecture", "layer_flow"])
+    ///
+    /// # Available validators
+    ///
+    /// - "clean_architecture" - Clean Architecture compliance
+    /// - "layer_flow" - Layer dependency rules
+    /// - "port_adapter" - Port/adapter patterns
+    /// - "visibility" - Visibility modifiers
+    pub fn validate_named(&self, names: &[&str]) -> Result<GenericReport> {
+        let registry = self.new_validator_registry();
+        let violations = registry
+            .validate_named(&self.config, names)
+            .map_err(|e| ValidationError::Config(e.to_string()))?;
+
+        Ok(GenericReporter::create_report(&violations, self.config.workspace_root.clone()))
+    }
+
+    /// Run both legacy and new validators, returning a combined report
+    ///
+    /// This method provides the most comprehensive validation by running:
+    /// 1. All legacy validators (via `validate_all()`)
+    /// 2. All new registry validators (via `validate_with_registry()`)
+    ///
+    /// # Note
+    ///
+    /// As validators are migrated to the new system, they will be removed
+    /// from the legacy path and added to the registry path to avoid
+    /// duplicate violation reports.
+    pub fn validate_comprehensive(&mut self) -> Result<(ValidationReport, GenericReport)> {
+        let legacy_report = self.validate_all()?;
+        let registry_report = self.validate_with_registry()?;
+        Ok((legacy_report, registry_report))
     }
 }
 

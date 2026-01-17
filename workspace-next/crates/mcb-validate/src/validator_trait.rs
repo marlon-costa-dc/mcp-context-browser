@@ -118,16 +118,40 @@ impl ValidatorRegistry {
     /// Create a registry with standard validators
     ///
     /// This registers all built-in validators with default configuration.
-    /// Currently returns an empty registry - validators will be added
-    /// as they are migrated to the new trait-based architecture.
+    /// Validators include:
+    /// - clean_architecture: Clean Architecture compliance
+    /// - layer_flow: Layer dependency rules
+    /// - port_adapter: Port/adapter patterns
+    /// - visibility: Visibility modifiers
     pub fn standard() -> Self {
-        // TODO: Register migrated validators here
-        // Example:
-        // Self::new()
-        //     .with_validator(Box::new(DependencyValidator::new()))
-        //     .with_validator(Box::new(QualityValidator::new()))
-        //     .with_validator(Box::new(OrganizationValidator::new()))
+        use crate::clean_architecture::CleanArchitectureValidator;
+        use crate::layer_flow::LayerFlowValidator;
+        use crate::port_adapter::PortAdapterValidator;
+        use crate::visibility::VisibilityValidator;
+
+        // Create validators that need workspace root
+        // They will receive the actual config when validate() is called
         Self::new()
+            .with_validator(Box::new(CleanArchitectureValidator::new(".")))
+            .with_validator(Box::new(LayerFlowValidator::new()))
+            .with_validator(Box::new(PortAdapterValidator::new()))
+            .with_validator(Box::new(VisibilityValidator::new()))
+    }
+
+    /// Create a registry with standard validators for a specific workspace
+    pub fn standard_for(workspace_root: impl Into<std::path::PathBuf>) -> Self {
+        use crate::clean_architecture::CleanArchitectureValidator;
+        use crate::layer_flow::LayerFlowValidator;
+        use crate::port_adapter::PortAdapterValidator;
+        use crate::visibility::VisibilityValidator;
+
+        let root = workspace_root.into();
+
+        Self::new()
+            .with_validator(Box::new(CleanArchitectureValidator::new(root)))
+            .with_validator(Box::new(LayerFlowValidator::new()))
+            .with_validator(Box::new(PortAdapterValidator::new()))
+            .with_validator(Box::new(VisibilityValidator::new()))
     }
 }
 

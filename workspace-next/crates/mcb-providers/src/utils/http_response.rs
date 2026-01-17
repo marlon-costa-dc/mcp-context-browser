@@ -6,6 +6,11 @@
 use mcb_domain::error::{Error, Result};
 use reqwest::Response;
 
+/// Format error message for embedding provider
+fn embedding_error(provider: &str, context: &str, details: &str) -> Error {
+    Error::embedding(format!("{provider} {context}: {details}"))
+}
+
 /// Utilities for processing HTTP responses
 ///
 /// Provides common response handling patterns used by embedding providers.
@@ -28,33 +33,18 @@ impl HttpResponseUtils {
 
         if !status.is_success() {
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+            let code = status.as_u16();
 
-            return match status.as_u16() {
-                401 => Err(Error::embedding(format!(
-                    "{} authentication failed: {}",
-                    provider_name, error_text
-                ))),
-                429 => Err(Error::embedding(format!(
-                    "{} rate limit exceeded: {}",
-                    provider_name, error_text
-                ))),
-                500..=599 => Err(Error::embedding(format!(
-                    "{} server error ({}): {}",
-                    provider_name,
-                    status.as_u16(),
-                    error_text
-                ))),
-                _ => Err(Error::embedding(format!(
-                    "{} request failed ({}): {}",
-                    provider_name,
-                    status.as_u16(),
-                    error_text
-                ))),
-            };
+            return Err(match code {
+                401 => embedding_error(provider_name, "authentication failed", &error_text),
+                429 => embedding_error(provider_name, "rate limit exceeded", &error_text),
+                500..=599 => embedding_error(provider_name, &format!("server error ({code})"), &error_text),
+                _ => embedding_error(provider_name, &format!("request failed ({code})"), &error_text),
+            });
         }
 
         response.json().await.map_err(|e| {
-            Error::embedding(format!("Failed to parse {} response: {}", provider_name, e))
+            embedding_error(provider_name, "response parse failed", &e.to_string())
         })
     }
 }

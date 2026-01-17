@@ -33,17 +33,17 @@ use crate::utils::HttpResponseUtils;
 /// use reqwest::Client;
 /// use std::time::Duration;
 ///
-/// fn example() {
+/// fn example() -> Result<(), Box<dyn std::error::Error>> {
 ///     let client = Client::builder()
 ///         .timeout(Duration::from_secs(30))
-///         .build()
-///         .unwrap();
+///         .build()?;
 ///     let provider = OllamaEmbeddingProvider::new(
 ///         "http://localhost:11434".to_string(),
 ///         "nomic-embed-text".to_string(),
 ///         Duration::from_secs(30),
 ///         client,
 ///     );
+///     Ok(())
 /// }
 /// ```
 pub struct OllamaEmbeddingProvider {

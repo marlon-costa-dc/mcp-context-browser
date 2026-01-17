@@ -8,6 +8,7 @@
 //! - Value objects are immutable
 //! - Server layer boundaries are respected
 
+use crate::violation_trait::{Violation, ViolationCategory};
 use crate::{Result, Severity, ValidationConfig};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -171,6 +172,79 @@ impl std::fmt::Display for CleanArchitectureViolation {
     }
 }
 
+impl Violation for CleanArchitectureViolation {
+    fn id(&self) -> &str {
+        match self {
+            Self::DomainContainsImplementation { .. } => "CA001",
+            Self::HandlerCreatesService { .. } => "CA002",
+            Self::PortMissingComponentDerive { .. } => "CA003",
+            Self::EntityMissingIdentity { .. } => "CA004",
+            Self::ValueObjectMutable { .. } => "CA005",
+            Self::ServerImportsProviderDirectly { .. } => "CA006",
+        }
+    }
+
+    fn category(&self) -> ViolationCategory {
+        ViolationCategory::Architecture
+    }
+
+    fn severity(&self) -> Severity {
+        match self {
+            Self::DomainContainsImplementation { severity, .. } => *severity,
+            Self::HandlerCreatesService { severity, .. } => *severity,
+            Self::PortMissingComponentDerive { severity, .. } => *severity,
+            Self::EntityMissingIdentity { severity, .. } => *severity,
+            Self::ValueObjectMutable { severity, .. } => *severity,
+            Self::ServerImportsProviderDirectly { severity, .. } => *severity,
+        }
+    }
+
+    fn file(&self) -> Option<&PathBuf> {
+        match self {
+            Self::DomainContainsImplementation { file, .. } => Some(file),
+            Self::HandlerCreatesService { file, .. } => Some(file),
+            Self::PortMissingComponentDerive { file, .. } => Some(file),
+            Self::EntityMissingIdentity { file, .. } => Some(file),
+            Self::ValueObjectMutable { file, .. } => Some(file),
+            Self::ServerImportsProviderDirectly { file, .. } => Some(file),
+        }
+    }
+
+    fn line(&self) -> Option<usize> {
+        match self {
+            Self::DomainContainsImplementation { line, .. } => Some(*line),
+            Self::HandlerCreatesService { line, .. } => Some(*line),
+            Self::PortMissingComponentDerive { line, .. } => Some(*line),
+            Self::EntityMissingIdentity { line, .. } => Some(*line),
+            Self::ValueObjectMutable { line, .. } => Some(*line),
+            Self::ServerImportsProviderDirectly { line, .. } => Some(*line),
+        }
+    }
+
+    fn suggestion(&self) -> Option<String> {
+        match self {
+            Self::DomainContainsImplementation { .. } => {
+                Some("Move implementation logic to mcb-providers or mcb-infrastructure".to_string())
+            }
+            Self::HandlerCreatesService { .. } => {
+                Some("Inject service via constructor/Shaku instead of creating directly".to_string())
+            }
+            Self::PortMissingComponentDerive { trait_name, .. } => {
+                Some(format!("Add #[derive(Component)] and #[shaku(interface = {})]", trait_name))
+            }
+            Self::EntityMissingIdentity { .. } => {
+                Some("Add id: Uuid or similar identity field to entity".to_string())
+            }
+            Self::ValueObjectMutable { .. } => {
+                Some("Value objects should be immutable - return new instance instead".to_string())
+            }
+            Self::ServerImportsProviderDirectly { .. } => {
+                Some("Import providers through mcb-infrastructure re-exports".to_string())
+            }
+        }
+    }
+}
+
 /// Clean Architecture validator
 pub struct CleanArchitectureValidator {
     config: ValidationConfig,
@@ -187,7 +261,7 @@ impl CleanArchitectureValidator {
         Self { config }
     }
 
-    /// Run all architecture validations
+    /// Run all architecture validations (returns typed violations)
     pub fn validate_all(&self) -> Result<Vec<CleanArchitectureViolation>> {
         let mut violations = Vec::new();
         violations.extend(self.validate_server_layer_boundaries()?);
@@ -197,6 +271,31 @@ impl CleanArchitectureValidator {
         Ok(violations)
     }
 
+    /// Run all validations (returns boxed violations for Validator trait)
+    fn validate_boxed(&self) -> Result<Vec<Box<dyn Violation>>> {
+        let typed_violations = self.validate_all()?;
+        Ok(typed_violations
+            .into_iter()
+            .map(|v| Box::new(v) as Box<dyn Violation>)
+            .collect())
+    }
+}
+
+impl crate::validator_trait::Validator for CleanArchitectureValidator {
+    fn name(&self) -> &'static str {
+        "clean_architecture"
+    }
+
+    fn description(&self) -> &'static str {
+        "Validates Clean Architecture compliance: layer boundaries, DI patterns, entity identity, value object immutability"
+    }
+
+    fn validate(&self, _config: &ValidationConfig) -> anyhow::Result<Vec<Box<dyn Violation>>> {
+        self.validate_boxed().map_err(|e| anyhow::anyhow!("{}", e))
+    }
+}
+
+impl CleanArchitectureValidator {
     /// Validate server layer doesn't import providers directly
     fn validate_server_layer_boundaries(&self) -> Result<Vec<CleanArchitectureViolation>> {
         let mut violations = Vec::new();
