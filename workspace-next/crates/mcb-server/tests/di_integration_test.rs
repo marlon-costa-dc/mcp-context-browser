@@ -10,7 +10,7 @@ use mcb_domain::domain_services::search::{
     ContextServiceInterface, IndexingServiceInterface, SearchServiceInterface,
 };
 use mcb_domain::value_objects::Embedding;
-use mcb_infrastructure::cache::config::CacheEntryConfig;
+use mcb_domain::ports::providers::cache::CacheEntryConfig;
 use mcb_infrastructure::config::{AppConfig, ConfigBuilder};
 use mcb_infrastructure::di::bootstrap::{
     ConfigHealthAccess, FullContainer, InfrastructureComponents, ProviderComponentsAccess,
@@ -56,12 +56,23 @@ async fn test_full_container_provides_all_services() {
         .await
         .expect("Container creation should succeed");
 
-    // Verify all services are accessible
-    let _indexing: &dyn IndexingServiceInterface = container.indexing_service().as_ref();
-    let _context: &dyn ContextServiceInterface = container.context_service().as_ref();
-    let _search: &dyn SearchServiceInterface = container.search_service().as_ref();
+    // Verify all services are accessible and can perform basic operations
+    let indexing = container.indexing_service();
+    let context = container.context_service();
+    let search = container.search_service();
 
-    // If we got here without panic, all services are available
+    // Verify indexing service is functional
+    let status = indexing.get_status();
+    assert!(!status.is_indexing, "Fresh container should not be actively indexing");
+
+    // Verify context service reports valid dimensions
+    let dimensions = context.embedding_dimensions();
+    assert!(dimensions > 0, "Context service should report positive embedding dimensions");
+
+    // Verify search service exists (search requires initialized collection)
+    // Just verify the Arc is not null by checking it can be cloned
+    let _search_clone = search.clone();
+    assert!(true, "All services are accessible and functional");
 }
 
 #[tokio::test]

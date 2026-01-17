@@ -413,7 +413,7 @@ impl ShakuValidator {
                     continue;
                 }
 
-                // Skip DI bootstrap, factory, and module files (they're allowed to instantiate)
+                // Skip DI bootstrap, factory, module, and composition root files (they're allowed to instantiate)
                 let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
                 let path_str = path.to_string_lossy();
                 if file_name == "bootstrap.rs"
@@ -424,6 +424,9 @@ impl ShakuValidator {
                     || file_name == "implementation.rs"
                     || file_name == "provider.rs"  // Provider aggregators create instances
                     || file_name == "providers.rs"  // Provider config creates providers
+                    || file_name == "mcp_server.rs"  // Composition root for MCP server
+                    || file_name == "server.rs"  // Server composition roots
+                    || file_name == "main.rs"  // Application entry point
                     || path_str.contains("/di/modules/")  // All DI module files
                     || path_str.contains("/di/factory/")  // All DI factory files
                 {

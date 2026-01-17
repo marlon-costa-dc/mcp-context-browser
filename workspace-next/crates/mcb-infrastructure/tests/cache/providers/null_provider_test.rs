@@ -1,6 +1,6 @@
 //! Null Cache Provider Tests
 
-use mcb_infrastructure::cache::config::CacheEntryConfig;
+use mcb_domain::ports::providers::cache::CacheEntryConfig;
 use mcb_providers::cache::NullCacheProvider;
 use mcb_domain::ports::providers::cache::CacheProvider;
 

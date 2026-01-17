@@ -2,7 +2,7 @@
 //!
 //! Tests for SharedCacheProvider and namespacing.
 
-use mcb_infrastructure::cache::config::CacheEntryConfig;
+use mcb_domain::ports::providers::cache::CacheEntryConfig;
 use mcb_infrastructure::cache::provider::{CacheProviderType, SharedCacheProvider};
 use mcb_providers::cache::NullCacheProvider;
 use std::time::Duration;
