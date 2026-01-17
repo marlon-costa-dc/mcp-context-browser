@@ -1,7 +1,7 @@
 //! Tests for search domain services
 
-use mcb_application::use_cases::SearchServiceImpl;
 use mcb_application::domain_services::search::SearchServiceInterface;
+use mcb_application::use_cases::SearchServiceImpl;
 use std::sync::Arc;
 
 // Mock implementation for testing
@@ -14,15 +14,27 @@ impl mcb_application::ports::services::ContextServiceInterface for MockContextSe
         Ok(())
     }
 
-    async fn store_chunks(&self, _collection: &str, _chunks: &[mcb_domain::entities::CodeChunk]) -> mcb_domain::error::Result<()> {
+    async fn store_chunks(
+        &self,
+        _collection: &str,
+        _chunks: &[mcb_domain::entities::CodeChunk],
+    ) -> mcb_domain::error::Result<()> {
         Ok(())
     }
 
-    async fn search_similar(&self, _collection: &str, _query: &str, _limit: usize) -> mcb_domain::error::Result<Vec<mcb_domain::value_objects::SearchResult>> {
+    async fn search_similar(
+        &self,
+        _collection: &str,
+        _query: &str,
+        _limit: usize,
+    ) -> mcb_domain::error::Result<Vec<mcb_domain::value_objects::SearchResult>> {
         Ok(Vec::new())
     }
 
-    async fn embed_text(&self, _text: &str) -> mcb_domain::error::Result<mcb_domain::value_objects::Embedding> {
+    async fn embed_text(
+        &self,
+        _text: &str,
+    ) -> mcb_domain::error::Result<mcb_domain::value_objects::Embedding> {
         Ok(mcb_domain::value_objects::Embedding {
             vector: vec![0.0; 384],
             model: "mock-model".to_string(),
@@ -46,8 +58,9 @@ impl mcb_application::ports::services::ContextServiceInterface for MockContextSe
 #[test]
 fn test_search_service_creation() {
     // Create a mock context service
-    let context_service: Arc<dyn mcb_application::domain_services::search::ContextServiceInterface> =
-        Arc::new(MockContextService);
+    let context_service: Arc<
+        dyn mcb_application::domain_services::search::ContextServiceInterface,
+    > = Arc::new(MockContextService);
 
     let search_service = SearchServiceImpl::new(context_service);
 
@@ -58,17 +71,18 @@ fn test_search_service_creation() {
 #[test]
 fn test_search_service_search() {
     // Create a mock context service
-    let context_service: Arc<dyn mcb_application::domain_services::search::ContextServiceInterface> =
-        Arc::new(MockContextService);
+    let context_service: Arc<
+        dyn mcb_application::domain_services::search::ContextServiceInterface,
+    > = Arc::new(MockContextService);
 
     let search_service = SearchServiceImpl::new(context_service);
 
     // Test search functionality (will return empty results with mock)
-    let result = tokio::runtime::Runtime::new()
-        .unwrap()
-        .block_on(async {
-            search_service.search("test-collection", "test-query", 10).await
-        });
+    let result = tokio::runtime::Runtime::new().unwrap().block_on(async {
+        search_service
+            .search("test-collection", "test-query", 10)
+            .await
+    });
 
     // Should succeed but return empty results
     assert!(result.is_ok());

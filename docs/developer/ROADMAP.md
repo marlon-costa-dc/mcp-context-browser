@@ -104,12 +104,14 @@ Transform MCP Context Browser into a comprehensive development platform combinin
 #### Technical Details
 
 **Git Integration:**
+
 -   **New Dependency**: git2 (libgit2 bindings)
 -   **New Files**: ~12 source files
 -   **Estimated LOC**: ~2500
 -   **ADR**: [008-git-aware-semantic-indexing-v0.2.0](../adr/008-git-aware-semantic-indexing-v0.2.0.md)
 
 **Session Memory:**
+
 -   **New Dependency**: sqlx (SQLite support)
 -   **New Files**: ~15 source files
 -   **Estimated LOC**: ~3000

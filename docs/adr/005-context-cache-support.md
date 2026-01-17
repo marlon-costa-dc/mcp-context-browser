@@ -8,7 +8,7 @@
 
 ## Context
 
-To optimize performance of frequent read/write context operations, we decided to introduce a caching mechanism. Without cache, each request could result in redundant calculations or accesses. We considered an in-memory solution for speed, and also the possibility of distributed cache for scenarios with multiple instances or greater persistence. We mapped two options: Moka (in-memory cache library, thread-safe, in Rust) for local use, and Redis (in-memory database/cache external) for shared cache.
+To optimize performance of frequent read/write context operations, we decided to introduce a caching mechanism. Without cache, each request could Result in redundant calculations or accesses. We considered an in-memory solution for speed, and also the possibility of distributed cache for scenarios with multiple instances or greater persistence. We mapped two options: Moka (in-memory cache library, thread-safe, in Rust) for local use, and Redis (in-memory database/cache external) for shared cache.
 
 ## Decision
 

@@ -157,10 +157,12 @@ VECTOR_STORE_PROVIDER=edgevec
 Both tools support the same core languages. MCP-context-browser v0.1.0 now includes:
 
 **Original (matching Claude-context):**
+
 -   Rust, Python, JavaScript, TypeScript
 -   Go, Java, C, C++, C#
 
 **Added in v0.1.0:**
+
 -   Ruby, PHP, Swift, Kotlin
 
 ## Differences

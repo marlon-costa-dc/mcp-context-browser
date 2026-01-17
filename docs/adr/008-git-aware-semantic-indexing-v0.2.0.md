@@ -12,6 +12,7 @@
 > -   Blocking: Requires git2 dependency and new module structure
 >
 > **Target crate structure (v0.2.0)**:
+>
 > -   `crates/mcb-domain/src/git.rs` - Git domain types
 > -   `crates/mcb-application/src/ports/providers/git.rs` - GitProvider trait
 > -   `crates/mcb-providers/src/git/` - git2 implementation

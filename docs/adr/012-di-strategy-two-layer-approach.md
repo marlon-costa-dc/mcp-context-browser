@@ -13,16 +13,18 @@ The MCP Context Browser uses Shaku as its dependency injection framework. During
 Different service categories have different requirements:
 
 1.  **Infrastructure services** (cache, auth, events, metrics):
-   -   Stateless or simple state
-   -   Can be instantiated at compile-time with default values
-   -   Don't require async initialization
-   -   Have predictable construction parameters
 
-2.  **Application services** (indexing, search, context):
-   -   Require runtime configuration (API keys, endpoints, model names)
-   -   Need async initialization (connecting to vector stores, loading models)
-   -   Have complex dependencies on production providers
-   -   Construction parameters vary based on configuration
+-   Stateless or simple state
+-   Can be instantiated at compile-time with default values
+-   Don't require async initialization
+-   Have predictable construction parameters
+
+1.  **Application services** (indexing, search, context):
+
+-   Require runtime configuration (API keys, endpoints, model names)
+-   Need async initialization (connecting to vector stores, loading models)
+-   Have complex dependencies on production providers
+-   Construction parameters vary based on configuration
 
 ### Why Not Pure Shaku?
 

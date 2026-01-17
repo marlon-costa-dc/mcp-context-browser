@@ -56,6 +56,7 @@ cargo run --release
 | `JWT_EXPIRATION` | u64 | 1+ | 3600 | Token expiration in seconds |
 
 **Behavior:**
+
 -   If ALL THREE (`ADMIN_USERNAME`, `ADMIN_PASSWORD`, `JWT_SECRET`) are set and valid:
 -   ✅ Admin interface ENABLED
 -   Admin user created automatically
@@ -84,6 +85,7 @@ export JWT_EXPIRATION="86400"  # 24 hours
 | `ADMIN_PASSWORD` | String | 8 chars | Empty | Admin password (also used for admin) |
 
 **Behavior:**
+
 -   If BOTH `JWT_SECRET` AND `ADMIN_PASSWORD` are set and valid:
 -   ✅ Authentication ENABLED
 -   Admin user created with hashed password
@@ -114,6 +116,7 @@ export ADMIN_PASSWORD="min-8-char-password"
 | `DATABASE_CONNECTION_TIMEOUT_SECS` | u64 | 0 | 30 | Connection timeout (seconds) |
 
 **Behavior:**
+
 -   If `DATABASE_URL` is set and valid:
 -   ✅ Database ENABLED
 -   Connection pool created with specified parameters

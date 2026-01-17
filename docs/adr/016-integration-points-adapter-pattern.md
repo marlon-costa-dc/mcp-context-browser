@@ -29,6 +29,7 @@ MCB Handler (MCP protocol)
 ### Example: Complexity Analyzer
 
 **PMAT Original** (100% reused):
+
 ```rust
 // libs/code-metrics/src/complexity/analyzer.rs
 // DIRECT COPY from PMAT
@@ -45,6 +46,7 @@ impl ComplexityAnalyzer {
 ```
 
 **MCB Adapter** (thin wrapper):
+
 ```rust
 // crates/mcb-providers/src/analyzers/complexity_adapter.rs
 
@@ -68,6 +70,7 @@ impl ComplexityAnalyzerAdapter {
 ```
 
 **MCB Service** (uses adapter):
+
 ```rust
 // crates/mcb-application/src/use_cases/analysis/complexity.rs
 
@@ -104,14 +107,15 @@ impl ComplexityAnalysisInterface for ComplexityAnalysisService {
 
 ### Adapter Responsibilities
 
-1. **Type Conversion**: PMAT types ↔ MCB types
-2. **Error Translation**: anyhow::Error → MCB's typed errors
-3. **Async Bridging**: Wrap blocking PMAT code in `spawn_blocking`
-4. **Minimal Logic**: <50 LOC, pure translation
+1.  **Type Conversion**: PMAT types ↔ MCB types
+2.  **Error Translation**: anyhow::Error → MCB's typed errors
+3.  **Async Bridging**: Wrap blocking PMAT code in `spawn_blocking`
+4.  **Minimal Logic**: <50 LOC, pure translation
 
 ### Integration Point Definition
 
 **v0.2.0** (This release):
+
 -   Define adapter interfaces
 -   Create empty adapter directory structure
 -   Document expected PMAT → MCB conversions
@@ -134,22 +138,26 @@ pub trait AnalysisAdapter: Send + Sync {
 ```
 
 **v0.3.0** (Implementation):
+
 -   Implement adapters for complexity, TDG, SATD
 -   Port PMAT code to `libs/code-metrics/`
 
 ## Consequences
 
 **Positive**:
+
 -   100% PMAT algorithm reuse (no reimplementation risk)
 -   Clean architecture preserved
 -   Type safety via adapter contracts
 -   Easy to add new adapters
 
 **Negative**:
+
 -   Indirection overhead (~1-2ms per call)
 -   Two type systems to maintain
 
 **Mitigation**:
+
 -   Keep adapters thin (target <50 LOC)
 -   Use inline conversions where possible
 -   Benchmark to ensure <1% overhead
@@ -163,9 +171,9 @@ pub trait AnalysisAdapter: Send + Sync {
 
 ## Related ADRs
 
-- [ADR-013: Clean Architecture Crate Separation](013-clean-architecture-crate-separation.md) - Crate organization
-- [ADR-015: Workspace Shared Libraries](015-workspace-shared-libraries.md) - PMAT code location
-- [ADR-019: Error Handling Strategy](019-error-handling-strategy.md) - Error conversion patterns
+-   [ADR-013: Clean Architecture Crate Separation](013-clean-architecture-crate-separation.md) - Crate organization
+-   [ADR-015: Workspace Shared Libraries](015-workspace-shared-libraries.md) - PMAT code location
+-   [ADR-019: Error Handling Strategy](019-error-handling-strategy.md) - Error conversion patterns
 
 ---
 

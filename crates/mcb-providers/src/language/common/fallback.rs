@@ -109,7 +109,12 @@ impl<'a> GenericFallbackChunker<'a> {
     }
 
     /// Create a chunk from a completed block
-    fn create_chunk_from_block(&self, context: &mut ChunkingContext, start_line: usize, end_line: usize) {
+    fn create_chunk_from_block(
+        &self,
+        context: &mut ChunkingContext,
+        start_line: usize,
+        end_line: usize,
+    ) {
         let params = ChunkCreationParams {
             lines: context.current_block,
             start_line,

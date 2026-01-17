@@ -212,6 +212,7 @@ crates/
 ```
 
 **Dependency Direction** (inward only):
+
 ```
 mcb-server → mcb-infrastructure → mcb-application → mcb-domain
                     ↓

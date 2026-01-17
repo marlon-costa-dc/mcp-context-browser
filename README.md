@@ -26,7 +26,7 @@ The MCP Context Browser architecture follows low coupling and high cohesion prin
 
 ### Modular Crates
 
-The project is divided into crates, for example: mcp_context_browser_core, mcp_context_browser_providers, mcp_context_browser_eventbus, etc. Each crate concentrates a set of responsibilities. This makes the codebase more manageable and allows crate reuse in other MCP projects.
+The project is divided into crates, for example: MCP_context_browser_core, MCP_context_browser_providers, MCP_context_browser_eventbus, etc. Each crate concentrates a set of responsibilities. This makes the codebase more manageable and allows crate reuse in other MCP projects.
 
 ### Service Manager & DI
 
@@ -167,7 +167,7 @@ The Context Browser offers a web administration panel that can be used to monito
 
 ### Access
 
-By default, after starting the server, the panel is accessible at http://localhost:8080/admin (adjust host/port according to your configuration). When accessing this URL via browser, you will see a simple interface showing server statistics, list of active providers, last activity of each one, and a stream of recent events.
+By default, after starting the server, the panel is accessible at <http://localhost:8080/admin> (adjust host/port according to your configuration). When accessing this URL via browser, you will see a simple interface showing server statistics, list of active providers, last activity of each one, and a stream of recent events.
 
 The displayed events include context addition/update, cache hits/misses, and any runtime warnings/errors. Thanks to SSE, new events appear in real-time on the page as they are emitted by the EventBus.
 

@@ -18,6 +18,7 @@ PMAT has 4600+ tests. MCB has 308+ tests. Integration must preserve both.
 **Location**: `crates/<crate>/tests/` or `libs/<lib>/tests/`
 
 **Pattern**:
+
 ```rust
 // crates/mcb-application/tests/search_service_test.rs
 
@@ -41,6 +42,7 @@ async fn test_search_returns_relevant_results() {
 **Location**: `crates/mcb-server/tests/integration/`
 
 **Pattern**:
+
 ```rust
 // crates/mcb-server/tests/integration/full_flow_test.rs
 
@@ -62,6 +64,7 @@ async fn test_index_and_search_flow() {
 **Location**: `libs/code-metrics/tests/` (ported from PMAT)
 
 **Pattern**:
+
 ```rust
 // libs/code-metrics/tests/complexity_properties.rs
 
@@ -97,43 +100,50 @@ crates/
 ## Test Migration Plan
 
 ### v0.2.0 (Structure)
+
 -   Define test directory structure for libs/
 -   Create test utilities for PMAT code
 -   Port infrastructure tests
 
 ### v0.3.0 (Migration)
+
 -   Port 1000+ PMAT tests for complexity, TDG, SATD
 -   Update tests to use MCB types
 -   Target: 1500+ total tests
 
 ### v0.4.0 (Extended)
+
 -   Port 1500+ additional PMAT tests
 -   Target: 3000+ total tests
 
 ### v1.0.0 (Complete)
+
 -   5390+ total tests
 -   Full coverage of all features
 
 ## Consequences
 
 **Positive**:
+
 -   Preserved test coverage
 -   Clear test organization
 -   Property-based testing for edge cases
 
 **Negative**:
+
 -   CI time increase (~5 min → ~15 min)
 
 **Mitigation**:
+
 -   Parallel test execution
 -   Test categorization (quick/full)
 -   CI caching
 
 ## Related ADRs
 
-- [ADR-012: Two-Layer DI Strategy](012-di-strategy-two-layer-approach.md) - Test container setup
-- [ADR-013: Clean Architecture Crate Separation](013-clean-architecture-crate-separation.md) - Test location per crate
-- [ADR-017: Phased Feature Integration](017-phased-feature-integration.md) - Test migration timeline
+-   [ADR-012: Two-Layer DI Strategy](012-di-strategy-two-layer-approach.md) - Test container setup
+-   [ADR-013: Clean Architecture Crate Separation](013-clean-architecture-crate-separation.md) - Test location per crate
+-   [ADR-017: Phased Feature Integration](017-phased-feature-integration.md) - Test migration timeline
 
 ---
 

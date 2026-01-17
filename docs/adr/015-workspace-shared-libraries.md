@@ -9,6 +9,7 @@
 ## Context
 
 Future integration of PMAT code requires shared libraries for:
+
 -   Tree-sitter AST parsing (used by search + analysis)
 -   Code metrics algorithms (complexity, debt scoring)
 -   Analysis orchestration (parallel processing, caching)
@@ -49,6 +50,7 @@ tree-sitter = "0.26"
 **Purpose**: Unified AST parsing for chunking + analysis
 
 **API**:
+
 ```rust
 pub trait LanguageProcessor: Send + Sync {
     // Chunking (existing MCB capability in mcb-providers)
@@ -61,6 +63,7 @@ pub trait LanguageProcessor: Send + Sync {
 ```
 
 **v0.1.1 Status**:
+
 -   Chunking code lives in `crates/mcb-providers/src/language/`
 -   12 language processors implemented
 -   Will be extracted to this library in v0.3.0
@@ -70,6 +73,7 @@ pub trait LanguageProcessor: Send + Sync {
 **Purpose**: Complexity/debt algorithms from PMAT
 
 **API** (defined in v0.1.1, implemented in v0.3.0):
+
 ```rust
 pub trait MetricsCalculator: Send + Sync {
     fn calculate_complexity(&self, ast: &ParsedCode) -> ComplexityMetrics;
@@ -84,40 +88,46 @@ pub trait MetricsCalculator: Send + Sync {
 ## Consequences
 
 **Positive**:
+
 -   Code reuse between domains
 -   Independent versioning possible
 -   Easier to extract as separate crates later
 -   Clear API boundaries
 
 **Negative**:
+
 -   Workspace compilation overhead
 -   Dependency management complexity
 
 **Mitigation**:
+
 -   Use `workspace = true` for shared deps
 -   Keep libraries focused and small
 
 ## Implementation Plan
 
 ### v0.1.1 (Current - Foundation)
+
 -   Seven-crate workspace structure implemented
 -   Language chunking in `crates/mcb-providers/src/language/`
 -   Workspace dependencies defined
 
 ### v0.3.0 (Future - Full Implementation)
-1. Create `libs/tree-sitter-analysis/`
-2. Create `libs/code-metrics/`
-3. Create `libs/analysis-core/`
-4. Extract existing chunking code to library
-5. Port PMAT algorithms
+
+1.  Create `libs/tree-sitter-analysis/`
+2.  Create `libs/code-metrics/`
+3.  Create `libs/analysis-core/`
+4.  Extract existing chunking code to library
+5.  Port PMAT algorithms
 
 ### v0.5.0 (Future)
-1. Consider extracting git utilities to `libs/git-analysis/`
+
+1.  Consider extracting git utilities to `libs/git-analysis/`
 
 ## Related ADRs
 
-- [ADR-013: Clean Architecture Crate Separation](013-clean-architecture-crate-separation.md) - Seven-crate foundation
-- [ADR-014: Multi-Domain Architecture](014-multi-domain-architecture.md) - Domain organization
+-   [ADR-013: Clean Architecture Crate Separation](013-clean-architecture-crate-separation.md) - Seven-crate foundation
+-   [ADR-014: Multi-Domain Architecture](014-multi-domain-architecture.md) - Domain organization
 
 ---
 

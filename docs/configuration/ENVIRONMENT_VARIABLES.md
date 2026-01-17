@@ -61,6 +61,7 @@ export MCP_PORT=9001
 | `MCP_CACHE__MAX_SIZE` | `10000` | Integer | Max cache entries (for local Moka mode) |
 
 **Current Architecture Note**:
+
 -   If `REDIS_URL` is**empty**→ Uses Moka (local in-memory cache)
 -   If `REDIS_URL` is**non-empty**→ Uses Redis (distributed cache)
 
@@ -174,6 +175,7 @@ export MCP_NATS_RETENTION_HOURS=24
 | `ADMIN_PASSWORD` | `` (empty) | String | Admin account password (min 8 chars) |
 
 **Security Model**:
+
 -   If**both**`JWT_SECRET` and `ADMIN_PASSWORD` are set → Auth**enabled**
 -   If**either**is empty → Auth**disabled**(graceful degradation)
 
@@ -216,6 +218,7 @@ export JWT_EXPIRATION="3600"  # 1 hour
 | `DATABASE_CONNECTION_TIMEOUT_SECS` | `30` | Integer | Connection establishment timeout |
 
 **Security Model**:
+
 -   If `DATABASE_URL` is empty → Database**disabled**(no storage)
 -   If `DATABASE_URL` is set → Database**enabled**with connection pooling
 
@@ -545,6 +548,7 @@ pub enum CacheBackendConfig {
 ```
 
 This will replace:
+
 -   `MCP_CACHE__REDIS_URL` with `MCP_CACHE__BACKEND=local|redis`
 -   `MCP_EVENT_BUS_TYPE` will be moved to `EventBusConfig::from_env()`
 -   All config enums will support environment variable overrides

@@ -15,13 +15,14 @@ MCB uses typed errors (`thiserror`). PMAT uses `anyhow::Error`.
 
 **Layered error handling**:
 
-1. **Domain Layer**: Typed errors with `thiserror`
-2. **Adapter Layer**: Convert `anyhow` → typed errors
-3. **PMAT Libraries**: Keep `anyhow` (unchanged)
+1.  **Domain Layer**: Typed errors with `thiserror`
+2.  **Adapter Layer**: Convert `anyhow` → typed errors
+3.  **PMAT Libraries**: Keep `anyhow` (unchanged)
 
 ### Example
 
 **PMAT Code** (unchanged):
+
 ```rust
 // libs/code-metrics/src/complexity/analyzer.rs
 pub fn analyze_file(&self, path: &Path) -> anyhow::Result<FunctionComplexity> {
@@ -30,6 +31,7 @@ pub fn analyze_file(&self, path: &Path) -> anyhow::Result<FunctionComplexity> {
 ```
 
 **Adapter Layer** (conversion):
+
 ```rust
 // crates/mcb-providers/src/analyzers/complexity_adapter.rs
 
@@ -46,6 +48,7 @@ impl ComplexityAnalyzerAdapter {
 ```
 
 **Domain Error Types**:
+
 ```rust
 // crates/mcb-domain/src/error.rs
 
@@ -85,19 +88,21 @@ All use `thiserror` for type-safe error handling.
 ## Consequences
 
 **Positive**:
+
 -   PMAT code unchanged (100% reuse)
 -   MCB's typed errors at boundaries
 -   Error context preserved
 
 **Negative**:
+
 -   Two error types to maintain
 
 **Acceptable**: Adapter layer is thin (<50 LOC per adapter)
 
 ## Related ADRs
 
-- [ADR-013: Clean Architecture Crate Separation](013-clean-architecture-crate-separation.md) - Error location per crate
-- [ADR-016: Integration Points Adapter Pattern](016-integration-points-adapter-pattern.md) - Adapter pattern
+-   [ADR-013: Clean Architecture Crate Separation](013-clean-architecture-crate-separation.md) - Error location per crate
+-   [ADR-016: Integration Points Adapter Pattern](016-integration-points-adapter-pattern.md) - Adapter pattern
 
 ---
 

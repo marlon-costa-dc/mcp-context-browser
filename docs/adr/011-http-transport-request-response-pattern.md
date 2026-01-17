@@ -14,6 +14,7 @@
 ## Context
 
 The MCP (Model Context Protocol) specification defines a Streamable HTTP transport with:
+
 -   **POST /MCP**: Client sends requests, receives responses (request-response pattern)
 -   **GET /MCP**: Server streams updates to client via Server-Sent Events (SSE)
 
@@ -142,11 +143,13 @@ The current v0.1.0 implementation needed to decide whether to implement both pat
 **Approach**: Implement Server-Sent Events streaming for GET /MCP endpoint
 
 **Pros**:
+
 -   Full MCP spec compliance
 -   More efficient server-to-client updates
 -   Real-time streaming support
 
 **Cons**:
+
 -   Significantly more complex implementation
 -   Connection state management challenges
 -   Browser/proxy compatibility issues
@@ -160,9 +163,11 @@ The current v0.1.0 implementation needed to decide whether to implement both pat
 **Approach**: Respond to GET /MCP with 200 OK and empty SSE stream
 
 **Pros**:
+
 -   Spec-compliant response code
 
 **Cons**:
+
 -   Misleading to clients (implies working connection)
 -   Clients won't know why they're getting no data
 -   Encourages broken behavior
@@ -175,11 +180,13 @@ The current v0.1.0 implementation needed to decide whether to implement both pat
 **Approach**: Use WebSocket instead of HTTP/SSE for bidirectional streaming
 
 **Pros**:
+
 -   Better for real-time bidirectional communication
 -   Better performance for frequent updates
 -   Simpler client libraries
 
 **Cons**:
+
 -   Not part of MCP spec (which uses HTTP)
 -   Requires different client implementation
 -   More infrastructure requirements

@@ -112,8 +112,7 @@ pub trait ChunkRepository: Interface + Send + Sync {
     async fn stats(&self) -> Result<RepositoryStats>;
 }
 /// Value Object: Repository Statistics
-#[derive(Debug, Clone)]
-#[derive(Default)]
+#[derive(Debug, Clone, Default)]
 pub struct RepositoryStats {
     /// Total chunks stored across all collections
     pub total_chunks: u64,

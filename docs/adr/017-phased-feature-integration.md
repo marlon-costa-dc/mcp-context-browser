@@ -11,12 +11,14 @@
 MCB and PMAT have distinct feature sets. Integration must be incremental to maintain stability.
 
 **MCB v0.1.1** (Semantic Search - RELEASED):
+
 -   4 MCP tools (index, search, clear, status)
 -   308+ tests (100% pass rate)
 -   Seven-crate Clean Architecture
 -   Two-layer DI strategy (Shaku + factories)
 
 **PMAT** (Code Analysis):
+
 -   Complexity analysis (cyclomatic, cognitive)
 -   TDG scoring (Technical Debt Gradient)
 -   SATD detection (Self-Admitted Technical Debt)
@@ -32,6 +34,7 @@ MCB and PMAT have distinct feature sets. Integration must be incremental to main
 **Focus**: Seven-Crate Clean Architecture
 
 **Deliverables**:
+
 -   [x] mcb-domain: 14 port traits with shaku::Interface
 -   [x] mcb-application: Context, Search, Indexing services
 -   [x] mcb-providers: 6 embedding + 3 vector store providers
@@ -48,6 +51,7 @@ MCB and PMAT have distinct feature sets. Integration must be incremental to main
 **Focus**: Git-aware indexing + Session memory
 
 **Deliverables**:
+
 -   Git integration (project-relative indexing)
 -   Session memory storage
 -   Hybrid search (BM25 + vector)
@@ -61,6 +65,7 @@ MCB and PMAT have distinct feature sets. Integration must be incremental to main
 **Focus**: Complexity, TDG, SATD
 
 **Deliverables**:
+
 -   Port PMAT complexity analyzer
 -   Port TDG scorer
 -   Port SATD detector
@@ -74,6 +79,7 @@ MCB and PMAT have distinct feature sets. Integration must be incremental to main
 **Focus**: Advanced code analysis
 
 **Deliverables**:
+
 -   Dead code detection
 -   Dependency analysis (DAG)
 -   Big-O complexity estimation
@@ -87,6 +93,7 @@ MCB and PMAT have distinct feature sets. Integration must be incremental to main
 **Focus**: Quality metrics and Git integration
 
 **Deliverables**:
+
 -   Quality scoring
 -   File maintainability index
 -   Commit history analysis
@@ -100,6 +107,7 @@ MCB and PMAT have distinct feature sets. Integration must be incremental to main
 **Focus**: Refactoring and mutations
 
 **Deliverables**:
+
 -   Refactoring suggestions
 -   Mutation testing integration
 -   TUI dashboard
@@ -110,34 +118,37 @@ MCB and PMAT have distinct feature sets. Integration must be incremental to main
 
 ## Migration Principles
 
-1. **No Breaking Changes**: Each version is backward compatible
-2. **Feature Flags**: New features behind cargo features
-3. **Incremental Testing**: Port PMAT tests alongside code
-4. **Parallel Development**: MCB features continue during integration
+1.  **No Breaking Changes**: Each version is backward compatible
+2.  **Feature Flags**: New features behind Cargo features
+3.  **Incremental Testing**: Port PMAT tests alongside code
+4.  **Parallel Development**: MCB features continue during integration
 
 ## Consequences
 
 **Positive**:
+
 -   Controlled risk
 -   Continuous delivery
 -   Clear milestones
 -   Testable increments
 
 **Negative**:
+
 -   Longer timeline
 -   Multiple integration points
 
 **Mitigation**:
+
 -   Automate integration testing
 -   Feature flags for partial adoption
 -   Clear documentation per version
 
 ## Related ADRs
 
-- [ADR-012: Two-Layer DI Strategy](012-di-strategy-two-layer-approach.md) - DI foundation
-- [ADR-013: Clean Architecture Crate Separation](013-clean-architecture-crate-separation.md) - Crate structure
-- [ADR-016: Integration Points Adapter Pattern](016-integration-points-adapter-pattern.md) - PMAT integration
-- [ADR-020: Testing Strategy Integration](020-testing-strategy-integration.md) - Test migration
+-   [ADR-012: Two-Layer DI Strategy](012-di-strategy-two-layer-approach.md) - DI foundation
+-   [ADR-013: Clean Architecture Crate Separation](013-clean-architecture-crate-separation.md) - Crate structure
+-   [ADR-016: Integration Points Adapter Pattern](016-integration-points-adapter-pattern.md) - PMAT integration
+-   [ADR-020: Testing Strategy Integration](020-testing-strategy-integration.md) - Test migration
 
 ---
 

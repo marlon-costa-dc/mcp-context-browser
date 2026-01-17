@@ -32,7 +32,9 @@ fn create_log_filter(level: &str) -> EnvFilter {
 }
 
 /// Create file appender if file output is configured
-fn create_file_appender(file_output: &Option<std::path::PathBuf>) -> Option<tracing_appender::rolling::RollingFileAppender> {
+fn create_file_appender(
+    file_output: &Option<std::path::PathBuf>,
+) -> Option<tracing_appender::rolling::RollingFileAppender> {
     file_output.as_ref().map(|path| {
         tracing_appender::rolling::daily(
             path.parent().unwrap_or_else(|| std::path::Path::new(".")),
@@ -43,7 +45,10 @@ fn create_file_appender(file_output: &Option<std::path::PathBuf>) -> Option<trac
 }
 
 /// Initialize logging with JSON format
-fn init_json_logging(filter: EnvFilter, file_appender: Option<tracing_appender::rolling::RollingFileAppender>) -> Result<()> {
+fn init_json_logging(
+    filter: EnvFilter,
+    file_appender: Option<tracing_appender::rolling::RollingFileAppender>,
+) -> Result<()> {
     let stdout = fmt::layer()
         .json()
         .with_target(true)
@@ -67,7 +72,10 @@ fn init_json_logging(filter: EnvFilter, file_appender: Option<tracing_appender::
 }
 
 /// Initialize logging with text format
-fn init_text_logging(filter: EnvFilter, file_appender: Option<tracing_appender::rolling::RollingFileAppender>) -> Result<()> {
+fn init_text_logging(
+    filter: EnvFilter,
+    file_appender: Option<tracing_appender::rolling::RollingFileAppender>,
+) -> Result<()> {
     let stdout = fmt::layer()
         .with_target(true)
         .with_thread_ids(true)

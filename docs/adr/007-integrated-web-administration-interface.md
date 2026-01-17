@@ -10,12 +10,12 @@
 > -   AdminServiceImpl with full implementation (implementation.rs, helpers/)
 > -   REST API routes for config, health, backup, maintenance (routes.rs, handlers.rs)
 > -   JWT authentication integration
-> - **New (v0.2.0)**:
+> -   **New (v0.2.0)**:
 >     -   Unified port architecture (MCP + Admin + Metrics on port 3001)
 >     -   Subsystem control via EventBus (6 new AdminService methods)
 >     -   Configuration persistence with explicit save pattern
 >     -   14 SystemEvent variants for inter-subsystem communication
-> - **Pending**: Frontend HTML/CSS/JS refinement, WebSocket real-time updates
+> -   **Pending**: Frontend HTML/CSS/JS refinement, WebSocket real-time updates
 
 ## Context
 

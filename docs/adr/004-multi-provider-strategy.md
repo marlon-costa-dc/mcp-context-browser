@@ -7,18 +7,20 @@
 > Full multi-provider routing implemented in `crates/mcb-providers/src/routing/`:
 >
 > **Routing Components** (`crates/mcb-providers/src/routing/`):
-> - `circuit_breaker.rs` - Circuit breaker with state transitions
-> - `health.rs` - Health monitoring for providers
-> - `cost_tracker.rs` - Cost tracking and budget management
-> - `failover.rs` - Automatic failover logic
-> - `metrics.rs` - Metrics collection
-> - `router.rs` - Provider router with selection strategies
+>
+> -   `circuit_breaker.rs` - Circuit breaker with state transitions
+> -   `health.rs` - Health monitoring for providers
+> -   `cost_tracker.rs` - Cost tracking and budget management
+> -   `failover.rs` - Automatic failover logic
+> -   `metrics.rs` - Metrics collection
+> -   `router.rs` - Provider router with selection strategies
 >
 > **Provider Implementations** (`crates/mcb-providers/src/`):
-> - `embedding/` - 6 providers (OpenAI, VoyageAI, Ollama, Gemini, FastEmbed, Null)
-> - `vector_store/` - 3 providers (In-Memory, Encrypted, Null)
-> - `cache/` - Cache providers (Moka, Null)
-> - `language/` - 12 language processors with `UniversalLanguageChunkingProvider`
+>
+> -   `embedding/` - 6 providers (OpenAI, VoyageAI, Ollama, Gemini, FastEmbed, Null)
+> -   `vector_store/` - 3 providers (In-Memory, Encrypted, Null)
+> -   `cache/` - Cache providers (Moka, Null)
+> -   `language/` - 12 language processors with `UniversalLanguageChunkingProvider`
 >
 > All providers implement port traits from `mcb-domain` with Shaku DI integration.
 

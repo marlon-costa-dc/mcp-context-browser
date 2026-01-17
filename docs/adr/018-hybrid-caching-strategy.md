@@ -11,8 +11,9 @@
 Code analysis is CPU-intensive (500ms-5s per file). Caching is critical.
 
 **Two proven patterns**:
-1. **MCB**: Moka async cache with TTL (fast lookups, memory-based)
-2. **PMAT**: SHA256 file hashing for invalidation (accurate change detection)
+
+1.  **MCB**: Moka async cache with TTL (fast lookups, memory-based)
+2.  **PMAT**: SHA256 file hashing for invalidation (accurate change detection)
 
 ## Decision
 
@@ -72,18 +73,21 @@ impl HybridAnalysisCache {
 ## v0.1.1 Status
 
 Current cache implementation in `crates/mcb-providers/src/cache/`:
-- `moka.rs` - Moka async cache provider
-- `null.rs` - Null cache for testing
+
+-   `moka.rs` - Moka async cache provider
+-   `null.rs` - Null cache for testing
 
 The hybrid cache will extend this foundation in v0.3.0.
 
 ## Implementation Plan
 
 **v0.2.0** (Define):
+
 -   Define `HybridAnalysisCache` interface
 -   Update existing MCB cache to support pluggable invalidation
 
 **v0.3.0** (Implement):
+
 -   Implement SHA256 tracking
 -   Integrate with analysis services
 -   Benchmark cache hit rates
@@ -91,22 +95,25 @@ The hybrid cache will extend this foundation in v0.3.0.
 ## Consequences
 
 **Positive**:
+
 -   Accurate invalidation (SHA256)
 -   Fast lookups (Moka)
 -   Best of both worlds
 
 **Negative**:
+
 -   SHA256 computation overhead (~1-5ms per file)
 
 **Mitigation**:
+
 -   Compute SHA256 in background
 -   Cache SHA256 values
 -   Only recompute on cache miss
 
 ## Related ADRs
 
-- [ADR-001: Provider Pattern Architecture](001-provider-pattern-architecture.md) - Cache provider trait
-- [ADR-013: Clean Architecture Crate Separation](013-clean-architecture-crate-separation.md) - Cache location in mcb-providers
+-   [ADR-001: Provider Pattern Architecture](001-provider-pattern-architecture.md) - Cache provider trait
+-   [ADR-013: Clean Architecture Crate Separation](013-clean-architecture-crate-separation.md) - Cache location in mcb-providers
 
 ---
 

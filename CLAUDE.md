@@ -1,6 +1,6 @@
-# CLAUDE.md
+# Claude.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code (Claude.ai/code) when working with code in this repository.
 
 ## Project Overview
 
@@ -47,6 +47,7 @@ crates/
 ```
 
 **Dependency Direction** (inward only):
+
 ```
 mcb-server → mcb-infrastructure → mcb-application → mcb-domain
                     ↓
@@ -65,11 +66,11 @@ mcb-server → mcb-infrastructure → mcb-application → mcb-domain
 
 ## Code Standards
 
-1. **No unwrap/expect** - Use `?` operator with proper error types
-2. **File size < 500 lines** - Split large files
-3. **Trait-based DI** - Use `Arc<dyn Trait>`, not `Arc<ConcreteType>`
-4. **Async-first** - All I/O operations async with Tokio
-5. **Error handling** - Custom types with `thiserror`:
+1.  **No unwrap/expect** - Use `?` operator with proper error types
+2.  **File size < 500 lines** - Split large files
+3.  **Trait-based DI** - Use `Arc<dyn Trait>`, not `Arc<ConcreteType>`
+4.  **Async-first** - All I/O operations async with Tokio
+5.  **Error handling** - Custom types with `thiserror`:
 
 ```rust
 #[derive(Error, Debug)]
@@ -102,10 +103,11 @@ pub struct FullContainer {
 ## Quality Gates
 
 Before any commit:
-- `make test` - 0 failures
-- `make lint` - clean output
-- `make validate` - 0 architecture violations
-- No new `unwrap/expect`
+
+-   `make test` - 0 failures
+-   `make lint` - clean output
+-   `make validate` - 0 architecture violations
+-   No new `unwrap/expect`
 
 ## Supported Providers
 
@@ -117,6 +119,6 @@ Before any commit:
 
 ## Documentation
 
-- ADRs: `docs/adr/README.md` (13 architectural decisions)
-- Architecture: `docs/architecture/ARCHITECTURE.md`
-- Migration: `docs/migration/FROM_CLAUDE_CONTEXT.md`
+-   ADRs: `docs/adr/README.md` (13 architectural decisions)
+-   Architecture: `docs/architecture/ARCHITECTURE.md`
+-   Migration: `docs/migration/FROM_CLAUDE_CONTEXT.md`
