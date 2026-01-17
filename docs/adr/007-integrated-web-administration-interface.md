@@ -28,18 +28,18 @@ MCP Context Browser provides comprehensive system monitoring and metrics through
 
 This creates barriers for non-technical users and makes it difficult to:
 
--    Monitor system health in real-time
--    Configure providers dynamically
--    Manage indexes and search operations
--    Troubleshoot issues without technical expertise
--    Visualize performance metrics and trends
+-   Monitor system health in real-time
+-   Configure providers dynamically
+-   Manage indexes and search operations
+-   Troubleshoot issues without technical expertise
+-   Visualize performance metrics and trends
 
 The existing infrastructure already includes:
 
--    HTTP metrics server on port 3001
--    Comprehensive metrics collection
--    Provider management capabilities
--    Configuration system
+-   HTTP metrics server on port 3001
+-   Comprehensive metrics collection
+-   Provider management capabilities
+-   Configuration system
 
 ## Decision
 
@@ -128,15 +128,15 @@ pub struct AdminApiServer {
 
 New REST endpoints under `/admin/` prefix:
 
--    `GET /admin/` - Serve main admin interface
--    `GET /admin/config` - Get current configuration
--    `PUT /admin/config` - Update configuration
--    `GET /admin/providers` - List providers
--    `POST /admin/providers` - Add provider
--    `DELETE /admin/providers/{id}` - Remove provider
--    `GET /admin/indexes` - List indexes
--    `POST /admin/indexes/{id}/clear` - Clear index
--    `POST /admin/auth/login` - Authentication
+-   `GET /admin/` - Serve main admin interface
+-   `GET /admin/config` - Get current configuration
+-   `PUT /admin/config` - Update configuration
+-   `GET /admin/providers` - List providers
+-   `POST /admin/providers` - Add provider
+-   `DELETE /admin/providers/{id}` - Remove provider
+-   `GET /admin/indexes` - List indexes
+-   `POST /admin/indexes/{id}/clear` - Clear index
+-   `POST /admin/auth/login` - Authentication
 
 ### Frontend Structure
 
@@ -167,18 +167,18 @@ crates/mcb-server/src/admin/web/templates/
 
 ### Security Implementation
 
--    JWT authentication with configurable expiration
--    Role-based access (admin vs read-only)
--    CSRF protection for state-changing operations
--    HTTPS enforcement in production
--    Rate limiting for API endpoints
+-   JWT authentication with configurable expiration
+-   Role-based access (admin vs read-only)
+-   CSRF protection for state-changing operations
+-   HTTPS enforcement in production
+-   Rate limiting for API endpoints
 
 ### Testing Strategy
 
--    Unit tests for new API endpoints
--    Integration tests for web interface functionality
--    E2E tests for critical admin workflows
--    Security testing for authentication and authorization
+-   Unit tests for new API endpoints
+-   Integration tests for web interface functionality
+-   E2E tests for critical admin workflows
+-   Security testing for authentication and authorization
 
 ### Migration Path
 
@@ -190,17 +190,17 @@ crates/mcb-server/src/admin/web/templates/
 
 ### Performance Considerations
 
--    Static asset compression and caching
--    Lazy loading for JavaScript modules
--    Efficient WebSocket connection management
--    Minimal impact on existing metrics endpoints
+-   Static asset compression and caching
+-   Lazy loading for JavaScript modules
+-   Efficient WebSocket connection management
+-   Minimal impact on existing metrics endpoints
 
 ### Rollback Plan
 
--    Feature flag to disable admin interface
--    Separate admin routes can be easily removed
--    Database migrations (if any) are reversible
--    Static assets can be excluded from builds
+-   Feature flag to disable admin interface
+-   Separate admin routes can be easily removed
+-   Database migrations (if any) are reversible
+-   Static assets can be excluded from builds
 
 ## Unified Port Architecture (v0.2.0)
 
@@ -259,10 +259,10 @@ let metrics_server = MetricsApiServer::with_limits(...)
 
 ### Benefits
 
--    Single port simplifies firewall/proxy configuration
--    Eliminates port 3002 (previously MCP HTTP transport)
--    Unified graceful shutdown via ConnectionTracker
--    Consistent rate limiting and CORS across all endpoints
+-   Single port simplifies firewall/proxy configuration
+-   Eliminates port 3002 (previously MCP HTTP transport)
+-   Unified graceful shutdown via ConnectionTracker
+-   Consistent rate limiting and CORS across all endpoints
 
 ## Subsystem Control Protocol (v0.2.0)
 

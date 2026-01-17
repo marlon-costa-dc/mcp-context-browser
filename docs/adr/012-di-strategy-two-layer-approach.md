@@ -175,9 +175,15 @@ pub async fn run_server(config_path: Option<&Path>) -> Result<()> {
 
 ## Related ADRs
 
--   [ADR-001: Provider Pattern Architecture](001-provider-pattern-architecture.md)
--   [ADR-004: Multi-Provider Strategy](004-multi-provider-strategy.md)
--   [ADR-013: Clean Architecture Crate Separation](013-clean-architecture-crate-separation.md)
+-   [ADR-001: Provider Pattern Architecture](001-provider-pattern-architecture.md) - Trait-based provider DI
+-   [ADR-002: Async-First Architecture](002-async-first-architecture.md) - Async initialization patterns
+-   [ADR-004: Multi-Provider Strategy](004-multi-provider-strategy.md) - Provider factory selection
+-   [ADR-006: Code Audit and Improvements](006-code-audit-and-improvements.md) - DI pattern enforcement
+-   [ADR-007: Integrated Web Administration Interface](007-integrated-web-administration-interface.md) - AdminService DI
+-   [ADR-008: Git-Aware Semantic Indexing](008-git-aware-semantic-indexing-v0.2.0.md) - GitProvider factory (v0.2.0)
+-   [ADR-009: Persistent Session Memory](009-persistent-session-memory-v0.2.0.md) - MemoryProvider DI (v0.2.0)
+-   [ADR-010: Hooks Subsystem](010-hooks-subsystem-agent-backed.md) - HookProcessor DI (v0.2.0)
+-   [ADR-013: Clean Architecture Crate Separation](013-clean-architecture-crate-separation.md) - Crate organization for DI
 
 ## References
 

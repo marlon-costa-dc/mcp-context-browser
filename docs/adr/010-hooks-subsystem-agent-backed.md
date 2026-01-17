@@ -4,12 +4,17 @@
 
 **Proposed**(Planned for v0.2.0)
 
-> Not yet implemented. Key dependencies:
+> Not yet implemented. Target crate structure for v0.2.0:
 >
-> -   EventBus exists and can be extended (src/infrastructure/events.rs)
-> -   No HookService, HookProcessor, or PolicyEngine
+> -   `crates/mcb-domain/src/hooks.rs` - Hook domain types
+> -   `crates/mcb-application/src/ports/providers/hooks.rs` - HookProcessor port trait
+> -   `crates/mcb-application/src/use_cases/hooks.rs` - HookService
+> -   `crates/mcb-providers/src/hooks/` - Hook provider implementations
+> -   `crates/mcb-server/src/handlers/hook_tools.rs` - MCP tool handlers
+> -   `crates/mcb-infrastructure/src/config/hooks.rs` - Hooks configuration
+> -   `crates/mcb-infrastructure/src/di/hooks_registry.rs` - Hook processor registry
+> -   EventBus exists in `crates/mcb-infrastructure/src/events/mod.rs`
 > -   Requires ADR-009 memory integration for hook observations
-> -   Blocking: New application service and processor infrastructure required
 
 ## Context
 
@@ -17,11 +22,11 @@ Claude Code provides a hooks system for extending AI assistant behavior at lifec
 
 **Current limitations:**
 
--    Hooks are shell scripts with hardcoded rules
--    No semantic understanding of context
--    No integration with code search or session memory
--    Each hook operates in isolation
--    Complex decisions require manual rule maintenance
+-   Hooks are shell scripts with hardcoded rules
+-   No semantic understanding of context
+-   No integration with code search or session memory
+-   Each hook operates in isolation
+-   Complex decisions require manual rule maintenance
 
 **Opportunity for integration:**
 
@@ -36,11 +41,11 @@ MCP Context Browser v0.2.0 already provides (via ADR 008 and ADR 009):
 
 **User demand:**
 
--    Intelligent hook processing with semantic context
--    Agent-backed decisions using Claude models
--    Integration with existing code search and memory
--    Policy-based filtering with semantic fallback
--    Zero-config for basic use, full customization available
+-   Intelligent hook processing with semantic context
+-   Agent-backed decisions using Claude models
+-   Integration with existing code search and memory
+-   Policy-based filtering with semantic fallback
+-   Zero-config for basic use, full customization available
 
 ## Decision
 
@@ -138,7 +143,7 @@ Claude Code Session
 
 ### Phase 1: Extend Domain Error
 
-**Modify**: `src/domain/error.rs`
+**Modify**: `crates/mcb-domain/src/error.rs`
 
 ```rust
 // Add to Error enum
@@ -155,7 +160,7 @@ impl Error {
 
 ### Phase 2: Extend SystemEvent
 
-**Modify**: `src/infrastructure/events.rs`
+**Modify**: `crates/mcb-infrastructure/src/events/mod.rs`
 
 ```rust
 // Add to SystemEvent enum
@@ -186,7 +191,7 @@ pub enum SystemEvent {
 
 ### Phase 3: Hook Domain Types
 
-**Create**: `src/domain/hooks.rs`
+**Create**: `crates/mcb-domain/src/hooks.rs`
 
 ```rust
 //! Hook domain types
@@ -306,7 +311,7 @@ pub enum PolicyAction {
 
 ### Phase 4: Hook Provider Port
 
-**Create**: `src/domain/ports/hooks.rs`
+**Create**: `crates/mcb-application/src/ports/providers/hooks.rs`
 
 ```rust
 //! Hook provider ports
@@ -347,7 +352,7 @@ pub trait PolicyStore: Send + Sync {
 
 ### Phase 5: Hook Provider Registry
 
-**Create**: `src/infrastructure/di/hooks_registry.rs`
+**Create**: `crates/mcb-infrastructure/src/di/hooks_registry.rs`
 
 ```rust
 //! Hook provider registry
@@ -413,7 +418,7 @@ impl Default for HookProcessorRegistry {
 
 ### Phase 6: Policy Engine Adapter
 
-**Create**: `src/adapters/hooks/policy_engine.rs`
+**Create**: `crates/mcb-providers/src/hooks/policy_engine.rs`
 
 ```rust
 //! Policy engine for fast-path hook decisions
@@ -510,7 +515,7 @@ impl PolicyEngine {
 
 ### Phase 7: Claude Agent Processor
 
-**Create**: `src/adapters/hooks/claude_processor.rs`
+**Create**: `crates/mcb-providers/src/hooks/claude_processor.rs`
 
 ```rust
 //! Claude agent processor using HttpClientProvider
@@ -651,7 +656,7 @@ impl HookProcessor for ClaudeAgentProcessor {
 
 ### Phase 8: Hook Service
 
-**Create**: `src/application/hooks.rs`
+**Create**: `crates/mcb-application/src/use_cases/hooks.rs`
 
 ```rust
 //! Hook service
@@ -945,7 +950,7 @@ impl HookService {
 
 ### Phase 9: MCP Tool Handlers
 
-**Create**: `src/server/handlers/hook_tools.rs`
+**Create**: `crates/mcb-server/src/handlers/hook_tools.rs`
 
 ```rust
 //! MCP tool handlers for hooks
@@ -1043,7 +1048,7 @@ fn parse_session_type(s: &str) -> Option<SessionType> {
 
 ### Phase 10: Configuration
 
-**Create**: `src/infrastructure/config/hooks.rs`
+**Create**: `crates/mcb-infrastructure/src/config/hooks.rs`
 
 ```rust
 //! Hooks configuration
@@ -1092,14 +1097,14 @@ fn default_cache_ttl() -> u64 { 300 }
 
 | File | LOC | Purpose |
 |------|-----|---------|
-| `src/domain/hooks.rs` | ~120 | Hook domain types |
-| `src/domain/ports/hooks.rs` | ~30 | HookProcessor trait |
-| `src/infrastructure/di/hooks_registry.rs` | ~50 | Registry (pattern copy) |
-| `src/adapters/hooks/policy_engine.rs` | ~80 | Policy evaluation |
-| `src/adapters/hooks/claude_processor.rs` | ~100 | Claude API via HttpClient |
-| `src/application/hooks.rs` | ~180 | HookService (pattern copy) |
-| `src/server/handlers/hook_tools.rs` | ~80 | MCP handlers |
-| `src/infrastructure/config/hooks.rs` | ~40 | Configuration |
+| `crates/mcb-domain/src/hooks.rs` | ~120 | Hook domain types |
+| `crates/mcb-application/src/ports/providers/hooks.rs` | ~30 | HookProcessor trait |
+| `crates/mcb-infrastructure/src/di/hooks_registry.rs` | ~50 | Registry (pattern copy) |
+| `crates/mcb-providers/src/hooks/policy_engine.rs` | ~80 | Policy evaluation |
+| `crates/mcb-providers/src/hooks/claude_processor.rs` | ~100 | Claude API via HttpClient |
+| `crates/mcb-application/src/use_cases/hooks.rs` | ~180 | HookService (pattern copy) |
+| `crates/mcb-server/src/handlers/hook_tools.rs` | ~80 | MCP handlers |
+| `crates/mcb-infrastructure/src/config/hooks.rs` | ~40 | Configuration |
 
 **Total**: ~680 LOC (vs ~4000 if built from scratch)
 
@@ -1107,14 +1112,14 @@ fn default_cache_ttl() -> u64 { 300 }
 
 | File | Change |
 |------|--------|
-| `src/domain/error.rs` | Add `Hook` variant |
-| `src/infrastructure/events.rs` | Add 3 hook events |
-| `src/domain/mod.rs` | Export hooks module |
-| `src/domain/ports/mod.rs` | Export HookProcessor |
-| `src/adapters/mod.rs` | Export hooks adapters |
-| `src/application/mod.rs` | Export HookService |
-| `src/server/mcp_server.rs` | Register hook tools |
-| `src/infrastructure/config/mod.rs` | Export HooksConfig |
+| `crates/mcb-domain/src/error.rs` | Add `Hook` variant |
+| `crates/mcb-infrastructure/src/events/mod.rs` | Add 3 hook events |
+| `crates/mcb-domain/src/mod.rs` | Export hooks module |
+| `crates/mcb-application/src/ports/providers/mod.rs` | Export HookProcessor |
+| `crates/mcb-providers/src/lib.rs` | Export hooks providers |
+| `crates/mcb-application/src/use_cases/mod.rs` | Export HookService |
+| `crates/mcb-server/src/mcp_server.rs` | Register hook tools |
+| `crates/mcb-infrastructure/src/config/mod.rs` | Export HooksConfig |
 
 ## Integration Points
 
@@ -1135,11 +1140,18 @@ if let Some(git) = &self.git_provider {
 2.**Observation storage**: Store hook observations via `MemoryProvider.store_observation()`
 3.**Shared types**: Reuse `Observation`, `ObservationType` from memory domain
 
+## Related ADRs
+
+-   [ADR-001: Provider Pattern Architecture](001-provider-pattern-architecture.md) - HookProcessor follows trait-based DI
+-   [ADR-002: Async-First Architecture](002-async-first-architecture.md) - Async hook processing
+-   [ADR-007: Integrated Web Administration Interface](007-integrated-web-administration-interface.md) - Hook monitoring UI
+-   [ADR-008: Git-Aware Semantic Indexing](008-git-aware-semantic-indexing-v0.2.0.md) - Git context in hooks
+-   [ADR-009: Persistent Session Memory](009-persistent-session-memory-v0.2.0.md) - Hook observation storage
+-   [ADR-012: Two-Layer DI Strategy](012-di-strategy-two-layer-approach.md) - Shaku DI for hook services
+-   [ADR-013: Clean Architecture Crate Separation](013-clean-architecture-crate-separation.md) - Seven-crate organization
+
 ## References
 
--    [ADR 001: Provider Pattern Architecture](001-provider-pattern-architecture.md)
--    [ADR 002: Async-First Architecture](002-async-first-architecture.md)
--    [ADR 008: Git-Aware Semantic Indexing](008-git-aware-semantic-indexing-v0.2.0.md)
--    [ADR 009: Persistent Session Memory](009-persistent-session-memory-v0.2.0.md)
--    [Claude Code Hooks Documentation](https://docs.anthropic.com/claude-code/hooks)
--    Existing patterns: `src/infrastructure/events.rs`, `src/infrastructure/di/registry.rs`, `src/application/context.rs`
+-   [Claude Code Hooks Documentation](https://docs.anthropic.com/claude-code/hooks)
+-   [Shaku Documentation](https://docs.rs/shaku) - DI framework
+-   Existing patterns: `crates/mcb-infrastructure/src/events/mod.rs`, `crates/mcb-infrastructure/src/di/registry.rs`, `crates/mcb-application/src/use_cases/context.rs`

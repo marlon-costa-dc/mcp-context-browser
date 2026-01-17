@@ -146,14 +146,14 @@ jobs:
   docs-quality:
     runs-on: ubuntu-latest
     steps:
--    uses: actions/checkout@v4
--    name: ADR Compliance Check
+-   uses: actions/checkout@v4
+-   name: ADR Compliance Check
         run: cargo run --bin adr-validator
--    name: Spell Check
+-   name: Spell Check
         run: cargo spellcheck
--    name: Link Validation
+-   name: Link Validation
         run: cargo deadlinks
--    name: Documentation Generation
+-   name: Documentation Generation
         run: make docs-auto
 ```
 

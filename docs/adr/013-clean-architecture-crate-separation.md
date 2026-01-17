@@ -334,9 +334,15 @@ async fn test_full_indexing_flow() {
 
 ## Related ADRs
 
--   [ADR-001: Provider Pattern Architecture](001-provider-pattern-architecture.md)
--   [ADR-004: Multi-Provider Strategy](004-multi-provider-strategy.md)
--   [ADR-012: Two-Layer DI Strategy](012-di-strategy-two-layer-approach.md)
+-   [ADR-001: Provider Pattern Architecture](001-provider-pattern-architecture.md) - Provider trait patterns
+-   [ADR-002: Async-First Architecture](002-async-first-architecture.md) - Async patterns per layer
+-   [ADR-003: C4 Model Documentation](003-c4-model-documentation.md) - Architecture visualization
+-   [ADR-004: Multi-Provider Strategy](004-multi-provider-strategy.md) - mcb-providers organization
+-   [ADR-005: Documentation Excellence](005-documentation-excellence.md) - Documentation per crate
+-   [ADR-006: Code Audit and Improvements](006-code-audit-and-improvements.md) - Quality standards per layer
+-   [ADR-007: Integrated Web Administration Interface](007-integrated-web-administration-interface.md) - mcb-server admin module
+-   [ADR-011: HTTP Transport](011-http-transport-request-response-pattern.md) - mcb-server transport layer
+-   [ADR-012: Two-Layer DI Strategy](012-di-strategy-two-layer-approach.md) - Shaku DI in mcb-infrastructure
 
 ## References
 

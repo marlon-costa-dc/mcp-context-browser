@@ -91,9 +91,9 @@ let embeddings = provider.embed_batch(&texts).await?;
 
 For better performance:
 
--    Use batch embedding when possible
--    Cache embeddings when appropriate
--    Consider smaller models for applications with memory constraints
+-   Use batch embedding when possible
+-   Cache embeddings when appropriate
+-   Consider smaller models for applications with memory constraints
 
 ## Troubleshooting
 
@@ -134,7 +134,7 @@ The FastEmbed Provider:
 
 ## Next Steps
 
--    Support for more FastEmbed models
--    Configuration of execution providers (CPU/GPU)
--    Automatic quantization to reduce memory usage
--    Embedding cache for frequent texts
+-   Support for more FastEmbed models
+-   Configuration of execution providers (CPU/GPU)
+-   Automatic quantization to reduce memory usage
+-   Embedding cache for frequent texts

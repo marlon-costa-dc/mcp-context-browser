@@ -7,9 +7,15 @@
 > Not yet implemented. Key dependencies:
 >
 > -   git2 crate not in Cargo.toml
-> -   No src/domain/git.rs or src/adapters/providers/git/
+> -   No `crates/mcb-domain/src/git.rs` or `crates/mcb-providers/src/git/`
 > -   No GitProvider trait or implementation
 > -   Blocking: Requires git2 dependency and new module structure
+>
+> **Target crate structure (v0.2.0)**:
+> -   `crates/mcb-domain/src/git.rs` - Git domain types
+> -   `crates/mcb-application/src/ports/providers/git.rs` - GitProvider trait
+> -   `crates/mcb-providers/src/git/` - git2 implementation
+> -   `crates/mcb-application/src/use_cases/git_indexing.rs` - Git-aware indexing service
 
 ## Context
 
@@ -17,19 +23,19 @@ MCP Context Browser v0.1.0 provides efficient semantic code search but lacks ver
 
 **Current problems:**
 
--    Indexes are based on filesystem paths, breaking if directory is moved
--    No distinction between branches - search mixes code from different contexts
--    Change detection based on file mtime, not actual commits
--    No support for monorepos with multiple projects
--    No commit history indexing
--    No change impact analysis
+-   Indexes are based on filesystem paths, breaking if directory is moved
+-   No distinction between branches - search mixes code from different contexts
+-   Change detection based on file mtime, not actual commits
+-   No support for monorepos with multiple projects
+-   No commit history indexing
+-   No change impact analysis
 
 **User demand:**
 
--    Developers work with large monorepos (Uber, Google, Meta patterns)
--    Need to search code in specific branch
--    Need to understand impact of changes before merge
--    Need to index submodules as separate projects
+-   Developers work with large monorepos (Uber, Google, Meta patterns)
+-   Need to search code in specific branch
+-   Need to understand impact of changes before merge
+-   Need to index submodules as separate projects
 
 ## Decision
 
@@ -44,9 +50,9 @@ Implement full git integration in MCP-context-browser v0.2.0 with:
 
 **Library chosen**: git2 (libgit2 bindings)
 
--    Mature, battle-tested, widely used
--    Stable and well-documented API
--    Superior performance to gitoxide (still in development)
+-   Mature, battle-tested, widely used
+-   Stable and well-documented API
+-   Superior performance to gitoxide (still in development)
 
 ## Consequences
 
@@ -89,7 +95,7 @@ Implement full git integration in MCP-context-browser v0.2.0 with:
 
 ### Phase 1: Domain Model Extension
 
-**Create**: `src/domain/git.rs`
+**Create**: `crates/mcb-domain/src/git.rs`
 
 ```rust
 use serde::{Deserialize, Serialize};
@@ -177,7 +183,7 @@ pub struct GitChunkMetadata {
 
 ### Phase 2: Git Provider Port/Adapter
 
-**Create**: `src/domain/ports/git.rs`
+**Create**: `crates/mcb-application/src/ports/providers/git.rs`
 
 ```rust
 use async_trait::async_trait;
@@ -228,7 +234,7 @@ pub trait GitProvider: Send + Sync {
 }
 ```
 
-**Create**: `src/adapters/providers/git/git2_provider.rs`
+**Create**: `crates/mcb-providers/src/git/git2_provider.rs`
 
 ```rust
 use git2::{Repository, BranchType, DiffOptions};
@@ -257,7 +263,7 @@ impl Git2Provider {
 
 ### Phase 3: Repository Manager Service
 
-**Create**: `src/application/repository.rs`
+**Create**: `crates/mcb-application/src/use_cases/repository.rs`
 
 ```rust
 use dashmap::DashMap;
@@ -299,7 +305,7 @@ impl RepositoryManager {
 
 ### Phase 4: Git-Aware Snapshot Manager
 
-**Create**: `src/infrastructure/snapshot/git_snapshot.rs`
+**Create**: `crates/mcb-infrastructure/src/snapshot/git_snapshot.rs`
 
 ```rust
 use std::path::Path;
@@ -343,7 +349,7 @@ impl GitSnapshotManager {
 
 ### Phase 5: Schema Extensions
 
-**Modify**: `src/domain/types.rs`
+**Modify**: `crates/mcb-domain/src/entities/code_chunk.rs`
 
 ```rust
 // Add to existing CodeChunk struct
@@ -385,7 +391,7 @@ pub struct CodeChunk {
 
 ### Phase 6: Git Indexing Service
 
-**Create**: `src/application/git_indexing.rs`
+**Create**: `crates/mcb-application/src/use_cases/git_indexing.rs`
 
 ```rust
 pub struct GitIndexingService {
@@ -456,7 +462,7 @@ pub struct HistoryIndexingStrategy {
 
 ### Phase 8: Impact Analysis
 
-**Create**: `src/application/impact.rs`
+**Create**: `crates/mcb-application/src/use_cases/impact.rs`
 
 ```rust
 pub struct ImpactAnalyzer {
@@ -510,7 +516,7 @@ impl ImpactAnalyzer {
 
 ### Phase 9: MCP Tools
 
-**Create**: `src/server/handlers/git_tools.rs`
+**Create**: `crates/mcb-server/src/handlers/git_tools.rs`
 
 | Tool | Description | Parameters |
 |------|-------------|------------|
@@ -522,7 +528,7 @@ impl ImpactAnalyzer {
 
 ### Phase 10: Configuration
 
-**Create**: `src/infrastructure/config/git.rs`
+**Create**: `crates/mcb-infrastructure/src/config/git.rs`
 
 ```rust
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
@@ -571,31 +577,31 @@ git2 = "0.20"
 
 | File | Purpose |
 |------|---------|
-| `src/domain/git.rs` | Git domain types |
-| `src/domain/ports/git.rs` | GitProvider trait |
-| `src/adapters/providers/git/mod.rs` | Git module |
-| `src/adapters/providers/git/git2_provider.rs` | git2 implementation |
-| `src/application/repository.rs` | Repository manager |
-| `src/application/git_indexing.rs` | Git-aware indexing |
-| `src/application/impact.rs` | Impact analysis |
-| `src/infrastructure/snapshot/git_snapshot.rs` | Git-based change detection |
-| `src/server/handlers/git_tools.rs` | MCP git tools |
-| `src/infrastructure/config/git.rs` | Git configuration |
+| `crates/mcb-domain/src/git.rs` | Git domain types |
+| `crates/mcb-application/src/ports/providers/git.rs` | GitProvider trait |
+| `crates/mcb-providers/src/git/mod.rs` | Git module |
+| `crates/mcb-providers/src/git/git2_provider.rs` | git2 implementation |
+| `crates/mcb-application/src/use_cases/repository.rs` | Repository manager |
+| `crates/mcb-application/src/use_cases/git_indexing.rs` | Git-aware indexing |
+| `crates/mcb-application/src/use_cases/impact.rs` | Impact analysis |
+| `crates/mcb-infrastructure/src/snapshot/git_snapshot.rs` | Git-based change detection |
+| `crates/mcb-server/src/handlers/git_tools.rs` | MCP git tools |
+| `crates/mcb-infrastructure/src/config/git.rs` | Git configuration |
 
 ## Files to Modify
 
 | File | Change |
 |------|--------|
-| `Cargo.toml` | Add `git2 = "0.20"` dependency |
-| `src/domain/types.rs` | Add `git_metadata` field to CodeChunk |
-| `src/domain/ports/mod.rs` | Export GitProvider |
-| `src/domain/mod.rs` | Export git module |
-| `src/adapters/providers/mod.rs` | Export git provider |
-| `src/application/mod.rs` | Export repository, git_indexing, impact |
-| `src/application/indexing.rs` | Integrate with GitIndexingService |
-| `src/infrastructure/snapshot/mod.rs` | Export git_snapshot |
-| `src/server/mcp_server.rs` | Register new tools |
-| `src/infrastructure/config/mod.rs` | Export git config |
+| `crates/mcb-providers/Cargo.toml` | Add `git2 = "0.20"` dependency |
+| `crates/mcb-domain/src/entities/code_chunk.rs` | Add `git_metadata` field to CodeChunk |
+| `crates/mcb-application/src/ports/providers/mod.rs` | Export GitProvider |
+| `crates/mcb-domain/src/mod.rs` | Export git module |
+| `crates/mcb-providers/src/lib.rs` | Export git provider |
+| `crates/mcb-application/src/use_cases/mod.rs` | Export repository, git_indexing, impact |
+| `crates/mcb-application/src/use_cases/indexing.rs` | Integrate with GitIndexingService |
+| `crates/mcb-infrastructure/src/snapshot/mod.rs` | Export git_snapshot |
+| `crates/mcb-server/src/mcp_server.rs` | Register new tools |
+| `crates/mcb-infrastructure/src/config/mod.rs` | Export git config |
 
 ## Success Metrics
 
@@ -615,9 +621,17 @@ git2 = "0.20"
 | History depth | 50 commits | Per-repo |
 | Submodules | Recursive indexing | Per-repo |
 
+## Related ADRs
+
+-   [ADR-001: Provider Pattern Architecture](001-provider-pattern-architecture.md) - Provider patterns for GitProvider
+-   [ADR-002: Async-First Architecture](002-async-first-architecture.md) - Async git operations
+-   [ADR-004: Multi-Provider Strategy](004-multi-provider-strategy.md) - Provider routing
+-   [ADR-009: Persistent Session Memory](009-persistent-session-memory-v0.2.0.md) - Git-tagged memory entries
+-   [ADR-012: Two-Layer DI Strategy](012-di-strategy-two-layer-approach.md) - DI for git providers
+-   [ADR-013: Clean Architecture Crate Separation](013-clean-architecture-crate-separation.md) - Crate organization
+
 ## References
 
--    [git2 crate](https://docs.rs/git2/)
--    [libgit2](https://libgit2.org/)
--    [ADR 001: Provider Pattern Architecture](001-provider-pattern-architecture.md)
--    [ADR 004: Multi-Provider Strategy](004-multi-provider-strategy.md)
+-   [git2 crate](https://docs.rs/git2/)
+-   [libgit2](https://libgit2.org/)
+-   [Shaku Documentation](https://docs.rs/shaku)

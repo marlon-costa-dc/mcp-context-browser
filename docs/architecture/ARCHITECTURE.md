@@ -355,10 +355,10 @@ impl ContextService {
 
 **Responsibilities**:
 
--    Coordinate embedding generation
--    Manage vector storage operations
--    Handle batch processing
--    Collect performance metrics
+-   Coordinate embedding generation
+-   Manage vector storage operations
+-   Handle batch processing
+-   Collect performance metrics
 
 ##### SearchService
 
@@ -399,10 +399,10 @@ impl SearchService {
 
 **Responsibilities**:
 
--    Query processing and embedding generation
--    Vector similarity search execution
--    Result ranking and filtering
--    Response caching and optimization
+-   Query processing and embedding generation
+-   Vector similarity search execution
+-   Result ranking and filtering
+-   Response caching and optimization
 
 ##### IndexingService
 
@@ -450,10 +450,10 @@ impl IndexingService {
 
 **Responsibilities**:
 
--    Repository scanning and file discovery
--    Language detection and AST parsing
--    Incremental indexing with change detection
--    Chunk generation and metadata extraction
+-   Repository scanning and file discovery
+-   Language detection and AST parsing
+-   Incremental indexing with change detection
+-   Chunk generation and metadata extraction
 
 #### Provider Implementations
 
@@ -688,14 +688,14 @@ The system follows Clean Architecture principles with 7 crates organized as a Ca
 
 **Key Components**:
 
--    `ports/providers/`: Provider port traits (embedding, vector_store, cache, crypto)
--    `ports/infrastructure/`: Infrastructure port traits (sync, snapshot, events)
--    `ports/admin.rs`: Admin service port traits
--    `entities/`: Domain entities (CodeChunk, Repository, etc.)
--    `value_objects/`: Value objects (Embedding, SearchResult, etc.)
--    `repositories/`: Repository port traits (ChunkRepository, SearchRepository)
--    `error.rs`: Domain error types
--    `types.rs`: Core domain types
+-   `ports/providers/`: Provider port traits (embedding, vector_store, cache, crypto)
+-   `ports/infrastructure/`: Infrastructure port traits (sync, snapshot, events)
+-   `ports/admin.rs`: Admin service port traits
+-   `entities/`: Domain entities (CodeChunk, Repository, etc.)
+-   `value_objects/`: Value objects (Embedding, SearchResult, etc.)
+-   `repositories/`: Repository port traits (ChunkRepository, SearchRepository)
+-   `error.rs`: Domain error types
+-   `types.rs`: Core domain types
 
 #### 🔧 Application Layer (`crates/mcb-application/`)
 
@@ -703,11 +703,11 @@ The system follows Clean Architecture principles with 7 crates organized as a Ca
 
 **Services**:
 
--    `services/context.rs`: ContextService - embedding generation and vector storage coordination
--    `services/indexing.rs`: IndexingService - codebase indexing workflow
--    `services/search.rs`: SearchService - semantic search operations
--    `domain_services/chunking.rs`: ChunkingOrchestrator - batch chunking coordination
--    `ports/`: Application-level port interfaces
+-   `services/context.rs`: ContextService - embedding generation and vector storage coordination
+-   `services/indexing.rs`: IndexingService - codebase indexing workflow
+-   `services/search.rs`: SearchService - semantic search operations
+-   `domain_services/chunking.rs`: ChunkingOrchestrator - batch chunking coordination
+-   `ports/`: Application-level port interfaces
 
 #### 🔌 Providers Layer (`crates/mcb-providers/`)
 
@@ -715,12 +715,12 @@ The system follows Clean Architecture principles with 7 crates organized as a Ca
 
 **Submodules**:
 
--    `embedding/`: OpenAI, VoyageAI, Ollama, Gemini, FastEmbed, Null (6 providers)
--    `vector_store/`: Memory, Encrypted, Null (6 providers via features)
--    `cache/`: Moka, Redis cache providers
--    `language/`: 12 AST-based language processors (Rust, Python, JS, TS, Go, Java, C, C++, C#, Ruby, PHP, Swift, Kotlin)
--    `routing/`: Circuit breakers, health monitoring, failover
--    `admin/`: Performance metrics provider
+-   `embedding/`: OpenAI, VoyageAI, Ollama, Gemini, FastEmbed, Null (6 providers)
+-   `vector_store/`: Memory, Encrypted, Null (6 providers via features)
+-   `cache/`: Moka, Redis cache providers
+-   `language/`: 12 AST-based language processors (Rust, Python, JS, TS, Go, Java, C, C++, C#, Ruby, PHP, Swift, Kotlin)
+-   `routing/`: Circuit breakers, health monitoring, failover
+-   `admin/`: Performance metrics provider
 
 #### 🏗️ Infrastructure Layer (`crates/mcb-infrastructure/`)
 
@@ -728,14 +728,14 @@ The system follows Clean Architecture principles with 7 crates organized as a Ca
 
 **Key Components**:
 
--    `di/`: Shaku-based dependency injection with hierarchical modules
--    `di/modules/`: DI modules (infrastructure, server, providers, etc.)
--    `config/`: Configuration management
--    `cache/`: Cache infrastructure
--    `crypto/`: Encryption and hashing utilities
--    `health/`: Health check infrastructure
--    `logging/`: Logging configuration
--    `adapters/`: Null adapters for DI testing
+-   `di/`: Shaku-based dependency injection with hierarchical modules
+-   `di/modules/`: DI modules (infrastructure, server, providers, etc.)
+-   `config/`: Configuration management
+-   `cache/`: Cache infrastructure
+-   `crypto/`: Encryption and hashing utilities
+-   `health/`: Health check infrastructure
+-   `logging/`: Logging configuration
+-   `adapters/`: Null adapters for DI testing
 
 #### 🌐 Server Layer (`crates/mcb-server/`)
 
@@ -743,11 +743,11 @@ The system follows Clean Architecture principles with 7 crates organized as a Ca
 
 **Components**:
 
--    `handlers/`: MCP tool handlers (index, search, clear, status)
--    `transport/`: Stdio transport implementation
--    `tools/`: Tool registry
--    `admin/`: Admin API handlers
--    `init.rs`: Server initialization
+-   `handlers/`: MCP tool handlers (index, search, clear, status)
+-   `transport/`: Stdio transport implementation
+-   `tools/`: Tool registry
+-   `admin/`: Admin API handlers
+-   `init.rs`: Server initialization
 
 #### 🔍 Validation Layer (`crates/mcb-validate/`)
 
@@ -755,8 +755,8 @@ The system follows Clean Architecture principles with 7 crates organized as a Ca
 
 **Components**:
 
--    `validators/`: 12 validators (deps, quality, patterns, tests, docs, naming, SOLID, org, kiss, shaku, refactor)
--    `report.rs`: Validation reporting
+-   `validators/`: 12 validators (deps, quality, patterns, tests, docs, naming, SOLID, org, kiss, shaku, refactor)
+-   `report.rs`: Validation reporting
 
 #### 📦 Facade Crate (`crates/mcb/`)
 
@@ -774,38 +774,38 @@ The system follows Clean Architecture principles with 7 crates organized as a Ca
 
 **Health Monitoring (`health/`)**:
 
--    `HealthMonitor`: Continuous provider health checking
--    `ProviderHealthChecker`: Automated health assessment
--    `HealthCheckResult`: Structured health status reporting
+-   `HealthMonitor`: Continuous provider health checking
+-   `ProviderHealthChecker`: Automated health assessment
+-   `HealthCheckResult`: Structured health status reporting
 
 **Circuit Breaker (`circuit_breaker/`)**:
 
--    `CircuitBreaker`: Failure detection and recovery
--    `CircuitBreakerConfig`: Configurable failure thresholds
--    `CircuitBreakerState`: State management for resilience
+-   `CircuitBreaker`: Failure detection and recovery
+-   `CircuitBreakerConfig`: Configurable failure thresholds
+-   `CircuitBreakerState`: State management for resilience
 
 **Metrics Collection (`metrics/`)**:
 
--    `ProviderMetricsCollector`: Usage and performance tracking
--    `MetricsSummary`: Aggregated metrics reporting
+-   `ProviderMetricsCollector`: Usage and performance tracking
+-   `MetricsSummary`: Aggregated metrics reporting
 
 **Cost Tracking (`cost_tracker/`)**:
 
--    `CostTracker`: API usage and cost monitoring
--    `UsageMetrics`: Detailed usage statistics
--    `CostTrackerConfig`: Cost optimization settings
+-   `CostTracker`: API usage and cost monitoring
+-   `UsageMetrics`: Detailed usage statistics
+-   `CostTrackerConfig`: Cost optimization settings
 
 **Failover Management (`failover/`)**:
 
--    `FailoverManager`: Automatic provider switching
--    `FailoverStrategy`: Priority-based and round-robin strategies
--    `PriorityBasedStrategy`: Cost and performance-aware selection
+-   `FailoverManager`: Automatic provider switching
+-   `FailoverStrategy`: Priority-based and round-robin strategies
+-   `PriorityBasedStrategy`: Cost and performance-aware selection
 
 **Router Core (`router/`)**:
 
--    `ProviderRouter`: Main routing orchestration
--    `ProviderContext`: Contextual routing decisions
--    `ProviderSelectionStrategy`: Pluggable selection algorithms
+-   `ProviderRouter`: Main routing orchestration
+-   `ProviderContext`: Contextual routing decisions
+-   `ProviderSelectionStrategy`: Pluggable selection algorithms
 
 **Key Features**:
 
@@ -823,16 +823,16 @@ The system follows Clean Architecture principles with 7 crates organized as a Ca
 
 **Components**:
 
--    `BM25Scorer`: Term frequency-based ranking
--    `BM25Params`: Configurable BM25 parameters (k1=1.2, b=0.75)
--    `HybridSearchEngine`: Combined search orchestration
--    `SearchResult`: Unified Result format
+-   `BM25Scorer`: Term frequency-based ranking
+-   `BM25Params`: Configurable BM25 parameters (k1=1.2, b=0.75)
+-   `HybridSearchEngine`: Combined search orchestration
+-   `SearchResult`: Unified Result format
 
 **Benefits**:
 
--    Better relevance through dual ranking
--    Handles both keyword and semantic queries
--    Configurable weighting between lexical and semantic scores
+-   Better relevance through dual ranking
+-   Handles both keyword and semantic queries
+-   Configurable weighting between lexical and semantic scores
 
 ---
 
@@ -1489,7 +1489,7 @@ spec:
   template:
     spec:
       containers:
--    name: mcp-context-browser
+-   name: mcp-context-browser
         image: mcp-context-browser:latest
         livenessProbe:
           httpGet:
@@ -1717,10 +1717,10 @@ impl QualityGateChecker {
 
 **Consequences**:
 
--    ✅ High extensibility for adding new providers
--    ✅ Clean separation of concerns
--    ✅ Testability through dependency injection
--    ⚠️ Additional complexity in provider management
+-   ✅ High extensibility for adding new providers
+-   ✅ Clean separation of concerns
+-   ✅ Testability through dependency injection
+-   ⚠️ Additional complexity in provider management
 
 #### ADR-002: Async-First Architecture
 
@@ -1732,10 +1732,10 @@ impl QualityGateChecker {
 
 **Consequences**:
 
--    ✅ Excellent performance for concurrent operations
--    ✅ Scalability for high-throughput scenarios
--    ⚠️ Higher complexity for error handling
--    ⚠️ Learning curve for async Rust patterns
+-   ✅ Excellent performance for concurrent operations
+-   ✅ Scalability for high-throughput scenarios
+-   ⚠️ Higher complexity for error handling
+-   ⚠️ Learning curve for async Rust patterns
 
 #### ADR-003: C4 Model Documentation
 
@@ -1747,10 +1747,10 @@ impl QualityGateChecker {
 
 **Consequences**:
 
--    ✅ Clear, hierarchical documentation structure
--    ✅ Multiple levels of detail for different audiences
--    ✅ Tooling support for diagram generation
--    ⚠️ Learning curve for C4 model concepts
+-   ✅ Clear, hierarchical documentation structure
+-   ✅ Multiple levels of detail for different audiences
+-   ✅ Tooling support for diagram generation
+-   ⚠️ Learning curve for C4 model concepts
 
 #### ADR-004: Multi-Provider Strategy
 
@@ -1762,10 +1762,10 @@ impl QualityGateChecker {
 
 **Consequences**:
 
--    ✅ High availability and fault tolerance
--    ✅ Cost optimization through provider selection
--    ⚠️ Configuration complexity
--    ⚠️ Testing complexity across providers
+-   ✅ High availability and fault tolerance
+-   ✅ Cost optimization through provider selection
+-   ⚠️ Configuration complexity
+-   ⚠️ Testing complexity across providers
 
 #### ADR-012: Two-Layer DI Strategy
 
@@ -1777,10 +1777,10 @@ impl QualityGateChecker {
 
 **Consequences**:
 
--    ✅ Clear mental model: Shaku = defaults, Factories = production
--    ✅ Easy testing with null providers from Shaku modules
--    ✅ Configuration-driven provider selection at runtime
--    ⚠️ Two patterns to understand (Shaku and factories)
+-   ✅ Clear mental model: Shaku = defaults, Factories = production
+-   ✅ Easy testing with null providers from Shaku modules
+-   ✅ Configuration-driven provider selection at runtime
+-   ⚠️ Two patterns to understand (Shaku and factories)
 
 See [ADR-012](../adr/012-di-strategy-two-layer-approach.md) for full details.
 
@@ -1794,11 +1794,11 @@ See [ADR-012](../adr/012-di-strategy-two-layer-approach.md) for full details.
 
 **Consequences**:
 
--    ✅ Clear boundaries and responsibilities per crate
--    ✅ Testability without infrastructure dependencies
--    ✅ Parallel compilation, incremental builds
--    ⚠️ Seven crates require coordination
--    ⚠️ Learning curve for Clean Architecture concepts
+-   ✅ Clear boundaries and responsibilities per crate
+-   ✅ Testability without infrastructure dependencies
+-   ✅ Parallel compilation, incremental builds
+-   ⚠️ Seven crates require coordination
+-   ⚠️ Learning curve for Clean Architecture concepts
 
 See [ADR-013](../adr/013-clean-architecture-crate-separation.md) for full details.
 
@@ -1828,20 +1828,20 @@ services:
       context: .
       dockerfile: Dockerfile.dev
     ports:
--    "3000:3000"
+-   "3000:3000"
     environment:
--    RUST_LOG=debug
--    MCP_MODE=development
--    EMBEDDING_PROVIDER=mock
--    VECTOR_STORE=memory
+-   RUST_LOG=debug
+-   MCP_MODE=development
+-   EMBEDDING_PROVIDER=mock
+-   VECTOR_STORE=memory
     volumes:
--    .:/app
--    cargo-cache:/usr/local/cargo/registry
+-   .:/app
+-   cargo-cache:/usr/local/cargo/registry
 
   redis:
     image: redis:7-alpine
     ports:
--    "6379:6379"
+-   "6379:6379"
 ```
 
 #### Production Deployment
@@ -1858,16 +1858,16 @@ spec:
   template:
     spec:
       containers:
--    name: mcp-context-browser
+-   name: mcp-context-browser
         image: mcp-context-browser:v1.0.0
         env:
--    name: MCP_MODE
+-   name: MCP_MODE
           value: "production"
--    name: EMBEDDING_PROVIDER
+-   name: EMBEDDING_PROVIDER
           value: "openai"
--    name: VECTOR_STORE
+-   name: VECTOR_STORE
           value: "milvus"
--    name: OPENAI_API_KEY
+-   name: OPENAI_API_KEY
           valueFrom:
             secretKeyRef:
               name: mcp-secrets
@@ -1880,12 +1880,12 @@ spec:
           httpGet:
             path: /ready
             port: 3000
--    name: milvus
+-   name: milvus
         image: milvusdb/milvus:latest
         env:
--    name: ETCD_ENDPOINTS
+-   name: ETCD_ENDPOINTS
           value: "etcd:2379"
--    name: MINIO_ADDRESS
+-   name: MINIO_ADDRESS
           value: "minio:9000"
 ```
 
@@ -1979,9 +1979,9 @@ impl HealthCheck for ProviderHealthCheck {
 
 # alerting-rules.yml
 groups:
--    name: mcp-context-browser
+-   name: mcp-context-browser
     rules:
--    alert: HighErrorRate
+-   alert: HighErrorRate
         expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.05
         for: 5m
         labels:
@@ -1989,7 +1989,7 @@ groups:
         annotations:
           summary: "High error rate detected"
 
--    alert: ProviderDown
+-   alert: ProviderDown
         expr: up{job="mcp-provider"} == 0
         for: 2m
         labels:
@@ -2053,51 +2053,51 @@ impl BackupManager {
 
 **Delivered**:
 
--    Clean Rust architecture with SOLID principles
--    Provider pattern with mock implementations
--    MCP protocol framework (stdio transport)
--    In-memory vector storage with cosine similarity
--    Core data structures and comprehensive error handling
+-   Clean Rust architecture with SOLID principles
+-   Provider pattern with mock implementations
+-   MCP protocol framework (stdio transport)
+-   In-memory vector storage with cosine similarity
+-   Core data structures and comprehensive error handling
 
 ### Phase 2: Provider Ecosystem (Completed ✅)
 
 **Delivered**:
 
--    ✅ Real embedding provider integrations (OpenAI, Ollama, Gemini, VoyageAI)
--    ✅ Production vector database integration (Milvus, In-Memory, Filesystem)
--    ✅ Enhanced file processing with AST parsing
--    ✅ Performance optimization and caching
--    ✅ Complete DI system with provider registry and routing
+-   ✅ Real embedding provider integrations (OpenAI, Ollama, Gemini, VoyageAI)
+-   ✅ Production vector database integration (Milvus, In-Memory, Filesystem)
+-   ✅ Enhanced file processing with AST parsing
+-   ✅ Performance optimization and caching
+-   ✅ Complete DI system with provider registry and routing
 
 **Upcoming Milestones**:
 
--    ✅**v0.1.0**: First stable release - drop-in replacement for Claude-context
--    🚧**v0.2.0**: Git-aware indexing + persistent session memory ([ADR-008](../adr/008-git-aware-semantic-indexing-v0.2.0.md), [ADR-009](../adr/009-persistent-session-memory-v0.2.0.md))
--    Repository-aware indexing with git2
--    Multi-branch and commit history search
--    Cross-session memory with SQLite storage
--    Hybrid search for observations and decisions
--    📋**v0.3.0**: Advanced code intelligence
--    Symbol extraction and cross-referencing
--    Call graph analysis
--    Dependency impact mapping
+-   ✅**v0.1.0**: First stable release - drop-in replacement for Claude-context
+-   🚧**v0.2.0**: Git-aware indexing + persistent session memory ([ADR-008](../adr/008-git-aware-semantic-indexing-v0.2.0.md), [ADR-009](../adr/009-persistent-session-memory-v0.2.0.md))
+-   Repository-aware indexing with git2
+-   Multi-branch and commit history search
+-   Cross-session memory with SQLite storage
+-   Hybrid search for observations and decisions
+-   📋**v0.3.0**: Advanced code intelligence
+-   Symbol extraction and cross-referencing
+-   Call graph analysis
+-   Dependency impact mapping
 
 ### Phase 3: Enterprise Features (Planned 📋)
 
 **Target Features**:
 
--    Multi-user support with authentication
--    REST API alongside MCP protocol
--    Advanced monitoring and alerting
--    Automated scaling and high availability
--    Enterprise security and compliance
+-   Multi-user support with authentication
+-   REST API alongside MCP protocol
+-   Advanced monitoring and alerting
+-   Automated scaling and high availability
+-   Enterprise security and compliance
 
 **Long-term Vision**:
 
--    Distributed deployment across multiple regions
--    Edge computing support for low-latency access
--    Advanced AI features (code generation, refactoring suggestions)
--    Integration with popular IDEs and development tools
+-   Distributed deployment across multiple regions
+-   Edge computing support for low-latency access
+-   Advanced AI features (code generation, refactoring suggestions)
+-   Integration with popular IDEs and development tools
 
 ### Technical Debt & Improvements
 

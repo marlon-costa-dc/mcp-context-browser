@@ -51,36 +51,36 @@
 -   **Parameters**: 11 core config fields
 -   **Env Var Support**: Implicit (via config loader)
 -   **Notes**:
--    Root config structure aggregates all subsystems
--    All fields have defaults
--    Optional `admin` field (enabled only if credentials provided)
+-   Root config structure aggregates all subsystems
+-   All fields have defaults
+-   Optional `admin` field (enabled only if credentials provided)
 
 #### ✅ src/infrastructure/config/loader.rs
 
 -   **Status**: PASSED
 -   **Features**:
--    Loads from `config/default.toml` and `config/local.toml`
--    Overrides with environment variables (prefix `MCP_`, separator `__`)
--    Validation with `validator` crate
+-   Loads from `config/default.toml` and `config/local.toml`
+-   Overrides with environment variables (prefix `MCP_`, separator `__`)
+-   Validation with `validator` crate
 -   **Env Var Pattern**: `MCP_<section>__<field>` (nested underscore separation)
 
 #### ✅ src/infrastructure/config/server.rs
 
 -   **Status**: PASSED
 -   **Parameters**: 2
--    `host` (default: `127.0.0.1`)
--    `port` (default: `3000`)
+-   `host` (default: `127.0.0.1`)
+-   `port` (default: `3000`)
 -   **Env Vars**:
--    `MCP_SERVER__HOST`
--    `MCP_SERVER__PORT`
+-   `MCP_SERVER__HOST`
+-   `MCP_SERVER__PORT`
 
 #### ✅ src/infrastructure/config/metrics.rs
 
 -   **Status**: PASSED
 -   **Parameters**: 3
--    `enabled` (default: true, via `MCP_METRICS_ENABLED`)
--    `port` (default: 3001, via `MCP_PORT`)
--    `rate_limiting` (nested RateLimitConfig)
+-   `enabled` (default: true, via `MCP_METRICS_ENABLED`)
+-   `port` (default: 3001, via `MCP_PORT`)
+-   `rate_limiting` (nested RateLimitConfig)
 -   **Env Vars**: `MCP_METRICS_ENABLED`, `MCP_PORT`
 -   **Notes**: Unified port for Admin + Metrics APIs
 
@@ -94,16 +94,16 @@
 -   **Parameters**: 28+ (across CacheConfig + 5 namespaces)
 -   **Env Vars**: All supported via `MCP_CACHE__*` pattern
 -   **Critical Fields**:
--    `redis_url` (empty = Moka local, non-empty = Redis remote)
--    `default_ttl_seconds` (default: 3600)
--    `max_size` (default: 10000)
--    `enabled` (default: true)
+-   `redis_url` (empty = Moka local, non-empty = Redis remote)
+-   `default_ttl_seconds` (default: 3600)
+-   `max_size` (default: 10000)
+-   `enabled` (default: true)
 -   **Namespace Configs**(TTL, max_entries, compression):
--    embeddings (7200s, 5000 entries, compressed)
--    search_results (1800s, 2000 entries, uncompressed)
--    metadata (3600s, 1000 entries, uncompressed)
--    provider_responses (300s, 3000 entries, compressed)
--    sync_batches (86400s, 1000 entries, uncompressed)
+-   embeddings (7200s, 5000 entries, compressed)
+-   search_results (1800s, 2000 entries, uncompressed)
+-   metadata (3600s, 1000 entries, uncompressed)
+-   provider_responses (300s, 3000 entries, compressed)
+-   sync_batches (86400s, 1000 entries, uncompressed)
 -   **Audit Finding**: String-based mode detection (not type-safe)
 -   **Severity**: Low
 -   **Plan**: Phase 2 will introduce `CacheBackendConfig` enum
@@ -112,12 +112,12 @@
 
 -   **Status**: PASSED
 -   **Parameters**: 7
--    `jwt_secret` (required if auth enabled, min 32 chars)
--    `jwt_expiration` (default: 86400 seconds)
--    `jwt_issuer` (default: "MCP-context-browser")
--    `enabled` (auto-detected from credentials)
--    `bypass_paths` (default: ["/API/health", "/API/context/metrics"])
--    `users` (HashMap, skip serde)
+-   `jwt_secret` (required if auth enabled, min 32 chars)
+-   `jwt_expiration` (default: 86400 seconds)
+-   `jwt_issuer` (default: "MCP-context-browser")
+-   `enabled` (auto-detected from credentials)
+-   `bypass_paths` (default: ["/API/health", "/API/context/metrics"])
+-   `users` (HashMap, skip serde)
 -   **Env Vars**: `JWT_SECRET`, `ADMIN_PASSWORD`
 -   **Security Model**: Graceful degradation - disables if credentials missing
 -   **Production Validation**: `validate_for_production()` checks security warnings
@@ -126,14 +126,14 @@
 
 -   **Status**: PASSED
 -   **EventBusConfig Enum**:
--    `Tokio { capacity: usize }` (default: 100)
--    `Nats { url, retention_hours, max_msgs_per_subject }`
+-   `Tokio { capacity: usize }` (default: 100)
+-   `Nats { url, retention_hours, max_msgs_per_subject }`
 -   **Env Vars**:
--    `MCP_EVENT_BUS_TYPE` (Tokio or nats)
--    `MCP_EVENT_BUS_CAPACITY` (Tokio only)
--    `MCP_NATS_URL` (NATS only, default: "nats://localhost:4222")
--    `MCP_NATS_RETENTION_HOURS` (default: 1)
--    `MCP_NATS_MAX_MSGS` (default: 10000)
+-   `MCP_EVENT_BUS_TYPE` (Tokio or nats)
+-   `MCP_EVENT_BUS_CAPACITY` (Tokio only)
+-   `MCP_NATS_URL` (NATS only, default: "nats://localhost:4222")
+-   `MCP_NATS_RETENTION_HOURS` (default: 1)
+-   `MCP_NATS_MAX_MSGS` (default: 10000)
 -   **Factory Function**: `create_event_bus(config)` exists but not used (Phase 4)
 -   **NATS Status**: Disabled due to type inference issues (Phase 5)
 
@@ -141,19 +141,19 @@
 
 -   **Status**: PASSED
 -   **DatabaseConfig Struct**:
--    `url` (empty when disabled)
--    `max_connections` (default: 20)
--    `min_idle` (default: 5)
--    `max_lifetime` (default: 1800s = 30 min)
--    `idle_timeout` (default: 600s = 10 min)
--    `connection_timeout` (default: 30s)
+-   `url` (empty when disabled)
+-   `max_connections` (default: 20)
+-   `min_idle` (default: 5)
+-   `max_lifetime` (default: 1800s = 30 min)
+-   `idle_timeout` (default: 600s = 10 min)
+-   `connection_timeout` (default: 30s)
 -   **Env Vars**:
--    `DATABASE_URL` (required if database enabled)
--    `DATABASE_MAX_CONNECTIONS`
--    `DATABASE_MIN_IDLE`
--    `DATABASE_MAX_LIFETIME_SECS`
--    `DATABASE_IDLE_TIMEOUT_SECS`
--    `DATABASE_CONNECTION_TIMEOUT_SECS`
+-   `DATABASE_URL` (required if database enabled)
+-   `DATABASE_MAX_CONNECTIONS`
+-   `DATABASE_MIN_IDLE`
+-   `DATABASE_MAX_LIFETIME_SECS`
+-   `DATABASE_IDLE_TIMEOUT_SECS`
+-   `DATABASE_CONNECTION_TIMEOUT_SECS`
 -   **Graceful Degradation**: If DATABASE_URL not set, database disabled
 -   **Note**: Has `from_env()` implementation ✅
 
@@ -161,32 +161,32 @@
 
 -   **Status**: PASSED (with intentional design note)
 -   **Parameters**: 5
--    `enabled` (default: true)
--    `username` (default: "admin" - for testing only)
--    `password` (default: "admin" - for testing only)
--    `jwt_secret` (default: "default-jwt-secret-change-in-production")
--    `jwt_expiration` (default: 3600)
+-   `enabled` (default: true)
+-   `username` (default: "admin" - for testing only)
+-   `password` (default: "admin" - for testing only)
+-   `jwt_secret` (default: "default-jwt-secret-change-in-production")
+-   `jwt_expiration` (default: 3600)
 -   **Env Vars**: Loads from environment via `from_env()` NOT FROM DEFAULT
 -   **Graceful Degradation**: Made optional in Config struct - admin router only registered if credentials provided
 -   **Security Note**: Defaults are FOR TESTING ONLY
--    In production, credentials must come from environment variables
--    If not provided, admin interface is completely disabled
+-   In production, credentials must come from environment variables
+-   If not provided, admin interface is completely disabled
 -   **Design Pattern**: Demonstrates "optional feature" pattern well
 
 #### ✅ src/infrastructure/rate_limit.rs
 
 -   **Status**: PASSED
 -   **RateLimitConfig Struct**:
--    `backend` (RateLimitBackend enum)
--    `window_seconds` (default: 60)
--    `max_requests_per_window` (default: 100)
--    `burst_allowance` (default: 10)
--    `enabled` (default: true)
--    `redis_timeout_seconds` (default: 5)
--    `cache_ttl_seconds` (default: 1)
+-   `backend` (RateLimitBackend enum)
+-   `window_seconds` (default: 60)
+-   `max_requests_per_window` (default: 100)
+-   `burst_allowance` (default: 10)
+-   `enabled` (default: true)
+-   `redis_timeout_seconds` (default: 5)
+-   `cache_ttl_seconds` (default: 1)
 -   **RateLimitBackend Enum**:
--    `Memory { max_entries: 10000 }`
--    `Redis { url: String }`
+-   `Memory { max_entries: 10000 }`
+-   `Redis { url: String }`
 -   **Env Vars**: `MCP_RATE_LIMIT__BACKEND__TYPE`, `MCP_RATE_LIMIT__BACKEND__URL` (when type=redis)
 -   **Type Safety**: Good! Uses enum instead of String
 
@@ -203,12 +203,12 @@
 
 -   **Status**: PASSED
 -   **EmbeddingProviderConfig Enum**(6 variants):
--    OpenAI (model, API_key, base_url, dimensions, max_tokens)
--    Ollama (model, host, dimensions, max_tokens)
--    VoyageAI (model, API_key, dimensions, max_tokens)
--    Gemini (model, API_key, base_url, dimensions, max_tokens)
--    FastEmbed (model, dimensions, max_tokens)
--    Mock (dimensions, max_tokens)
+-   OpenAI (model, API_key, base_url, dimensions, max_tokens)
+-   Ollama (model, host, dimensions, max_tokens)
+-   VoyageAI (model, API_key, dimensions, max_tokens)
+-   Gemini (model, API_key, base_url, dimensions, max_tokens)
+-   FastEmbed (model, dimensions, max_tokens)
+-   Mock (dimensions, max_tokens)
 -   **Validation**: Implements `Validate` trait
 -   **Env Var Support**: Via TOML config file
 -   **Security**: API keys read from config/environment, not hardcoded
@@ -217,12 +217,12 @@
 
 -   **Status**: PASSED
 -   **VectorStoreProviderConfig Enum**(6 variants):
--    Milvus (address, token, collection, dimensions, timeout)
--    EdgeVec (address, token, collection, dimensions, timeout)
--    InMemory (dimensions)
--    Filesystem (path, dimensions)
--    Encrypted (path, key, dimensions)
--    Null (dimensions)
+-   Milvus (address, token, collection, dimensions, timeout)
+-   EdgeVec (address, token, collection, dimensions, timeout)
+-   InMemory (dimensions)
+-   Filesystem (path, dimensions)
+-   Encrypted (path, key, dimensions)
+-   Null (dimensions)
 -   **Validation**: Type-safe enum
 -   **Env Var Support**: Via TOML config
 
@@ -233,10 +233,10 @@
 -   **Env Var Support**: Via helper functions `get_env_usize()`, `get_env_u32()`, `get_env_u64()`
 -   **Pattern**: `ADMIN_<CONSTANT_NAME>` for all admin settings
 -   **Examples**:
--    `ADMIN_MAX_ACTIVITIES=100`
--    `ADMIN_ACTIVITY_RETENTION_DAYS=30`
--    `ADMIN_BACKUP_RETENTION_DAYS=30`
--    `ADMIN_INDEX_REBUILD_TIMEOUT_SECS=3600`
+-   `ADMIN_MAX_ACTIVITIES=100`
+-   `ADMIN_ACTIVITY_RETENTION_DAYS=30`
+-   `ADMIN_BACKUP_RETENTION_DAYS=30`
+-   `ADMIN_INDEX_REBUILD_TIMEOUT_SECS=3600`
 -   **Documentation**: Comprehensive! Every parameter documented with default and purpose
 -   **Tests**: Full test coverage for env var loading
 
@@ -248,9 +248,9 @@
 
 -   **Status**: PASSED
 -   **Functionality**:
--    Loads TOML files in priority order
--    Overrides with environment variables
--    Validates all configuration
+-   Loads TOML files in priority order
+-   Overrides with environment variables
+-   Validates all configuration
 -   **Env Var Pattern**: `MCP_<section>__<field>` (double underscore for nesting)
 -   **Error Handling**: Clear error messages
 
@@ -259,8 +259,8 @@
 -   **Status**: PASSED (but factory pattern not fully utilized)
 -   **Factory Functions**: Create DI instances
 -   **Note**: Provider factories exist but not consistently used
--    Event bus has factory (`create_event_bus`) but server calls deprecated function
--    Plan: Phase 4 will fix event bus usage
+-   Event bus has factory (`create_event_bus`) but server calls deprecated function
+-   Plan: Phase 4 will fix event bus usage
 
 ---
 
@@ -275,17 +275,17 @@ MCP_<SUBSYSTEM>_<PARAMETER>
 ```
 
 Subsystems identified:
--    `MCP_SERVER_*` - Server configuration
--    `MCP_CACHE_*` - Caching system
--    `MCP_EVENT_BUS_*` - Event system
--    `MCP_NATS_*` - NATS-specific
--    `MCP_RATE_LIMIT_*` - Rate limiting
--    `MCP_RESOURCE_LIMITS_*` - Resource limits
--    `MCP_METRICS_*` - Metrics
--    `MCP_PROVIDERS_*` - Provider configuration
--    `ADMIN_*` - Admin system (legacy pattern, acceptable)
--    `JWT_*` - Authentication (legacy pattern, acceptable)
--    `DATABASE_*` - Database (legacy pattern, acceptable)
+-   `MCP_SERVER_*` - Server configuration
+-   `MCP_CACHE_*` - Caching system
+-   `MCP_EVENT_BUS_*` - Event system
+-   `MCP_NATS_*` - NATS-specific
+-   `MCP_RATE_LIMIT_*` - Rate limiting
+-   `MCP_RESOURCE_LIMITS_*` - Resource limits
+-   `MCP_METRICS_*` - Metrics
+-   `MCP_PROVIDERS_*` - Provider configuration
+-   `ADMIN_*` - Admin system (legacy pattern, acceptable)
+-   `JWT_*` - Authentication (legacy pattern, acceptable)
+-   `DATABASE_*` - Database (legacy pattern, acceptable)
 
 ### Naming Consistency
 
@@ -309,10 +309,10 @@ fn default_jwt_secret() -> String { "default-jwt-secret-change-in-production".to
 ```
 
 **Audit Status**: ACCEPTABLE ✅
--    Reason 1: These are test-only defaults
--    Reason 2: Explicitly documented as "change-in-production"
--    Reason 3: Production deployment REQUIRES environment variables
--    Reason 4: Graceful degradation - admin interface disabled if not explicitly configured
+-   Reason 1: These are test-only defaults
+-   Reason 2: Explicitly documented as "change-in-production"
+-   Reason 3: Production deployment REQUIRES environment variables
+-   Reason 4: Graceful degradation - admin interface disabled if not explicitly configured
 
 **Server Config**:
 
@@ -322,13 +322,13 @@ pub port: u16,            // Default: 3000
 ```
 
 **Audit Status**: ACCEPTABLE ✅
--    Reason: Reasonable defaults for local development
--    Reason: Both overridable via env vars
+-   Reason: Reasonable defaults for local development
+-   Reason: Both overridable via env vars
 
 **No Hardcoded Secrets Found**: ✅
--    No API keys hardcoded
--    No database passwords hardcoded
--    No JWT secrets (except test default clearly marked)
+-   No API keys hardcoded
+-   No database passwords hardcoded
+-   No JWT secrets (except test default clearly marked)
 
 ---
 
@@ -344,9 +344,9 @@ All configurations follow this priority (highest to lowest):
 4.**Built-in Defaults**(Rust code)
 
 **Audit Result**: PASSED ✅
--    Full externalization possible
--    No mandatory hardcoded values
--    Graceful degradation for optional systems
+-   Full externalization possible
+-   No mandatory hardcoded values
+-   Graceful degradation for optional systems
 
 ---
 
@@ -375,14 +375,14 @@ All configurations follow this priority (highest to lowest):
 ### ✅ Type Safety: Good
 
 **Using Enums**(Type-Safe):
--    `EventBusConfig` - Tokio or NATS ✅
--    `RateLimitBackend` - Memory or Redis ✅
--    `EmbeddingProviderConfig` - 6 provider variants ✅
--    `VectorStoreProviderConfig` - 6 store variants ✅
+-   `EventBusConfig` - Tokio or NATS ✅
+-   `RateLimitBackend` - Memory or Redis ✅
+-   `EmbeddingProviderConfig` - 6 provider variants ✅
+-   `VectorStoreProviderConfig` - 6 store variants ✅
 
 **Using Strings**(Less Type-Safe):
--    Cache backend detection: `if redis_url.is_empty()` (Phase 2 will fix)
--    Server host: `String` (acceptable - no validation needed)
+-   Cache backend detection: `if redis_url.is_empty()` (Phase 2 will fix)
+-   Server host: `String` (acceptable - no validation needed)
 
 **Audit Result**: GOOD - Only minor concern is cache backend String detection, which is planned to be fixed in Phase 2
 
@@ -393,13 +393,13 @@ All configurations follow this priority (highest to lowest):
 ### ✅ Validation Rules Present
 
 **Fields with Validation Rules**:
--    `server.port`: range(min = 1) ✅
--    `cache.default_ttl_seconds`: range(min = 1) ✅
--    `cache.max_size`: range(min = 1) ✅
--    All `ttl_seconds` fields: range(min = 1) ✅
--    All `max_entries` fields: range(min = 1) ✅
--    Resource limits percentages: range(0.0-100.0) ✅
--    Auth fields: length constraints ✅
+-   `server.port`: range(min = 1) ✅
+-   `cache.default_ttl_seconds`: range(min = 1) ✅
+-   `cache.max_size`: range(min = 1) ✅
+-   All `ttl_seconds` fields: range(min = 1) ✅
+-   All `max_entries` fields: range(min = 1) ✅
+-   Resource limits percentages: range(0.0-100.0) ✅
+-   Auth fields: length constraints ✅
 
 **Validator Pattern**:
 
@@ -419,36 +419,36 @@ pub cache: CacheConfig,
 
 ### ✅ Audit Criteria (ALL PASSED)
 
--    [x] All configuration files reviewed (15 files)
--    [x] All parameters documented (85+)
--    [x] Environment variable mappings verified
--    [x] Naming convention audit (100% compliance)
--    [x] Hardcoded values identified (2 test-only, acceptable)
--    [x] Defaults documented and reasonable
--    [x] Type safety assessed (good, minor improvement planned)
--    [x] Validation rules present (comprehensive)
--    [x] Graceful degradation verified (optional systems)
--    [x] Environment variables reference created (ENVIRONMENT_VARIABLES.md)
+-   [x] All configuration files reviewed (15 files)
+-   [x] All parameters documented (85+)
+-   [x] Environment variable mappings verified
+-   [x] Naming convention audit (100% compliance)
+-   [x] Hardcoded values identified (2 test-only, acceptable)
+-   [x] Defaults documented and reasonable
+-   [x] Type safety assessed (good, minor improvement planned)
+-   [x] Validation rules present (comprehensive)
+-   [x] Graceful degradation verified (optional systems)
+-   [x] Environment variables reference created (ENVIRONMENT_VARIABLES.md)
 
 ### ⚠️ Findings: ACCEPTABLE (Will Fix in Phases 2-3)
 
 1.**Cache backend uses String detection**(not type-safe)
 
--    Current: `if redis_url.is_empty()`
--    Fix: Phase 2 will introduce `CacheBackendConfig` enum
--    Impact: Low - works perfectly, just not type-safe
+-   Current: `if redis_url.is_empty()`
+-   Fix: Phase 2 will introduce `CacheBackendConfig` enum
+-   Impact: Low - works perfectly, just not type-safe
 
 2.**Event bus factory not used**(hardcoded Tokio)
 
--    Current: `create_shared_event_bus()` always returns Tokio
--    Fix: Phase 4 will use factory pattern
--    Impact: Low - only affects multi-instance deployments
+-   Current: `create_shared_event_bus()` always returns Tokio
+-   Fix: Phase 4 will use factory pattern
+-   Impact: Low - only affects multi-instance deployments
 
 3.**NATS backend disabled**(type inference issues)
 
--    Current: EventBusConfig::Nats falls back to Tokio
--    Fix: Phase 5 will resolve jetstream API errors
--    Impact: Low - default Tokio works fine
+-   Current: EventBusConfig::Nats falls back to Tokio
+-   Fix: Phase 5 will resolve jetstream API errors
+-   Impact: Low - default Tokio works fine
 
 ---
 
@@ -467,8 +467,8 @@ pub cache: CacheConfig,
 ## Audit Artifacts
 
 **Files Created**:
--    ✅ [ENVIRONMENT_VARIABLES.md](./ENVIRONMENT_VARIABLES.md) - Complete reference for all env vars
--    ✅ [PHASE_0_AUDIT.md](./PHASE_0_AUDIT.md) - This audit checklist
+-   ✅ [ENVIRONMENT_VARIABLES.md](./ENVIRONMENT_VARIABLES.md) - Complete reference for all env vars
+-   ✅ [PHASE_0_AUDIT.md](./PHASE_0_AUDIT.md) - This audit checklist
 
 **Verification Commands**:
 

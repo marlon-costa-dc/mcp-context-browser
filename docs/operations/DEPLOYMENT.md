@@ -121,9 +121,9 @@ free -h  # Memory
 
 ### Getting Help
 
--    Check existing [GitHub Issues](https://github.com/marlonsc/mcp-context-browser/issues)
--    Review the [ARCHITECTURE.md](../architecture/ARCHITECTURE.md) for technical details
--    See [CONTRIBUTING.md](../developer/CONTRIBUTING.md) for development setup
+-   Check existing [GitHub Issues](https://github.com/marlonsc/mcp-context-browser/issues)
+-   Review the [ARCHITECTURE.md](../architecture/ARCHITECTURE.md) for technical details
+-   See [CONTRIBUTING.md](../developer/CONTRIBUTING.md) for development setup
 
 ## 🚀 Future Deployment Options
 
@@ -164,20 +164,20 @@ spec:
         app: mcp-context-browser
     spec:
       containers:
--    name: mcp-context-browser
+-   name: mcp-context-browser
         image: mcp-context-browser:latest
         ports:
--    containerPort: 3000
+-   containerPort: 3000
         env:
--    name: MCP_MODE
+-   name: MCP_MODE
           value: "distributed"
--    name: STORAGE_PROVIDER
+-   name: STORAGE_PROVIDER
           value: "milvus"
--    name: MILVUS_URI
+-   name: MILVUS_URI
           value: "milvus-service:19530"
--    name: DATABASE_URL
+-   name: DATABASE_URL
           value: "postgresql://user:password@db:5432/mcp_db"
--    name: REDIS_URL
+-   name: REDIS_URL
           value: "redis://redis:6379"
         resources:
           requests:
@@ -198,30 +198,30 @@ services:
   mcp-context-browser:
     build: .
     ports:
--    "3000:3000"
--    "9090:9090"  # Metrics endpoint
+-   "3000:3000"
+-   "9090:9090"  # Metrics endpoint
     environment:
--    MCP_MODE=distributed
--    STORAGE_PROVIDER=milvus
--    MILVUS_URI=milvus:19530
--    DATABASE_URL=postgresql://user:password@postgres:5432/mcp_db
--    REDIS_URL=redis://redis:6379
--    JWT_SECRET=your-secret-key
+-   MCP_MODE=distributed
+-   STORAGE_PROVIDER=milvus
+-   MILVUS_URI=milvus:19530
+-   DATABASE_URL=postgresql://user:password@postgres:5432/mcp_db
+-   REDIS_URL=redis://redis:6379
+-   JWT_SECRET=your-secret-key
     depends_on:
--    milvus
--    postgres
--    redis
+-   milvus
+-   postgres
+-   redis
     volumes:
--    ./config:/app/config:ro
--    ./data:/app/data
+-   ./config:/app/config:ro
+-   ./data:/app/data
 
   milvus:
     image: milvusdb/milvus:latest
     ports:
--    "19530:19530"
--    "9091:9091"
+-   "19530:19530"
+-   "9091:9091"
     volumes:
--    milvus_data:/var/lib/milvus
+-   milvus_data:/var/lib/milvus
     command: milvus run standalone
 
   postgres:
@@ -231,16 +231,16 @@ services:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
     volumes:
--    postgres_data:/var/lib/postgresql/data
+-   postgres_data:/var/lib/postgresql/data
     ports:
--    "5432:5432"
+-   "5432:5432"
 
   redis:
     image: redis:7-alpine
     ports:
--    "6379:6379"
+-   "6379:6379"
     volumes:
--    redis_data:/data
+-   redis_data:/data
 
 volumes:
   milvus_data:
@@ -310,7 +310,7 @@ spec:
   selector:
     app: mcp-context-browser
   ports:
--    port: 80
+-   port: 80
       targetPort: 3000
   type: LoadBalancer
 
@@ -324,14 +324,14 @@ metadata:
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
 spec:
   tls:
--    hosts:
--    mcp.yourcompany.com
+-   hosts:
+-   mcp.yourcompany.com
       secretName: mcp-tls
   rules:
--    host: mcp.yourcompany.com
+-   host: mcp.yourcompany.com
       http:
         paths:
--    path: /
+-   path: /
             pathType: Prefix
             backend:
               service:
@@ -462,7 +462,7 @@ data:
     # Milvus configuration
     etcd:
       endpoints:
--    etcd-service:2379
+-   etcd-service:2379
     minio:
       address: minio-service
       port: 9000
@@ -716,19 +716,19 @@ spec:
   minReplicas: 3
   maxReplicas: 50
   metrics:
--    type: Resource
+-   type: Resource
     resource:
       name: cpu
       target:
         type: Utilization
         averageUtilization: 70
--    type: Resource
+-   type: Resource
     resource:
       name: memory
       target:
         type: Utilization
         averageUtilization: 80
--    type: Pods
+-   type: Pods
     pods:
       metric:
         name: http_requests_per_second

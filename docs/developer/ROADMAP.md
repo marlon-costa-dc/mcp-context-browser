@@ -17,17 +17,17 @@ MCP Context Browser v0.1.0 is the first stable release, providing a complete dro
 
 #### Achievements
 
--    ✅ Full MCP protocol implementation (4 tools)
--    ✅ 12 languages with AST parsing (Rust, Python, JS/TS, Go, Java, C, C++, C#, Ruby, PHP, Swift, Kotlin)
--    ✅ 6 embedding providers (OpenAI, VoyageAI, Ollama, Gemini, FastEmbed, Null)
--    ✅ 6 vector stores (Milvus, EdgeVec, In-Memory, Filesystem, Encrypted, Null)
--    ✅ Claude-context environment variable compatibility
--    ✅ 790+ tests with comprehensive coverage (100% pass rate)
--    ✅ JWT authentication and rate limiting
--    ✅ Clean architecture with trait-based dependency injection
--    ✅ HTTP transport foundation for future enhancements
--    ✅ Systemd service integration
--    ✅ Binary auto-respawn mechanism
+-   ✅ Full MCP protocol implementation (4 tools)
+-   ✅ 12 languages with AST parsing (Rust, Python, JS/TS, Go, Java, C, C++, C#, Ruby, PHP, Swift, Kotlin)
+-   ✅ 6 embedding providers (OpenAI, VoyageAI, Ollama, Gemini, FastEmbed, Null)
+-   ✅ 6 vector stores (Milvus, EdgeVec, In-Memory, Filesystem, Encrypted, Null)
+-   ✅ Claude-context environment variable compatibility
+-   ✅ 790+ tests with comprehensive coverage (100% pass rate)
+-   ✅ JWT authentication and rate limiting
+-   ✅ Clean architecture with trait-based dependency injection
+-   ✅ HTTP transport foundation for future enhancements
+-   ✅ Systemd service integration
+-   ✅ Binary auto-respawn mechanism
 
 ---
 
@@ -47,17 +47,17 @@ Transform MCP Context Browser into a comprehensive development platform combinin
 
 1.**Git-Aware Semantic Indexing**(ADR-008)
 
--    Project-relative indexing (portable)
--    Multi-branch support with commit history
--    Change impact analysis
--    Monorepo and submodule support
+-   Project-relative indexing (portable)
+-   Multi-branch support with commit history
+-   Change impact analysis
+-   Monorepo and submodule support
 
 2.**Persistent Session Memory**(ADR-009)
 
--    Cross-session observation storage
--    Semantic search over past decisions and work
--    Token-efficient progressive disclosure (3-layer workflow)
--    Context injection for session continuity
+-   Cross-session observation storage
+-   Semantic search over past decisions and work
+-   Token-efficient progressive disclosure (3-layer workflow)
+-   Context injection for session continuity
 
 #### New Capabilities - Git Integration
 
@@ -167,10 +167,10 @@ Enhance semantic code search with deep code intelligence features, enabling adva
 
 #### Success Metrics
 
--    Symbol extraction: <1s for 10,000 LOC
--    Cross-reference lookup: <100ms
--    Call graph generation: <5s for large projects
--    Similarity detection: >90% accuracy
+-   Symbol extraction: <1s for 10,000 LOC
+-   Cross-reference lookup: <100ms
+-   Call graph generation: <5s for large projects
+-   Similarity detection: >90% accuracy
 
 ---
 
@@ -205,10 +205,10 @@ Transform MCP Context Browser into an enterprise-ready platform with multi-tenan
 
 #### Success Metrics
 
--    Tenant isolation: 100% (no cross-tenant data leakage)
--    SSO integration: <5 min setup time
--    Audit completeness: 100% of API calls logged
--    Admin UI availability: 99.9% uptime
+-   Tenant isolation: 100% (no cross-tenant data leakage)
+-   SSO integration: <5 min setup time
+-   Audit completeness: 100% of API calls logged
+-   Admin UI availability: 99.9% uptime
 
 ---
 
@@ -244,12 +244,12 @@ Deliver a fully production-ready enterprise platform with SLA guarantees, profes
 
 #### Success Metrics
 
--    Uptime: 99.9% (measured monthly)
--    Response time: P95 <200ms for search queries
--    Support SLA: <15 min for critical issues
--    Compliance: 100% audit pass rate
--    Recovery Time Objective (RTO): <1 hour
--    Recovery Point Objective (RPO): <15 minutes
+-   Uptime: 99.9% (measured monthly)
+-   Response time: P95 <200ms for search queries
+-   Support SLA: <15 min for critical issues
+-   Compliance: 100% audit pass rate
+-   Recovery Time Objective (RTO): <1 hour
+-   Recovery Point Objective (RPO): <15 minutes
 
 #### Certification Timeline
 
@@ -292,12 +292,12 @@ Deliver a fully production-ready enterprise platform with SLA guarantees, profes
 
 All releases must pass:
 
--    [ ] All tests pass (unit, integration, e2e)
--    [ ] Code coverage meets targets (>85%)
--    [ ] Clippy lint clean
--    [ ] Security audit clean
--    [ ] Performance benchmarks maintained
--    [ ] Documentation complete and accurate
+-   [ ] All tests pass (unit, integration, e2e)
+-   [ ] Code coverage meets targets (>85%)
+-   [ ] Clippy lint clean
+-   [ ] Security audit clean
+-   [ ] Performance benchmarks maintained
+-   [ ] Documentation complete and accurate
 
 ---
 

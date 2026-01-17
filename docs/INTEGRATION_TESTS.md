@@ -128,16 +128,16 @@ docker-compose down -v        # Cleanup
 
 Tests include:
 
--    Provider creation and configuration
--    Set/Get operations
--    Delete operations
--    Namespace clearing
--    Key existence checks
--    TTL expiration
--    Health checks
--    Concurrent access
--    Connection pooling
--    Large payload handling
+-   Provider creation and configuration
+-   Set/Get operations
+-   Delete operations
+-   Namespace clearing
+-   Key existence checks
+-   TTL expiration
+-   Health checks
+-   Concurrent access
+-   Connection pooling
+-   Large payload handling
 
 Run:
 
@@ -151,15 +151,15 @@ cargo test redis_cache_integration -- --nocapture
 
 Tests include:
 
--    Provider creation and configuration
--    Publish/Subscribe operations
--    Multiple subscribers
--    Different event types
--    Concurrent publishing
--    Health checks
--    Message recovery
--    Large payload handling
--    Stream persistence
+-   Provider creation and configuration
+-   Publish/Subscribe operations
+-   Multiple subscribers
+-   Different event types
+-   Concurrent publishing
+-   Health checks
+-   Message recovery
+-   Large payload handling
+-   Stream persistence
 
 Run:
 
@@ -206,8 +206,8 @@ The main Docker Compose file includes:
 
 The test-runner connects to:
 
--    Docker services via internal network (`mcp-openai-mock:1080`, etc.)
--    Host services via `host.docker.internal:port` (macOS) or `172.17.0.1:port` (Linux)
+-   Docker services via internal network (`mcp-openai-mock:1080`, etc.)
+-   Host services via `host.docker.internal:port` (macOS) or `172.17.0.1:port` (Linux)
 
 **Usage:**
 
@@ -367,9 +367,9 @@ test result: ok. 18 passed; 0 failed; 0 ignored
 
 Typical execution times:
 
--    Redis tests: ~15-20 seconds (including TTL wait)
--    NATS tests: ~25-30 seconds (including persistence wait)
--    Total: ~45-50 seconds
+-   Redis tests: ~15-20 seconds (including TTL wait)
+-   NATS tests: ~25-30 seconds (including persistence wait)
+-   Total: ~45-50 seconds
 
 ## CI/CD Integration
 
@@ -393,7 +393,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
         ports:
--    6379:6379
+-   6379:6379
 
       nats:
         image: nats:latest
@@ -403,13 +403,13 @@ jobs:
           --health-timeout 5s
           --health-retries 5
         ports:
--    4222:4222
+-   4222:4222
 
     steps:
--    uses: actions/checkout@v3
--    uses: dtolnay/rust-toolchain@stable
+-   uses: actions/checkout@v3
+-   uses: dtolnay/rust-toolchain@stable
 
--    name: Run integration tests
+-   name: Run integration tests
         run: |
           REDIS_URL=redis://127.0.0.1:6379 \
           NATS_URL=nats://127.0.0.1:4222 \
@@ -418,10 +418,10 @@ jobs:
 
 ## Additional Resources
 
--    [Redis Documentation](https://redis.io/documentation)
--    [NATS Documentation](https://docs.nats.io/)
--    [MCP Context Browser Architecture](./architecture/ARCHITECTURE.md)
--    [Provider Pattern Implementation](./adr/005-provider-pattern.md)
+-   [Redis Documentation](https://redis.io/documentation)
+-   [NATS Documentation](https://docs.nats.io/)
+-   [MCP Context Browser Architecture](./architecture/ARCHITECTURE.md)
+-   [Provider Pattern Implementation](./adr/005-provider-pattern.md)
 
 ## Contributing
 

@@ -30,13 +30,13 @@ Technical architecture documentation following C4 model principles.
 
 -   **[Architecture Overview](architecture/ARCHITECTURE.md)**- Comprehensive system architecture
 -   **[Architecture Diagrams](diagrams/)**- Visual architecture documentation
--    [System Context](diagrams/generated/index.html) - System boundaries and external systems
--    [Container Architecture](diagrams/generated/index.html) - Service and deployment architecture
+-   [System Context](diagrams/generated/index.html) - System boundaries and external systems
+-   [Container Architecture](diagrams/generated/index.html) - Service and deployment architecture
 -   **[Architecture Decision Records](adr/)**- Historical architectural decisions
--    [ADR 001: Provider Pattern](adr/001-provider-pattern-architecture.md)
--    [ADR 002: Async-First Architecture](adr/002-async-first-architecture.md)
--    [ADR 003: C4 Model Documentation](adr/003-c4-model-documentation.md)
--    [ADR 004: Multi-Provider Strategy](adr/004-multi-provider-strategy.md)
+-   [ADR 001: Provider Pattern](adr/001-provider-pattern-architecture.md)
+-   [ADR 002: Async-First Architecture](adr/002-async-first-architecture.md)
+-   [ADR 003: C4 Model Documentation](adr/003-c4-model-documentation.md)
+-   [ADR 004: Multi-Provider Strategy](adr/004-multi-provider-strategy.md)
 
 ### 🚀 Operations
 

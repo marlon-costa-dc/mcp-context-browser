@@ -26,10 +26,10 @@
 
 ## 📋 Documentation
 
--    [**ARCHITECTURE.md**](../architecture/ARCHITECTURE.md) - Technical architecture and design
--    [**ROADMAP.md**](ROADMAP.md) - Development roadmap and milestones
--    [**DEPLOYMENT.md**](DEPLOYMENT.md) - Deployment guides and configurations
--    [**CONTRIBUTING.md**](CONTRIBUTING.md) - Contribution guidelines
+-   [**ARCHITECTURE.md**](../architecture/ARCHITECTURE.md) - Technical architecture and design
+-   [**ROADMAP.md**](ROADMAP.md) - Development roadmap and milestones
+-   [**DEPLOYMENT.md**](DEPLOYMENT.md) - Deployment guides and configurations
+-   [**CONTRIBUTING.md**](CONTRIBUTING.md) - Contribution guidelines
 
 ## 📦 Quick Start
 

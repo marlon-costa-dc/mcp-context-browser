@@ -23,11 +23,11 @@ The MCP Context Browser handles AI operations (embedding generation, vector sear
 
 Key performance requirements:
 
--    Handle 1000+ concurrent users
--    Process codebases with 1000+ files efficiently
--    Maintain sub-500ms response times for queries
--    Support streaming and background processing
--    Integrate with external APIs (OpenAI, vector databases)
+-   Handle 1000+ concurrent users
+-   Process codebases with 1000+ files efficiently
+-   Maintain sub-500ms response times for queries
+-   Support streaming and background processing
+-   Integrate with external APIs (OpenAI, vector databases)
 
 Traditional synchronous programming would create bottlenecks and poor resource utilization for these I/O-bound operations.
 
@@ -37,12 +37,12 @@ Adopt an async-first architecture using Tokio as the async runtime throughout th
 
 Key architectural decisions:
 
--    Tokio as the primary async runtime
--    Async traits for all provider interfaces
--    Structured concurrency with Tokio::spawn
--    Async channels for inter-task communication
--    Hyper for HTTP client operations
--    Futures and streams for data processing pipelines
+-   Tokio as the primary async runtime
+-   Async traits for all provider interfaces
+-   Structured concurrency with Tokio::spawn
+-   Async channels for inter-task communication
+-   Hyper for HTTP client operations
+-   Futures and streams for data processing pipelines
 
 ## Consequences
 

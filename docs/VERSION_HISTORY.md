@@ -75,11 +75,11 @@ Per-language file organization with modular architecture:
 
 Infrastructure for future HTTP/SSE transport support:
 
--    `src/server/transport/mod.rs` - Transport layer abstraction
--    `src/server/transport/http.rs` - HTTP transport implementation
--    `src/server/transport/session.rs` - Session management
--    `src/server/transport/config.rs` - Transport configuration
--    `src/server/transport/versioning.rs` - Protocol versioning
+-   `src/server/transport/mod.rs` - Transport layer abstraction
+-   `src/server/transport/http.rs` - HTTP transport implementation
+-   `src/server/transport/session.rs` - Session management
+-   `src/server/transport/config.rs` - Transport configuration
+-   `src/server/transport/versioning.rs` - Protocol versioning
 
 #### Infrastructure Enhancements
 
@@ -90,14 +90,14 @@ Infrastructure for future HTTP/SSE transport support:
 
 #### Systemd Integration
 
--    User-level service file: `systemd/mcp-context-browser.service`
--    Installation script: `scripts/install-user-service.sh`
--    Uninstallation script: `scripts/uninstall-user-service.sh`
+-   User-level service file: `systemd/mcp-context-browser.service`
+-   Installation script: `scripts/install-user-service.sh`
+-   Uninstallation script: `scripts/uninstall-user-service.sh`
 
 #### Documentation
 
--    Migration guide: `docs/migration/FROM_CLAUDE_CONTEXT.md`
--    Quick start guide: `docs/user-guide/QUICKSTART.md`
+-   Migration guide: `docs/migration/FROM_CLAUDE_CONTEXT.md`
+-   Quick start guide: `docs/user-guide/QUICKSTART.md`
 
 ### Technical Metrics
 
@@ -112,7 +112,7 @@ Infrastructure for future HTTP/SSE transport support:
 
 ### Breaking Changes from v0.1.0
 
--    None - fully backward compatible
+-   None - fully backward compatible
 
 ### Migration from Claude-context
 
@@ -139,24 +139,24 @@ See [Migration Guide](migration/FROM_CLAUDE_CONTEXT.md) for detailed instruction
 
 #### Self-Documenting Codebase
 
--    Comprehensive API documentation generation
--    Automated dependency analysis and visualization
--    Code example extraction and validation
--    Quality gates preventing documentation drift
+-   Comprehensive API documentation generation
+-   Automated dependency analysis and visualization
+-   Code example extraction and validation
+-   Quality gates preventing documentation drift
 
 #### ADR Automation
 
--    ADR lifecycle management with validation
--    Compliance checking against architectural decisions
--    Automated ADR generation from code changes
--    Integration with CI/CD quality gates
+-   ADR lifecycle management with validation
+-   Compliance checking against architectural decisions
+-   Automated ADR generation from code changes
+-   Integration with CI/CD quality gates
 
 #### Interactive Platform
 
--    mdbook-based documentation with search
--    Interactive code examples and tutorials
--    API reference with live examples
--    Community contribution workflows
+-   mdbook-based documentation with search
+-   Interactive code examples and tutorials
+-   API reference with live examples
+-   Community contribution workflows
 
 ---
 
@@ -380,41 +380,41 @@ Comprehensive development platform
 
 ### v0.0.1: Core Functionality
 
--    MCP protocol compliance: 100%
--    Basic search working: 100%
--    Tool calling functional: 100%
--    Configuration system: 80%
+-   MCP protocol compliance: 100%
+-   Basic search working: 100%
+-   Tool calling functional: 100%
+-   Configuration system: 80%
 
 ### v0.0.2: Infrastructure Quality
 
--    CI/CD pipeline: 100%
--    Documentation coverage: 95%
--    Testing frameworks: 100%
--    Development tooling: 100%
+-   CI/CD pipeline: 100%
+-   Documentation coverage: 95%
+-   Testing frameworks: 100%
+-   Development tooling: 100%
 
 ### v0.0.3: Enterprise Readiness
 
--    Security compliance: 100% (SOC 2)
--    Performance targets: 100% (less than 500ms latency)
--    Scalability: 100% (Kubernetes + HPA)
--    Monitoring: 100% (Prometheus + Grafana)
--    Production deployment: 100%
+-   Security compliance: 100% (SOC 2)
+-   Performance targets: 100% (less than 500ms latency)
+-   Scalability: 100% (Kubernetes + HPA)
+-   Monitoring: 100% (Prometheus + Grafana)
+-   Production deployment: 100%
 
 ### v0.1.0: Documentation Excellence
 
--    Auto-generated docs: 95%+
--    ADR compliance validation: 100%
--    Interactive platform: 100%
--    Zero manual maintenance: 100%
+-   Auto-generated docs: 95%+
+-   ADR compliance validation: 100%
+-   Interactive platform: 100%
+-   Zero manual maintenance: 100%
 
 ### v0.1.0: First Stable Release
 
--    Claude-context compatibility: 100%
--    Language processors: 12 languages
--    Test coverage: 790+ tests
--    HTTP transport foundation: Complete
--    Systemd integration: Complete
--    Clean architecture: Complete
+-   Claude-context compatibility: 100%
+-   Language processors: 12 languages
+-   Test coverage: 790+ tests
+-   HTTP transport foundation: Complete
+-   Systemd integration: Complete
+-   Clean architecture: Complete
 
 ---
 
@@ -463,14 +463,14 @@ Comprehensive development platform
 
 -   **Breaking Changes**: TBD - likely metadata schema changes for git integration
 -   **Migration Required**:
--    Re-indexing with git metadata for existing repositories
--    New SQLite database for session memory (no migration needed)
+-   Re-indexing with git metadata for existing repositories
+-   New SQLite database for session memory (no migration needed)
 -   **Benefits**:
--    Git awareness: multi-branch search, commit history, impact analysis
--    Session memory: cross-session context, persistent decisions, token efficiency
+-   Git awareness: multi-branch search, commit history, impact analysis
+-   Session memory: cross-session context, persistent decisions, token efficiency
 -   **ADRs**:
--    [008-git-aware-semantic-indexing-v0.2.0](adr/008-git-aware-semantic-indexing-v0.2.0.md)
--    [009-persistent-session-memory-v0.2.0](adr/009-persistent-session-memory-v0.2.0.md)
+-   [008-git-aware-semantic-indexing-v0.2.0](adr/008-git-aware-semantic-indexing-v0.2.0.md)
+-   [009-persistent-session-memory-v0.2.0](adr/009-persistent-session-memory-v0.2.0.md)
 
 ---
 

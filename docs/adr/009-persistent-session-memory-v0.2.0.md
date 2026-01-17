@@ -4,13 +4,17 @@
 
 **Proposed**(Planned for v0.2.0)
 
-> Not yet implemented. Key dependencies:
+> Not yet implemented. Target crate structure for v0.2.0:
 >
-> -   No src/domain/memory.rs or MemoryProvider trait
-> -   No src/application/session.rs (memory sessions, distinct from transport sessions)
-> -   No src/application/memory_search.rs or context_injection.rs
+> -   `crates/mcb-domain/src/memory.rs` - Memory domain types
+> -   `crates/mcb-application/src/ports/providers/memory.rs` - MemoryProvider port trait
+> -   `crates/mcb-application/src/use_cases/session.rs` - Session manager service
+> -   `crates/mcb-application/src/use_cases/memory_search.rs` - Memory search service
+> -   `crates/mcb-application/src/use_cases/context_injection.rs` - Context injection
+> -   `crates/mcb-providers/src/memory/` - Memory provider implementations
+> -   `crates/mcb-server/src/handlers/memory_tools.rs` - MCP tool handlers
+> -   `crates/mcb-infrastructure/src/config/memory.rs` - Memory configuration
 > -   Requires ADR-008 git integration for git-tagged observations
-> -   Blocking: New domain model and provider infrastructure required
 
 ## Context
 
@@ -18,20 +22,20 @@ MCP Context Browser v0.1.0 provides semantic code search but lacks session-level
 
 **Current problems:**
 
--    No persistence of tool observations across sessions
--    No session summaries or decision tracking
--    No context injection for session continuity
--    No semantic search over past work
--    Token waste re-discovering solved problems
--    No ROI metrics on context discovery
+-   No persistence of tool observations across sessions
+-   No session summaries or decision tracking
+-   No context injection for session continuity
+-   No semantic search over past work
+-   Token waste re-discovering solved problems
+-   No ROI metrics on context discovery
 
 **User demand:**
 
--    Developers need cross-session memory (like Claude-mem provides)
--    Need to recall past decisions and rationale
--    Need semantic search over session history
--    Need progressive disclosure (index → context → details)
--    Need token-efficient context injection
+-   Developers need cross-session memory (like Claude-mem provides)
+-   Need to recall past decisions and rationale
+-   Need semantic search over session history
+-   Need progressive disclosure (index → context → details)
+-   Need token-efficient context injection
 
 **Reference implementation**: Claude-mem v8.5.2 demonstrates these features work well in practice with TypeScript + SQLite + Chroma architecture.
 
@@ -113,7 +117,7 @@ Claude Code Session
 
 ### Phase 1: Domain Model
 
-**Create**: `src/domain/memory.rs`
+**Create**: `crates/mcb-domain/src/memory.rs`
 
 ```rust
 use serde::{Deserialize, Serialize};
@@ -280,7 +284,7 @@ pub struct TimelineContext {
 
 ### Phase 2: Memory Provider Port
 
-**Create**: `src/domain/ports/memory.rs`
+**Create**: `crates/mcb-application/src/ports/providers/memory.rs`
 
 ```rust
 use async_trait::async_trait;
@@ -380,7 +384,7 @@ pub enum SearchOrder {
 
 ### Phase 3: Memory Storage Adapter
 
-**Create**: `src/adapters/providers/memory/sqlite_memory.rs`
+**Create**: `crates/mcb-providers/src/memory/sqlite_memory.rs`
 
 ```rust
 use async_trait::async_trait;
@@ -539,7 +543,7 @@ impl MemoryProvider for SqliteMemoryProvider {
 
 ### Phase 4: Session Manager Service
 
-**Create**: `src/application/session.rs`
+**Create**: `crates/mcb-application/src/use_cases/session.rs`
 
 ```rust
 use dashmap::DashMap;
@@ -664,7 +668,7 @@ impl SessionManager {
 
 ### Phase 5: Memory Search Service
 
-**Create**: `src/application/memory_search.rs`
+**Create**: `crates/mcb-application/src/use_cases/memory_search.rs`
 
 ```rust
 use std::sync::Arc;
@@ -757,7 +761,7 @@ impl MemorySearchService {
 
 ### Phase 6: Context Injection Service
 
-**Create**: `src/application/context_injection.rs`
+**Create**: `crates/mcb-application/src/use_cases/context_injection.rs`
 
 ```rust
 use std::sync::Arc;
@@ -888,7 +892,7 @@ fn type_emoji(t: &ObservationType) -> &'static str {
 
 ### Phase 7: MCP Tools
 
-**Create**: `src/server/handlers/memory_tools.rs`
+**Create**: `crates/mcb-server/src/handlers/memory_tools.rs`
 
 ```rust
 use serde::{Deserialize, Serialize};
@@ -1029,7 +1033,7 @@ impl MemoryToolsHandler {
 
 ### Phase 8: MCP Tool Registration
 
-**Modify**: `src/server/mcp_server.rs`
+**Modify**: `crates/mcb-server/src/mcp_server.rs`
 
 ```rust
 // Add to tool registration
@@ -1128,7 +1132,7 @@ fn register_memory_tools(&self) -> Vec<ToolInfo> {
 
 ### Phase 9: Configuration
 
-**Create**: `src/infrastructure/config/memory.rs`
+**Create**: `crates/mcb-infrastructure/src/config/memory.rs`
 
 ```rust
 use serde::{Deserialize, Serialize};
@@ -1206,7 +1210,7 @@ fn default_max_tokens() -> usize { 8000 }
 
 ### Phase 10: Admin UI Integration
 
-**Modify**: `src/server/admin/web/templates/` - Add memory dashboard
+**Modify**: `crates/mcb-server/src/admin/web/templates/` - Add memory dashboard
 
 ```html
 <!-- memory.html -->
@@ -1264,30 +1268,30 @@ sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite"] }
 
 | File | Purpose |
 |------|---------|
-| `src/domain/memory.rs` | Memory domain types |
-| `src/domain/ports/memory.rs` | MemoryProvider trait |
-| `src/adapters/providers/memory/mod.rs` | Memory providers module |
-| `src/adapters/providers/memory/sqlite_memory.rs` | SQLite implementation |
-| `src/application/session.rs` | Session manager service |
-| `src/application/memory_search.rs` | Memory search service |
-| `src/application/context_injection.rs` | Context generation |
-| `src/server/handlers/memory_tools.rs` | MCP tool handlers |
-| `src/infrastructure/config/memory.rs` | Memory configuration |
-| `src/server/admin/web/templates/memory.html` | Admin dashboard |
+| `crates/mcb-domain/src/memory.rs` | Memory domain types |
+| `crates/mcb-application/src/ports/providers/memory.rs` | MemoryProvider trait |
+| `crates/mcb-providers/src/memory/mod.rs` | Memory providers module |
+| `crates/mcb-providers/src/memory/sqlite_memory.rs` | SQLite implementation |
+| `crates/mcb-application/src/use_cases/session.rs` | Session manager service |
+| `crates/mcb-application/src/use_cases/memory_search.rs` | Memory search service |
+| `crates/mcb-application/src/use_cases/context_injection.rs` | Context generation |
+| `crates/mcb-server/src/handlers/memory_tools.rs` | MCP tool handlers |
+| `crates/mcb-infrastructure/src/config/memory.rs` | Memory configuration |
+| `crates/mcb-server/src/admin/web/templates/memory.html` | Admin dashboard |
 
 ## Files to Modify
 
 | File | Change |
 |------|--------|
-| `Cargo.toml` | Add `sqlx` dependency |
-| `src/domain/mod.rs` | Export memory module |
-| `src/domain/ports/mod.rs` | Export MemoryProvider |
-| `src/adapters/providers/mod.rs` | Export memory providers |
-| `src/application/mod.rs` | Export session, memory_search, context_injection |
-| `src/server/mcp_server.rs` | Register memory tools |
-| `src/infrastructure/config/mod.rs` | Export memory config |
-| `src/infrastructure/di/factory/implementation.rs` | Wire memory services |
-| `src/server/admin/routes.rs` | Add memory dashboard route |
+| `crates/mcb-providers/Cargo.toml` | Add `sqlx` dependency |
+| `crates/mcb-domain/src/mod.rs` | Export memory module |
+| `crates/mcb-application/src/ports/providers/mod.rs` | Export MemoryProvider |
+| `crates/mcb-providers/src/lib.rs` | Export memory providers |
+| `crates/mcb-application/src/use_cases/mod.rs` | Export session, memory_search, context_injection |
+| `crates/mcb-server/src/mcp_server.rs` | Register memory tools |
+| `crates/mcb-infrastructure/src/config/mod.rs` | Export memory config |
+| `crates/mcb-infrastructure/src/di/modules/mod.rs` | Wire memory services |
+| `crates/mcb-server/src/admin/routes.rs` | Add memory dashboard route |
 
 ## Integration with ADR-008 (Git)
 
@@ -1329,11 +1333,18 @@ let git_metadata = if let Some(git_provider) = &self.git_provider {
 | Date range | 30 days | Per-request |
 | SDK compression | Disabled | Opt-in |
 
+## Related ADRs
+
+-   [ADR-001: Provider Pattern Architecture](001-provider-pattern-architecture.md) - MemoryProvider follows trait-based DI
+-   [ADR-002: Async-First Architecture](002-async-first-architecture.md) - Async storage operations
+-   [ADR-004: Multi-Provider Strategy](004-multi-provider-strategy.md) - Memory provider routing
+-   [ADR-007: Integrated Web Administration Interface](007-integrated-web-administration-interface.md) - Memory dashboard UI
+-   [ADR-008: Git-Aware Semantic Indexing](008-git-aware-semantic-indexing-v0.2.0.md) - Git-tagged observations
+-   [ADR-010: Hooks Subsystem](010-hooks-subsystem-agent-backed.md) - Hook observation storage
+-   [ADR-012: Two-Layer DI Strategy](012-di-strategy-two-layer-approach.md) - Shaku DI for memory services
+-   [ADR-013: Clean Architecture Crate Separation](013-clean-architecture-crate-separation.md) - Seven-crate organization
+
 ## References
 
--    [Claude-mem v8.5.2](https://github.com/thedotmack/claude-mem) - Reference implementation
--    [ADR 001: Provider Pattern Architecture](001-provider-pattern-architecture.md)
--    [ADR 002: Async-First Architecture](002-async-first-architecture.md)
--    [ADR 004: Multi-Provider Strategy](004-multi-provider-strategy.md)
--    [ADR 007: Integrated Web Administration Interface](007-integrated-web-administration-interface.md)
--    [ADR 008: Git-Aware Semantic Indexing](008-git-aware-semantic-indexing-v0.2.0.md)
+-   [Claude-mem v8.5.2](https://github.com/thedotmack/claude-mem) - Reference implementation
+-   [Shaku Documentation](https://docs.rs/shaku) - DI framework

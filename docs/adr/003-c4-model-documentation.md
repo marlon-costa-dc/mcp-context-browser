@@ -28,11 +28,11 @@ The MCP Context Browser is a complex system with multiple architectural layers, 
 
 Current documentation challenges:
 
--    Architecture documentation was inconsistent and incomplete
--    Different audiences needed different levels of detail
--    Visual diagrams were missing or outdated
--    No standardized approach to documenting architectural decisions
--    Difficulty communicating system complexity to stakeholders
+-   Architecture documentation was inconsistent and incomplete
+-   Different audiences needed different levels of detail
+-   Visual diagrams were missing or outdated
+-   No standardized approach to documenting architectural decisions
+-   Difficulty communicating system complexity to stakeholders
 
 The team needed a structured approach to architecture documentation that would scale with the project and provide clear communication channels.
 
@@ -46,9 +46,9 @@ Implementation approach:
 -   **Container Diagrams**: High-level technical overview for technical stakeholders
 -   **Component Diagrams**: Detailed design for developers
 -   **Code Diagrams**: Implementation-level detail for maintainers
--    PlantUML for consistent, version-controlled diagram generation
--    Structured Markdown documentation with clear navigation
--    Automated diagram validation and generation
+-   PlantUML for consistent, version-controlled diagram generation
+-   Structured Markdown documentation with clear navigation
+-   Automated diagram validation and generation
 
 ## Consequences
 
@@ -254,16 +254,16 @@ on:
   push:
     branches: [ main ]
     paths:
--    'docs/**'
--    'src/**'
--    'ARCHITECTURE.md'
+-   'docs/**'
+-   'src/**'
+-   'ARCHITECTURE.md'
 
 jobs:
   validate-diagrams:
     runs-on: ubuntu-latest
     steps:
--    uses: actions/checkout@v3
--    name: Validate PlantUML
+-   uses: actions/checkout@v3
+-   name: Validate PlantUML
         uses: cloudbees/plantuml-github-action@master
         with:
           args: -v -checkmetadata docs/diagrams/*.puml
@@ -271,14 +271,14 @@ jobs:
   build-docs:
     runs-on: ubuntu-latest
     steps:
--    uses: actions/checkout@v3
--    name: Setup Rust
+-   uses: actions/checkout@v3
+-   name: Setup Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
--    name: Generate Diagrams
+-   name: Generate Diagrams
         run: make diagrams
--    name: Build Documentation
+-   name: Build Documentation
         run: make docs
--    name: Deploy to GitHub Pages
+-   name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}

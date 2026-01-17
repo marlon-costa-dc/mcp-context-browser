@@ -464,14 +464,14 @@ The existing router pattern extends to new provider types:
 
 ## Related ADRs
 
-- [ADR-001: Provider Pattern Architecture](001-provider-pattern-architecture.md) - Base provider abstraction
-- [ADR-002: Async-First Architecture](002-async-first-architecture.md) - Async provider execution
-- [ADR-012: Two-Layer DI Strategy](012-di-strategy-two-layer-approach.md) - Provider creation via factories
-- [ADR-013: Clean Architecture Crate Separation](013-clean-architecture-crate-separation.md) - Provider crate organization
+-   [ADR-001: Provider Pattern Architecture](001-provider-pattern-architecture.md) - Base provider abstraction
+-   [ADR-002: Async-First Architecture](002-async-first-architecture.md) - Async provider execution
+-   [ADR-012: Two-Layer DI Strategy](012-di-strategy-two-layer-approach.md) - Provider creation via factories
+-   [ADR-013: Clean Architecture Crate Separation](013-clean-architecture-crate-separation.md) - Provider crate organization
 
 ## References
 
-- [Circuit Breaker Pattern](https://microservices.io/patterns/reliability/circuit-breaker.html)
-- [Provider Selection Strategies](https://aws.amazon.com/blogs/architecture/)
-- [Multi-Cloud Architecture Patterns](https://aws.amazon.com/blogs/architecture/category/multi-cloud/)
-- [Shaku Documentation](https://docs.rs/shaku)
+-   [Circuit Breaker Pattern](https://microservices.io/patterns/reliability/circuit-breaker.html)
+-   [Provider Selection Strategies](https://aws.amazon.com/blogs/architecture/)
+-   [Multi-Cloud Architecture Patterns](https://aws.amazon.com/blogs/architecture/category/multi-cloud/)
+-   [Shaku Documentation](https://docs.rs/shaku)

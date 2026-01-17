@@ -49,10 +49,10 @@ cargo run
 
 ### Rust Guidelines
 
--    Follow [The Rust Programming Language](https://doc.rust-lang.org/book/) conventions
--    Use `rustfmt` for formatting: `cargo fmt`
--    Follow `clippy` suggestions: `cargo clippy`
--    Write idiomatic Rust code
+-   Follow [The Rust Programming Language](https://doc.rust-lang.org/book/) conventions
+-   Use `rustfmt` for formatting: `cargo fmt`
+-   Follow `clippy` suggestions: `cargo clippy`
+-   Write idiomatic Rust code
 
 ### Code Structure (v0.1.1 Modular Crates)
 
@@ -112,20 +112,20 @@ mod tests {
 
 ### Before Submitting
 
--    [ ] Tests pass: `cargo test`
--    [ ] Code formats correctly: `cargo fmt --check`
--    [ ] No linting errors: `cargo clippy -- -D warnings`
--    [ ] CI checks pass: `make ci`
--    [ ] Documentation updated if needed
+-   [ ] Tests pass: `cargo test`
+-   [ ] Code formats correctly: `cargo fmt --check`
+-   [ ] No linting errors: `cargo clippy -- -D warnings`
+-   [ ] CI checks pass: `make ci`
+-   [ ] Documentation updated if needed
 
 ### PR Description
 
 Include:
 
--    What changes were made
--    Why the changes were needed
--    How to test the changes
--    Any breaking changes
+-   What changes were made
+-   Why the changes were needed
+-   How to test the changes
+-   Any breaking changes
 
 ### Review Process
 
@@ -140,19 +140,19 @@ Include:
 
 **Include:**
 
--    Steps to reproduce
--    Expected vs actual behavior
--    Environment details (Rust version, OS)
--    Error messages/logs
+-   Steps to reproduce
+-   Expected vs actual behavior
+-   Environment details (Rust version, OS)
+-   Error messages/logs
 
 ### Feature Requests
 
 **Include:**
 
--    Problem description
--    Proposed solution
--    Use cases
--    Alternative approaches considered
+-   Problem description
+-   Proposed solution
+-   Use cases
+-   Alternative approaches considered
 
 ## 🚀 Examples
 

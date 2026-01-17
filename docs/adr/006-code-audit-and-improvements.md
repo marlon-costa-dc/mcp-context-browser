@@ -42,11 +42,11 @@ Key problems identified:
 
 Current state analysis:
 
--    Total files: 189
--    Total lines: 42,314
--    Files with >1000 lines: 2 (config.rs, server/mod.rs)
--    unwrap/expect count: 157 across 28 files
--    Test coverage: ~60% (estimated)
+-   Total files: 189
+-   Total lines: 42,314
+-   Files with >1000 lines: 2 (config.rs, server/mod.rs)
+-   unwrap/expect count: 157 across 28 files
+-   Test coverage: ~60% (estimated)
 
 ## Decision
 
@@ -218,25 +218,25 @@ mod tests {
 
 **Performance Benchmarks:**
 
--    Establish baseline metrics before changes
--    Monitor compilation time, binary size, runtime performance
--    Set up continuous benchmarking in CI/CD
+-   Establish baseline metrics before changes
+-   Monitor compilation time, binary size, runtime performance
+-   Set up continuous benchmarking in CI/CD
 
 ### Phase 4: Validation and Release (Weeks 7-8)
 
 **Rollback Plan:**
 
--    Feature flags for gradual rollout
--    Database migration rollback scripts
--    Configuration rollback procedures
--    Monitoring alerts for performance regressions
+-   Feature flags for gradual rollout
+-   Database migration rollback scripts
+-   Configuration rollback procedures
+-   Monitoring alerts for performance regressions
 
 **Security Considerations:**
 
--    Input validation prevents injection attacks
--    Proper error handling avoids information leakage
--    Dependency updates for security patches
--    Code review security checklist
+-   Input validation prevents injection attacks
+-   Proper error handling avoids information leakage
+-   Dependency updates for security patches
+-   Code review security checklist
 
 ### Dependencies to Add
 
