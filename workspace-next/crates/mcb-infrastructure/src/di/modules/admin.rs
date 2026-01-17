@@ -12,11 +12,6 @@ use shaku::module;
 use super::traits::AdminModule;
 
 module! {
-    /// Empty admin module - admin services are in ServerModule
-    ///
-    /// The AdminModule trait is `Send + Sync` only, allowing this to be a marker module.
-    /// Server admin components (PerformanceMetricsInterface, IndexingOperationsInterface)
-    /// are registered in ServerModule where they logically belong.
     pub AdminModuleImpl: AdminModule {
         components = [],
         providers = []

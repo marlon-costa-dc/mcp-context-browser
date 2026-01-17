@@ -11,7 +11,7 @@ all: quality ## Default: run full quality checks
 help: ## Show available commands
 	@printf "\n"
 	@printf "\033[1;36m╔═══════════════════════════════════════════════════════════╗\033[0m\n"
-	@printf "\033[1;36m║     MCP Context Browser v0.1.0 - Make Commands            ║\033[0m\n"
+	@printf "\033[1;36m║     MCP Context Browser v0.1.1 - Make Commands            ║\033[0m\n"
 	@printf "\033[1;36m╚═══════════════════════════════════════════════════════════╝\033[0m\n"
 	@printf "\n"
 	@printf "\033[1;33m📦 BUILD & TEST\033[0m\n"

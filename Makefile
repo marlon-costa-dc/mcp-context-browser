@@ -1,5 +1,5 @@
 # =============================================================================
-# MCP Context Browser - Makefile v0.1.0
+# MCP Context Browser - Makefile v0.1.1
 # =============================================================================
 # Streamlined, integrated with scripts/docs/*.sh
 # Run `make help` for command reference

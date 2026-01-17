@@ -6,6 +6,32 @@ This document provides a comprehensive history of MCP Context Browser releases, 
 
 ---
 
+## v0.1.1 "Maintenance Release" - 2026-01-17 RELEASED
+
+**Status**: Production-Ready |**Achievement**: Version Management Unification
+
+### Overview
+
+MCP Context Browser v0.1.1 introduces unified version management across the entire codebase, ensuring consistent version references from a single source of truth.
+
+### Major Improvements
+
+\1-  **Unified Version Management**: Centralized version constant using `env!("CARGO_PKG_VERSION")` for consistent version references across the entire codebase
+\1-  **Version Synchronization**: All documentation, templates, and configuration files now reference the same version source
+\1-  **Maintenance Updates**: Various minor improvements and bug fixes
+
+### Technical Changes
+
+\1-  Added `VERSION` constant in `src/lib.rs` using `env!("CARGO_PKG_VERSION")`
+\1-  Updated all version references across documentation and templates
+\1-  Synchronized version information between Cargo.toml and all dependent files
+
+### Breaking Changes
+
+\1-  None - fully backward compatible
+
+---
+
 ## v0.1.0 "First Stable Release" - 2026-01-11 RELEASED
 
 **Status**: Production-Ready |**Achievement**: Drop-in Claude-context Replacement
@@ -267,7 +293,8 @@ Delivered working MCP server with core semantic search capabilities.
 | v0.0.2 | 2026-01-06 | Released | Infrastructure and Documentation | 100% |
 | v0.0.3 | 2026-01-07 | Released | Production Foundation | 100% |
 | v0.1.0 | 2026-01-08 | Released | Documentation Excellence | 100% |
-| v0.1.0 | 2026-01-11 |**Released**| First Stable Release | 100% |
+| v0.1.0 | 2026-01-11 | Released | First Stable Release | 100% |
+| v0.1.1 | 2026-01-17 |**Released**| Version Management Unification | 100% |
 | v0.2.0 | Planned |**Planned**| Git-Aware Semantic Indexing | 0% |
 
 ---
@@ -393,15 +420,15 @@ Comprehensive development platform
 
 ## Project Evolution Metrics
 
-| Metric | v0.0.1 | v0.0.2 | v0.0.3 | v0.1.0 | v0.1.0 |
+| Metric | v0.0.1 | v0.0.2 | v0.0.3 | v0.1.0 | v0.1.0 | v0.1.1 |
 |--------|--------|--------|--------|--------|--------|
-| Lines of Code | ~2K | ~10K | ~16K | ~18K | ~25K |
-| Test Coverage | 60% | 80% | 90%+ | 95%+ | 95%+ |
-| Documentation | Basic | Professional | Complete | Self-documenting | Production |
-| Architecture | Simple | Modular | Enterprise | Automated | Clean DI |
-| Deployment | Manual | Docker | Kubernetes | Cloud-native | Systemd |
-| Monitoring | None | Basic | Enterprise | Intelligent | Complete |
-| Languages | 0 | 4 | 8 | 13 | 12 |
+| Lines of Code | ~2K | ~10K | ~16K | ~18K | ~25K | ~25K |
+| Test Coverage | 60% | 80% | 90%+ | 95%+ | 95%+ | 95%+ |
+| Documentation | Basic | Professional | Complete | Self-documenting | Production | Production |
+| Architecture | Simple | Modular | Enterprise | Automated | Clean DI | Clean DI |
+| Deployment | Manual | Docker | Kubernetes | Cloud-native | Systemd | Systemd |
+| Monitoring | None | Basic | Enterprise | Intelligent | Complete | Complete |
+| Languages | 0 | 4 | 8 | 13 | 12 | 12 |
 
 ---
 
