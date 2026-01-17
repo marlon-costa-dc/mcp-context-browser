@@ -41,8 +41,6 @@ fn test_propagator_handle_is_running() {
 
     // A spawned task that sleeps should either still be running or have completed
     // Both are valid states - we verify the method works correctly
-    assert!(
-        is_running || !is_running,
-        "is_running should return a valid boolean"
-    );
+    // Just verify the function completes and returns a valid value
+    let _ = is_running;
 }

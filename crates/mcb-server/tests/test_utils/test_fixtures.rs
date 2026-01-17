@@ -1,6 +1,7 @@
 //! Test fixtures for mcb-server tests
 //!
 //! Provides factory functions for creating test data and temporary directories.
+#![allow(dead_code)]
 
 use mcb_application::domain_services::search::{IndexingResult, IndexingStatus};
 use mcb_domain::value_objects::SearchResult;

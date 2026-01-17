@@ -129,7 +129,7 @@ fn test_embedding_vector_properties() {
     // Test that all values are reasonable (between -1 and 1 for normalized embeddings)
     for &value in &embedding.vector {
         assert!(
-            value >= -1.0 && value <= 1.0,
+            (-1.0..=1.0).contains(&value),
             "Embedding value {} is out of expected range [-1, 1]",
             value
         );

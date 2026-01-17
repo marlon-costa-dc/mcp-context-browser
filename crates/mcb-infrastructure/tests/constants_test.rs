@@ -2,6 +2,7 @@
 //!
 //! Validates that infrastructure constants have reasonable values
 //! and maintain expected relationships.
+#![allow(clippy::assertions_on_constants)]
 
 use mcb_infrastructure::constants::*;
 
@@ -65,7 +66,7 @@ fn test_embedding_dimension_constants() {
 #[test]
 fn test_embedding_dimension_common_values() {
     // Common embedding dimensions are powers of 2 or multiples of 128/256
-    let common_dims = vec![256, 384, 512, 768, 1024, 1536, 2048, 3072];
+    let common_dims = [256, 384, 512, 768, 1024, 1536, 2048, 3072];
 
     // Null provider uses common dimension
     assert!(

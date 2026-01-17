@@ -29,6 +29,18 @@ This directory contains all Architecture Decision Records (ADRs) for the MCP Con
 -   [ADR 012: Two-Layer DI Strategy](012-di-strategy-two-layer-approach.md) - Shaku modules + runtime factories
 -   [ADR 013: Clean Architecture Crate Separation](013-clean-architecture-crate-separation.md) - Seven-crate workspace organization
 
+### Multi-Domain & Integration (v0.2.0+)
+
+-   [ADR 014: Multi-Domain Architecture Strategy](014-multi-domain-architecture.md) - Future domain expansion
+-   [ADR 015: Workspace Shared Libraries](015-workspace-shared-libraries.md) - Shared code in libs/
+-   [ADR 016: Integration Points and Adapter Pattern](016-integration-points-adapter-pattern.md) - PMAT integration pattern
+-   [ADR 017: Phased Feature Integration](017-phased-feature-integration.md) - Release roadmap
+-   [ADR 018: Hybrid Caching Strategy](018-hybrid-caching-strategy.md) - Moka + SHA256 caching
+-   [ADR 019: Error Handling Strategy](019-error-handling-strategy.md) - thiserror + anyhow integration
+-   [ADR 020: Testing Strategy Integration](020-testing-strategy-integration.md) - Test migration plan
+-   [ADR 021: Dependency Management](021-dependency-management.md) - Workspace dependencies
+-   [ADR 022: CI Integration Strategy](022-ci-integration-strategy.md) - Quality gates and benchmarks
+
 ## ADR Status Legend
 
 | Status | Meaning |

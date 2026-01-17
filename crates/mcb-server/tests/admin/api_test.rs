@@ -4,6 +4,7 @@
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
+#[allow(unused_imports)]
 use mcb_application::ports::admin::PerformanceMetricsInterface;
 use mcb_providers::admin::{AtomicPerformanceMetrics, DefaultIndexingOperations};
 use mcb_server::admin::{handlers::AdminState, routes::admin_router};

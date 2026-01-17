@@ -5,7 +5,7 @@
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
-use mcb_application::ports::admin::{IndexingOperationsInterface, PerformanceMetricsInterface};
+use mcb_application::ports::admin::PerformanceMetricsInterface;
 use mcb_providers::admin::{AtomicPerformanceMetrics, DefaultIndexingOperations};
 use mcb_server::admin::{handlers::AdminState, routes::admin_router};
 use std::sync::Arc;
@@ -95,7 +95,7 @@ async fn test_full_admin_stack_integration() {
 
     // 5. Start indexing operations and verify
     let op1 = indexing.start_operation("project-alpha", 100);
-    let op2 = indexing.start_operation("project-beta", 200);
+    let _op2 = indexing.start_operation("project-beta", 200);
     indexing.update_progress(&op1, Some("src/main.rs".to_string()), 25);
 
     // 6. Verify indexing endpoint shows operations

@@ -14,8 +14,11 @@ fn test_indexing_constants() {
 }
 
 #[test]
+#[allow(clippy::assertions_on_constants)]
 fn test_indexing_constants_relationships() {
     // Test that constants have reasonable relationships
+    // These assertions document expected properties even though they're
+    // evaluated at compile time
     assert!(INDEXING_CHUNK_MIN_LENGTH > 0);
     assert!(INDEXING_CHUNK_MIN_LINES > 0);
     assert!(INDEXING_BATCH_SIZE > 0);
@@ -33,6 +36,7 @@ fn test_indexing_constants_relationships() {
 }
 
 #[test]
+#[allow(clippy::assertions_on_constants)]
 fn test_constants_are_compile_time() {
     // These are compile-time constants, so they should be accessible
     // without any runtime computation

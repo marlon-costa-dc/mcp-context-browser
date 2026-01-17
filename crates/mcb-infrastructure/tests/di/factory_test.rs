@@ -45,7 +45,7 @@ async fn test_health_registry_factory() {
 
 #[tokio::test]
 async fn test_health_registry_factory_default() {
-    let factory = DefaultHealthRegistryFactory::default();
+    let factory = DefaultHealthRegistryFactory;
     let registry = factory.create_health_registry().await.unwrap();
 
     // Verify that system health checker is registered

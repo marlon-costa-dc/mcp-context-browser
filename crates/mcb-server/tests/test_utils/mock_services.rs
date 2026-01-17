@@ -1,4 +1,5 @@
 //! Mock implementations of domain service interfaces for testing
+#![allow(dead_code, unused_mut)]
 
 use async_trait::async_trait;
 use mcb_application::domain_services::search::{

@@ -108,11 +108,13 @@ fn test_cache_config_ttl_when_enabled() {
 #[test]
 fn test_ssl_cert_required_for_https() {
     // HTTPS without SSL paths should fail validation
-    let mut https_no_ssl = ServerConfig::default();
-    https_no_ssl.ssl = ServerSslConfig {
-        https: true,
-        ssl_cert_path: None,
-        ssl_key_path: None,
+    let https_no_ssl = ServerConfig {
+        ssl: ServerSslConfig {
+            https: true,
+            ssl_cert_path: None,
+            ssl_key_path: None,
+        },
+        ..Default::default()
     };
     let result = ServerConfigUtils::validate_ssl_config(&https_no_ssl);
     assert!(result.is_err());
@@ -122,11 +124,13 @@ fn test_ssl_cert_required_for_https() {
         .contains("certificate path is required"));
 
     // HTTPS with only cert path should fail
-    let mut https_cert_only = ServerConfig::default();
-    https_cert_only.ssl = ServerSslConfig {
-        https: true,
-        ssl_cert_path: Some(PathBuf::from("/path/to/cert.pem")),
-        ssl_key_path: None,
+    let https_cert_only = ServerConfig {
+        ssl: ServerSslConfig {
+            https: true,
+            ssl_cert_path: Some(PathBuf::from("/path/to/cert.pem")),
+            ssl_key_path: None,
+        },
+        ..Default::default()
     };
     let result = ServerConfigUtils::validate_ssl_config(&https_cert_only);
     assert!(result.is_err());
@@ -136,11 +140,13 @@ fn test_ssl_cert_required_for_https() {
         .contains("key path is required"));
 
     // HTTP config doesn't require SSL
-    let mut http_config = ServerConfig::default();
-    http_config.ssl = ServerSslConfig {
-        https: false,
-        ssl_cert_path: None,
-        ssl_key_path: None,
+    let http_config = ServerConfig {
+        ssl: ServerSslConfig {
+            https: false,
+            ssl_cert_path: None,
+            ssl_key_path: None,
+        },
+        ..Default::default()
     };
     let result = ServerConfigUtils::validate_ssl_config(&http_config);
     assert!(result.is_ok());

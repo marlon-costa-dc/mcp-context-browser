@@ -40,7 +40,7 @@ async fn test_null_provider_operations() {
 
 #[test]
 fn test_null_provider_default() {
-    let provider = NullCacheProvider::default();
+    let provider = NullCacheProvider;
     // Verify default provider has correct debug representation
     assert!(format!("{:?}", provider).contains("NullCacheProvider"));
 }

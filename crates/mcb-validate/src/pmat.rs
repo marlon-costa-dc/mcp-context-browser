@@ -531,7 +531,8 @@ mod tests {
         // It doesn't require PMAT to be installed
         let result = PmatValidator::check_pmat_available();
         // Result can be true or false depending on environment
-        assert!(result == true || result == false);
+        // Just verify the function completes without panic
+        let _ = result;
     }
 
     #[test]

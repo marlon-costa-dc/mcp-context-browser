@@ -35,9 +35,6 @@ fn test_types_are_send_sync() {
     assert_send_sync::<IndexingServiceImpl>();
     assert_send_sync::<SearchServiceImpl>();
 
-    // Verify we reached this point (types are Send + Sync)
-    assert!(
-        true,
-        "All service implementations are Send + Sync as required for async runtime"
-    );
+    // If we reach this point, all service implementations are Send + Sync
+    // as required for the async runtime
 }

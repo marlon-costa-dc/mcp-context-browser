@@ -1755,7 +1755,7 @@ pub fn process_data() {
         let validator = OrganizationValidator::new(temp.path());
         let violations = validator.validate_magic_numbers().unwrap();
 
-        assert!(violations.len() >= 1, "Should detect magic numbers");
+        assert!(!violations.is_empty(), "Should detect magic numbers");
     }
 
     #[test]

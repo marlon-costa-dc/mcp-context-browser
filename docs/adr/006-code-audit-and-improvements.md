@@ -2,7 +2,7 @@
 
 ## Status
 
-**Implemented** (v0.1.0+)
+**Implemented** (v0.1.1)
 
 > Major improvements completed:
 >
@@ -10,21 +10,15 @@
 > -   Async-first architecture with 480+ async functions
 > -   thiserror-based error handling throughout
 > -   File sizes reduced (most < 500 lines)
-> -   3 files in src/infrastructure/auth/ retain RwLock unwraps (acceptable for lock poisoning)
-> -   Test coverage improved to 790+ tests (100% pass rate)
+> -   Test coverage improved to 308+ tests (100% pass rate)
 >
-> **January 2026 Updates:**
+> **v0.1.1 Modular Architecture Updates:**
 >
-> -   ✅ **14 domain port traits** fully wired in `src/domain/ports/` (up from 2)
-> -   ✅ **CostTracker bug fix** - Fixed infinite recursion in trait method implementations
-> -   ✅ **SnapshotProvider consolidation** - Merged duplicate trait definitions
-> -   ✅ **Dead code removal** - Removed unused `hybrid_search_provider` parameter from ContextService
-> -   ✅ **New trait implementations wired:**
->     -   `IntelligentChunker` → `CodeChunker`
->     -   `EventBus` → `EventPublisher`
->     -   `SyncManager` → `SyncCoordinator`
->     -   `SnapshotManager` → `SnapshotProvider` (expanded to 4 methods)
+> -   ✅ **Seven-crate Clean Architecture** implemented (see [ADR-013](013-clean-architecture-crate-separation.md))
+> -   ✅ **14 domain port traits** in `crates/mcb-domain/src/ports/`
+> -   ✅ **Two-layer DI strategy** (see [ADR-012](012-di-strategy-two-layer-approach.md))
 > -   ✅ **All traits extend `shaku::Interface`** for DI compatibility
+> -   ✅ **mcb-validate crate** enforces architecture boundaries
 
 ## Context
 
