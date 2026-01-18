@@ -2,84 +2,189 @@
 
 ## Status
 
-**Proposed** (v0.2.0)
+**Proposed** (v0.1.2)
 
 > Planned replacement for manual configuration loading as part of the simplification initiative.
 
 ## Context
 
-The current configuration system uses the `config` crate with manual source composition:
+The current configuration system uses the `config` crate (version 0.15) with manual source composition. The config crate provides a builder pattern for aggregating configuration from multiple sources:
 
-```rust
-let mut builder = Config::builder();
-builder = builder.add_source(config::File::from_str(&toml::to_string(&AppConfig::default())?, config::FileFormat::Toml));
-builder = builder.add_source(File::from(config_path));
-builder = builder.add_source(Environment::with_prefix("APP").separator("_"));
-let config = builder.build()?.try_deserialize::<AppConfig>()?;
-```
+### Current Implementation
 
-This approach requires:
-1. **Manual source management**: Explicitly adding each configuration source
-2. **Format specification**: Hard-coded format handling for TOML/JSON
-3. **Error-prone composition**: Easy to miss sources or get precedence wrong
-4. **Limited validation**: Basic deserialization without rich error context
-5. **Repetitive code**: Similar patterns across different configuration needs
-
-Figment provides a unified configuration approach that:
-1. **Unifies sources**: Single API for files, environment variables, and defaults
-2. **Rich error handling**: Better error messages and validation
-3. **Type safety**: Compile-time guarantees for configuration structure
-4. **Extensible**: Easy to add new configuration sources
-5. **Profile support**: Built-in development/production profile handling
-
-## Decision
-
-We will migrate from the `config` crate to Figment for all configuration loading:
-
-1. **Replace `config::Config`** with `figment::Figment`
-2. **Use `Figment::new().merge()`** pattern for source composition
-3. **Leverage Figment's providers** for TOML, environment variables, etc.
-4. **Maintain the same `AppConfig` structure** for compatibility
-5. **Add profile support** for development/production environments
-
-### Migration Pattern
-
-**Before (config crate):**
 ```rust
 use config::{Config, Environment, File};
 
 let mut builder = Config::builder();
+
+// Step 1: Add defaults (serialized from AppConfig::default())
+builder = builder.add_source(config::File::from_str(
+    &toml::to_string(&AppConfig::default())?,
+    config::FileFormat::Toml,
+));
+
+// Step 2: Add configuration file
 builder = builder.add_source(File::from(config_path));
-builder = builder.add_source(Environment::with_prefix("APP"));
+
+// Step 3: Add environment variables
+builder = builder.add_source(
+    Environment::with_prefix("APP")
+        .prefix_separator("_")
+        .separator("_")
+        .try_parsing(true)
+);
+
+// Step 4: Build and deserialize
 let config: AppConfig = builder.build()?.try_deserialize()?;
 ```
 
-**After (Figment):**
+### Current Limitations
+
+1. **Manual orchestration**: Each source must be explicitly added and configured
+2. **Repetitive setup**: Similar patterns repeated across different configuration needs
+3. **Format coupling**: Hard-coded format handling (TOML vs JSON vs YAML)
+4. **Precedence complexity**: Source precedence depends on addition order
+5. **Limited error context**: Basic deserialization errors without source attribution
+6. **No profile support**: Manual handling of development/production environments
+
+### Figment as Solution
+
+Figment (version 0.10.19) provides a unified configuration approach with powerful composition and validation features:
+
+#### Core Features
+- **Provider system**: Modular sources (TOML, JSON, YAML, environment, custom)
+- **Fluent composition**: Chainable `merge()` operations with clear precedence
+- **Profile support**: Built-in development/production environment handling
+- **Rich error handling**: Detailed error messages with source attribution
+- **Type safety**: Compile-time guarantees through `extract<T>()` method
+- **Extensible**: Easy to implement custom providers
+
+#### Key Advantages Over Config Crate
+
+| Feature | Config Crate | Figment |
+|---------|--------------|---------|
+| **API Style** | Builder pattern with manual source addition | Fluent composition with `merge()` |
+| **Error Messages** | Basic deserialization errors | Rich, contextual error messages |
+| **Profile Support** | Manual implementation | Built-in profile system |
+| **Provider Ecosystem** | Limited built-in providers | Extensive provider library |
+| **Validation** | Basic deserialization | Rich validation with custom extractors |
+| **Extensibility** | Custom sources via traits | Provider trait system |
+
+## Decision
+
+We will migrate from the `config` crate to Figment for all configuration loading across the MCP Context Browser. This decision addresses the need for more robust, maintainable, and feature-rich configuration handling.
+
+### Migration Scope
+
+The migration will affect all configuration loading points:
+
+1. **Infrastructure configuration** (`mcb-infrastructure/src/config/loader.rs`)
+2. **Server startup configuration** (`mcb-server/src/init.rs`)
+3. **Admin interface configuration** (`mcb-server/src/admin/config.rs`)
+4. **Provider-specific configuration** (embedding, vector store, cache providers)
+
+### Technical Migration Strategy
+
+#### Core Changes
+1. **Replace `config::Config`** with `figment::Figment` as the central configuration type
+2. **Use `Figment::new().merge()`** fluent API for source composition
+3. **Leverage Figment's built-in providers** for TOML, environment variables, and custom sources
+4. **Maintain the same `AppConfig` structure** for API compatibility
+5. **Add profile support** for development/production environment switching
+
+#### Provider Migration
+Figment provides dedicated providers for common configuration sources:
+
+| Source Type | Config Crate | Figment Provider |
+|-------------|--------------|------------------|
+| **TOML files** | `config::File` | `figment::providers::Toml` |
+| **Environment vars** | `config::Environment` | `figment::providers::Env` |
+| **JSON files** | `config::File` | `figment::providers::Json` |
+| **YAML files** | Manual parsing | `figment::providers::Yaml` |
+
+### Migration Pattern
+
+**Before (config crate - verbose and error-prone):**
+```rust
+use config::{Config, Environment, File};
+
+let mut builder = Config::builder();
+
+// Manual source addition with explicit format specification
+builder = builder.add_source(File::from(config_path));
+
+// Complex environment variable setup
+builder = builder.add_source(
+    Environment::with_prefix("APP")
+        .prefix_separator("_")
+        .separator("_")
+        .try_parsing(true)
+        .list_separator(" ")
+        .with_list_parse_key("server.cors_origins")
+);
+
+// Manual error handling
+let config = builder.build()?;
+let app_config: AppConfig = config.try_deserialize()
+    .context("Failed to deserialize configuration")?;
+```
+
+**After (Figment - clean and robust):**
 ```rust
 use figment::{Figment, providers::{Toml, Env}};
 
-let config: AppConfig = Figment::new()
-    .merge(Toml::file(config_path))
-    .merge(Env::prefixed("APP_"))
+// Fluent composition with clear precedence
+let figment = Figment::new()
+    .merge(Toml::file("config/default.toml"))  // Defaults
+    .merge(Toml::file(config_path))            // User config (overrides defaults)
+    .merge(Env::prefixed("APP_").split("_")); // Environment (highest precedence)
+
+// Rich error handling with source attribution
+let app_config: AppConfig = figment.extract()
+    .map_err(|e| format!("Configuration error in {}: {}", e.path, e.value))?;
+```
+
+### Profile Support Implementation
+
+Figment enables environment-specific configuration through profile-based composition:
+
+```rust
+use figment::Profile;
+
+// Development configuration
+let dev_config: AppConfig = Figment::new()
+    .merge(Toml::file("config/default.toml"))
+    .merge(Toml::file("config/development.toml").profile(Profile::new("dev")))
+    .merge(Env::prefixed("APP_").profile(Profile::new("dev")))
+    .extract()?;
+
+// Production configuration
+let prod_config: AppConfig = Figment::new()
+    .merge(Toml::file("config/default.toml"))
+    .merge(Toml::file("config/production.toml").profile(Profile::new("prod")))
+    .merge(Env::prefixed("APP_").profile(Profile::new("prod")))
     .extract()?;
 ```
 
-### Profile Support
+### Error Handling Improvements
 
-Figment enables profile-based configuration:
+Figment provides significantly better error messages:
 
-```rust
-// Development config
-Figment::new()
-    .merge(Toml::file("config/default.toml"))
-    .merge(Toml::file("config/development.toml"))
-    .merge(Env::prefixed("APP_").split("_"))
+**Config crate error:**
+```
+Error: TOML parse error: invalid type: integer `123`, expected a string for key `app.port` at line 10 column 15
+```
 
-// Production config
-Figment::new()
-    .merge(Toml::file("config/default.toml"))
-    .merge(Toml::file("config/production.toml"))
-    .merge(Env::prefixed("APP_").split("_"))
+**Figment error:**
+```
+Error: `app.port` is not a string (integer `123`) in config/default.toml:10:15, but expected a string
+
+Caused by:
+    expected a string
+    at config/default.toml:10:15
+    8 | [app]
+    9 | name = "myapp"
+    10| port = 123  # <-- integer, expected string
 ```
 
 ## Consequences

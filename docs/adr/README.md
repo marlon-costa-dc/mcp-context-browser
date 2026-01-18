@@ -38,12 +38,29 @@ This directory contains all Architecture Decision Records (ADRs) for the MCP Con
 -   [ADR 012: Two-Layer DI Strategy](012-di-strategy-two-layer-approach.md) - Shaku modules + runtime factories
 -   [ADR 013: Clean Architecture Crate Separation](013-clean-architecture-crate-separation.md) - Seven-crate workspace organization
 
-### v0.2.0 Refatoração & Simplification
+### v0.1.2 Refatoração & Simplification
 
 -   [ADR 023: Inventory to Linkme Migration](023-inventory-to-linkme-migration.md) - Plugin registration simplification
 -   [ADR 024: Simplified Dependency Injection](024-simplified-dependency-injection.md) - **SUPERSEDES** [ADR 002](002-dependency-injection-shaku.md)
 -   [ADR 025: Figment Configuration Migration](025-figment-configuration.md) - Unified configuration loading
 -   [ADR 026: API Routing Refactor (Rocket vs Poem)](026-routing-refactor-rocket-poem.md) - HTTP framework evaluation and migration
+
+### Implementation Timeline v0.1.2
+
+#### Phase 1: Foundation (Week 1-2)
+- [ADR 023] Inventory to Linkme Migration
+- [ADR 024] Simplified Dependency Injection
+
+#### Phase 2: Configuration & Routing (Week 3-4)
+- [ADR 025] Figment Configuration Migration
+- [ADR 026] API Routing Refactor (Rocket vs Poem)
+
+#### Phase 3: Integration & Testing (Week 5-6)
+- Integration testing across all changes
+- Performance validation
+- Documentation updates
+
+**Target Release**: v0.1.2 (6 weeks from planning completion)
 
 ### Multi-Domain & Integration (v0.2.0+)
 

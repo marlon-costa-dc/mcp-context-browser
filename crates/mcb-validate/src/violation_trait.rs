@@ -23,6 +23,10 @@ pub enum ViolationCategory {
     Solid,
     /// Dependency injection and Shaku patterns
     DependencyInjection,
+    /// Configuration patterns (Figment, config crate)
+    Configuration,
+    /// Web framework patterns (Rocket, Axum)
+    WebFramework,
     /// Performance patterns
     Performance,
     /// Async patterns
@@ -53,6 +57,8 @@ impl Display for ViolationCategory {
             Self::Organization => write!(f, "Organization"),
             Self::Solid => write!(f, "SOLID"),
             Self::DependencyInjection => write!(f, "DI/Shaku"),
+            Self::Configuration => write!(f, "Configuration"),
+            Self::WebFramework => write!(f, "Web Framework"),
             Self::Performance => write!(f, "Performance"),
             Self::Async => write!(f, "Async"),
             Self::Documentation => write!(f, "Documentation"),

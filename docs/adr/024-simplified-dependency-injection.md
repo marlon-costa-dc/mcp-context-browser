@@ -2,27 +2,111 @@
 
 ## Status
 
-**Proposed** (v0.2.0)
+**Proposed** (v0.1.2)
 
 > Planned replacement for [ADR 002: Dependency Injection with Shaku](002-dependency-injection-shaku.md) as part of the refatoração and simplification initiative.
 
 ## Context
 
-The current dependency injection system using Shaku provides compile-time guarantees but introduces significant complexity:
+The current dependency injection system uses Shaku (version 0.6), a compile-time DI container that provides trait-based dependency resolution. While effective, this approach introduces substantial complexity that impacts development velocity and maintainability.
 
-1. **Macro overhead**: Extensive use of `#[derive(Component)]`, `module!`, and `HasComponent` traits
-2. **Build complexity**: Compile-time DI resolution adds to build times
-3. **Learning curve**: Shaku's API is complex for new contributors
-4. **Maintenance burden**: Module definitions must be kept in sync manually
-5. **Limited flexibility**: Runtime service swapping requires container rebuilding
+### Current Shaku Implementation
 
-While Shaku provides good decoupling, the complexity outweighs the benefits for this project's scale and needs. A simpler approach using constructor injection with manual service composition would:
+The current system uses a two-layer DI approach (ADR 012) with:
 
-1. **Reduce boilerplate**: Eliminate macro-heavy DI declarations
-2. **Improve readability**: Clear dependency flow through constructor parameters
-3. **Maintain testability**: Constructor injection still enables dependency mocking
-4. **Simplify debugging**: Direct object construction is easier to trace
-5. **Reduce build times**: Less compile-time macro expansion
+1. **Shaku Components**: Services registered with `#[derive(Component)]` and `#[shaku(interface = dyn Trait)]`
+2. **Runtime Factories**: Production providers created via factory functions outside Shaku
+3. **Module Composition**: Services organized in Shaku modules with macro-generated wiring
+
+**Example of current complexity:**
+```rust
+// Component definition with multiple attributes
+#[derive(Component)]
+#[shaku(interface = dyn EmbeddingProvider)]
+pub struct OllamaEmbeddingProvider {
+    #[shaku(inject)]  // Runtime injection point
+    config: Arc<dyn ConfigProvider>,
+    #[shaku(inject)]
+    http_client: Arc<dyn HttpClient>,
+}
+
+// Module definition with macro
+module! {
+    pub EmbeddingModuleImpl: EmbeddingModule {
+        components = [OllamaEmbeddingProvider],
+        providers = []
+    }
+}
+
+// Runtime resolution
+let provider: Arc<dyn EmbeddingProvider> = container.resolve();
+```
+
+### Problems with Current Approach
+
+#### Developer Experience Issues
+1. **Macro complexity**: `#[derive(Component)]`, `#[shaku(interface = ...)]`, `#[shaku(inject)]` everywhere
+2. **Build time impact**: Extensive macro expansion slows compilation
+3. **Learning curve**: Shaku API is complex for new team members
+4. **Debugging difficulty**: DI resolution happens through macro-generated code
+
+#### Maintenance Issues
+1. **Module sync**: Manual maintenance of module definitions as services change
+2. **Trait bounds**: Complex trait bounds on component implementations
+3. **Testing overhead**: Need to understand Shaku to write unit tests
+4. **Refactoring friction**: Changes require updating multiple macro annotations
+
+#### Architectural Issues
+1. **Over-engineering**: DI container complexity exceeds project needs
+2. **Runtime opacity**: Service resolution happens through generated code
+3. **Limited flexibility**: Hard to customize service creation per environment
+
+### Constructor Injection as Alternative
+
+Constructor injection with manual composition provides a simpler approach:
+
+**Key Benefits:**
+1. **Explicit dependencies**: Constructor parameters make dependencies clear
+2. **Easy testing**: Direct constructor calls enable straightforward mocking
+3. **Fast compilation**: No macro expansion overhead
+4. **Simple debugging**: Direct object construction is easy to trace
+5. **Framework independence**: No DI framework lock-in
+
+**Constructor injection pattern:**
+```rust
+// Service with explicit dependencies
+pub struct EmbeddingService {
+    provider: Arc<dyn EmbeddingProvider>,
+    cache: Arc<dyn CacheProvider>,
+}
+
+impl EmbeddingService {
+    // Dependencies are explicit constructor parameters
+    pub fn new(
+        provider: Arc<dyn EmbeddingProvider>,
+        cache: Arc<dyn CacheProvider>,
+    ) -> Self {
+        Self { provider, cache }
+    }
+}
+
+// Manual composition in bootstrap
+let provider = Arc::new(OllamaProvider::new(config));
+let cache = Arc::new(MokaCache::new(config));
+let service = Arc::new(EmbeddingService::new(provider, cache));
+```
+
+### Comparative Analysis
+
+| Aspect | Shaku (Current) | Constructor Injection |
+|--------|----------------|----------------------|
+| **API Complexity** | High (macros, modules, components) | Low (constructors, Arc<T>) |
+| **Build Time** | Slow (extensive macro expansion) | Fast (no macros) |
+| **Learning Curve** | Steep (Shaku-specific knowledge) | Shallow (standard Rust patterns) |
+| **Testability** | Good (but requires Shaku setup) | Excellent (direct constructor calls) |
+| **Debugging** | Difficult (macro-generated code) | Easy (direct object construction) |
+| **Flexibility** | Limited (container-managed) | High (manual composition) |
+| **Maintenance** | High (module definitions) | Low (constructor changes) |
 
 ## Decision
 

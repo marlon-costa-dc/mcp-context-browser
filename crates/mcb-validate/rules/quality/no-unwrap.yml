@@ -1,0 +1,36 @@
+_template: "code_pattern_check"
+id: "QUAL001"
+name: "No Unwrap in Production"
+category: "quality"
+severity: "error"
+enabled: true
+engine: "rust-rule-engine"
+
+description: "Production code should not use .unwrap()"
+rationale: "Unwrap can cause panics; use ? operator or proper error handling"
+
+config:
+  file_patterns: ["**/*.rs"]
+  exclude_patterns: ["**/tests/**", "**/*test.rs", "**/tests.rs"]
+  forbidden_patterns: ["\\.unwrap\\(\\)", "\\.expect\\([^)]*\\)"]
+
+rule: |
+  rule NoUnwrap "No unwrap() in production code" {
+      when
+          File(path matches "**/*.rs") &&
+          !File(path matches "**/tests/**") &&
+          !File(path matches "**/*test.rs") &&
+          Content(contains ".unwrap()")
+      then
+          Violation("Avoid .unwrap() in production code");
+  }
+
+  rule NoExpect "No .expect() in production code" {
+      when
+          File(path matches "**/*.rs") &&
+          !File(path matches "**/tests/**") &&
+          !File(path matches "**/*test.rs") &&
+          Content(contains ".expect(")
+      then
+          Violation("Avoid .expect() in production code, use ? with context");
+  }

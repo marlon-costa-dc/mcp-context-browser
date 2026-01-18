@@ -1,8 +1,8 @@
-//! Declarative Rule Registry
+//! Rule Registry System
 //!
-//! Provides declarative rule definitions for Clean Architecture validation.
-//! Rules are defined as data structures rather than hardcoded logic.
+//! Provides declarative rule definitions and registry management.
 
-pub mod registry;
+pub mod registry;  // Legacy registry (kept for compatibility)
 
+// Re-export legacy for compatibility
 pub use registry::{clean_architecture_rules, layer_boundary_rules, Rule, RuleRegistry};

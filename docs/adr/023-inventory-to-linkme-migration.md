@@ -2,9 +2,9 @@
 
 ## Status
 
-**Proposed** (v0.2.0)
+**Proposed** (v0.1.2)
 
-> Planned for implementation in v0.2.0 as part of the refatoração and simplification initiative.
+> Planned for implementation in v0.1.2 as part of the refatoração and simplification initiative.
 
 ## Context
 

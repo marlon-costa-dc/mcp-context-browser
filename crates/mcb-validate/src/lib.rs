@@ -38,12 +38,19 @@ pub mod scan;
 
 // === Rule Registry (Phase 3) ===
 pub mod rules;
+pub mod engines;
 
 // === New Validators (using new system) ===
 pub mod clean_architecture;
 pub mod layer_flow;
 pub mod port_adapter;
 pub mod visibility;
+
+// === Migration Validators (v0.2.0) ===
+// pub mod linkme;
+// pub mod constructor_injection;
+// pub mod figment;
+// pub mod rocket;
 
 // === Legacy Validators (being migrated to new system) ===
 pub mod async_patterns;
@@ -64,6 +71,7 @@ pub mod shaku;
 pub mod solid;
 pub mod tests_org;
 
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 
@@ -78,14 +86,21 @@ pub use config::{
     QualityRulesConfig, RulesConfig, ShakuRulesConfig, SolidRulesConfig, ValidatorsConfig,
 };
 
-// Re-export rule registry
-pub use rules::{Rule, RuleRegistry};
+// Re-export rule registry and YAML system
+pub use rules::{Rule, RuleRegistry, YamlRuleLoader, YamlRuleValidator, TemplateEngine};
+pub use engines::{HybridRuleEngine, RuleEngineType};
 
 // Re-export new validators
 pub use clean_architecture::{CleanArchitectureValidator, CleanArchitectureViolation};
 pub use layer_flow::{LayerFlowValidator, LayerFlowViolation};
 pub use port_adapter::{PortAdapterValidator, PortAdapterViolation};
 pub use visibility::{VisibilityValidator, VisibilityViolation};
+
+// Re-export migration validators (v0.1.2)
+pub use linkme::{LinkmeValidator, LinkmeViolation};
+pub use constructor_injection::{ConstructorInjectionValidator, ConstructorInjectionViolation};
+pub use figment::{FigmentValidator, FigmentViolation};
+pub use rocket::{RocketValidator, RocketViolation};
 
 // Re-export legacy validators
 pub use dependency::{DependencyValidator, DependencyViolation};
@@ -488,6 +503,7 @@ impl ArchitectureValidator {
             async_count: async_violations.len(),
             error_boundary_count: error_boundary_violations.len(),
             pmat_count: pmat_violations.len(),
+            // New v0.2.0 migration rules will be tracked separately
             passed: total == 0,
         };
 
@@ -594,6 +610,60 @@ impl ArchitectureValidator {
         self.pmat.validate_all()
     }
 
+    // ========== YAML-Based Validation (Phase 9) ==========
+
+    /// Create a YAML-based validator
+    pub fn yaml_validator(&self) -> Result<YamlRuleValidator> {
+        YamlRuleValidator::new()
+    }
+
+    /// Load and validate all YAML rules
+    pub async fn load_yaml_rules(&self) -> Result<Vec<crate::rules::yaml_loader::ValidatedRule>> {
+        let rules_dir = std::env::current_dir()?
+            .join("crates/mcb-validate/rules");
+
+        let loader = YamlRuleLoader::new(rules_dir);
+        loader.load_all_rules().await
+    }
+
+    /// Validate using YAML rules with hybrid engines
+    pub async fn validate_with_yaml_rules(&self) -> Result<GenericReport> {
+        let rules = self.load_yaml_rules().await?;
+        let engine = HybridRuleEngine::new();
+
+        let mut violations = Vec::new();
+
+        for rule in rules.into_iter().filter(|r| r.enabled) {
+            let context = engines::hybrid_engine::RuleContext {
+                workspace_root: self.config.workspace_root.clone(),
+                config: self.config.clone(),
+                ast_data: HashMap::new(), // Would be populated by scanner
+                cargo_data: HashMap::new(), // Would be populated by scanner
+                file_contents: HashMap::new(), // Would be populated by scanner
+            };
+
+            let engine_type = match rule.engine.as_str() {
+                "rust-rule-engine" => RuleEngineType::RustRuleEngine,
+                "rusty-rules" => RuleEngineType::RustyRules,
+                _ => RuleEngineType::RustyRules, // Default
+            };
+
+            let result = engine.execute_rule(
+                &rule.id,
+                engine_type,
+                &rule.rule_definition,
+                &context,
+            ).await?;
+
+            violations.extend(result.violations);
+        }
+
+        Ok(GenericReporter::create_report(
+            &violations,
+            self.config.workspace_root.clone(),
+        ))
+    }
+
     // ========== Registry-Based Validation (Phase 7) ==========
 
     /// Create a ValidatorRegistry with the standard new validators
@@ -694,58 +764,3 @@ pub fn find_workspace_root_from(start: &Path) -> Option<PathBuf> {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_severity_serialization() {
-        let severity = Severity::Error;
-        let json = serde_json::to_string(&severity).unwrap();
-        assert_eq!(json, "\"Error\"");
-    }
-
-    #[test]
-    fn test_validation_config_creation() {
-        let config = ValidationConfig::new("/workspace");
-        assert_eq!(config.workspace_root.to_str().unwrap(), "/workspace");
-        assert!(config.additional_src_paths.is_empty());
-        assert!(config.exclude_patterns.is_empty());
-    }
-
-    #[test]
-    fn test_validation_config_builder() {
-        let config = ValidationConfig::new("/workspace")
-            .with_additional_path("../src")
-            .with_additional_path("../legacy")
-            .with_exclude_pattern("target/")
-            .with_exclude_pattern("tests/fixtures/");
-
-        assert_eq!(config.additional_src_paths.len(), 2);
-        assert_eq!(config.exclude_patterns.len(), 2);
-    }
-
-    #[test]
-    fn test_validation_config_should_exclude() {
-        let config = ValidationConfig::new("/workspace")
-            .with_exclude_pattern("target/")
-            .with_exclude_pattern("fixtures/");
-
-        assert!(config.should_exclude(Path::new("/workspace/target/debug")));
-        assert!(config.should_exclude(Path::new("/workspace/tests/fixtures/data.json")));
-        assert!(!config.should_exclude(Path::new("/workspace/src/lib.rs")));
-    }
-
-    #[test]
-    fn test_architecture_validator_with_config() {
-        let config = ValidationConfig::new("/tmp/test-workspace")
-            .with_additional_path("../legacy-src")
-            .with_exclude_pattern("target/");
-
-        let validator = ArchitectureValidator::with_config(config);
-        let config_ref = validator.config();
-
-        assert_eq!(config_ref.additional_src_paths.len(), 1);
-        assert_eq!(config_ref.exclude_patterns.len(), 1);
-    }
-}

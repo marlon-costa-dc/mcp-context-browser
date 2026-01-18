@@ -9,6 +9,7 @@
 .PHONY: validate-deps validate-quality validate-patterns validate-tests validate-docs validate-naming
 .PHONY: validate-solid validate-org validate-kiss validate-shaku validate-refactor
 .PHONY: validate-all validate-config
+.PHONY: validate-migration validate-linkme validate-ctor validate-figment validate-rocket
 .PHONY: check-full ci-quality
 .PHONY: pmat-tdg pmat-diag pmat-entropy pmat-defects pmat-gate pmat-explain pmat-clean
 
@@ -154,6 +155,37 @@ validate-refactor: ## Check refactoring completeness violations
 	@echo "Detects: orphan imports, duplicate definitions, missing tests, stale re-exports"
 	@cargo test --package mcb-validate test_validate_workspace_refactoring -- --nocapture 2>&1 | \
 		grep -v "^running\|^test \|Compiling\|Finished"
+
+# -----------------------------------------------------------------------------
+# Migration Validation Targets (v0.1.2)
+# -----------------------------------------------------------------------------
+
+validate-migration: validate-linkme validate-ctor validate-figment validate-rocket ## Validate all v0.1.2 migration issues
+	@echo "Migration validation completed!"
+
+validate-linkme: ## Validate Inventory → Linkme migration
+	@echo "=== Inventory → Linkme Migration Issues ==="
+	@echo "Detects: inventory::submit!/collect! usage, missing linkme patterns"
+	@cargo test --package mcb-validate test_linkme_validator -- --nocapture 2>&1 | \
+		grep -v "^running\|^test \|Compiling\|Finished" || echo "Linkme validator test not found"
+
+validate-ctor: ## Validate Shaku → Constructor Injection migration
+	@echo "=== Shaku → Constructor Injection Migration Issues ==="
+	@echo "Detects: #[derive(Component)], #[shaku(inject)], module! usage"
+	@cargo test --package mcb-validate test_constructor_injection_validator -- --nocapture 2>&1 | \
+		grep -v "^running\|^test \|Compiling\|Finished" || echo "Constructor injection validator test not found"
+
+validate-figment: ## Validate Config → Figment migration
+	@echo "=== Config Crate → Figment Migration Issues ==="
+	@echo "Detects: Config::builder(), config::Environment usage"
+	@cargo test --package mcb-validate test_figment_validator -- --nocapture 2>&1 | \
+		grep -v "^running\|^test \|Compiling\|Finished" || echo "Figment validator test not found"
+
+validate-rocket: ## Validate Axum → Rocket migration
+	@echo "=== Axum → Rocket Migration Issues ==="
+	@echo "Detects: axum::Router, axum::routing::* usage, Tower middleware"
+	@cargo test --package mcb-validate test_rocket_validator -- --nocapture 2>&1 | \
+		grep -v "^running\|^test \|Compiling\|Finished" || echo "Rocket validator test not found"
 
 # -----------------------------------------------------------------------------
 # Multi-Directory Validation

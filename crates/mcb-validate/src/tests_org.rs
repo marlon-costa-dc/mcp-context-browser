@@ -278,6 +278,7 @@ impl TestValidator {
     pub fn validate_all(&self) -> Result<Vec<TestViolation>> {
         let mut violations = Vec::new();
         violations.extend(self.validate_no_inline_tests()?);
+        violations.extend(self.validate_test_directory_structure()?);
         violations.extend(self.validate_test_naming()?);
         violations.extend(self.validate_test_function_naming()?);
         violations.extend(self.validate_test_quality()?);
@@ -320,7 +321,7 @@ impl TestValidator {
                             violations.push(TestViolation::InlineTestModule {
                                 file: entry.path().to_path_buf(),
                                 line: line_num + 1,
-                                severity: Severity::Warning,
+                                severity: Severity::Error,
                             });
                         }
                     }
@@ -331,7 +332,66 @@ impl TestValidator {
         Ok(violations)
     }
 
-    /// Check test file naming conventions
+    /// Validate that tests are properly organized in subdirectories
+    pub fn validate_test_directory_structure(&self) -> Result<Vec<TestViolation>> {
+        let mut violations = Vec::new();
+
+        for crate_dir in self.get_crate_dirs()? {
+            let tests_dir = crate_dir.join("tests");
+            if !tests_dir.exists() {
+                continue;
+            }
+
+            // Check that required subdirectories exist
+            let required_dirs = ["unit", "integration", "e2e"];
+            for dir_name in &required_dirs {
+                let subdir = tests_dir.join(dir_name);
+                if !subdir.exists() {
+                    violations.push(TestViolation::BadTestFileName {
+                        file: tests_dir.clone(),
+                        suggestion: format!("Create tests/{}/ directory", dir_name),
+                        severity: Severity::Error,
+                    });
+                }
+            }
+
+            // Check for test files directly in tests/ directory (not in subdirs)
+            for entry in std::fs::read_dir(&tests_dir)? {
+                let entry = entry?;
+                let path = entry.path();
+
+                // Skip directories
+                if path.is_dir() {
+                    continue;
+                }
+
+                // Skip non-Rust files
+                if path.extension().and_then(|e| e.to_str()) != Some("rs") {
+                    continue;
+                }
+
+                let file_name = path.file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("");
+
+                // Skip allowed files in root tests directory
+                if matches!(file_name, "lib.rs" | "mod.rs" | "test_utils.rs") {
+                    continue;
+                }
+
+                // Any other .rs file directly in tests/ is a violation
+                violations.push(TestViolation::BadTestFileName {
+                    file: path,
+                    suggestion: "Move to tests/unit/, tests/integration/, or tests/e2e/ directory".to_string(),
+                    severity: Severity::Error,
+                });
+            }
+        }
+
+        Ok(violations)
+    }
+
+    /// Check test file naming conventions and directory structure
     pub fn validate_test_naming(&self) -> Result<Vec<TestViolation>> {
         let mut violations = Vec::new();
 
@@ -341,13 +401,41 @@ impl TestValidator {
                 continue;
             }
 
+            // Check for required directory structure
+            let unit_dir = tests_dir.join("unit");
+            let integration_dir = tests_dir.join("integration");
+            let e2e_dir = tests_dir.join("e2e");
+
+            // Warn if directories don't exist (they should for proper organization)
+            if !unit_dir.exists() {
+                violations.push(TestViolation::BadTestFileName {
+                    file: tests_dir.clone(),
+                    suggestion: "Create tests/unit/ directory for unit tests".to_string(),
+                    severity: Severity::Info,
+                });
+            }
+            if !integration_dir.exists() {
+                violations.push(TestViolation::BadTestFileName {
+                    file: tests_dir.clone(),
+                    suggestion: "Create tests/integration/ directory for integration tests".to_string(),
+                    severity: Severity::Info,
+                });
+            }
+            if !e2e_dir.exists() {
+                violations.push(TestViolation::BadTestFileName {
+                    file: tests_dir.clone(),
+                    suggestion: "Create tests/e2e/ directory for end-to-end tests".to_string(),
+                    severity: Severity::Info,
+                });
+            }
+
             for entry in WalkDir::new(&tests_dir)
                 .into_iter()
                 .filter_map(|e| e.ok())
                 .filter(|e| e.path().extension().is_some_and(|ext| ext == "rs"))
             {
-                let file_name = entry
-                    .path()
+                let path = entry.path();
+                let file_name = path
                     .file_stem()
                     .and_then(|s| s.to_str())
                     .unwrap_or("");
@@ -358,7 +446,7 @@ impl TestValidator {
                 }
 
                 // Skip test utility files (mocks, fixtures, helpers)
-                let path_str = entry.path().to_string_lossy();
+                let path_str = path.to_string_lossy();
                 if path_str.contains("test_utils")
                     || file_name.contains("mock")
                     || file_name.contains("fixture")
@@ -367,20 +455,58 @@ impl TestValidator {
                     continue;
                 }
 
-                // Test files should end with _test or _tests, or use integration test patterns
-                let is_valid_test_name = file_name.ends_with("_test")
-                    || file_name.ends_with("_tests")
-                    || file_name.contains("integration")
-                    || file_name.contains("workflow")
-                    || file_name.contains("e2e")
-                    || file_name.contains("benchmark");
+                // Check directory-based naming conventions
+                let parent_dir = path.parent().and_then(|p| p.file_name())
+                    .and_then(|n| n.to_str()).unwrap_or("");
 
-                if !is_valid_test_name {
-                    violations.push(TestViolation::BadTestFileName {
-                        file: entry.path().to_path_buf(),
-                        suggestion: format!("{}_test.rs or {}_tests.rs", file_name, file_name),
-                        severity: Severity::Info,
-                    });
+                match parent_dir {
+                    "unit" => {
+                        // Unit tests must follow [module]_tests.rs pattern
+                        if !file_name.ends_with("_tests") {
+                            violations.push(TestViolation::BadTestFileName {
+                                file: path.to_path_buf(),
+                                suggestion: format!("{}_tests.rs (unit tests must end with _tests)", file_name),
+                                severity: Severity::Warning,
+                            });
+                        }
+                    }
+                    "integration" => {
+                        // Integration tests can be more flexible but should indicate their purpose
+                        let is_valid_integration = file_name.contains("integration")
+                            || file_name.contains("workflow")
+                            || file_name.ends_with("_integration")
+                            || file_name.ends_with("_workflow");
+
+                        if !is_valid_integration {
+                            violations.push(TestViolation::BadTestFileName {
+                                file: path.to_path_buf(),
+                                suggestion: format!("{}_integration.rs or {}_workflow.rs (integration tests should indicate their purpose)", file_name, file_name),
+                                severity: Severity::Info,
+                            });
+                        }
+                    }
+                    "e2e" => {
+                        // E2E tests should clearly indicate they're end-to-end
+                        let is_valid_e2e = file_name.contains("e2e")
+                            || file_name.contains("end_to_end")
+                            || file_name.starts_with("test_");
+
+                        if !is_valid_e2e {
+                            violations.push(TestViolation::BadTestFileName {
+                                file: path.to_path_buf(),
+                                suggestion: format!("{}_e2e.rs or test_{}.rs (e2e tests should indicate they're end-to-end)", file_name, file_name),
+                                severity: Severity::Info,
+                            });
+                        }
+                    }
+                    _ => {
+                        // Files directly in tests/ directory (not in subdirs) are violations
+                        violations.push(TestViolation::BadTestFileName {
+                            file: path.to_path_buf(),
+                            suggestion: "Move to tests/unit/, tests/integration/, or tests/e2e/ directory".to_string(),
+                            severity: Severity::Warning,
+                        });
+                    }
                 }
             }
         }
@@ -437,14 +563,14 @@ impl TestValidator {
                             if let Some(cap) = fn_pattern.captures(potential_fn) {
                                 let fn_name = cap.get(1).map(|m| m.as_str()).unwrap_or("");
 
-                                // Check naming convention
-                                if !fn_name.starts_with("test_") && !fn_name.starts_with("it_") {
+                                // Check naming convention - must start with test_
+                                if !fn_name.starts_with("test_") {
                                     violations.push(TestViolation::BadTestFunctionName {
                                         file: entry.path().to_path_buf(),
                                         line: fn_line_idx + 1,
                                         function_name: fn_name.to_string(),
                                         suggestion: format!("test_{}", fn_name),
-                                        severity: Severity::Info,
+                                        severity: Severity::Warning,
                                     });
                                 }
 
@@ -618,7 +744,7 @@ impl TestValidator {
                                         file: entry.path().to_path_buf(),
                                         line: fn_start + 1,
                                         function_name: fn_name.to_string(),
-                                        severity: Severity::Warning,
+                                        severity: Severity::Error,
                                     });
                                 }
 

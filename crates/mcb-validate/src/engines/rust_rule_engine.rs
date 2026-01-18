@@ -1,0 +1,211 @@
+//! Rust Rule Engine Wrapper
+//!
+//! Wrapper for rust-rule-engine crate with RETE-UL algorithm
+//! and GRL (Grule Rule Language) support.
+
+use async_trait::async_trait;
+use serde_json::Value;
+use std::collections::HashMap;
+
+use crate::violation_trait::{Violation, ViolationCategory, Severity};
+use crate::Result;
+
+use super::hybrid_engine::{RuleContext, RuleEngine};
+
+/// Wrapper for rust-rule-engine
+pub struct RustRuleEngineWrapper {
+    // In a real implementation, this would hold the actual rust-rule-engine instance
+    compiled_rules: HashMap<String, String>,
+}
+
+impl RustRuleEngineWrapper {
+    pub fn new() -> Self {
+        Self {
+            compiled_rules: HashMap::new(),
+        }
+    }
+
+    /// Compile GRL rule for execution
+    pub fn compile_grl_rule(&mut self, rule_id: String, grl_code: &str) -> Result<()> {
+        // In real implementation, this would compile the GRL code
+        // For now, just store it
+        self.compiled_rules.insert(rule_id, grl_code.to_string());
+        Ok(())
+    }
+
+    /// Execute compiled GRL rule
+    pub fn execute_compiled_rule(
+        &self,
+        rule_id: &str,
+        context: &RuleContext,
+    ) -> Result<Vec<Violation>> {
+        let grl_code = self.compiled_rules.get(rule_id)
+            .ok_or_else(|| crate::ValidationError::Config(
+                format!("Compiled rule not found: {}", rule_id)
+            ))?;
+
+        // Parse and execute GRL rules
+        self.execute_grl_code(grl_code, context)
+    }
+
+    /// Execute GRL code directly
+    fn execute_grl_code(&self, grl_code: &str, context: &RuleContext) -> Result<Vec<Violation>> {
+        let mut violations = Vec::new();
+
+        // Parse GRL rules and execute them
+        // This is a simplified implementation - real rust-rule-engine would handle this
+
+        if grl_code.contains("DomainIndependence") {
+            // Check domain layer independence
+            violations.extend(self.check_domain_independence(context)?);
+        }
+
+        if grl_code.contains("NoUnwrap") {
+            // Check for unwrap usage
+            violations.extend(self.check_unwrap_usage(context)?);
+        }
+
+        if grl_code.contains("NoExpect") {
+            // Check for expect usage
+            violations.extend(self.check_expect_usage(context)?);
+        }
+
+        Ok(violations)
+    }
+
+    fn check_domain_independence(&self, context: &RuleContext) -> Result<Vec<Violation>> {
+        let mut violations = Vec::new();
+
+        // Check Cargo.toml for domain crate
+        let cargo_toml_path = context.workspace_root.join("crates/mcb-domain/Cargo.toml");
+        if cargo_toml_path.exists() {
+            let content = std::fs::read_to_string(&cargo_toml_path)?;
+            if content.contains("mcb-") {
+                violations.push(Violation {
+                    id: "CA001".to_string(),
+                    category: ViolationCategory::Architecture,
+                    severity: Severity::Error,
+                    message: "Domain layer cannot depend on internal mcb-* crates".to_string(),
+                    file: Some(cargo_toml_path),
+                    line: None,
+                    column: None,
+                    context: Some("Found forbidden dependency in Cargo.toml".to_string()),
+                });
+            }
+        }
+
+        Ok(violations)
+    }
+
+    fn check_unwrap_usage(&self, context: &RuleContext) -> Result<Vec<Violation>> {
+        let mut violations = Vec::new();
+
+        // Scan Rust files for unwrap usage
+        self.scan_files_for_pattern(
+            context,
+            "**/*.rs",
+            vec!["**/tests/**", "**/*test.rs"],
+            ".unwrap()",
+            "QUAL001",
+            "Avoid .unwrap() in production code",
+            &mut violations,
+        )?;
+
+        Ok(violations)
+    }
+
+    fn check_expect_usage(&self, context: &RuleContext) -> Result<Vec<Violation>> {
+        let mut violations = Vec::new();
+
+        // Scan Rust files for expect usage
+        self.scan_files_for_pattern(
+            context,
+            "**/*.rs",
+            vec!["**/tests/**", "**/*test.rs"],
+            ".expect(",
+            "QUAL001",
+            "Avoid .expect() in production code, use ? with context",
+            &mut violations,
+        )?;
+
+        Ok(violations)
+    }
+
+    fn scan_files_for_pattern(
+        &self,
+        context: &RuleContext,
+        include_pattern: &str,
+        exclude_patterns: Vec<&str>,
+        search_pattern: &str,
+        rule_id: &str,
+        message: &str,
+        violations: &mut Vec<Violation>,
+    ) -> Result<()> {
+        use walkdir::WalkDir;
+        use glob::Pattern;
+
+        let include_glob = Pattern::new(include_pattern)?;
+        let exclude_globs: Vec<Pattern> = exclude_patterns
+            .iter()
+            .map(|p| Pattern::new(p))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        for entry in WalkDir::new(&context.workspace_root) {
+            let entry = entry?;
+            let path = entry.path();
+
+            if !include_glob.matches_path(path) {
+                continue;
+            }
+
+            // Check exclusions
+            let should_exclude = exclude_globs.iter().any(|glob| glob.matches_path(path));
+            if should_exclude {
+                continue;
+            }
+
+            if let Ok(content) = std::fs::read_to_string(path) {
+                if content.contains(search_pattern) {
+                    violations.push(Violation {
+                        id: rule_id.to_string(),
+                        category: ViolationCategory::Quality,
+                        severity: Severity::Error,
+                        message: message.to_string(),
+                        file: Some(path.to_path_buf()),
+                        line: None, // Could be improved with line numbers
+                        column: None,
+                        context: Some(format!("Found pattern: {}", search_pattern)),
+                    });
+                }
+            }
+        }
+
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl RuleEngine for RustRuleEngineWrapper {
+    async fn execute(
+        &self,
+        rule_definition: &Value,
+        context: &RuleContext,
+    ) -> Result<Vec<Violation>> {
+        // Extract GRL code from rule definition
+        if let Some(grl_code) = rule_definition.get("grl").and_then(|v| v.as_str()) {
+            self.execute_grl_code(grl_code, context)
+        } else {
+            // Try to extract from rule string
+            let rule_str = serde_json::to_string(rule_definition)?;
+            self.execute_grl_code(&rule_str, context)
+        }
+    }
+}
+
+impl Clone for RustRuleEngineWrapper {
+    fn clone(&self) -> Self {
+        Self {
+            compiled_rules: self.compiled_rules.clone(),
+        }
+    }
+}

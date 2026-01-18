@@ -2,96 +2,261 @@
 
 ## Status
 
-**Proposed** (v0.2.0)
+**Proposed** (v0.1.2)
 
 > Evaluation and migration decision for HTTP routing framework as part of the simplification initiative.
 
 ## Context
 
-The current HTTP routing uses Axum with manual route construction:
+The current HTTP routing uses Axum (version 0.8) with manual route construction and Tower middleware. Axum provides a functional approach to web development with a focus on performance and composability.
+
+### Current Implementation
 
 ```rust
+use axum::{Router, routing::{get, post}, middleware::from_fn};
+use tower_http::{cors::CorsLayer, trace::TraceLayer};
+
+// Manual route construction
 let router = Router::new()
     .route("/health", get(health_check))
     .route("/metrics", get(get_metrics))
     .route("/config", get(get_config))
     .route("/config/reload", post(reload_config))
+    .route("/services", get(list_services))
+    .route("/services/{name}/start", post(start_service))
+    .route("/services/{name}/stop", post(stop_service))
+    .route("/services/{name}/restart", post(restart_service))
+    // Complex middleware composition
+    .layer(CorsLayer::permissive())
+    .layer(TraceLayer::new_for_http())
     .with_state(state);
 ```
 
-This approach has limitations:
-1. **Manual route building**: Verbose route definitions
-2. **Middleware complexity**: Tower middleware composition is verbose
-3. **Handler coupling**: Routes tightly coupled to handler functions
-4. **No built-in features**: Missing common web framework features
+### Current Limitations
 
-Two alternatives are being evaluated:
+#### Developer Experience Issues
+1. **Manual route building**: Each route requires explicit registration
+2. **Middleware complexity**: Tower ecosystem has steep learning curve
+3. **Handler coupling**: Routes are defined separately from handler functions
+4. **No built-in features**: Missing common web framework conveniences
 
-### Rocket Framework
-- **Attribute-based routing**: `#[get("/path")]` decorators
-- **Built-in features**: Forms, templates, state management
-- **Macro-driven**: Generates routing code at compile-time
-- **Stable and mature**: Long-established in Rust ecosystem
+#### Maintenance Issues
+1. **Route scattering**: Routes defined far from handler implementations
+2. **Middleware orchestration**: Complex Tower middleware composition
+3. **Error handling**: Manual error response formatting
+4. **Testing**: Difficult to test routes in isolation
 
-### Poem Framework
-- **Programmatic routing**: Fluent API for route construction
-- **Modern async**: Built on Tokio and hyper
-- **Lightweight**: Minimal overhead, fast compilation
+### Alternative Frameworks Evaluation
+
+#### Rocket Framework (Selected)
+Rocket (version 0.5.1) provides a batteries-included web framework with attribute-based routing:
+
+**Key Features:**
+- **Attribute-based routing**: `#[get("/path")]` decorators on handler functions
+- **Built-in features**: Forms, templates, state management, validation
+- **Macro-driven**: Generates routing code at compile-time with conflict detection
+- **Stable and mature**: Long-established in Rust ecosystem with extensive documentation
+- **Full-stack**: Includes everything needed for web applications
+
+**Strengths:**
+- Intuitive attribute-based API familiar to web developers
+- Compile-time route validation and conflict detection
+- Rich ecosystem of built-in features (forms, sessions, templates)
+- Excellent documentation and community support
+- Mature codebase with stable API
+
+#### Poem Framework (Alternative Considered)
+Poem (modern async web framework) offers a programmatic approach:
+
+**Key Features:**
+- **Programmatic routing**: Fluent API with method chaining
+- **Modern async**: Built on Tokio and hyper with excellent performance
+- **Lightweight**: Minimal dependencies and fast compilation
 - **Flexible middleware**: Easy composition and reuse
+- **Type-safe**: Strong typing throughout the framework
+
+**Strengths:**
+- Excellent performance and low overhead
+- Modern async patterns throughout
+- Highly composable and flexible architecture
+- Strong typing and compile-time guarantees
+
+**Trade-offs:**
+- Less mature ecosystem compared to Rocket
+- Fewer built-in features (requires more external crates)
+- Different programming model (programmatic vs declarative)
+
+### Framework Comparison
+
+| Aspect | Axum (Current) | Rocket (Chosen) | Poem (Alternative) |
+|--------|----------------|-----------------|-------------------|
+| **Routing Style** | Programmatic | Attribute-based | Programmatic |
+| **Learning Curve** | Medium | Low | Medium |
+| **Ecosystem Maturity** | High | Very High | Medium |
+| **Built-in Features** | Minimal | Extensive | Minimal |
+| **Performance** | Excellent | Very Good | Excellent |
+| **Compile Time** | Fast | Medium | Fast |
+| **Middleware** | Tower ecosystem | Built-in | Flexible |
+| **Error Handling** | Manual | Built-in | Manual |
 
 ## Decision
 
-After evaluation, we will migrate to **Rocket** for the following reasons:
+After comprehensive evaluation of framework alternatives, we will migrate from Axum to **Rocket** for HTTP routing. This decision prioritizes developer experience, ecosystem maturity, and built-in features over raw performance.
 
-1. **Familiarity**: Attribute-based routing is more intuitive
-2. **Ecosystem maturity**: Extensive community support and documentation
-3. **Built-in features**: Forms, validation, templates reduce boilerplate
-4. **Code generation**: Compile-time route validation and optimization
-5. **Developer experience**: Better error messages and debugging
+### Selection Criteria and Rationale
 
-### Rocket Migration Pattern
+#### Primary Selection Factors
 
-**Before (Axum):**
+1. **Developer Experience**: Rocket's attribute-based routing (`#[get("/path")]`) is more intuitive than Axum's programmatic approach, especially for teams familiar with web frameworks like Express.js, Flask, or Spring Boot.
+
+2. **Ecosystem Maturity**: Rocket has been stable in the Rust ecosystem for years with extensive documentation, community support, and proven production usage.
+
+3. **Built-in Features**: Rocket includes batteries like form handling, validation, templating, and session management out of the box, reducing the need for external crates.
+
+4. **Compile-time Safety**: Rocket performs route conflict detection and validation at compile time, catching routing errors early.
+
+5. **Framework Consistency**: Rocket provides a cohesive framework experience rather than Axum's minimal approach that requires assembling multiple Tower middleware crates.
+
+#### Performance Trade-off Analysis
+
+While Axum + Tower offers slightly better raw performance, the difference is negligible for most applications and doesn't justify the increased complexity and maintenance burden.
+
+### Technical Migration Strategy
+
+#### Route Migration Pattern
+
+**Before (Axum - scattered and verbose):**
 ```rust
-use axum::{Router, routing::get};
+use axum::{Router, routing::{get, post, patch}, extract::Path};
+use tower_http::{cors::CorsLayer, trace::TraceLayer};
 
-fn health_check() -> &'static str { "OK" }
+// Handler functions defined separately
+async fn health_check() -> &'static str { "OK" }
 
-let router = Router::new().route("/health", get(health_check));
+async fn get_config() -> Json<AppConfig> { /* ... */ }
+
+async fn update_config_section(
+    Path(section): Path<String>,
+    Json(update): Json<ConfigUpdate>,
+) -> Result<Json<ConfigResponse>, AppError> { /* ... */ }
+
+// Routes defined far from handlers
+let router = Router::new()
+    .route("/health", get(health_check))
+    .route("/config", get(get_config))
+    .route("/config/{section}", patch(update_config_section))
+    .layer(CorsLayer::permissive())
+    .layer(TraceLayer::new_for_http())
+    .with_state(app_state);
 ```
 
-**After (Rocket):**
+**After (Rocket - co-located and declarative):**
 ```rust
-use rocket::{get, routes};
+use rocket::{get, post, patch, routes, serde::json::Json, State};
 
+// Routes defined with handlers using attributes
 #[get("/health")]
 fn health_check() -> &'static str { "OK" }
 
-let rocket = rocket::build().mount("/", routes![health_check]);
-```
+#[get("/config")]
+fn get_config(config: &State<AppConfig>) -> Json<&AppConfig> {
+    Json(config.inner())
+}
 
-### Route Organization
+#[patch("/config/<section>")]
+fn update_config_section(
+    section: &str,
+    update: Json<ConfigUpdate>,
+    config: &State<AppConfig>,
+) -> Result<Json<ConfigResponse>, AppError> {
+    // Handler implementation...
+}
 
-Routes will be organized by feature area:
+// Routes organized by feature
+mod config_routes {
+    use rocket::{get, patch, routes};
 
-```rust
-mod health {
-    use rocket::{get, post};
+    // All config-related routes in one place
+    #[get("/")]
+    fn get_config() -> Json<AppConfig> { /* ... */ }
 
-    #[get("/health")]
-    fn check() -> &'static str { "OK" }
-
-    #[get("/health/extended")]
-    fn extended() -> Json<HealthStatus> { /* ... */ }
+    #[patch("/<section>")]
+    fn update_config_section(section: &str) -> Json<ConfigResponse> { /* ... */ }
 
     pub fn routes() -> Vec<rocket::Route> {
-        routes![check, extended]
+        routes![get_config, update_config_section]
     }
 }
 
-// In main router
-.mount("/api/v1", health::routes())
+// Main application setup
+#[launch]
+fn rocket() -> _ {
+    rocket::build()
+        .manage(app_config)
+        .mount("/api/v1/health", routes![health_check])
+        .mount("/api/v1/config", config_routes::routes())
+}
 ```
+
+#### Middleware and Cross-cutting Concerns
+
+**CORS, Logging, and Security in Rocket:**
+```rust
+use rocket::{fairing::{Fairing, Info, Kind}, http::Header, Request, Response};
+
+// Built-in CORS support
+#[launch]
+fn rocket() -> _ {
+    rocket::build()
+        .attach(Cors)  // Built-in CORS fairing
+        .attach(RequestLogger)  // Custom logging fairing
+        .mount("/", routes![...])
+}
+
+// Custom fairing for cross-cutting concerns
+#[derive(Default)]
+struct RequestLogger;
+
+#[rocket::async_trait]
+impl Fairing for RequestLogger {
+    fn info(&self) -> Info {
+        Info {
+            name: "Request Logger",
+            kind: Kind::Request | Kind::Response
+        }
+    }
+
+    async fn on_request(&self, req: &mut Request<'_>, _: &mut Data<'_>) {
+        // Request logging logic
+    }
+
+    async fn on_response(&self, req: &Request<'_>, res: &mut Response<'_>) {
+        // Response logging logic
+    }
+}
+```
+
+### Migration Scope and Phases
+
+#### Phase 1: Infrastructure Migration
+1. Replace Axum dependency with Rocket in `Cargo.toml`
+2. Create Rocket application bootstrap in `mcb-server/src/main.rs`
+3. Migrate basic health check and metrics endpoints
+
+#### Phase 2: Admin API Migration
+1. Convert admin routes from Axum to Rocket attribute-based routing
+2. Migrate state management and dependency injection
+3. Update error handling to Rocket patterns
+
+#### Phase 3: Advanced Features
+1. Implement authentication and authorization using Rocket's guard system
+2. Add request/response processing with Rocket's data guards
+3. Migrate WebSocket/SSE functionality if needed
+
+#### Phase 4: Testing and Validation
+1. Update integration tests for Rocket
+2. Validate API contract compliance
+3. Performance testing and optimization
 
 ## Consequences
 

@@ -21,8 +21,9 @@ glob.workspace = true
 regex.workspace = true
 
 # Serialization
-serde = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
+serde_yaml = "0.9"
 
 # TOML parsing for Cargo.toml
 toml.workspace = true
@@ -36,6 +37,28 @@ chrono.workspace = true
 
 # CLI (optional)
 clap = { workspace = true, optional = true }
+
+# Rule Engines - Core do sistema
+rust-rule-engine = "1.16"  # RETE-UL algorithm, GRL syntax
+rusty-rules = "0.2"        # JSON DSL rules engine
+
+# Validation libraries - Para estruturas e campos
+validator = { version = "0.20", features = ["derive"] }
+garde = { version = "0.21", features = ["derive"] }
+
+# JSON Schema validation - Para validar regras YAML
+jsonschema = "0.17"
+
+# Pest parser - Para DSL avançada
+pest = "2.8"
+pest_derive = "2.8"
+
+# Plugin system - Para descoberta automática
+inventory = "0.3"
+
+# JSON Path - Para navegação complexa
+jsonpath-rust = "0.7"
+async-trait.workspace = true
 
 [dev-dependencies]
 tempfile = "3.14"
