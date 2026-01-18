@@ -1,0 +1,23 @@
+schema: "rule/v1"
+id: "SOLID002"
+name: "Single Responsibility - Impl Methods"
+category: "solid"
+severity: "warning"
+enabled: true
+engine: "rust-rule-engine"
+
+description: "Impl block has too many methods"
+rationale: "Large impl blocks suggest the struct has too many responsibilities"
+
+config:
+  max_methods: 15
+  exclude_patterns: ["**/tests/**"]
+
+rule: |
+  rule ImplMethodsLimit "Check impl method count" {
+      when
+          AST.Impl(method_count > ${max_methods}) &&
+          !TestImpl()
+      then
+          Violation("Impl block has too many methods (${method_count}), max is ${max_methods}");
+  }

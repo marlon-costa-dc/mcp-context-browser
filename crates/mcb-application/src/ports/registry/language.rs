@@ -75,8 +75,9 @@ pub struct LanguageProviderEntry {
     pub factory: fn(&LanguageProviderConfig) -> Result<Arc<dyn LanguageChunkingProvider>, String>,
 }
 
-// Auto-collection via inventory - providers submit entries at compile time
-inventory::collect!(LanguageProviderEntry);
+// Auto-collection via linkme distributed slices - providers submit entries at compile time
+#[linkme::distributed_slice]
+pub static LANGUAGE_PROVIDERS: [LanguageProviderEntry] = [..];
 
 /// Resolve language chunking provider by name from registry
 ///
@@ -94,14 +95,15 @@ pub fn resolve_language_provider(
 ) -> Result<Arc<dyn LanguageChunkingProvider>, String> {
     let provider_name = &config.provider;
 
-    for entry in inventory::iter::<LanguageProviderEntry>() {
+    for entry in LANGUAGE_PROVIDERS {
         if entry.name == provider_name {
             return (entry.factory)(config);
         }
     }
 
     // List available providers for helpful error message
-    let available: Vec<&str> = inventory::iter::<LanguageProviderEntry>()
+    let available: Vec<&str> = LANGUAGE_PROVIDERS
+        .iter()
         .map(|e| e.name)
         .collect();
 
@@ -116,7 +118,8 @@ pub fn resolve_language_provider(
 /// Returns a list of (name, description) tuples for all registered
 /// language chunking providers. Useful for CLI help and admin UI.
 pub fn list_language_providers() -> Vec<(&'static str, &'static str)> {
-    inventory::iter::<LanguageProviderEntry>()
+    LANGUAGE_PROVIDERS
+        .iter()
         .map(|e| (e.name, e.description))
         .collect()
 }

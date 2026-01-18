@@ -83,8 +83,9 @@ pub struct EmbeddingProviderEntry {
     pub factory: fn(&EmbeddingProviderConfig) -> Result<Arc<dyn EmbeddingProvider>, String>,
 }
 
-// Auto-collection via inventory - providers submit entries at compile time
-inventory::collect!(EmbeddingProviderEntry);
+// Auto-collection via linkme distributed slices - providers submit entries at compile time
+#[linkme::distributed_slice]
+pub static EMBEDDING_PROVIDERS: [EmbeddingProviderEntry] = [..];
 
 /// Resolve embedding provider by name from registry
 ///
@@ -111,14 +112,15 @@ pub fn resolve_embedding_provider(
 ) -> Result<Arc<dyn EmbeddingProvider>, String> {
     let provider_name = &config.provider;
 
-    for entry in inventory::iter::<EmbeddingProviderEntry>() {
+    for entry in EMBEDDING_PROVIDERS {
         if entry.name == provider_name {
             return (entry.factory)(config);
         }
     }
 
     // List available providers for helpful error message
-    let available: Vec<&str> = inventory::iter::<EmbeddingProviderEntry>()
+    let available: Vec<&str> = EMBEDDING_PROVIDERS
+        .iter()
         .map(|e| e.name)
         .collect();
 
@@ -136,9 +138,21 @@ pub fn resolve_embedding_provider(
 /// # Returns
 /// Vector of (name, description) tuples for all registered providers
 pub fn list_embedding_providers() -> Vec<(&'static str, &'static str)> {
-    inventory::iter::<EmbeddingProviderEntry>()
+    EMBEDDING_PROVIDERS
+        .iter()
         .map(|e| (e.name, e.description))
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_embedding_providers_slice_access() {
+        // This test ensures the slice is accessible at compile time
+        let _providers = EMBEDDING_PROVIDERS;
+    }
 }
 
 #[cfg(test)]

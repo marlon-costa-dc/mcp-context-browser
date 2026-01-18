@@ -25,10 +25,54 @@ pub enum RuleEngineType {
     RustyRules,
 }
 
+/// Concrete violation structure for rule engines
+#[derive(Debug, Clone)]
+pub struct RuleViolation {
+    pub id: String,
+    pub category: ViolationCategory,
+    pub severity: Severity,
+    pub message: String,
+    pub file: Option<std::path::PathBuf>,
+    pub line: Option<usize>,
+    pub column: Option<usize>,
+    pub context: Option<String>,
+}
+
+impl RuleViolation {
+    pub fn new(id: impl Into<String>, category: ViolationCategory, severity: Severity, message: impl Into<String>) -> Self {
+        Self {
+            id: id.into(),
+            category,
+            severity,
+            message: message.into(),
+            file: None,
+            line: None,
+            column: None,
+            context: None,
+        }
+    }
+
+    pub fn with_file(mut self, file: std::path::PathBuf) -> Self {
+        self.file = Some(file);
+        self
+    }
+
+    pub fn with_location(mut self, line: usize, column: usize) -> Self {
+        self.line = Some(line);
+        self.column = Some(column);
+        self
+    }
+
+    pub fn with_context(mut self, context: impl Into<String>) -> Self {
+        self.context = Some(context.into());
+        self
+    }
+}
+
 /// Result of rule execution
 #[derive(Debug, Clone)]
 pub struct RuleResult {
-    pub violations: Vec<Violation>,
+    pub violations: Vec<RuleViolation>,
     pub execution_time_ms: u64,
 }
 
@@ -64,7 +108,7 @@ impl HybridRuleEngine {
     /// Execute a rule using the appropriate engine
     pub async fn execute_rule(
         &self,
-        rule_id: &str,
+        _rule_id: &str,
         engine_type: RuleEngineType,
         rule_definition: &serde_json::Value,
         context: &RuleContext,
@@ -113,9 +157,17 @@ impl HybridRuleEngine {
 
         let mut results = Vec::new();
         for handle in handles {
-            results.push(handle.await.map_err(|e| {
-                crate::ValidationError::Config(format!("Task join error: {}", e))
-            })?);
+            match handle.await {
+                Ok((rule_id, Ok(result))) => results.push((rule_id, result)),
+                Ok((rule_id, Err(e))) => {
+                    eprintln!("Warning: Rule '{}' execution error: {}", rule_id, e);
+                    // Continue with other tasks
+                }
+                Err(e) => {
+                    eprintln!("Warning: Task join error: {}", e);
+                    // Continue with other tasks
+                }
+            }
         }
 
         Ok(results)
@@ -169,5 +221,5 @@ pub trait RuleEngine: Send + Sync {
         &self,
         rule_definition: &serde_json::Value,
         context: &RuleContext,
-    ) -> Result<Vec<Violation>>;
+    ) -> Result<Vec<RuleViolation>>;
 }

@@ -83,8 +83,9 @@ pub struct CacheProviderEntry {
     pub factory: fn(&CacheProviderConfig) -> Result<Arc<dyn CacheProvider>, String>,
 }
 
-// Auto-collection via inventory - providers submit entries at compile time
-inventory::collect!(CacheProviderEntry);
+// Auto-collection via linkme distributed slices - providers submit entries at compile time
+#[linkme::distributed_slice]
+pub static CACHE_PROVIDERS: [CacheProviderEntry] = [..];
 
 /// Resolve cache provider by name from registry
 ///
@@ -102,14 +103,15 @@ pub fn resolve_cache_provider(
 ) -> Result<Arc<dyn CacheProvider>, String> {
     let provider_name = &config.provider;
 
-    for entry in inventory::iter::<CacheProviderEntry>() {
+    for entry in CACHE_PROVIDERS {
         if entry.name == provider_name {
             return (entry.factory)(config);
         }
     }
 
     // List available providers for helpful error message
-    let available: Vec<&str> = inventory::iter::<CacheProviderEntry>()
+    let available: Vec<&str> = CACHE_PROVIDERS
+        .iter()
         .map(|e| e.name)
         .collect();
 
@@ -124,7 +126,8 @@ pub fn resolve_cache_provider(
 /// Returns a list of (name, description) tuples for all registered
 /// cache providers. Useful for CLI help and admin UI.
 pub fn list_cache_providers() -> Vec<(&'static str, &'static str)> {
-    inventory::iter::<CacheProviderEntry>()
+    CACHE_PROVIDERS
+        .iter()
         .map(|e| (e.name, e.description))
         .collect()
 }

@@ -5,11 +5,11 @@
 
 use serde_json::Value;
 use validator::{Validate, ValidationErrors};
-use garde::{Validate as GardeValidate, Report};
 
 use crate::Result;
 
 /// Engine for field validations using validator and garde
+#[derive(Clone)]
 pub struct ValidatorEngine;
 
 impl ValidatorEngine {
@@ -27,11 +27,11 @@ impl ValidatorEngine {
             })?;
 
         // Use validator for basic validations
-        rule_config.validate()
+        validator::Validate::validate(&rule_config)
             .map_err(|e| crate::ValidationError::Config(format!("Validation error: {:?}", e)))?;
 
         // Use garde for more advanced validations
-        rule_config.validate(&())
+        garde::Validate::validate(&rule_config, &())
             .map_err(|e| crate::ValidationError::Config(format!("Garde validation error: {:?}", e)))?;
 
         Ok(())
@@ -39,73 +39,62 @@ impl ValidatorEngine {
 }
 
 /// Structure for validating rule configurations
-#[derive(Debug, Clone, Validate, GardeValidate, serde::Deserialize)]
+#[derive(Debug, Clone, Validate, serde::Deserialize)]
 pub struct RuleConfigValidation {
     /// Rule ID validation
     #[validate(length(min = 4, max = 10))]
-    #[garde(length(min = 4, max = 10))]
     pub id: Option<String>,
 
     /// Name validation
     #[validate(length(min = 3, max = 100))]
-    #[garde(length(min = 3, max = 100))]
     pub name: Option<String>,
 
     /// Category validation
     #[validate(custom(function = "validate_category"))]
-    #[garde(custom(validate_category_garde))]
     pub category: Option<String>,
 
     /// Severity validation
     #[validate(custom(function = "validate_severity"))]
-    #[garde(custom(validate_severity_garde))]
     pub severity: Option<String>,
 
     /// Description validation
     #[validate(length(min = 10, max = 500))]
-    #[garde(length(min = 10, max = 500))]
     pub description: Option<String>,
 
     /// Rationale validation
     #[validate(length(min = 10, max = 500))]
-    #[garde(length(min = 10, max = 500))]
     pub rationale: Option<String>,
 
     /// Engine validation
     #[validate(custom(function = "validate_engine"))]
-    #[garde(custom(validate_engine_garde))]
     pub engine: Option<String>,
 
     /// Config validation
-    #[garde(dive)]
     pub config: Option<RuleConfigFields>,
+
 }
 
 /// Configuration fields validation
-#[derive(Debug, Clone, GardeValidate, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Deserialize)]
 pub struct RuleConfigFields {
     /// Crate name validation
-    #[garde(length(min = 1))]
     pub crate_name: Option<String>,
 
     /// Forbidden prefixes validation
-    #[garde(length(min = 1))]
     pub forbidden_prefixes: Option<Vec<String>>,
 
     /// File patterns validation
-    #[garde(length(min = 1))]
     pub file_patterns: Option<Vec<String>>,
 
     /// Exclude patterns validation
     pub exclude_patterns: Option<Vec<String>>,
 
     /// Forbidden patterns validation
-    #[garde(length(min = 1))]
     pub forbidden_patterns: Option<Vec<String>>,
 }
 
 /// Validator functions for custom validations
-fn validate_category(category: &str) -> Result<(), ValidationErrors> {
+fn validate_category(category: &str) -> std::result::Result<(), ValidationErrors> {
     let valid_categories = [
         "architecture",
         "quality",
@@ -125,7 +114,7 @@ fn validate_category(category: &str) -> Result<(), ValidationErrors> {
     }
 }
 
-fn validate_severity(severity: &str) -> Result<(), ValidationErrors> {
+fn validate_severity(severity: &str) -> std::result::Result<(), ValidationErrors> {
     let valid_severities = ["error", "warning", "info"];
 
     if valid_severities.contains(&severity) {
@@ -137,7 +126,7 @@ fn validate_severity(severity: &str) -> Result<(), ValidationErrors> {
     }
 }
 
-fn validate_engine(engine: &str) -> Result<(), ValidationErrors> {
+fn validate_engine(engine: &str) -> std::result::Result<(), ValidationErrors> {
     let valid_engines = ["rust-rule-engine", "rusty-rules"];
 
     if valid_engines.contains(&engine) {
@@ -149,44 +138,6 @@ fn validate_engine(engine: &str) -> Result<(), ValidationErrors> {
     }
 }
 
-/// Garde validation functions
-fn validate_category_garde(value: &str, _ctx: &()) -> garde::Result {
-    let valid_categories = [
-        "architecture",
-        "quality",
-        "solid",
-        "dependency_injection",
-        "configuration",
-        "web_framework",
-        "migration"
-    ];
-
-    if valid_categories.contains(&value) {
-        Ok(())
-    } else {
-        Err(garde::Error::new("Invalid category"))
-    }
-}
-
-fn validate_severity_garde(value: &str, _ctx: &()) -> garde::Result {
-    let valid_severities = ["error", "warning", "info"];
-
-    if valid_severities.contains(&value) {
-        Ok(())
-    } else {
-        Err(garde::Error::new("Invalid severity"))
-    }
-}
-
-fn validate_engine_garde(value: &str, _ctx: &()) -> garde::Result {
-    let valid_engines = ["rust-rule-engine", "rusty-rules"];
-
-    if valid_engines.contains(&value) {
-        Ok(())
-    } else {
-        Err(garde::Error::new("Invalid engine"))
-    }
-}
 
 #[cfg(test)]
 mod tests {

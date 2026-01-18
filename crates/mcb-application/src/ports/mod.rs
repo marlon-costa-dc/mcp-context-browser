@@ -34,6 +34,16 @@ pub use infrastructure::{
     StateStoreProvider, SyncCoordinator, SystemMetrics, SystemMetricsCollectorInterface,
 };
 pub use providers::{EmbeddingProvider, HybridSearchProvider, VectorStoreProvider};
+pub use registry::{
+    EmbeddingProviderEntry, EmbeddingProviderConfig, EMBEDDING_PROVIDERS,
+    VectorStoreProviderEntry, VectorStoreProviderConfig, VECTOR_STORE_PROVIDERS,
+    CacheProviderEntry, CacheProviderConfig, CACHE_PROVIDERS,
+    LanguageProviderEntry, LanguageProviderConfig, LANGUAGE_PROVIDERS,
+    resolve_embedding_provider, list_embedding_providers,
+    resolve_vector_store_provider, list_vector_store_providers,
+    resolve_cache_provider, list_cache_providers,
+    resolve_language_provider, list_language_providers,
+};
 pub use services::{
     BatchIndexingServiceInterface, ChunkingOrchestratorInterface, ContextServiceInterface,
     IndexingResult, IndexingServiceInterface, IndexingStats, IndexingStatus,

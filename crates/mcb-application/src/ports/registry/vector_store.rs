@@ -94,8 +94,9 @@ pub struct VectorStoreProviderEntry {
     pub factory: fn(&VectorStoreProviderConfig) -> Result<Arc<dyn VectorStoreProvider>, String>,
 }
 
-// Auto-collection via inventory - providers submit entries at compile time
-inventory::collect!(VectorStoreProviderEntry);
+// Auto-collection via linkme distributed slices - providers submit entries at compile time
+#[linkme::distributed_slice]
+pub static VECTOR_STORE_PROVIDERS: [VectorStoreProviderEntry] = [..];
 
 /// Resolve vector store provider by name from registry
 ///
@@ -113,14 +114,15 @@ pub fn resolve_vector_store_provider(
 ) -> Result<Arc<dyn VectorStoreProvider>, String> {
     let provider_name = &config.provider;
 
-    for entry in inventory::iter::<VectorStoreProviderEntry>() {
+    for entry in VECTOR_STORE_PROVIDERS {
         if entry.name == provider_name {
             return (entry.factory)(config);
         }
     }
 
     // List available providers for helpful error message
-    let available: Vec<&str> = inventory::iter::<VectorStoreProviderEntry>()
+    let available: Vec<&str> = VECTOR_STORE_PROVIDERS
+        .iter()
         .map(|e| e.name)
         .collect();
 
@@ -135,7 +137,8 @@ pub fn resolve_vector_store_provider(
 /// Returns a list of (name, description) tuples for all registered
 /// vector store providers. Useful for CLI help and admin UI.
 pub fn list_vector_store_providers() -> Vec<(&'static str, &'static str)> {
-    inventory::iter::<VectorStoreProviderEntry>()
+    VECTOR_STORE_PROVIDERS
+        .iter()
         .map(|e| (e.name, e.description))
         .collect()
 }

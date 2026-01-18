@@ -1,0 +1,23 @@
+_template: "cargo_dependency_check"
+id: "CA002"
+name: "Application Layer Boundaries"
+category: "architecture"
+severity: "error"
+enabled: true
+engine: "rusty-rules"
+
+description: "Application crate only depends on domain"
+rationale: "Application orchestrates domain logic without infrastructure details"
+
+config:
+  crate_name: "mcb-application"
+  allowed_dependencies: ["mcb-domain"]
+
+rule: |
+  rule ApplicationBoundaries "Application Layer Boundaries" {
+      when
+          Crate(name == "mcb-application") &&
+          Dependencies(not all in ["mcb-domain"])
+      then
+          Violation("Application layer can only depend on domain layer");
+  }

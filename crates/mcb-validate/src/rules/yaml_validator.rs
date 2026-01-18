@@ -70,9 +70,20 @@ impl YamlRuleValidator {
         Ok(())
     }
 
-    /// Get schema as JSON value
-    pub fn get_schema(&self) -> &Value {
-        self.schema.get_schema()
+    /// Validate YAML against schema
+    pub fn validate_yaml(&self, yaml_value: &serde_yaml::Value) -> Result<()> {
+        let json_value = serde_json::to_value(yaml_value)
+            .map_err(|e| crate::ValidationError::Parse {
+                file: "yaml_rule".into(),
+                message: format!("JSON conversion error: {}", e),
+            })?;
+
+        let errors: Vec<_> = self.schema.validate(&json_value).err().unwrap_or_default().collect();
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(crate::ValidationError::Config(format!("Schema validation failed: {:?}", errors)))
+        }
     }
 
     /// Create validator from custom schema

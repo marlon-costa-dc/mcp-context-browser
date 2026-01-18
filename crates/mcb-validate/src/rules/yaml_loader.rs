@@ -2,7 +2,6 @@
 //!
 //! Automatically loads and validates YAML-based rules with template support.
 
-use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 use serde_yaml;
@@ -45,16 +44,16 @@ pub struct YamlRuleLoader {
 
 impl YamlRuleLoader {
     /// Create a new YAML rule loader
-    pub fn new(rules_dir: PathBuf) -> Self {
-        Self {
-            validator: YamlRuleValidator::new(),
+    pub fn new(rules_dir: PathBuf) -> Result<Self> {
+        Ok(Self {
+            validator: YamlRuleValidator::new()?,
             template_engine: TemplateEngine::new(),
             rules_dir,
-        }
+        })
     }
 
     /// Load all rules from the rules directory
-    pub async fn load_all_rules(&self) -> Result<Vec<ValidatedRule>> {
+    pub async fn load_all_rules(&mut self) -> Result<Vec<ValidatedRule>> {
         let mut rules = Vec::new();
 
         // Load templates first
@@ -62,7 +61,7 @@ impl YamlRuleLoader {
 
         // Load rule files
         for entry in WalkDir::new(&self.rules_dir) {
-            let entry = entry?;
+            let entry = entry.map_err(|e| crate::ValidationError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
             let path = entry.path();
 
             if self.is_rule_file(path) {
@@ -106,7 +105,7 @@ impl YamlRuleLoader {
         };
 
         // Convert to JSON for validation
-        let json_value: serde_json::Value = serde_json::from_value(processed_yaml)
+        let json_value: serde_json::Value = serde_json::to_value(processed_yaml)
             .map_err(|e| crate::ValidationError::Parse {
                 file: path.to_path_buf(),
                 message: format!("YAML to JSON conversion error: {}", e),
@@ -265,7 +264,7 @@ rule:
         let rule_file = rules_dir.join("test-rule.yml");
         std::fs::write(&rule_file, rule_content).unwrap();
 
-        let loader = YamlRuleLoader::new(rules_dir);
+        let mut loader = YamlRuleLoader::new(rules_dir).unwrap();
         let rules = loader.load_all_rules().await.unwrap();
 
         assert_eq!(rules.len(), 1);
@@ -318,7 +317,7 @@ config:
 
         std::fs::write(rules_dir.join("domain-deps.yml"), rule_content).unwrap();
 
-        let loader = YamlRuleLoader::new(rules_dir);
+        let mut loader = YamlRuleLoader::new(rules_dir).unwrap();
         let rules = loader.load_all_rules().await.unwrap();
 
         assert_eq!(rules.len(), 1);

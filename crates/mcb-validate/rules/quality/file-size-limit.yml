@@ -1,0 +1,23 @@
+schema: "rule/v1"
+id: "QUAL003"
+name: "File Size Limit"
+category: "quality"
+severity: "warning"
+enabled: true
+engine: "rusty-rules"
+
+description: "File exceeds maximum line count"
+rationale: "Large files are harder to maintain and understand"
+
+config:
+  max_lines: 500
+  exclude_patterns: ["**/target/**", "**/tests/**", "**/*generated*"]
+
+rule: |
+  rule FileSizeLimit "Check file size limits" {
+      when
+          File.LineCount > ${max_lines} &&
+          !File.Path.matches("${exclude_patterns}")
+      then
+          Violation("File exceeds maximum line count of ${max_lines}");
+  }

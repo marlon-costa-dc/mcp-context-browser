@@ -178,24 +178,23 @@ impl EmbeddingProvider for OllamaEmbeddingProvider {
 
 use mcb_application::ports::registry::{EmbeddingProviderConfig, EmbeddingProviderEntry};
 
-inventory::submit! {
-    EmbeddingProviderEntry {
-        name: "ollama",
-        description: "Ollama local embedding provider (nomic-embed-text, all-minilm, etc.)",
-        factory: |config: &EmbeddingProviderConfig| {
-            let base_url = config.base_url.clone()
-                .unwrap_or_else(|| "http://localhost:11434".to_string());
-            let model = config.model.clone()
-                .unwrap_or_else(|| "nomic-embed-text".to_string());
-            let timeout = Duration::from_secs(30);
-            let http_client = Client::builder()
-                .timeout(timeout)
-                .build()
-                .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
+#[linkme::distributed_slice(mcb_application::ports::registry::EMBEDDING_PROVIDERS)]
+static OLLAMA_PROVIDER: mcb_application::ports::registry::EmbeddingProviderEntry = mcb_application::ports::registry::EmbeddingProviderEntry {
+    name: "ollama",
+    description: "Ollama local embedding provider (nomic-embed-text, all-minilm, etc.)",
+    factory: |config: &mcb_application::ports::EmbeddingProviderConfig| {
+        let base_url = config.base_url.clone()
+            .unwrap_or_else(|| "http://localhost:11434".to_string());
+        let model = config.model.clone()
+            .unwrap_or_else(|| "nomic-embed-text".to_string());
+        let timeout = std::time::Duration::from_secs(30);
+        let http_client = reqwest::Client::builder()
+            .timeout(timeout)
+            .build()
+            .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
 
-            Ok(std::sync::Arc::new(OllamaEmbeddingProvider::new(
-                base_url, model, timeout, http_client
-            )))
-        },
-    }
-}
+        Ok(std::sync::Arc::new(OllamaEmbeddingProvider::new(
+            base_url, model, timeout, http_client
+        )))
+    },
+};

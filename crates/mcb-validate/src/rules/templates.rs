@@ -3,7 +3,7 @@
 //! Provides template inheritance and variable substitution for DRY rule definitions.
 
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use serde_yaml;
 use walkdir::WalkDir;
 
@@ -31,7 +31,7 @@ impl TemplateEngine {
         }
 
         for entry in WalkDir::new(&templates_dir) {
-            let entry = entry?;
+            let entry = entry.map_err(|e| crate::ValidationError::Io(e.into()))?;
             let path = entry.path();
 
             if path.extension().and_then(|ext| ext.to_str()) == Some("yml") {
@@ -159,7 +159,7 @@ impl TemplateEngine {
                         .collect();
                     Ok(strings.join(","))
                 }
-                _ => Ok(value.to_string()),
+                _ => Ok(format!("{:?}", value)),
             }
         } else {
             Err(crate::ValidationError::Config(format!("Variable '{}' not found", var_name)))

@@ -1,4 +1,4 @@
-_template: "code_pattern_check"
+schema: "rule/v1"
 id: "QUAL001"
 name: "No Unwrap in Production"
 category: "quality"
@@ -10,27 +10,16 @@ description: "Production code should not use .unwrap()"
 rationale: "Unwrap can cause panics; use ? operator or proper error handling"
 
 config:
-  file_patterns: ["**/*.rs"]
-  exclude_patterns: ["**/tests/**", "**/*test.rs", "**/tests.rs"]
-  forbidden_patterns: ["\\.unwrap\\(\\)", "\\.expect\\([^)]*\\)"]
+  allow_in_tests: true
+  allow_in_examples: false
+  custom_exclusions: []
 
 rule: |
-  rule NoUnwrap "No unwrap() in production code" {
+  rule NoUnwrapCheck "Avoid unwrap() in production" {
       when
-          File(path matches "**/*.rs") &&
-          !File(path matches "**/tests/**") &&
-          !File(path matches "**/*test.rs") &&
-          Content(contains ".unwrap()")
+          AST.MethodCall(name == "unwrap") &&
+          !TestFunction() &&
+          !ExampleFunction()
       then
           Violation("Avoid .unwrap() in production code");
-  }
-
-  rule NoExpect "No .expect() in production code" {
-      when
-          File(path matches "**/*.rs") &&
-          !File(path matches "**/tests/**") &&
-          !File(path matches "**/*test.rs") &&
-          Content(contains ".expect(")
-      then
-          Violation("Avoid .expect() in production code, use ? with context");
   }

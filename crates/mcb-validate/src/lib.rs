@@ -87,7 +87,10 @@ pub use config::{
 };
 
 // Re-export rule registry and YAML system
-pub use rules::{Rule, RuleRegistry, YamlRuleLoader, YamlRuleValidator, TemplateEngine};
+pub use rules::{Rule, RuleRegistry};
+pub use rules::yaml_loader::YamlRuleLoader;
+pub use rules::yaml_validator::YamlRuleValidator;
+pub use rules::templates::TemplateEngine;
 pub use engines::{HybridRuleEngine, RuleEngineType};
 
 // Re-export new validators
@@ -97,10 +100,10 @@ pub use port_adapter::{PortAdapterValidator, PortAdapterViolation};
 pub use visibility::{VisibilityValidator, VisibilityViolation};
 
 // Re-export migration validators (v0.1.2)
-pub use linkme::{LinkmeValidator, LinkmeViolation};
-pub use constructor_injection::{ConstructorInjectionValidator, ConstructorInjectionViolation};
-pub use figment::{FigmentValidator, FigmentViolation};
-pub use rocket::{RocketValidator, RocketViolation};
+// pub use linkme::{LinkmeValidator, LinkmeViolation};
+// pub use constructor_injection::{ConstructorInjectionValidator, ConstructorInjectionViolation};
+// pub use figment::{FigmentValidator, FigmentViolation};
+// pub use rocket::{RocketValidator, RocketViolation};
 
 // Re-export legacy validators
 pub use dependency::{DependencyValidator, DependencyViolation};
@@ -622,7 +625,7 @@ impl ArchitectureValidator {
         let rules_dir = std::env::current_dir()?
             .join("crates/mcb-validate/rules");
 
-        let loader = YamlRuleLoader::new(rules_dir);
+        let mut loader = YamlRuleLoader::new(rules_dir)?;
         loader.load_all_rules().await
     }
 

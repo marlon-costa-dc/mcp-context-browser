@@ -1,0 +1,23 @@
+schema: "rule/v1"
+id: "SOLID003"
+name: "Match Arm Complexity"
+category: "solid"
+severity: "info"
+enabled: true
+engine: "rust-rule-engine"
+
+description: "Match expression has too many arms"
+rationale: "Consider using polymorphism or strategy pattern"
+
+config:
+  max_arms: 10
+  exclude_patterns: ["**/tests/**"]
+
+rule: |
+  rule MatchComplexity "Check match arm count" {
+      when
+          AST.MatchExpression(arm_count > ${max_arms}) &&
+          !TestMatch()
+      then
+          Violation("Match expression has too many arms (${arm_count}), max is ${max_arms}");
+  }

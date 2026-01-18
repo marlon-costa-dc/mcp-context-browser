@@ -1,0 +1,23 @@
+schema: "rule/v1"
+id: "SOLID001"
+name: "Single Responsibility - Trait Methods"
+category: "solid"
+severity: "warning"
+enabled: true
+engine: "rust-rule-engine"
+
+description: "Trait has too many methods"
+rationale: "Traits with many methods violate Interface Segregation Principle"
+
+config:
+  max_methods: 10
+  exclude_patterns: ["**/tests/**"]
+
+rule: |
+  rule TraitMethodsLimit "Check trait method count" {
+      when
+          AST.Trait(method_count > ${max_methods}) &&
+          !TestTrait()
+      then
+          Violation("Trait has too many methods (${method_count}), max is ${max_methods}");
+  }
