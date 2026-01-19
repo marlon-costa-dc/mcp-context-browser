@@ -9,7 +9,7 @@ use crate::{
     AsyncViolation, DependencyViolation, DocumentationViolation, ErrorBoundaryViolation,
     ImplementationViolation, KissViolation, NamingViolation, OrganizationViolation,
     PatternViolation, PerformanceViolation, PmatViolation, QualityViolation, RefactoringViolation,
-    Severity, ShakuViolation, SolidViolation, TestViolation,
+    Severity, SolidViolation, TestViolation,
 };
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -41,8 +41,6 @@ pub struct ValidationReport {
     pub organization_violations: Vec<OrganizationViolation>,
     /// KISS principle violations (complexity)
     pub kiss_violations: Vec<KissViolation>,
-    /// DI/Shaku violations
-    pub shaku_violations: Vec<ShakuViolation>,
     /// Refactoring completeness violations
     pub refactoring_violations: Vec<RefactoringViolation>,
     /// Implementation quality violations
@@ -80,8 +78,6 @@ pub struct ValidationSummary {
     pub organization_count: usize,
     /// Number of KISS principle violations
     pub kiss_count: usize,
-    /// Number of DI/Shaku violations
-    pub shaku_count: usize,
     /// Number of refactoring completeness violations
     pub refactoring_count: usize,
     /// Number of implementation quality violations
