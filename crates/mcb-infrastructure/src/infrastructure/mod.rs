@@ -6,16 +6,9 @@
 //!
 //! **CONCRETE TYPES ARE INTERNAL ONLY.**
 //!
-//! All implementations in this module are registered in Shaku DI modules.
-//! External code MUST resolve dependencies via `HasComponent::resolve()`.
-//! NEVER import concrete types directly - use the trait abstractions.
-//!
-//! ## Shaku Registration
-//!
-//! Implementations are registered in `di/modules/`:
-//! - `DefaultShutdownCoordinator` → `InfrastructureModuleImpl`
-//! - `TokioBroadcastEventBus` → `InfrastructureModuleImpl`
-//! - `ServiceManager` → Created via factory with DI-resolved dependencies
+//! All implementations are composed in the DI bootstrap module.
+//! External code SHOULD use `init_app()` to get an `AppContext` with resolved services.
+//! NEVER import concrete types directly from here - use the trait abstractions.
 
 // Internal modules - implementations NOT exported
 pub(crate) mod admin;
@@ -26,15 +19,14 @@ pub(crate) mod metrics;
 pub(crate) mod snapshot;
 pub(crate) mod sync;
 
-// Re-export ONLY for Shaku module registration (crate-internal)
-// These types are NEVER exposed outside the crate - external code MUST use DI
-pub(crate) use admin::{NullIndexingOperations, NullPerformanceMetrics};
-pub(crate) use auth::NullAuthService;
-pub(crate) use events::TokioBroadcastEventBus;
-pub(crate) use lifecycle::DefaultShutdownCoordinator;
-pub(crate) use metrics::NullSystemMetricsCollector;
-pub(crate) use snapshot::NullSnapshotProvider;
-pub(crate) use sync::NullSyncProvider;
-
 // Public data types (NOT implementations) - these are pure DTOs
 pub use lifecycle::{ServiceInfo, ServiceManager, ServiceManagerError};
+
+// Crate-internal re-exports for tests and DI modules
+pub(crate) use admin::{NullIndexingOperations, NullPerformanceMetrics};
+pub(crate) use auth::NullAuthService;
+pub(crate) use events::{NullEventBusProvider, TokioBroadcastEventBus};
+pub(crate) use lifecycle::DefaultShutdownCoordinator;
+pub(crate) use metrics::NullSystemMetricsCollector;
+pub(crate) use snapshot::{NullSnapshotProvider, NullStateStoreProvider};
+pub(crate) use sync::{NullLockProvider, NullSyncProvider};

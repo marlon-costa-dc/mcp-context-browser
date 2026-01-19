@@ -109,7 +109,7 @@ unicode-segmentation = { workspace = true }
 base64 = { workspace = true }
 
 # Dependency injection
-shaku = { workspace = true }
+dill = { workspace = true }
 
 # Plugin registration
 linkme = "0.3"

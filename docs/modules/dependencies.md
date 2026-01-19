@@ -30,7 +30,7 @@ digraph {
     "mcb-validate" [fillcolor=lightyellow];
     "mcb-validate" -> "mcb-domain";
 
-    label="MCP Context Browser Crate Dependencies (v0.1.1)";
+    label="MCP Context Browser Crate Dependencies (v0.1.2)";
 }
 ```
 
@@ -100,4 +100,4 @@ Major external crates:
 
 ---
 
-*Updated 2026-01-17 - Reflects modular crate architecture (v0.1.1)*
+*Updated 2026-01-18 - Reflects modular crate architecture (v0.1.2)*

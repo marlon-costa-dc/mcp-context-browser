@@ -5,7 +5,6 @@
 //! previously imported from server layer.
 
 use serde::{Deserialize, Serialize};
-use shaku::Interface;
 use std::collections::HashMap;
 
 // ============================================================================
@@ -59,7 +58,7 @@ pub struct PerformanceMetricsData {
 /// let stats = metrics.get_performance_metrics();
 /// println!("Uptime: {}s, Queries: {}", stats.uptime_seconds, stats.total_queries);
 /// ```
-pub trait PerformanceMetricsInterface: Interface + Send + Sync {
+pub trait PerformanceMetricsInterface: Send + Sync {
     /// Get server uptime in seconds
     fn uptime_secs(&self) -> u64;
 
@@ -114,7 +113,7 @@ pub struct IndexingOperation {
 ///         id, op.processed_files, op.total_files, op.collection);
 /// }
 /// ```
-pub trait IndexingOperationsInterface: Interface + Send + Sync {
+pub trait IndexingOperationsInterface: Send + Sync {
     /// Get the map of ongoing indexing operations
     fn get_operations(&self) -> HashMap<String, IndexingOperation>;
 }
@@ -197,7 +196,7 @@ impl Default for ServiceState {
 /// service.stop().await;
 /// ```
 #[async_trait::async_trait]
-pub trait LifecycleManaged: Interface + Send + Sync {
+pub trait LifecycleManaged: Send + Sync {
     /// Get the service name
     fn name(&self) -> &str;
 
@@ -242,7 +241,7 @@ pub trait LifecycleManaged: Interface + Send + Sync {
 /// // To trigger shutdown (e.g., from admin API)
 /// coordinator.signal_shutdown();
 /// ```
-pub trait ShutdownCoordinator: Interface + Send + Sync {
+pub trait ShutdownCoordinator: Send + Sync {
     /// Signal all components to begin shutdown
     fn signal_shutdown(&self);
 

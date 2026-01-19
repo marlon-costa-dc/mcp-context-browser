@@ -6,25 +6,24 @@ Thank you for your interest in contributing! This guide helps you get started wi
 
 ### Prerequisites
 
--   **Rust 1.70+**: Install from [rustup.rs](https://rustup.rs/)
+-   **Rust 1.89+**: Install from [rustup.rs](https://rustup.rs/)
 -   **Git**: Version control system
 
 ### Setup Development Environment
 
 ```bash
-
 # Clone the repository
 git clone https://github.com/marlonsc/mcp-context-browser.git
 cd mcp-context-browser
 
 # Build the project
-cargo build
+make build
 
-# Run basic tests
-cargo test
+# Run all tests (790+)
+make test
 
-# Run the development server
-cargo run
+# Run quality checks
+make quality
 ```
 
 ## 🔄 Development Workflow
@@ -40,7 +39,7 @@ cargo run
 2.  **Test Changes**: Ensure tests pass
 
    ```bash
-   cargo test
+   make test
    ```
 
 1.  **Submit PR**: Create pull request with clear description
@@ -54,7 +53,7 @@ cargo run
 -   Follow `clippy` suggestions: `cargo clippy`
 -   Write idiomatic Rust code
 
-### Code Structure (v0.1.1 Modular Crates)
+### Code Structure (v0.1.2 Clean Architecture)
 
 ```text
 crates/
@@ -64,7 +63,7 @@ crates/
 ├── mcb-providers/      # External integrations (embedding, vector store, language)
 ├── mcb-infrastructure/ # Shared systems (DI, config, null adapters)
 ├── mcb-server/         # MCP protocol, HTTP transport, admin
-└── mcb-validate/       # Architecture validation (development tool)
+└── mcb-validate/       # Architecture validation (Phases 1-3 verified)
 ```
 
 ### Commit Messages
@@ -82,15 +81,14 @@ docs: update API documentation
 ### Running Tests
 
 ```bash
+# Run all tests (790+)
+make test
 
-# Run all tests
-cargo test
+# Run unit tests only
+make test-unit
 
-# Run specific test
-cargo test test_name
-
-# Run with output
-cargo test -- --nocapture
+# Run specific test with output
+cargo test test_name -- --nocapture
 ```
 
 ### Writing Tests
@@ -112,10 +110,10 @@ mod tests {
 
 ### Before Submitting
 
--   [ ] Tests pass: `cargo test`
--   [ ] Code formats correctly: `cargo fmt --check`
--   [ ] No linting errors: `cargo clippy -- -D warnings`
--   [ ] CI checks pass: `make ci`
+-   [ ] Tests pass: `make test`
+-   [ ] Code formats correctly: `make fmt`
+-   [ ] No linting errors: `make lint`
+-   [ ] Quality checks pass: `make quality`
 -   [ ] Documentation updated if needed
 
 ### PR Description
@@ -164,7 +162,7 @@ The project includes several examples demonstrating different usage patterns:
 
 ```rust
 // Demonstrates TOML configuration loading and validation
-// v0.1.1: Use mcb facade crate for public API
+// v0.1.2: Use mcb facade crate for public API
 use mcb::infrastructure::config::Config;
 
 #[tokio::main]
@@ -179,7 +177,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 **Using DI Container** (`examples/di_demo.rs`):
 
 ```rust
-// Demonstrates v0.1.1 Two-Layer DI Strategy (ADR-012)
+// Demonstrates v0.1.2 Two-Layer DI Strategy (ADR-012)
 use mcb::infrastructure::di::{DiContainerBuilder, AppContainer};
 use mcb::application::ports::providers::EmbeddingProvider;
 
@@ -198,15 +196,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Running Examples
 
 ```bash
-
 # Run a specific example
 cargo run --example config_demo
 
 # Run with custom configuration
 CONFIG_FILE=my_config.toml cargo run --example advanced_routing
 
-# List all available examples
-cargo run --bin mcp-context-browser -- --help
+# Run server directly
+cargo run --bin mcp-context-browser
 ```
 
 ## 📞 Getting Help
@@ -223,12 +220,12 @@ Be respectful and constructive in all interactions. Focus on improving the proje
 
 ## Cross-References
 
-### Architecture (v0.1.1)
+### Architecture (v0.1.2)
 
 -   **Architecture**: [ARCHITECTURE.md](../architecture/ARCHITECTURE.md) - System overview
 -   **ADR-012**: [Two-Layer DI Strategy](../adr/012-di-strategy-two-layer-approach.md) - Shaku + factories
--   **ADR-013**: [Clean Architecture Crate Separation](../adr/013-clean-architecture-crate-separation.md) - Seven-crate structure
--   **Module Documentation**: [docs/modules/](../modules/) - Per-crate documentation
+-   **ADR-013**: [Clean Architecture Crate Separation](../adr/013-clean-architecture-crate-separation.md) - Eight-crate structure
+-   **Implementation Status**: [IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md) - Current state
 
 ### Operations
 

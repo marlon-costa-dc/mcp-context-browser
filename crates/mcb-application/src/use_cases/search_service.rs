@@ -9,10 +9,7 @@ use mcb_domain::value_objects::SearchResult;
 use std::sync::Arc;
 
 /// Search service implementation - delegates to context service
-#[derive(shaku::Component)]
-#[shaku(interface = crate::domain_services::search::SearchServiceInterface)]
 pub struct SearchServiceImpl {
-    #[shaku(inject)]
     context_service: Arc<dyn ContextServiceInterface>,
 }
 

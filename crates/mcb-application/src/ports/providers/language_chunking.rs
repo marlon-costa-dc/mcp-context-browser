@@ -12,7 +12,6 @@
 
 use mcb_domain::entities::CodeChunk;
 use mcb_domain::value_objects::Language;
-use shaku::Interface;
 
 /// Language-Specific Code Chunking Provider
 ///
@@ -40,7 +39,7 @@ use shaku::Interface;
 /// let chunks = provider.chunk(source_code, "src/main.rs");
 /// println!("Extracted {} chunks from {}", chunks.len(), provider.provider_name());
 /// ```
-pub trait LanguageChunkingProvider: Interface + Send + Sync {
+pub trait LanguageChunkingProvider: Send + Sync {
     /// Get the language identifier this provider handles
     ///
     /// # Returns

@@ -4,7 +4,7 @@
 
 **Implemented** (v0.1.1)
 
-> Fully implemented with Clean Architecture + Shaku DI across 7 crates.
+> Fully implemented with Clean Architecture + Shaku DI across 8 crates.
 
 ## Context
 

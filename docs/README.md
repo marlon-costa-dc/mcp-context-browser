@@ -1,7 +1,7 @@
 # MCP Context Browser - Documentation
 
 [![Documentation Status](https://img.shields.io/badge/docs-automated-green)](https://github.com/marlonsc/mcp-context-browser/actions)
-[![Version](https://img.shields.io/badge/version-0.1.1-blue)](https://github.com/marlonsc/mcp-context-browser/releases)
+[![Version](https://img.shields.io/badge/version-0.1.2-blue)](https://github.com/marlonsc/mcp-context-browser/releases)
 [![Architecture](https://img.shields.io/badge/architecture-C4--model-blue)](docs/architecture/ARCHITECTURE.md)
 
 **Comprehensive documentation for the MCP Context Browser project**
@@ -37,13 +37,13 @@ Technical architecture documentation following C4 model principles.
     -   [ADR 002: Async-First Architecture](adr/002-async-first-architecture.md)
     -   [ADR 003: C4 Model Documentation](adr/003-c4-model-documentation.md)
     -   [ADR 004: Multi-Provider Strategy](adr/004-multi-provider-strategy.md)
-    -   [ADR 012: Two-Layer DI Strategy](adr/012-di-strategy-two-layer-approach.md) - v0.1.1
-    -   [ADR 013: Clean Architecture Crate Separation](adr/013-clean-architecture-crate-separation.md) - v0.1.1
-    -   [Full ADR Index](adr/README.md) - 22 ADRs total
+    -   [ADR 012: Two-Layer DI Strategy](adr/012-di-strategy-two-layer-approach.md) - v0.1.2
+    -   [ADR 013: Clean Architecture Crate Separation](adr/013-clean-architecture-crate-separation.md) - v0.1.2
+    -   [Full ADR Index](adr/README.md) - 30 ADRs total
 
-### 📦 Modules (v0.1.1 Crate Structure)
+### 📦 Modules (v0.1.2 Crate Structure)
 
-Module documentation organized by the seven-crate Clean Architecture:
+Module documentation organized by the eight-crate Clean Architecture:
 
 -   **[Module Index](modules/)**- Complete module documentation
 -   [Domain Layer](modules/domain.md) - Core business logic (`mcb-domain`)
@@ -51,6 +51,7 @@ Module documentation organized by the seven-crate Clean Architecture:
 -   [Providers](modules/providers.md) - External integrations (`mcb-providers`)
 -   [Infrastructure](modules/infrastructure.md) - Cross-cutting concerns (`mcb-infrastructure`)
 -   [Server](modules/server.md) - MCP protocol (`mcb-server`)
+-   [Validate](modules/validate.md) - Architecture validation (`mcb-validate`)
 
 ### 🚀 Operations
 

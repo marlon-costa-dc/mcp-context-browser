@@ -98,16 +98,6 @@ impl std::fmt::Debug for TokioEventBusProvider {
     }
 }
 
-// Shaku Component implementation for DI container
-impl<M: shaku::Module> shaku::Component<M> for TokioEventBusProvider {
-    type Interface = dyn EventBusProvider;
-    type Parameters = ();
-
-    fn build(_: &mut shaku::ModuleBuildContext<M>, _: Self::Parameters) -> Box<Self::Interface> {
-        Box::new(TokioEventBusProvider::new())
-    }
-}
-
 #[async_trait]
 impl EventBusProvider for TokioEventBusProvider {
     async fn publish_event(&self, event: DomainEvent) -> Result<()> {

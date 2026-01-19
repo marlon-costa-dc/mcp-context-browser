@@ -4,7 +4,6 @@
 
 use async_trait::async_trait;
 use mcb_domain::error::Result;
-use shaku::Interface;
 
 /// Lock guard token returned when a lock is acquired
 #[derive(Debug, Clone)]
@@ -17,7 +16,7 @@ pub struct LockGuard {
 
 /// Distributed lock provider interface
 #[async_trait]
-pub trait LockProvider: Interface + Send + Sync {
+pub trait LockProvider: Send + Sync {
     /// Acquire a distributed lock
     async fn acquire_lock(&self, key: &str) -> Result<LockGuard>;
 

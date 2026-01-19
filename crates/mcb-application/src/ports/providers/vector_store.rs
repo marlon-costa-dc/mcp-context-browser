@@ -2,7 +2,6 @@ use async_trait::async_trait;
 use mcb_domain::error::Result;
 use mcb_domain::value_objects::{Embedding, SearchResult};
 use serde_json::Value;
-use shaku::Interface;
 use std::collections::HashMap;
 
 /// Vector Store Administrative Operations
@@ -25,7 +24,7 @@ use std::collections::HashMap;
 /// }
 /// ```
 #[async_trait]
-pub trait VectorStoreAdmin: Interface + Send + Sync {
+pub trait VectorStoreAdmin: Send + Sync {
     /// Check if a collection exists
     ///
     /// # Arguments
@@ -93,7 +92,7 @@ pub trait VectorStoreAdmin: Interface + Send + Sync {
 /// }
 /// ```
 #[async_trait]
-pub trait VectorStoreProvider: Interface + VectorStoreAdmin + Send + Sync {
+pub trait VectorStoreProvider: VectorStoreAdmin + Send + Sync {
     /// Create a new vector collection with specified dimensions
     ///
     /// # Arguments

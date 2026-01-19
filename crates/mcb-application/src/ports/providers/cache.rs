@@ -12,7 +12,6 @@
 use async_trait::async_trait;
 use mcb_domain::error::Result;
 use serde::{Deserialize, Serialize};
-use shaku::Interface;
 use std::time::Duration;
 
 /// Default TTL for cache entries (5 minutes)
@@ -157,7 +156,7 @@ impl CacheStats {
 /// }
 /// ```
 #[async_trait]
-pub trait CacheProvider: Interface + Send + Sync + std::fmt::Debug {
+pub trait CacheProvider: Send + Sync + std::fmt::Debug {
     /// Get a value from the cache as JSON string
     ///
     /// # Arguments
@@ -227,7 +226,7 @@ pub trait CacheProvider: Interface + Send + Sync + std::fmt::Debug {
 /// let test_cache = factory.create_null();
 /// ```
 #[async_trait]
-pub trait CacheProviderFactoryInterface: Interface + Send + Sync {
+pub trait CacheProviderFactoryInterface: Send + Sync {
     /// Create a cache provider from configuration
     async fn create_from_config(
         &self,

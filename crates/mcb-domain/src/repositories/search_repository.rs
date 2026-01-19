@@ -7,7 +7,6 @@ use crate::entities::CodeChunk;
 use crate::error::Result;
 use crate::value_objects::search::SearchResult;
 use async_trait::async_trait;
-use shaku::Interface;
 
 /// Repository: Semantic and Hybrid Search Operations
 ///
@@ -33,7 +32,7 @@ use shaku::Interface;
 /// println!("Queries: {}, Avg time: {:.1}ms", stats.total_queries, stats.avg_response_time_ms);
 /// ```
 #[async_trait]
-pub trait SearchRepository: Interface + Send + Sync {
+pub trait SearchRepository: Send + Sync {
     /// Semantic search using vector similarity
     ///
     /// # Arguments

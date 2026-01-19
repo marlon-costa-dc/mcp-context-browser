@@ -9,7 +9,6 @@ use mcb_domain::entities::CodeChunk;
 use mcb_domain::error::Result;
 use mcb_domain::value_objects::config::SyncBatch;
 use mcb_domain::value_objects::{Embedding, SearchResult};
-use shaku::Interface;
 use std::path::Path;
 
 // ============================================================================
@@ -20,7 +19,7 @@ use std::path::Path;
 ///
 /// Defines the contract for semantic code understanding operations.
 #[async_trait]
-pub trait ContextServiceInterface: Interface + Send + Sync {
+pub trait ContextServiceInterface: Send + Sync {
     /// Initialize the service for a collection
     async fn initialize(&self, collection: &str) -> Result<()>;
 
@@ -56,7 +55,7 @@ pub trait ContextServiceInterface: Interface + Send + Sync {
 ///
 /// Simplified search interface for code queries.
 #[async_trait]
-pub trait SearchServiceInterface: Interface + Send + Sync {
+pub trait SearchServiceInterface: Send + Sync {
     /// Search for code similar to the query
     async fn search(
         &self,
@@ -74,7 +73,7 @@ pub trait SearchServiceInterface: Interface + Send + Sync {
 ///
 /// Defines the contract for codebase indexing operations.
 #[async_trait]
-pub trait IndexingServiceInterface: Interface + Send + Sync {
+pub trait IndexingServiceInterface: Send + Sync {
     /// Index a codebase at the given path
     async fn index_codebase(&self, path: &Path, collection: &str) -> Result<IndexingResult>;
 
@@ -121,7 +120,7 @@ pub struct IndexingStatus {
 ///
 /// Coordinates batch code chunking operations.
 #[async_trait]
-pub trait ChunkingOrchestratorInterface: Interface + Send + Sync {
+pub trait ChunkingOrchestratorInterface: Send + Sync {
     /// Process multiple files and return chunks
     async fn process_files(&self, files: Vec<(String, String)>) -> Result<Vec<CodeChunk>>;
 
@@ -141,7 +140,7 @@ pub trait ChunkingOrchestratorInterface: Interface + Send + Sync {
 /// Extended interface for batch indexing services that handle
 /// incremental updates, rebuilds, and detailed statistics.
 #[async_trait]
-pub trait BatchIndexingServiceInterface: Interface + Send + Sync {
+pub trait BatchIndexingServiceInterface: Send + Sync {
     /// Index a batch of code chunks
     async fn index_chunks(&self, chunks: &[CodeChunk]) -> Result<()>;
 

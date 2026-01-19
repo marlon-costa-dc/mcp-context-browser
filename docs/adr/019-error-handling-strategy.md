@@ -73,7 +73,7 @@ pub enum AnalysisError {
 
 ## v0.1.1 Error Organization
 
-Current error types in the seven-crate structure:
+Current error types in the eight-crate structure:
 
 | Crate | Error File | Error Type |
 |-------|-----------|------------|
@@ -106,4 +106,4 @@ All use `thiserror` for type-safe error handling.
 
 ---
 
-*Updated 2026-01-17 - Reflects v0.1.1 crate structure*
+*Updated 2026-01-17 - Reflects v0.1.2 crate structure*

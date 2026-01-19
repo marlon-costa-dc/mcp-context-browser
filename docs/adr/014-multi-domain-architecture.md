@@ -2,17 +2,17 @@
 
 ## Status
 
-**Superseded** (v0.1.1)
+**Superseded** (v0.1.2)
 **Date**: 2026-01-14
 **Version**: v0.1.1 Update
 
 > **Note**: This ADR describes future plans for multi-domain expansion. The v0.1.1 release
-> implemented the [Seven-Crate Clean Architecture](013-clean-architecture-crate-separation.md)
+> implemented the [Eight-Crate Clean Architecture](013-clean-architecture-crate-separation.md)
 > which provides the foundation for this multi-domain strategy.
 
 ## Context
 
-MCB v0.1.1 has implemented the seven-crate Clean Architecture foundation. Future versions will integrate:
+MCB v0.1.1 has implemented the eight-crate Clean Architecture foundation. Future versions will integrate:
 
 -   Code analysis capabilities (complexity, debt, quality)
 -   Git integration (repository analysis, commit history)
@@ -22,7 +22,7 @@ MCB v0.1.1 has implemented the seven-crate Clean Architecture foundation. Future
 
 ## Decision
 
-Adopt **modular domain architecture** within the seven-crate structure:
+Adopt **modular domain architecture** within the eight-crate structure:
 
 ```
 mcp-context-browser/
@@ -63,7 +63,7 @@ mcp-context-browser/
 
 **v0.1.1** (Current release):
 
--   Seven-crate Clean Architecture implemented
+-   Eight-crate Clean Architecture implemented
 -   Shaku DI with two-layer strategy
 -   20+ port traits with shaku::Interface (in mcb-application)
 -   mcb-validate enforces layer boundaries
@@ -103,7 +103,7 @@ mcp-context-browser/
 
 **v0.1.1 (Completed)**:
 
--   [x] Seven-crate Clean Architecture implemented
+-   [x] Eight-crate Clean Architecture implemented
 -   [x] Shaku DI with two-layer strategy
 -   [x] 20+ port traits with shaku::Interface (in mcb-application)
 -   [x] mcb-validate enforces layer boundaries
@@ -124,8 +124,8 @@ mcp-context-browser/
 ## Related ADRs
 
 -   [ADR-012: Two-Layer DI Strategy](012-di-strategy-two-layer-approach.md) - DI patterns
--   [ADR-013: Clean Architecture Crate Separation](013-clean-architecture-crate-separation.md) - Seven-crate structure
+-   [ADR-013: Clean Architecture Crate Separation](013-clean-architecture-crate-separation.md) - Eight-crate structure
 
 ---
 
-*Updated 2026-01-17 - Reflects modular crate architecture (v0.1.1)*
+*Updated 2026-01-17 - Reflects modular crate architecture (v0.1.2)*

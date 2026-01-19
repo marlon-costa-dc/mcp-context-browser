@@ -6,7 +6,7 @@
 
 > **DEPRECATED**: This two-layer approach (Shaku + runtime factories) will be simplified to direct constructor injection. The complex Shaku infrastructure will be removed in favor of simpler service composition patterns.
 
-**Originally Accepted** (v0.1.1)
+**Originally Accepted** (v0.1.2)
 
 ## Context
 

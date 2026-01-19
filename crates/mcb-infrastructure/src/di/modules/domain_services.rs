@@ -6,7 +6,7 @@
 //! ## Runtime Factory Pattern
 //!
 //! Services are created via `DomainServicesFactory::create_services()` at runtime
-//! rather than through Shaku DI, because they require runtime configuration
+//! using constructor injection, because they require runtime configuration
 //! (embedding provider, vector store, cache).
 
 use crate::cache::provider::SharedCacheProvider;
@@ -59,7 +59,7 @@ impl DomainServicesFactory {
     pub async fn create_services(deps: ServiceDependencies) -> Result<DomainServicesContainer> {
         // Create context service with dependencies
         let context_service: Arc<dyn ContextServiceInterface> =
-            Arc::new(mcb_application::use_cases::ContextServiceImpl::new(
+            Arc::new(ContextServiceImpl::new(
                 deps.cache.into(),
                 deps.embedding_provider,
                 deps.vector_store_provider,
@@ -67,12 +67,12 @@ impl DomainServicesFactory {
 
         // Create search service with context service dependency
         let search_service: Arc<dyn SearchServiceInterface> = Arc::new(
-            mcb_application::use_cases::SearchServiceImpl::new(Arc::clone(&context_service)),
+            SearchServiceImpl::new(Arc::clone(&context_service)),
         );
 
         // Create indexing service with context service and language chunker dependency
         let indexing_service: Arc<dyn IndexingServiceInterface> =
-            Arc::new(mcb_application::use_cases::IndexingServiceImpl::new(
+            Arc::new(IndexingServiceImpl::new(
                 Arc::clone(&context_service),
                 deps.language_chunker,
             ));
@@ -126,6 +126,3 @@ impl DomainServicesFactory {
         Ok(Arc::new(SearchServiceImpl::new(context_service)))
     }
 }
-
-// Note: Service implementations have been moved to mcb-application crate
-// This module now provides a factory for creating services at runtime

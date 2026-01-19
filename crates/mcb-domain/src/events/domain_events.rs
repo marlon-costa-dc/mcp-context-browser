@@ -8,7 +8,6 @@ use crate::error::Result;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use shaku::Interface;
 use std::sync::Arc;
 
 /// Service lifecycle state for managed services
@@ -185,7 +184,7 @@ pub enum DomainEvent {
 /// }
 /// ```
 #[async_trait]
-pub trait EventPublisher: Interface + Send + Sync {
+pub trait EventPublisher: Send + Sync {
     /// Publish an event to all subscribers
     ///
     /// Returns Ok(()) if the event was successfully published.

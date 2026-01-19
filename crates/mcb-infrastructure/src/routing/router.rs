@@ -203,12 +203,3 @@ impl ProviderRouter for NullProviderRouter {
     }
 }
 
-// Shaku Component implementation for NullProviderRouter
-impl<M: shaku::Module> shaku::Component<M> for NullProviderRouter {
-    type Interface = dyn ProviderRouter;
-    type Parameters = ();
-
-    fn build(_: &mut shaku::ModuleBuildContext<M>, _: Self::Parameters) -> Box<Self::Interface> {
-        Box::new(NullProviderRouter::new())
-    }
-}

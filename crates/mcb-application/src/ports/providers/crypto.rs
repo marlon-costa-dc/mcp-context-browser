@@ -13,7 +13,6 @@
 use async_trait::async_trait;
 use mcb_domain::error::Result;
 use serde::{Deserialize, Serialize};
-use shaku::Interface;
 use std::fmt;
 
 /// Cryptographic provider port
@@ -34,7 +33,7 @@ use std::fmt;
 /// }
 /// ```
 #[async_trait]
-pub trait CryptoProvider: Interface + Send + Sync {
+pub trait CryptoProvider: Send + Sync {
     /// Encrypt plaintext data
     ///
     /// # Arguments

@@ -80,4 +80,4 @@ crates/mcb-domain/src/
 
 ---
 
-*Updated 2026-01-17 - Reflects v0.1.1 crate architecture*
+*Updated 2026-01-18 - Reflects v0.1.2 crate architecture*

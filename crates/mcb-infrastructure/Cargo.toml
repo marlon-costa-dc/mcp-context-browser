@@ -45,7 +45,6 @@ notify = { workspace = true }
 arc-swap = { workspace = true }
 
 # Dependency injection
-shaku = { workspace = true }
 
 # HTTP client
 reqwest = { workspace = true }

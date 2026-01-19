@@ -39,16 +39,9 @@ fn build_chunk_metadata(chunk: &CodeChunk) -> HashMap<String, serde_json::Value>
 }
 
 /// Context service implementation - manages embeddings and vector storage
-#[derive(shaku::Component)]
-#[shaku(interface = crate::domain_services::search::ContextServiceInterface)]
 pub struct ContextServiceImpl {
-    #[shaku(inject)]
     cache: Arc<dyn crate::ports::providers::cache::CacheProvider>,
-
-    #[shaku(inject)]
     embedding_provider: Arc<dyn EmbeddingProvider>,
-
-    #[shaku(inject)]
     vector_store_provider: Arc<dyn VectorStoreProvider>,
 }
 

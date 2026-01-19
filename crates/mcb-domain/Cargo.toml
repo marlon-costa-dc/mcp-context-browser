@@ -28,7 +28,6 @@ thiserror = { workspace = true }
 async-trait = { workspace = true }
 
 # Dependency injection interfaces - shaku traits are pure
-shaku = { workspace = true }
 
 # Schema generation for MCP - pure lib acceptable for domain
 schemars = { workspace = true }

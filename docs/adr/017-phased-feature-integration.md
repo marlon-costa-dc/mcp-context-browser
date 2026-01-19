@@ -14,7 +14,7 @@ MCB and PMAT have distinct feature sets. Integration must be incremental to main
 
 -   4 MCP tools (index, search, clear, status)
 -   308+ tests (100% pass rate)
--   Seven-crate Clean Architecture
+-   Eight-crate Clean Architecture
 -   Two-layer DI strategy (Shaku + factories)
 
 **PMAT** (Code Analysis):
@@ -31,7 +31,7 @@ MCB and PMAT have distinct feature sets. Integration must be incremental to main
 
 ### Phase 1: v0.1.1 - Foundation (RELEASED)
 
-**Focus**: Seven-Crate Clean Architecture
+**Focus**: Eight-Crate Clean Architecture
 
 **Deliverables**:
 
@@ -152,4 +152,4 @@ MCB and PMAT have distinct feature sets. Integration must be incremental to main
 
 ---
 
-*Updated 2026-01-17 - Reflects v0.1.1 release status*
+*Updated 2026-01-17 - Reflects v0.1.2 release status*

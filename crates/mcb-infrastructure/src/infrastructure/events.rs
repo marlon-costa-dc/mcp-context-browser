@@ -20,12 +20,11 @@ use tracing::{debug, warn};
 ///
 /// Discards all published events without any side effects.
 /// Useful for testing when event publishing is not relevant.
-/// Used via `with_component_override` in tests.
-#[allow(dead_code)] // Constructed via Shaku DI component_override
+/// Used as test double when event publishing is not relevant.
+#[allow(dead_code)]
 #[derive(Debug, Default)]
 pub struct NullEventBusProvider;
 
-#[allow(dead_code)] // Methods used via Shaku DI component_override
 impl NullEventBusProvider {
     /// Create a new null event bus provider
     pub fn new() -> Self {
@@ -35,15 +34,6 @@ impl NullEventBusProvider {
     /// Create as Arc for sharing
     pub fn new_shared() -> Arc<Self> {
         Arc::new(Self::new())
-    }
-}
-
-impl<M: shaku::Module> shaku::Component<M> for NullEventBusProvider {
-    type Interface = dyn EventBusProvider;
-    type Parameters = ();
-
-    fn build(_: &mut shaku::ModuleBuildContext<M>, _: Self::Parameters) -> Box<Self::Interface> {
-        Box::new(NullEventBusProvider::new())
     }
 }
 
@@ -125,15 +115,6 @@ impl std::fmt::Debug for TokioBroadcastEventBus {
             .field("capacity", &self.capacity)
             .field("subscribers", &self.sender.receiver_count())
             .finish()
-    }
-}
-
-impl<M: shaku::Module> shaku::Component<M> for TokioBroadcastEventBus {
-    type Interface = dyn EventBusProvider;
-    type Parameters = ();
-
-    fn build(_: &mut shaku::ModuleBuildContext<M>, _: Self::Parameters) -> Box<Self::Interface> {
-        Box::new(TokioBroadcastEventBus::new())
     }
 }
 

@@ -169,4 +169,4 @@ shaku_derive = "0.6"
 
 ---
 
-*Updated 2026-01-17 - Reflects v0.1.1 workspace structure*
+*Updated 2026-01-17 - Reflects v0.1.2 workspace structure*

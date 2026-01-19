@@ -8,7 +8,6 @@
 use async_trait::async_trait;
 use mcb_domain::error::Result;
 use serde::{Deserialize, Serialize};
-use shaku::Interface;
 use std::collections::HashMap;
 
 /// Health status for a provider
@@ -108,7 +107,7 @@ impl ProviderContext {
 /// Provides intelligent routing and selection of backend providers
 /// based on health status, cost, quality, and operational requirements.
 #[async_trait]
-pub trait ProviderRouter: Interface + Send + Sync {
+pub trait ProviderRouter: Send + Sync {
     /// Select the best embedding provider based on context
     ///
     /// Returns the identifier of the selected provider.

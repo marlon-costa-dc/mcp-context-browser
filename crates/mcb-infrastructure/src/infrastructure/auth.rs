@@ -7,8 +7,6 @@ use mcb_application::ports::infrastructure::AuthServiceInterface;
 use mcb_domain::error::Result;
 
 /// Null implementation for testing
-#[derive(shaku::Component)]
-#[shaku(interface = AuthServiceInterface)]
 pub struct NullAuthService;
 
 impl NullAuthService {

@@ -357,16 +357,6 @@ impl std::fmt::Debug for DefaultShutdownCoordinator {
     }
 }
 
-// Shaku Component implementation
-impl<M: shaku::Module> shaku::Component<M> for DefaultShutdownCoordinator {
-    type Interface = dyn ShutdownCoordinator;
-    type Parameters = ();
-
-    fn build(_: &mut shaku::ModuleBuildContext<M>, _: Self::Parameters) -> Box<Self::Interface> {
-        Box::new(DefaultShutdownCoordinator::new())
-    }
-}
-
 impl ShutdownCoordinator for DefaultShutdownCoordinator {
     fn signal_shutdown(&self) {
         info!("Shutdown signal received");

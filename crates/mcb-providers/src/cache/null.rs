@@ -20,8 +20,7 @@ use mcb_domain::error::Result;
 /// let provider = NullCacheProvider::new();
 /// // All operations succeed but nothing is cached
 /// ```
-#[derive(Debug, Clone, shaku::Component)]
-#[shaku(interface = CacheProvider)]
+#[derive(Debug, Clone)]
 pub struct NullCacheProvider;
 
 impl NullCacheProvider {

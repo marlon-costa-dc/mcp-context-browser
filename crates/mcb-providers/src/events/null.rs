@@ -37,16 +37,6 @@ impl NullEventBusProvider {
     }
 }
 
-// Shaku Component implementation for DI container
-impl<M: shaku::Module> shaku::Component<M> for NullEventBusProvider {
-    type Interface = dyn EventBusProvider;
-    type Parameters = ();
-
-    fn build(_: &mut shaku::ModuleBuildContext<M>, _: Self::Parameters) -> Box<Self::Interface> {
-        Box::new(NullEventBusProvider::new())
-    }
-}
-
 #[async_trait]
 impl EventBusProvider for NullEventBusProvider {
     async fn publish_event(&self, _event: DomainEvent) -> Result<()> {

@@ -7,7 +7,6 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 use reqwest::Client;
-use shaku::Component;
 
 use mcb_application::ports::EmbeddingProvider;
 use mcb_domain::error::{Error, Result};
@@ -48,8 +47,6 @@ use crate::utils::HttpResponseUtils;
 ///     Ok(())
 /// }
 /// ```
-#[derive(Component)]
-#[shaku(interface = EmbeddingProvider)]
 pub struct OpenAIEmbeddingProvider {
     api_key: String,
     base_url: Option<String>,

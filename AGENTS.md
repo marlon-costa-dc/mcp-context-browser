@@ -4,7 +4,7 @@ This file provides guidance to coding agents when working with code in this repo
 
 ## Project Overview
 
-MCP Context Browser is a high-performance MCP server for semantic code search using vector embeddings. Version 0.1.1 is production-ready.
+MCP Context Browser is a high-performance MCP server for semantic code search using vector embeddings. Version 0.1.2 is in development.
 
 ## Commands
 
@@ -33,7 +33,7 @@ make sync           # Add + commit + push (never use raw git commit)
 cargo test test_name -- --nocapture
 ```
 
-## Architecture (7 Crates - Clean Architecture)
+## Architecture (8 Crates - Clean Architecture)
 
 ```
 crates/
@@ -43,7 +43,7 @@ crates/
 ├── mcb-providers/       # Layer 3: Provider implementations (embedding, vector stores)
 ├── mcb-infrastructure/  # Layer 4: DI, config, cache, crypto, health, logging
 ├── mcb-server/          # Layer 5: MCP protocol, handlers, transport
-└── mcb-validate/        # Dev tooling: architecture validation rules
+└── mcb-validate/        # Dev tooling: architecture validation (Phases 1-3 verified)
 ```
 
 **Dependency Direction** (inward only):
@@ -63,6 +63,8 @@ mcb-server → mcb-infrastructure → mcb-application → mcb-domain
 **mcb-infrastructure**: DI container (`InfrastructureComponents`, `FullContainer`), cache providers (Moka, Redis, Null), config loading, AES-GCM crypto, health checks, structured logging.
 
 **mcb-server**: MCP tool handlers (`index_codebase`, `search_code`, `get_indexing_status`, `clear_index`), stdio transport.
+
+**mcb-validate**: Architecture validation tooling. Phases 1-3 verified (73 tests pass), Phases 4-7 not started. See `docs/developer/IMPLEMENTATION_STATUS.md`.
 
 ## Code Standards
 

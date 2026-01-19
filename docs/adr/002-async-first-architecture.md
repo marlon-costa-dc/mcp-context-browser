@@ -4,7 +4,7 @@
 
 **Implemented** (v0.1.1)
 
-> Fully implemented with Tokio async runtime across 7 crates in the Clean Architecture workspace.
+> Fully implemented with Tokio async runtime across 8 crates in the Clean Architecture workspace.
 >
 > **Async Distribution by Crate**:
 >

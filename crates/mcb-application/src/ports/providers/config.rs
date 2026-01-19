@@ -4,7 +4,6 @@
 
 use mcb_domain::error::Result;
 use mcb_domain::value_objects::{EmbeddingConfig, VectorStoreConfig};
-use shaku::Interface;
 
 /// Provider configuration manager interface
 ///
@@ -31,7 +30,7 @@ use shaku::Interface;
 /// }
 /// ```
 #[async_trait::async_trait]
-pub trait ProviderConfigManagerInterface: Interface + Send + Sync {
+pub trait ProviderConfigManagerInterface: Send + Sync {
     /// Get embedding provider configuration by name
     fn get_embedding_config(&self, name: &str) -> Result<&EmbeddingConfig>;
 

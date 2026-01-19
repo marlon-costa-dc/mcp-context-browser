@@ -52,13 +52,8 @@ impl IndexingProgress {
 }
 
 /// Indexing service implementation - orchestrates file discovery and chunking
-#[derive(shaku::Component)]
-#[shaku(interface = crate::domain_services::search::IndexingServiceInterface)]
 pub struct IndexingServiceImpl {
-    #[shaku(inject)]
     context_service: Arc<dyn ContextServiceInterface>,
-
-    #[shaku(inject)]
     language_chunker: Arc<dyn LanguageChunkingProvider>,
 }
 

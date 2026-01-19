@@ -7,8 +7,6 @@ use mcb_application::ports::infrastructure::{SystemMetrics, SystemMetricsCollect
 use mcb_domain::error::Result;
 
 /// Null implementation for testing
-#[derive(shaku::Component)]
-#[shaku(interface = SystemMetricsCollectorInterface)]
 pub struct NullSystemMetricsCollector;
 
 impl NullSystemMetricsCollector {

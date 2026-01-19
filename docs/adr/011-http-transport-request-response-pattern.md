@@ -2,7 +2,7 @@
 
 ## Status
 
-**Documented**(v0.1.1)
+**Documented**(v0.1.2)
 
 > Implemented with POST request-response pattern. SSE streaming deferred to v0.2.0.
 > Current implementation in `crates/mcb-server/src/transport/http.rs` provides:

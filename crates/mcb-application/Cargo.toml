@@ -38,7 +38,6 @@ tracing = { workspace = true }
 async-trait = { workspace = true }
 
 # Dependency injection
-shaku = { workspace = true }
 
 # Plugin registration
 linkme = "0.3"

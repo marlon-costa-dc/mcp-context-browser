@@ -3,7 +3,7 @@
 //! Cross-cutting technical concerns that support the application and domain layers.
 //!
 //! This layer provides shared technical capabilities used across the entire system.
-//! All adapters/providers are in mcb-providers crate, accessed via Shaku DI.
+//! All adapters/providers are in mcb-providers crate, accessed via dill DI.
 //!
 //! ## Module Categories
 //!
@@ -21,7 +21,7 @@
 //! | Module | Description |
 //! |--------|-------------|
 //! | [`config`] | TOML configuration with hot-reload |
-//! | [`di`] | Shaku dependency injection modules |
+//! | [`di`] | dill dependency injection catalog |
 //! | [`constants`] | Centralized configuration constants |
 //!
 //! ### Observability
@@ -54,9 +54,6 @@ pub mod infrastructure;
 // Re-export commonly used types
 pub use error_ext::ErrorContext;
 pub use utils::TimedOperation;
-
-// Re-export Shaku traits for DI resolution (used by mcb-server)
-pub use shaku::HasComponent;
 
 // Internal tests module (can access pub(crate) items)
 #[cfg(test)]

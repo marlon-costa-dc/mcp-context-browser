@@ -1,13 +1,13 @@
 # MCP Context Browser
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Rust](https://img.shields.io/badge/rust-1.70%2B-orange)](https://www.rust-lang.org/)
+[![Rust](https://img.shields.io/badge/rust-1.89%2B-orange)](https://www.rust-lang.org/)
 [![MCP](https://img.shields.io/badge/MCP-2024--11--05-blue)](https://modelcontextprotocol.io/)
-[![Version](https://img.shields.io/badge/version-0.1.1-blue)](https://github.com/marlonsc/mcp-context-browser/releases)
+[![Version](https://img.shields.io/badge/version-0.1.2-blue)](https://github.com/marlonsc/mcp-context-browser/releases)
 
 **Model Context Protocol Server**- Provides semantic code search and analysis capabilities to AI assistants through a standardized MCP interface.
 
-## 🎯 Current Capabilities (v0.1.1)
+## 🎯 Current Capabilities (v0.1.2)
 
 ### Core Features
 
@@ -27,40 +27,36 @@
 ## 📋 Documentation
 
 -   [**ARCHITECTURE.md**](../architecture/ARCHITECTURE.md) - Technical architecture and design
--   [**ROADMAP.md**](ROADMAP.md) - Development roadmap and milestones
--   [**DEPLOYMENT.md**](DEPLOYMENT.md) - Deployment guides and configurations
--   [**CONTRIBUTING.md**](CONTRIBUTING.md) - Contribution guidelines
+-   [**ROADMAP.md**](../developer/ROADMAP.md) - Development roadmap and milestones
+-   [**DEPLOYMENT.md**](../operations/DEPLOYMENT.md) - Deployment guides and configurations
+-   [**CONTRIBUTING.md**](../developer/CONTRIBUTING.md) - Contribution guidelines
 
 ## 📦 Quick Start
 
-```bash
+See the [**QUICKSTART.md**](./QUICKSTART.md) guide for detailed setup instructions.
 
-# Install Rust and clone
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```bash
+# Install Rust 1.89+ and clone
 git clone https://github.com/marlonsc/mcp-context-browser.git
 cd mcp-context-browser
 
-# Run development setup
-make setup
-make dev
+# Build and test
+make build
+make test
 ```
 
 ## 🧪 Testing
 
-The project follows TDD (Test-Driven Development) principles with comprehensive test coverage:
+The project has 790+ tests with comprehensive coverage:
 
 ```bash
-
 # Run all tests
 make test
 
-# Run tests with coverage
-make coverage
+# Run quality checks (fmt + lint + test)
+make quality
 
-# Run tests in watch mode
-make test-watch
-
-# Run all validation checks
+# Run architecture validation
 make validate
 ```
 

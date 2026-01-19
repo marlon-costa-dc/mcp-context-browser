@@ -1,11 +1,14 @@
 //! Code Quality Validation
 //!
 //! Validates code quality standards:
-//! - No unwrap/expect in production code
+//! - No unwrap/expect in production code (AST-based detection)
 //! - No panic!() in production code
 //! - File size limits (500 lines)
 //! - TODO/FIXME comment detection
+//!
+//! Phase 2 deliverable: QUAL001 (no-unwrap) detects `.unwrap()` calls via AST
 
+use crate::ast::UnwrapDetector;
 use crate::violation_trait::{Violation, ViolationCategory};
 use crate::{Result, Severity, ValidationConfig};
 use regex::Regex;
@@ -246,15 +249,14 @@ impl QualityValidator {
     }
 
     /// Check for unwrap/expect in src/ (not tests/)
+    ///
+    /// This uses AST-based detection via Tree-sitter for accurate detection
+    /// of `.unwrap()` and `.expect()` method calls.
+    ///
+    /// Phase 2 deliverable: "QUAL001 (no-unwrap) detects `.unwrap()` calls via AST"
     pub fn validate_no_unwrap_expect(&self) -> Result<Vec<QualityViolation>> {
         let mut violations = Vec::new();
-        let unwrap_pattern = Regex::new(r"\.unwrap\(\)").expect("Invalid regex");
-        let expect_pattern = Regex::new(r"\.expect\(").expect("Invalid regex");
-        let safe_patterns = [
-            Regex::new(r"\.unwrap_or\(").expect("Invalid regex"),
-            Regex::new(r"\.unwrap_or_else\(").expect("Invalid regex"),
-            Regex::new(r"\.unwrap_or_default\(").expect("Invalid regex"),
-        ];
+        let mut detector = UnwrapDetector::new()?;
 
         // Use get_scan_dirs() for proper handling of both crate-style and flat directories
         for src_dir in self.config.get_scan_dirs()? {
@@ -263,79 +265,45 @@ impl QualityValidator {
                 .filter_map(|e| e.ok())
                 .filter(|e| e.path().extension().is_some_and(|ext| ext == "rs"))
             {
-                let content = std::fs::read_to_string(entry.path())?;
-                let mut in_test_module = false;
-                let mut waiting_for_test_module = false;
-                let mut brace_depth: i32 = 0;
-                let mut test_module_brace_depth: i32 = 0;
+                // Use AST-based detection
+                let detections = detector.detect_in_file(entry.path())?;
 
-                for (line_num, line) in content.lines().enumerate() {
-                    let trimmed = line.trim();
-
-                    // Track doc comments - skip them
-                    if trimmed.starts_with("///") || trimmed.starts_with("//!") {
+                for detection in detections {
+                    // Skip detections in test modules
+                    if detection.in_test {
                         continue;
                     }
 
-                    // Skip regular comments
-                    if trimmed.starts_with("//") {
-                        continue;
+                    // Skip if context contains SAFETY justification
+                    // (checked via Regex since AST doesn't capture comments easily)
+                    let content = std::fs::read_to_string(entry.path())?;
+                    let lines: Vec<&str> = content.lines().collect();
+                    if detection.line > 0 && detection.line <= lines.len() {
+                        let line_content = lines[detection.line - 1];
+                        if line_content.contains("// SAFETY:") || line_content.contains("// safety:") {
+                            continue;
+                        }
                     }
 
-                    // Detect test module attribute
-                    if trimmed.contains("#[cfg(test)]") {
-                        waiting_for_test_module = true;
-                    }
-
-                    // Track brace depth
-                    let open_braces = line.chars().filter(|c| *c == '{').count() as i32;
-                    let close_braces = line.chars().filter(|c| *c == '}').count() as i32;
-                    brace_depth += open_braces;
-                    brace_depth -= close_braces;
-
-                    // Enter test module when we see the opening brace after #[cfg(test)]
-                    if waiting_for_test_module && open_braces > 0 {
-                        in_test_module = true;
-                        test_module_brace_depth = brace_depth;
-                        waiting_for_test_module = false;
-                    }
-
-                    // Exit test module when braces close below the starting depth
-                    if in_test_module && brace_depth < test_module_brace_depth {
-                        in_test_module = false;
-                    }
-
-                    // Skip test modules
-                    if in_test_module {
-                        continue;
-                    }
-
-                    // Skip lines with SAFETY justification
-                    if trimmed.contains("// SAFETY:") || trimmed.contains("// safety:") {
-                        continue;
-                    }
-
-                    // Check for safe unwrap patterns first
-                    let has_safe_pattern = safe_patterns.iter().any(|p| p.is_match(line));
-
-                    // Check for unwrap
-                    if unwrap_pattern.is_match(line) && !has_safe_pattern {
-                        violations.push(QualityViolation::UnwrapInProduction {
-                            file: entry.path().to_path_buf(),
-                            line: line_num + 1,
-                            context: trimmed.to_string(),
-                            severity: Severity::Error,
-                        });
-                    }
-
-                    // Check for expect
-                    if expect_pattern.is_match(line) {
-                        violations.push(QualityViolation::ExpectInProduction {
-                            file: entry.path().to_path_buf(),
-                            line: line_num + 1,
-                            context: trimmed.to_string(),
-                            severity: Severity::Error,
-                        });
+                    // Create appropriate violation based on method type
+                    match detection.method.as_str() {
+                        "unwrap" => {
+                            violations.push(QualityViolation::UnwrapInProduction {
+                                file: entry.path().to_path_buf(),
+                                line: detection.line,
+                                context: detection.context,
+                                severity: Severity::Error,
+                            });
+                        }
+                        "expect" => {
+                            violations.push(QualityViolation::ExpectInProduction {
+                                file: entry.path().to_path_buf(),
+                                line: detection.line,
+                                context: detection.context,
+                                severity: Severity::Error,
+                            });
+                        }
+                        _ => {}
                     }
                 }
             }

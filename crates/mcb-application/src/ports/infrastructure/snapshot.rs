@@ -8,7 +8,6 @@ use async_trait::async_trait;
 use mcb_domain::entities::codebase::{CodebaseSnapshot, SnapshotChanges};
 use mcb_domain::error::Result;
 use mcb_domain::value_objects::config::SyncBatch;
-use shaku::Interface;
 use std::path::Path;
 use std::time::Duration;
 
@@ -37,7 +36,7 @@ use std::time::Duration;
 /// }
 /// ```
 #[async_trait]
-pub trait SyncProvider: Interface + Send + Sync {
+pub trait SyncProvider: Send + Sync {
     /// Check if codebase should be debounced (synced too recently)
     async fn should_debounce(&self, codebase_path: &Path) -> Result<bool>;
 
@@ -88,7 +87,7 @@ pub trait SyncProvider: Interface + Send + Sync {
 /// let changed_files = snapshot.get_changed_files(&project_path).await?;
 /// ```
 #[async_trait]
-pub trait SnapshotProvider: Interface + Send + Sync {
+pub trait SnapshotProvider: Send + Sync {
     /// Create a new snapshot for a codebase
     ///
     /// Traverses the codebase at `root_path`, computes file hashes, and creates

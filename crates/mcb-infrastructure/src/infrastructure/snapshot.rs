@@ -13,11 +13,9 @@ use std::path::Path;
 // Snapshot Provider (File Change Tracking)
 // ============================================================================
 
-/// Null snapshot provider for testing and Shaku DI default
+/// Null snapshot provider for testing
 ///
 /// Returns empty snapshots without accessing the filesystem.
-#[derive(shaku::Component)]
-#[shaku(interface = SnapshotProvider)]
 pub struct NullSnapshotProvider;
 
 impl NullSnapshotProvider {
@@ -70,14 +68,10 @@ impl SnapshotProvider for NullSnapshotProvider {
 // State Store Provider (Key-Value Persistence)
 // ============================================================================
 
-/// Null state store provider for testing and Shaku DI default
-#[allow(dead_code)] // Instantiated by Shaku DI container
-#[derive(shaku::Component)]
-#[shaku(interface = StateStoreProvider)]
+/// Null state store provider for testing
 pub struct NullStateStoreProvider;
 
 impl NullStateStoreProvider {
-    #[allow(dead_code)] // Used by Shaku DI
     pub fn new() -> Self {
         Self
     }

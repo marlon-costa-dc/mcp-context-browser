@@ -21,10 +21,7 @@ type CollectionEntry = (Embedding, HashMap<String, Value>);
 ///
 /// Stores vectors and metadata in memory using concurrent hash maps.
 /// Useful for development and testing where persistence is not required.
-#[derive(shaku::Component)]
-#[shaku(interface = VectorStoreProvider)]
 pub struct InMemoryVectorStoreProvider {
-    #[shaku(default = Arc::new(DashMap::new()))]
     collections: Arc<DashMap<String, Vec<CollectionEntry>>>,
 }
 

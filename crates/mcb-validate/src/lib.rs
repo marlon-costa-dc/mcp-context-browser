@@ -105,7 +105,8 @@ pub use linters::{ClippyLinter, LintViolation, LinterEngine, LinterType, RuffLin
 // Re-export AST module types
 pub use ast::{
     AstDecoder, AstEngine, AstNode, AstParseResult, AstParser, AstQuery, AstQueryBuilder,
-    AstQueryPatterns, AstViolation, Position, QueryCondition, Span,
+    AstQueryPatterns, AstViolation, Position, QueryCondition, Span, UnwrapDetection,
+    UnwrapDetector,
 };
 
 // Re-export new validators

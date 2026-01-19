@@ -27,8 +27,6 @@ use crate::constants::EMBEDDING_DIMENSION_NULL;
 /// assert_eq!(provider.dimensions(), 384);
 /// assert_eq!(provider.provider_name(), "null");
 /// ```
-#[derive(shaku::Component)]
-#[shaku(interface = EmbeddingProvider)]
 pub struct NullEmbeddingProvider;
 
 impl NullEmbeddingProvider {

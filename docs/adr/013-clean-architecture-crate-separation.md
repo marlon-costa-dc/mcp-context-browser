@@ -1,8 +1,8 @@
-# ADR-013: Clean Architecture Seven-Crate Separation
+# ADR-013: Clean Architecture Eight-Crate Separation
 
 ## Status
 
-Implemented (v0.1.1)
+Implemented (v0.1.2)
 
 ## Context
 
@@ -18,7 +18,7 @@ The Clean Architecture pattern, as described by Robert C. Martin, addresses thes
 
 ## Decision
 
-We organize the codebase into **seven Cargo workspace crates** following Clean Architecture principles:
+We organize the codebase into **eight Cargo workspace crates** following Clean Architecture principles:
 
 ### Layer 1: Domain (`mcb-domain`)
 
@@ -284,7 +284,7 @@ cargo run -p mcb-validate
 
 ### Negative
 
--   **Complexity**: Seven crates vs one requires coordination
+-   **Complexity**: Eight crates vs one requires coordination
 -   **Boilerplate**: Port traits need implementations in multiple places
 -   **Learning Curve**: Clean Architecture concepts required
 

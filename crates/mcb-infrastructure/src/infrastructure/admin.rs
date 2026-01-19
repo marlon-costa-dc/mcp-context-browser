@@ -1,6 +1,6 @@
 //! Admin Service Null Implementations
 //!
-//! Null implementations of admin port traits for Shaku DI testing.
+//! Null implementations of admin port traits for testing.
 //! Real implementations are in mcb-providers and created at runtime.
 
 use mcb_application::ports::admin::{
@@ -10,8 +10,7 @@ use mcb_application::ports::admin::{
 use std::collections::HashMap;
 
 /// Null implementation of PerformanceMetricsInterface for testing
-#[derive(shaku::Component, Default)]
-#[shaku(interface = PerformanceMetricsInterface)]
+#[derive(Default)]
 pub struct NullPerformanceMetrics;
 
 impl PerformanceMetricsInterface for NullPerformanceMetrics {
@@ -37,8 +36,7 @@ impl PerformanceMetricsInterface for NullPerformanceMetrics {
 }
 
 /// Null implementation of IndexingOperationsInterface for testing
-#[derive(shaku::Component, Default)]
-#[shaku(interface = IndexingOperationsInterface)]
+#[derive(Default)]
 pub struct NullIndexingOperations;
 
 impl IndexingOperationsInterface for NullIndexingOperations {

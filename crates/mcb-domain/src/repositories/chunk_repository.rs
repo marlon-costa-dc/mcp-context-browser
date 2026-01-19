@@ -9,7 +9,6 @@
 use crate::entities::CodeChunk;
 use crate::error::Result;
 use async_trait::async_trait;
-use shaku::Interface;
 
 /// Repository for managing code chunks
 ///
@@ -55,7 +54,7 @@ use shaku::Interface;
 /// # }
 /// ```
 #[async_trait]
-pub trait ChunkRepository: Interface + Send + Sync {
+pub trait ChunkRepository: Send + Sync {
     /// Save a single code chunk to the repository
     ///
     /// # Arguments

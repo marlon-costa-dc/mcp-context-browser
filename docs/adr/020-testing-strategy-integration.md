@@ -80,7 +80,7 @@ proptest! {
 
 ## v0.1.1 Test Organization
 
-Current test structure in seven-crate workspace:
+Current test structure in eight-crate workspace:
 
 ```
 crates/
@@ -147,4 +147,4 @@ crates/
 
 ---
 
-*Updated 2026-01-17 - Reflects v0.1.1 test structure*
+*Updated 2026-01-17 - Reflects v0.1.2 test structure*

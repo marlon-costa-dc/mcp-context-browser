@@ -23,11 +23,8 @@ type CollectionEntry = (Embedding, HashMap<String, Value>);
 /// - Unit testing where vector storage is not needed
 /// - Default DI binding when no real provider is configured
 /// - Performance testing of non-vector-store code paths
-#[derive(shaku::Component)]
-#[shaku(interface = VectorStoreProvider)]
 pub struct NullVectorStoreProvider {
     /// In-memory collection storage for testing purposes
-    #[shaku(default = Arc::new(DashMap::new()))]
     collections: Arc<DashMap<String, Vec<CollectionEntry>>>,
 }
 

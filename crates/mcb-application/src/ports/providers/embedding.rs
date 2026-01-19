@@ -1,7 +1,6 @@
 use async_trait::async_trait;
 use mcb_domain::error::Result;
 use mcb_domain::value_objects::Embedding;
-use shaku::Interface;
 
 /// AI Semantic Understanding Interface
 ///
@@ -33,7 +32,7 @@ use shaku::Interface;
 /// let embeddings = provider.embed_batch(&texts).await?;
 /// ```
 #[async_trait]
-pub trait EmbeddingProvider: Interface + Send + Sync {
+pub trait EmbeddingProvider: Send + Sync {
     /// Get embedding for a single text (default implementation provided)
     async fn embed(&self, text: &str) -> Result<Embedding> {
         // Default: delegate to embed_batch

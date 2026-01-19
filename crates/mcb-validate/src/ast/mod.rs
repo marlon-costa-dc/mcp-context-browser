@@ -6,6 +6,7 @@
 pub mod decoder;
 pub mod languages;
 pub mod query;
+pub mod unwrap_detector;
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -143,6 +144,7 @@ pub struct AstViolation {
 pub use decoder::AstDecoder;
 pub use languages::*;
 pub use query::{AstQuery, AstQueryBuilder, AstQueryPatterns, QueryCondition};
+pub use unwrap_detector::{UnwrapDetection, UnwrapDetector};
 
 #[cfg(test)]
 mod tests {

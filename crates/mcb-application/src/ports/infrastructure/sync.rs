@@ -6,7 +6,6 @@
 
 use async_trait::async_trait;
 use mcb_domain::error::Result;
-use shaku::Interface;
 use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
@@ -82,7 +81,7 @@ impl SyncResult {
 /// }
 /// ```
 #[async_trait]
-pub trait SyncCoordinator: Interface + Send + Sync {
+pub trait SyncCoordinator: Send + Sync {
     /// Check if sync should be skipped due to debouncing
     ///
     /// Returns true if the codebase was synced too recently.

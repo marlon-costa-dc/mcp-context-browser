@@ -4,11 +4,10 @@
 
 use async_trait::async_trait;
 use mcb_domain::error::Result;
-use shaku::Interface;
 
 /// State store interface for key-value persistence
 #[async_trait]
-pub trait StateStoreProvider: Interface + Send + Sync {
+pub trait StateStoreProvider: Send + Sync {
     /// Save data to a key
     async fn save(&self, key: &str, data: &[u8]) -> Result<()>;
 

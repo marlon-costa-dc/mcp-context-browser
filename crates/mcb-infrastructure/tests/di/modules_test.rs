@@ -1,6 +1,6 @@
 //! DI Module Tests
 //!
-//! Tests for Shaku-based dependency injection modules.
+//! Tests for domain services factory and container types.
 //!
 //! Note: Full DI module integration tests require complex setup
 //! with multiple infrastructure components. These tests verify

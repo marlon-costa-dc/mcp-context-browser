@@ -5,7 +5,6 @@
 use async_trait::async_trait;
 use dashmap::DashMap;
 use mcb_application::ports::infrastructure::routing::ProviderHealthStatus;
-use shaku::Interface;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::time::Instant;
 
@@ -35,7 +34,7 @@ impl Default for ProviderHealthData {
 
 /// Health monitor interface for DI
 #[async_trait]
-pub trait HealthMonitor: Interface + Send + Sync {
+pub trait HealthMonitor: Send + Sync {
     /// Get health status for a provider
     fn get_health(&self, provider_id: &str) -> ProviderHealthStatus;
 
@@ -140,16 +139,6 @@ impl HealthMonitor for InMemoryHealthMonitor {
     }
 }
 
-// Shaku Component implementation
-impl<M: shaku::Module> shaku::Component<M> for InMemoryHealthMonitor {
-    type Interface = dyn HealthMonitor;
-    type Parameters = ();
-
-    fn build(_: &mut shaku::ModuleBuildContext<M>, _: Self::Parameters) -> Box<Self::Interface> {
-        Box::new(InMemoryHealthMonitor::new())
-    }
-}
-
 /// Null health monitor for testing
 ///
 /// Always reports all providers as healthy.
@@ -186,12 +175,3 @@ impl HealthMonitor for NullHealthMonitor {
     }
 }
 
-// Shaku Component implementation for Null
-impl<M: shaku::Module> shaku::Component<M> for NullHealthMonitor {
-    type Interface = dyn HealthMonitor;
-    type Parameters = ();
-
-    fn build(_: &mut shaku::ModuleBuildContext<M>, _: Self::Parameters) -> Box<Self::Interface> {
-        Box::new(NullHealthMonitor::new())
-    }
-}

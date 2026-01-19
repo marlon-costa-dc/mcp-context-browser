@@ -4,12 +4,12 @@
 
 **Implemented** (v0.1.1)
 
-> C4 model documentation structure reflects the Clean Architecture seven-crate workspace:
+> C4 model documentation structure reflects the Clean Architecture eight-crate workspace:
 >
 > **Diagram Artifacts** (`docs/diagrams/`):
 >
 > -   `system-context.puml` - System boundaries with AI providers and vector stores
-> -   `container-architecture.puml` - Seven-crate workspace organization
+> -   `container-architecture.puml` - Eight-crate workspace organization
 > -   `C4-template.puml` - Template for new diagrams
 >
 > **Crate-Level Components** (Level 3):
@@ -117,7 +117,7 @@ Notation: Simple boxes and arrows
 #### Level 2: Container Architecture (Cargo Workspace)
 
 ```text
-Purpose: Show the seven-crate Clean Architecture organization
+Purpose: Show the eight-crate Clean Architecture organization
 Audience: Technical stakeholders
 Content: Crate boundaries, dependencies, technology choices
 Notation: Crates with layer annotations
@@ -216,13 +216,13 @@ Rel(mcp, vector_db, "Stores and retrieves vectors")
 @enduml
 ```
 
-**Container Architecture Diagram (Seven-Crate Workspace):**
+**Container Architecture Diagram (Eight-Crate Workspace):**
 
 ```plantuml
 @startuml Container Architecture
 !include <C4/C4_Container>
 
-title Container Architecture - MCP Context Browser (v0.1.1)
+title Container Architecture - MCP Context Browser (v0.1.2)
 
 Container(server, "mcb-server", "Rust/Tokio", "MCP protocol handlers, Admin API")
 Container(infra, "mcb-infrastructure", "Rust/Shaku", "DI modules, config, factories")
@@ -391,7 +391,7 @@ The v0.1.0 release will significantly enhance the C4 model documentation through
 
 -   [ADR-001: Provider Pattern Architecture](001-provider-pattern-architecture.md) - Port/adapter pattern documented
 -   [ADR-012: Two-Layer DI Strategy](012-di-strategy-two-layer-approach.md) - DI architecture diagrams
--   [ADR-013: Clean Architecture Crate Separation](013-clean-architecture-crate-separation.md) - Seven-crate organization
+-   [ADR-013: Clean Architecture Crate Separation](013-clean-architecture-crate-separation.md) - Eight-crate organization
 
 ## References
 

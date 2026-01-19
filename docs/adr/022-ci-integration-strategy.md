@@ -57,7 +57,7 @@ strategy:
 **v0.1.1** (Current):
 
 -   308+ tests must pass
--   Seven-crate workspace builds
+-   Eight-crate workspace builds
 -   mcb-validate reports 0 violations
 
 **v0.2.0**:
@@ -140,4 +140,4 @@ jobs:
 
 ---
 
-*Updated 2026-01-17 - Reflects v0.1.1 CI pipeline*
+*Updated 2026-01-17 - Reflects v0.1.2 CI pipeline*

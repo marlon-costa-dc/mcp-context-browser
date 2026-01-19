@@ -4,7 +4,6 @@
 
 use async_trait::async_trait;
 use mcb_domain::error::Result;
-use shaku::Interface;
 
 /// System metrics data
 #[derive(Debug, Clone, Default)]
@@ -16,7 +15,7 @@ pub struct SystemMetrics {
 
 /// System metrics collector interface
 #[async_trait]
-pub trait SystemMetricsCollectorInterface: Interface + Send + Sync {
+pub trait SystemMetricsCollectorInterface: Send + Sync {
     /// Collect current system metrics
     async fn collect(&self) -> Result<SystemMetrics>;
 

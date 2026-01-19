@@ -27,7 +27,6 @@
 use async_trait::async_trait;
 use mcb_domain::error::Result;
 use mcb_domain::events::DomainEvent;
-use shaku::Interface;
 use std::pin::Pin;
 
 /// Boxed async stream of domain events
@@ -51,7 +50,7 @@ pub type DomainEventStream =
 /// | `publish` | Low-level: publish raw bytes to a topic |
 /// | `subscribe` | Low-level: subscribe to raw topic (returns ID) |
 #[async_trait]
-pub trait EventBusProvider: Interface + Send + Sync {
+pub trait EventBusProvider: Send + Sync {
     // ========================================================================
     // High-Level Typed API (Preferred)
     // ========================================================================

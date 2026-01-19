@@ -4,7 +4,7 @@ This directory contains all Architecture Decision Records (ADRs) for the MCP Con
 
 ## Current ADRs
 
-### Core Architecture (v0.1.1)
+### Core Architecture (v0.1.2)
 
 -   [ADR 001: Modular Crates Architecture](001-modular-crates-architecture.md)
 -   [ADR 002: Dependency Injection with Shaku](002-dependency-injection-shaku.md)
@@ -32,11 +32,11 @@ This directory contains all Architecture Decision Records (ADRs) for the MCP Con
 -   [ADR 004: Multi-Provider Strategy](004-multi-provider-strategy.md) - Provider routing and failover
 -   [ADR 005: Documentation Excellence](005-documentation-excellence.md) - Documentation standards
 
-### Infrastructure ADRs (v0.1.1)
+### Infrastructure ADRs (v0.1.2)
 
 -   [ADR 011: HTTP Transport Request/Response Pattern](011-http-transport-request-response-pattern.md)
 -   [ADR 012: Two-Layer DI Strategy](012-di-strategy-two-layer-approach.md) - Shaku modules + runtime factories
--   [ADR 013: Clean Architecture Crate Separation](013-clean-architecture-crate-separation.md) - Seven-crate workspace organization
+-   [ADR 013: Clean Architecture Crate Separation](013-clean-architecture-crate-separation.md) - Eight-crate workspace organization
 
 ### v0.1.2 Refatoração & Simplification
 

@@ -8,7 +8,6 @@ use async_trait::async_trait;
 use mcb_domain::entities::CodeChunk;
 use mcb_domain::error::Result;
 use mcb_domain::value_objects::Language;
-use shaku::Interface;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -89,7 +88,7 @@ impl ChunkingResult {
 /// }
 /// ```
 #[async_trait]
-pub trait CodeChunker: Interface + Send + Sync {
+pub trait CodeChunker: Send + Sync {
     /// Chunk a single file
     ///
     /// Reads the file, detects its language, and extracts semantic chunks

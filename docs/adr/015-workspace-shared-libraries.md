@@ -14,7 +14,7 @@ Future integration of PMAT code requires shared libraries for:
 -   Code metrics algorithms (complexity, debt scoring)
 -   Analysis orchestration (parallel processing, caching)
 
-**Question**: Where to place shared code within the seven-crate architecture?
+**Question**: Where to place shared code within the eight-crate architecture?
 
 ## Decision
 
@@ -108,7 +108,7 @@ pub trait MetricsCalculator: Send + Sync {
 
 ### v0.1.1 (Current - Foundation)
 
--   Seven-crate workspace structure implemented
+-   Eight-crate workspace structure implemented
 -   Language chunking in `crates/mcb-providers/src/language/`
 -   Workspace dependencies defined
 
@@ -126,9 +126,9 @@ pub trait MetricsCalculator: Send + Sync {
 
 ## Related ADRs
 
--   [ADR-013: Clean Architecture Crate Separation](013-clean-architecture-crate-separation.md) - Seven-crate foundation
+-   [ADR-013: Clean Architecture Crate Separation](013-clean-architecture-crate-separation.md) - Eight-crate foundation
 -   [ADR-014: Multi-Domain Architecture](014-multi-domain-architecture.md) - Domain organization
 
 ---
 
-*Updated 2026-01-17 - Reflects v0.1.1 seven-crate workspace*
+*Updated 2026-01-17 - Reflects v0.1.2 eight-crate workspace*

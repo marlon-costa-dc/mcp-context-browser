@@ -251,10 +251,7 @@ impl CodeChunker for IntelligentChunker {
 /// A provider that supports all languages by delegating to the IntelligentChunker.
 /// This is used for dependency injection where we need a single provider that
 /// can handle any supported language.
-#[derive(shaku::Component)]
-#[shaku(interface = mcb_application::ports::providers::LanguageChunkingProvider)]
 pub struct UniversalLanguageChunkingProvider {
-    #[shaku(default)]
     chunker: IntelligentChunker,
 }
 

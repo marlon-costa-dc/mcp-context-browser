@@ -13,11 +13,9 @@ use std::time::Duration;
 // Sync Provider (File Sync Coordination)
 // ============================================================================
 
-/// Null sync provider for testing and Shaku DI default
+/// Null sync provider for testing
 ///
 /// Returns default values without performing actual file system operations.
-#[derive(shaku::Component)]
-#[shaku(interface = SyncProvider)]
 pub struct NullSyncProvider;
 
 impl NullSyncProvider {
@@ -67,14 +65,10 @@ impl SyncProvider for NullSyncProvider {
 // Lock Provider (Distributed Locking)
 // ============================================================================
 
-/// Null lock provider for testing and Shaku DI default
-#[allow(dead_code)] // Instantiated by Shaku DI container
-#[derive(shaku::Component)]
-#[shaku(interface = LockProvider)]
+/// Null lock provider for testing
 pub struct NullLockProvider;
 
 impl NullLockProvider {
-    #[allow(dead_code)] // Used by Shaku DI
     pub fn new() -> Self {
         Self
     }

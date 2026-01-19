@@ -4,11 +4,10 @@
 
 use async_trait::async_trait;
 use mcb_domain::error::Result;
-use shaku::Interface;
 
 /// Authentication service interface
 #[async_trait]
-pub trait AuthServiceInterface: Interface + Send + Sync {
+pub trait AuthServiceInterface: Send + Sync {
     /// Validate a JWT token
     async fn validate_token(&self, token: &str) -> Result<bool>;
 

@@ -117,4 +117,4 @@ The hybrid cache will extend this foundation in v0.3.0.
 
 ---
 
-*Updated 2026-01-17 - Reflects v0.1.1 crate organization*
+*Updated 2026-01-17 - Reflects v0.1.2 crate organization*

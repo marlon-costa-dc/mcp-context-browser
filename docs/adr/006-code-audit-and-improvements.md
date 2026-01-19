@@ -14,7 +14,7 @@
 >
 > **v0.1.1 Modular Architecture Updates:**
 >
-> -   ✅ **Seven-crate Clean Architecture** implemented (see [ADR-013](013-clean-architecture-crate-separation.md))
+> -   ✅ **Eight-crate Clean Architecture** implemented (see [ADR-013](013-clean-architecture-crate-separation.md))
 > -   ✅ **20+ port traits** in `crates/mcb-application/src/ports/`
 > -   ✅ **Two-layer DI strategy** (see [ADR-012](012-di-strategy-two-layer-approach.md))
 > -   ✅ **All traits extend `shaku::Interface`** for DI compatibility
@@ -348,7 +348,7 @@ v0.2.0 is purely architectural:
 -   [ADR-003: C4 Model Documentation](003-c4-model-documentation.md) - Architecture visualization
 -   [ADR-004: Multi-Provider Strategy](004-multi-provider-strategy.md) - Provider routing and failover
 -   [ADR-012: Two-Layer DI Strategy](012-di-strategy-two-layer-approach.md) - Shaku DI patterns
--   [ADR-013: Clean Architecture Crate Separation](013-clean-architecture-crate-separation.md) - Seven-crate organization
+-   [ADR-013: Clean Architecture Crate Separation](013-clean-architecture-crate-separation.md) - Eight-crate organization
 
 ## References
 
