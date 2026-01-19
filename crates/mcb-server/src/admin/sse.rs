@@ -25,14 +25,13 @@
 //!     console.log('Service state:', JSON.parse(e.data));
 //! });
 //! ```
+//!
+//! Migrated from Axum to Rocket in v0.1.2 (ADR-026).
 
-use axum::{
-    extract::State,
-    response::sse::{Event, KeepAlive, Sse},
-};
-use futures::stream::Stream;
+use futures::StreamExt;
 use mcb_domain::events::DomainEvent;
-use std::{convert::Infallible, time::Duration};
+use rocket::response::stream::{Event, EventStream};
+use rocket::{get, State};
 use tracing::{debug, warn};
 
 use super::handlers::AdminState;
@@ -41,21 +40,19 @@ use super::handlers::AdminState;
 ///
 /// Streams domain events to connected clients in real-time.
 /// Uses the EventBusProvider's subscribe_events() method to receive events.
-pub async fn events_stream(
-    State(state): State<AdminState>,
-) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
+#[get("/events")]
+pub async fn events_stream(state: &State<AdminState>) -> EventStream![] {
     let event_bus = state.event_bus.clone();
 
-    let stream = async_stream::stream! {
+    EventStream! {
         // Subscribe to domain events
         let mut event_stream = match event_bus.subscribe_events().await {
             Ok(stream) => stream,
             Err(e) => {
                 warn!("Failed to subscribe to events: {}", e);
                 // Yield an error event and exit
-                yield Ok(Event::default()
-                    .event("error")
-                    .data(format!("Failed to subscribe: {}", e)));
+                yield Event::data(format!("Failed to subscribe: {}", e))
+                    .event("error");
                 return;
             }
         };
@@ -63,7 +60,6 @@ pub async fn events_stream(
         debug!("SSE client connected, streaming events");
 
         // Stream events to the client
-        use futures::StreamExt;
         while let Some(event) = event_stream.next().await {
             let event_name = get_event_name(&event);
             let event_data = match serde_json::to_string(&event) {
@@ -75,19 +71,11 @@ pub async fn events_stream(
             };
 
             debug!("Sending SSE event: {}", event_name);
-            yield Ok(Event::default()
-                .event(event_name)
-                .data(event_data));
+            yield Event::data(event_data).event(event_name);
         }
 
         debug!("SSE event stream closed");
-    };
-
-    Sse::new(stream).keep_alive(
-        KeepAlive::new()
-            .interval(Duration::from_secs(30))
-            .text("ping"),
-    )
+    }
 }
 
 /// Get the event name string for SSE event type header

@@ -1,13 +1,14 @@
 //! Web Router Module
 //!
 //! Router configuration for the admin web interface.
+//!
+//! Migrated from Axum to Rocket in v0.1.2 (ADR-026).
 
-use axum::routing::get;
-use axum::Router;
+use rocket::{routes, Build, Rocket};
 
 use super::handlers;
 
-/// Create the admin web UI router
+/// Create the admin web UI rocket instance
 ///
 /// Routes:
 /// - GET `/` - Dashboard
@@ -16,12 +17,28 @@ use super::handlers;
 /// - GET `/ui/health` - Health status page
 /// - GET `/ui/indexing` - Indexing status page
 /// - GET `/favicon.ico` - Favicon
-pub fn web_router() -> Router {
-    Router::new()
-        .route("/", get(handlers::dashboard))
-        .route("/ui", get(handlers::dashboard))
-        .route("/ui/config", get(handlers::config_page))
-        .route("/ui/health", get(handlers::health_page))
-        .route("/ui/indexing", get(handlers::indexing_page))
-        .route("/favicon.ico", get(handlers::favicon))
+pub fn web_rocket() -> Rocket<Build> {
+    rocket::build().mount(
+        "/",
+        routes![
+            handlers::dashboard,
+            handlers::dashboard_ui,
+            handlers::config_page,
+            handlers::health_page,
+            handlers::indexing_page,
+            handlers::favicon,
+        ],
+    )
+}
+
+/// Get routes for mounting in a parent Rocket instance
+pub fn web_routes() -> Vec<rocket::Route> {
+    routes![
+        handlers::dashboard,
+        handlers::dashboard_ui,
+        handlers::config_page,
+        handlers::health_page,
+        handlers::indexing_page,
+        handlers::favicon,
+    ]
 }

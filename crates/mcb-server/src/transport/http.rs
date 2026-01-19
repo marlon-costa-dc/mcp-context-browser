@@ -22,24 +22,24 @@
 //!     "id": 1
 //! }
 //! ```
+//!
+//! # Migration Note
+//!
+//! Migrated from Axum to Rocket in v0.1.2 (ADR-026).
 
 use super::types::{McpRequest, McpResponse};
 use crate::constants::{JSONRPC_INTERNAL_ERROR, JSONRPC_INVALID_PARAMS, JSONRPC_METHOD_NOT_FOUND};
 use crate::tools::{create_tool_list, route_tool_call, ToolHandlers};
 use crate::McpServer;
-use axum::{
-    extract::State,
-    response::{sse::Event, IntoResponse, Sse},
-    routing::{get, post},
-    Json, Router,
-};
-use futures::stream::Stream;
 use rmcp::model::CallToolRequestParam;
 use rmcp::ServerHandler;
-use std::convert::Infallible;
+use rocket::fairing::{Fairing, Info, Kind};
+use rocket::http::Header;
+use rocket::response::stream::{Event, EventStream};
+use rocket::serde::json::Json;
+use rocket::{get, post, routes, Build, Request, Response, Rocket, State};
 use std::net::SocketAddr;
 use std::sync::Arc;
-use tokio::net::TcpListener;
 use tokio::sync::broadcast;
 use tracing::{error, info};
 
@@ -107,57 +107,73 @@ impl HttpTransport {
         }
     }
 
-    /// Create the HTTP router
-    pub fn router(&self) -> Router {
-        let state = self.state.clone();
-
-        let router = Router::new()
-            .route("/mcp", post(handle_mcp_request))
-            .route("/events", get(handle_sse))
-            .with_state(state);
+    /// Build the Rocket application
+    pub fn rocket(&self) -> Rocket<Build> {
+        let mut rocket = rocket::build()
+            .manage(self.state.clone())
+            .mount("/", routes![handle_mcp_request, handle_sse]);
 
         if self.config.enable_cors {
-            // Add CORS headers
-            router.layer(
-                tower_http::cors::CorsLayer::new()
-                    .allow_origin(tower_http::cors::Any)
-                    .allow_methods([axum::http::Method::GET, axum::http::Method::POST])
-                    .allow_headers(tower_http::cors::Any),
-            )
-        } else {
-            router
+            rocket = rocket.attach(Cors);
         }
+
+        rocket
     }
 
     /// Start the HTTP transport server
     pub async fn start(self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let addr = self.config.socket_addr();
-        let listener = TcpListener::bind(addr).await?;
-
         info!("HTTP transport listening on {}", addr);
 
-        let router = self.router();
-        axum::serve(listener, router).await?;
+        let figment = rocket::Config::figment()
+            .merge(("address", self.config.host.clone()))
+            .merge(("port", self.config.port));
+
+        let rocket = self.rocket().configure(figment);
+
+        rocket
+            .launch()
+            .await
+            .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
 
         Ok(())
     }
 
     /// Start with graceful shutdown
+    ///
+    /// Note: Rocket handles graceful shutdown internally via Ctrl+C.
+    /// The shutdown_signal parameter is kept for API compatibility but
+    /// uses Rocket's built-in shutdown mechanism.
     pub async fn start_with_shutdown(
         self,
-        shutdown_signal: impl std::future::Future<Output = ()> + Send + 'static,
+        _shutdown_signal: impl std::future::Future<Output = ()> + Send + 'static,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let addr = self.config.socket_addr();
-        let listener = TcpListener::bind(addr).await?;
+        // Rocket handles graceful shutdown internally
+        self.start().await
+    }
+}
 
-        info!("HTTP transport listening on {}", addr);
+/// CORS Fairing for Rocket
+///
+/// Adds CORS headers to all responses to allow browser access.
+pub struct Cors;
 
-        let router = self.router();
-        axum::serve(listener, router)
-            .with_graceful_shutdown(shutdown_signal)
-            .await?;
+#[rocket::async_trait]
+impl Fairing for Cors {
+    fn info(&self) -> Info {
+        Info {
+            name: "CORS Headers",
+            kind: Kind::Response,
+        }
+    }
 
-        Ok(())
+    async fn on_response<'r>(&self, _request: &'r Request<'_>, response: &mut Response<'r>) {
+        response.set_header(Header::new("Access-Control-Allow-Origin", "*"));
+        response.set_header(Header::new(
+            "Access-Control-Allow-Methods",
+            "GET, POST, OPTIONS",
+        ));
+        response.set_header(Header::new("Access-Control-Allow-Headers", "*"));
     }
 }
 
@@ -171,14 +187,16 @@ impl HttpTransport {
 /// - `tools/list`: Returns list of available tools
 /// - `tools/call`: Executes a tool with provided arguments
 /// - `ping`: Returns empty success response for health checks
+#[post("/mcp", format = "json", data = "<request>")]
 async fn handle_mcp_request(
-    State(state): State<HttpTransportState>,
-    Json(request): Json<McpRequest>,
-) -> impl IntoResponse {
+    state: &State<HttpTransportState>,
+    request: Json<McpRequest>,
+) -> Json<McpResponse> {
+    let request = request.into_inner();
     let response = match request.method.as_str() {
-        "initialize" => handle_initialize(&state, &request).await,
-        "tools/list" => handle_tools_list(&state, &request).await,
-        "tools/call" => handle_tools_call(&state, &request).await,
+        "initialize" => handle_initialize(state, &request).await,
+        "tools/list" => handle_tools_list(state, &request).await,
+        "tools/call" => handle_tools_call(state, &request).await,
         "ping" => McpResponse::success(request.id.clone(), serde_json::json!({})),
         _ => McpResponse::error(
             request.id.clone(),
@@ -326,17 +344,16 @@ async fn handle_tools_call(state: &HttpTransportState, request: &McpRequest) -> 
 }
 
 /// Handle SSE connection for server-to-client events
-async fn handle_sse(
-    State(state): State<HttpTransportState>,
-) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
-    let rx = state.event_tx.subscribe();
+#[get("/events")]
+fn handle_sse(state: &State<HttpTransportState>) -> EventStream![] {
+    let mut rx = state.event_tx.subscribe();
 
-    let stream = async_stream::stream! {
-        let mut rx = rx;
-        while let Ok(data) = rx.recv().await {
-            yield Ok(Event::default().data(data));
+    EventStream! {
+        loop {
+            match rx.recv().await {
+                Ok(data) => yield Event::data(data),
+                Err(_) => break,
+            }
         }
-    };
-
-    Sse::new(stream)
+    }
 }

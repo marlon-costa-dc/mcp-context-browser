@@ -9,10 +9,12 @@
 //! - `/ui/config` - Configuration editor with live reload
 //! - `/ui/health` - Health status and dependency monitoring
 //! - `/ui/indexing` - Indexing operation progress
+//!
+//! Migrated from Axum to Rocket in v0.1.2 (ADR-026).
 
 pub mod handlers;
 pub mod router;
 
 // Re-export public functions
-pub use handlers::{config_page, dashboard, favicon, health_page, indexing_page};
-pub use router::web_router;
+pub use handlers::{config_page, dashboard, dashboard_ui, favicon, health_page, indexing_page};
+pub use router::{web_rocket, web_routes};

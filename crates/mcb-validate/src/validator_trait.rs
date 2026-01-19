@@ -120,7 +120,7 @@ impl ValidatorRegistry {
     /// This registers all built-in validators with default configuration.
     /// Validators include:
     /// - Architecture: clean_architecture, layer_flow, port_adapter, visibility
-    /// - Dependencies: dependency, shaku
+    /// - Dependencies: dependency
     /// - Quality: quality, solid, naming, patterns, documentation, tests_org
     /// - Performance: performance, async_patterns, kiss, pmat
     /// - Organization: organization, implementation, refactoring, error_boundary
@@ -138,7 +138,7 @@ impl ValidatorRegistry {
 
         // Dependency validators
         use crate::dependency::DependencyValidator;
-        use crate::shaku::ShakuValidator;
+        // Note: ShakuValidator removed - now using inventory-based plugin architecture
 
         // Quality validators
         use crate::documentation::DocumentationValidator;
@@ -170,7 +170,7 @@ impl ValidatorRegistry {
             .with_validator(Box::new(VisibilityValidator::new()))
             // Dependencies
             .with_validator(Box::new(DependencyValidator::new(&root)))
-            .with_validator(Box::new(ShakuValidator::new(&root)))
+            // Note: ShakuValidator removed - now using inventory-based plugin architecture
             // Quality
             .with_validator(Box::new(QualityValidator::new(&root)))
             .with_validator(Box::new(SolidValidator::new(&root)))

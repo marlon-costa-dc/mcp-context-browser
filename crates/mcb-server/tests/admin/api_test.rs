@@ -1,17 +1,18 @@
 //! Admin API Endpoint Tests
 //!
-//! Tests for individual admin HTTP endpoints using tower test utilities.
+//! Tests for individual admin HTTP endpoints using Rocket test utilities.
+//!
+//! Migrated from Axum to Rocket in v0.1.2 (ADR-026).
 
 use async_trait::async_trait;
-use axum::body::Body;
-use axum::http::{Request, StatusCode};
 use mcb_application::ports::infrastructure::{DomainEventStream, EventBusProvider};
 use mcb_domain::error::Result;
 use mcb_domain::events::DomainEvent;
 use mcb_providers::admin::{AtomicPerformanceMetrics, DefaultIndexingOperations};
-use mcb_server::admin::{handlers::AdminState, routes::admin_router};
+use mcb_server::admin::{handlers::AdminState, routes::admin_rocket};
+use rocket::http::Status;
+use rocket::local::asynchronous::Client;
 use std::sync::Arc;
-use tower::ServiceExt;
 
 /// Null EventBus for testing
 struct TestEventBus;
@@ -54,34 +55,26 @@ fn create_test_state() -> AdminState {
     }
 }
 
-#[tokio::test]
+#[rocket::async_test]
 async fn test_health_endpoint() {
     let state = create_test_state();
-    let router = admin_router(state);
-
-    let response = router
-        .oneshot(
-            Request::builder()
-                .uri("/health")
-                .body(Body::empty())
-                .unwrap(),
-        )
+    let client = Client::tracked(admin_rocket(state))
         .await
-        .unwrap();
+        .expect("valid rocket instance");
 
-    assert_eq!(response.status(), StatusCode::OK);
+    let response = client.get("/health").dispatch().await;
 
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
-        .await
-        .unwrap();
-    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(response.status(), Status::Ok);
+
+    let body = response.into_string().await.expect("response body");
+    let json: serde_json::Value = serde_json::from_str(&body).unwrap();
 
     assert_eq!(json["status"], "healthy");
     assert!(json["uptime_seconds"].is_number());
     assert_eq!(json["active_indexing_operations"], 0);
 }
 
-#[tokio::test]
+#[rocket::async_test]
 async fn test_metrics_endpoint() {
     let state = create_test_state();
 
@@ -90,24 +83,16 @@ async fn test_metrics_endpoint() {
     state.metrics.record_query(200, false, false);
     state.metrics.update_active_connections(3);
 
-    let router = admin_router(state);
-
-    let response = router
-        .oneshot(
-            Request::builder()
-                .uri("/metrics")
-                .body(Body::empty())
-                .unwrap(),
-        )
+    let client = Client::tracked(admin_rocket(state))
         .await
-        .unwrap();
+        .expect("valid rocket instance");
 
-    assert_eq!(response.status(), StatusCode::OK);
+    let response = client.get("/metrics").dispatch().await;
 
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
-        .await
-        .unwrap();
-    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(response.status(), Status::Ok);
+
+    let body = response.into_string().await.expect("response body");
+    let json: serde_json::Value = serde_json::from_str(&body).unwrap();
 
     assert_eq!(json["total_queries"], 2);
     assert_eq!(json["successful_queries"], 1);
@@ -116,34 +101,26 @@ async fn test_metrics_endpoint() {
     assert!(json["average_response_time_ms"].as_f64().unwrap() > 0.0);
 }
 
-#[tokio::test]
+#[rocket::async_test]
 async fn test_indexing_endpoint_no_operations() {
     let state = create_test_state();
-    let router = admin_router(state);
-
-    let response = router
-        .oneshot(
-            Request::builder()
-                .uri("/indexing")
-                .body(Body::empty())
-                .unwrap(),
-        )
+    let client = Client::tracked(admin_rocket(state))
         .await
-        .unwrap();
+        .expect("valid rocket instance");
 
-    assert_eq!(response.status(), StatusCode::OK);
+    let response = client.get("/indexing").dispatch().await;
 
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
-        .await
-        .unwrap();
-    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(response.status(), Status::Ok);
+
+    let body = response.into_string().await.expect("response body");
+    let json: serde_json::Value = serde_json::from_str(&body).unwrap();
 
     assert_eq!(json["is_indexing"], false);
     assert_eq!(json["active_operations"], 0);
     assert!(json["operations"].as_array().unwrap().is_empty());
 }
 
-#[tokio::test]
+#[rocket::async_test]
 async fn test_indexing_endpoint_with_operations() {
     let indexing = Arc::new(DefaultIndexingOperations::new());
     let state = AdminState {
@@ -162,24 +139,16 @@ async fn test_indexing_endpoint_with_operations() {
     let op_id = indexing.start_operation("test-collection", 50);
     indexing.update_progress(&op_id, Some("src/main.rs".to_string()), 10);
 
-    let router = admin_router(state);
-
-    let response = router
-        .oneshot(
-            Request::builder()
-                .uri("/indexing")
-                .body(Body::empty())
-                .unwrap(),
-        )
+    let client = Client::tracked(admin_rocket(state))
         .await
-        .unwrap();
+        .expect("valid rocket instance");
 
-    assert_eq!(response.status(), StatusCode::OK);
+    let response = client.get("/indexing").dispatch().await;
 
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
-        .await
-        .unwrap();
-    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(response.status(), Status::Ok);
+
+    let body = response.into_string().await.expect("response body");
+    let json: serde_json::Value = serde_json::from_str(&body).unwrap();
 
     assert_eq!(json["is_indexing"], true);
     assert_eq!(json["active_operations"], 1);
@@ -195,91 +164,72 @@ async fn test_indexing_endpoint_with_operations() {
     assert_eq!(op["progress_percent"], 20.0);
 }
 
-#[tokio::test]
+#[rocket::async_test]
 async fn test_readiness_probe_not_ready() {
     // Create a fresh state - uptime will be < 1 second
     let state = create_test_state();
-    let router = admin_router(state);
-
-    let response = router
-        .oneshot(
-            Request::builder()
-                .uri("/ready")
-                .body(Body::empty())
-                .unwrap(),
-        )
+    let client = Client::tracked(admin_rocket(state))
         .await
-        .unwrap();
+        .expect("valid rocket instance");
+
+    let response = client.get("/ready").dispatch().await;
 
     // Initially the server should return 503 (uptime < 1s)
     // Note: This test may be flaky if the system is very slow
     // The status could be either 200 or 503 depending on timing
     let status = response.status();
     assert!(
-        status == StatusCode::OK || status == StatusCode::SERVICE_UNAVAILABLE,
-        "Expected OK or SERVICE_UNAVAILABLE, got {:?}",
+        status == Status::Ok || status == Status::ServiceUnavailable,
+        "Expected Ok or ServiceUnavailable, got {:?}",
         status
     );
 
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
-        .await
-        .unwrap();
-    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    let body = response.into_string().await.expect("response body");
+    let json: serde_json::Value = serde_json::from_str(&body).unwrap();
 
     // The ready field should be boolean
     assert!(json["ready"].is_boolean());
 }
 
-#[tokio::test]
+#[rocket::async_test]
 async fn test_readiness_probe_ready() {
     let state = create_test_state();
 
     // Wait for uptime to be >= 1 second
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
-    let router = admin_router(state);
-
-    let response = router
-        .oneshot(
-            Request::builder()
-                .uri("/ready")
-                .body(Body::empty())
-                .unwrap(),
-        )
+    let client = Client::tracked(admin_rocket(state))
         .await
-        .unwrap();
+        .expect("valid rocket instance");
 
-    assert_eq!(response.status(), StatusCode::OK);
+    let response = client.get("/ready").dispatch().await;
 
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
-        .await
-        .unwrap();
-    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(response.status(), Status::Ok);
+
+    let body = response.into_string().await.expect("response body");
+    let json: serde_json::Value = serde_json::from_str(&body).unwrap();
 
     assert_eq!(json["ready"], true);
 }
 
-#[tokio::test]
+#[rocket::async_test]
 async fn test_liveness_probe() {
     let state = create_test_state();
-    let router = admin_router(state);
-
-    let response = router
-        .oneshot(Request::builder().uri("/live").body(Body::empty()).unwrap())
+    let client = Client::tracked(admin_rocket(state))
         .await
-        .unwrap();
+        .expect("valid rocket instance");
 
-    assert_eq!(response.status(), StatusCode::OK);
+    let response = client.get("/live").dispatch().await;
 
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
-        .await
-        .unwrap();
-    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(response.status(), Status::Ok);
+
+    let body = response.into_string().await.expect("response body");
+    let json: serde_json::Value = serde_json::from_str(&body).unwrap();
 
     assert_eq!(json["alive"], true);
 }
 
-#[tokio::test]
+#[rocket::async_test]
 async fn test_health_with_active_operations() {
     let indexing = Arc::new(DefaultIndexingOperations::new());
     let state = AdminState {
@@ -298,29 +248,21 @@ async fn test_health_with_active_operations() {
     indexing.start_operation("coll-1", 100);
     indexing.start_operation("coll-2", 200);
 
-    let router = admin_router(state);
-
-    let response = router
-        .oneshot(
-            Request::builder()
-                .uri("/health")
-                .body(Body::empty())
-                .unwrap(),
-        )
+    let client = Client::tracked(admin_rocket(state))
         .await
-        .unwrap();
+        .expect("valid rocket instance");
 
-    assert_eq!(response.status(), StatusCode::OK);
+    let response = client.get("/health").dispatch().await;
 
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
-        .await
-        .unwrap();
-    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(response.status(), Status::Ok);
+
+    let body = response.into_string().await.expect("response body");
+    let json: serde_json::Value = serde_json::from_str(&body).unwrap();
 
     assert_eq!(json["active_indexing_operations"], 2);
 }
 
-#[tokio::test]
+#[rocket::async_test]
 async fn test_metrics_with_cache_hits() {
     let state = create_test_state();
 
@@ -331,22 +273,14 @@ async fn test_metrics_with_cache_hits() {
     state.metrics.record_query(40, true, false);
     state.metrics.record_query(50, true, false);
 
-    let router = admin_router(state);
-
-    let response = router
-        .oneshot(
-            Request::builder()
-                .uri("/metrics")
-                .body(Body::empty())
-                .unwrap(),
-        )
+    let client = Client::tracked(admin_rocket(state))
         .await
-        .unwrap();
+        .expect("valid rocket instance");
 
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
-        .await
-        .unwrap();
-    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    let response = client.get("/metrics").dispatch().await;
+
+    let body = response.into_string().await.expect("response body");
+    let json: serde_json::Value = serde_json::from_str(&body).unwrap();
 
     let cache_hit_rate = json["cache_hit_rate"].as_f64().unwrap();
     assert!(

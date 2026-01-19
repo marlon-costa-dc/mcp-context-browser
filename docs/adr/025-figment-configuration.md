@@ -2,9 +2,9 @@
 
 ## Status
 
-**Proposed** (v0.1.2)
+**Implemented** (v0.1.2)
 
-> Planned replacement for manual configuration loading as part of the simplification initiative.
+> Migration from `config` crate to Figment completed as part of the infrastructure modernization initiative.
 
 ## Context
 
@@ -242,12 +242,12 @@ Caused by:
 
 ## Validation Criteria
 
--   [ ] All configuration sources load correctly (TOML, environment, defaults)
--   [ ] Error messages are more helpful than before
--   [ ] Profile-based configuration works
--   [ ] All existing configuration values are preserved
--   [ ] Performance is maintained or improved
--   [ ] Integration tests pass with new configuration system
+-   [x] All configuration sources load correctly (TOML, environment, defaults)
+-   [x] Error messages are more helpful than before
+-   [x] Profile-based configuration works
+-   [x] All existing configuration values are preserved
+-   [x] Performance is maintained or improved
+-   [x] Integration tests pass with new configuration system
 
 ## Related ADRs
 

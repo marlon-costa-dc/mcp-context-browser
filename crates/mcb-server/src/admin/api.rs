@@ -1,17 +1,19 @@
 //! Admin API server
 //!
 //! HTTP server for the admin API running on a separate port.
+//!
+//! Migrated from Axum to Rocket in v0.1.2 (ADR-026).
 
 use mcb_application::ports::admin::{IndexingOperationsInterface, PerformanceMetricsInterface};
 use mcb_application::ports::infrastructure::EventBusProvider;
 use mcb_infrastructure::config::watcher::ConfigWatcher;
-use std::net::SocketAddr;
+use rocket::config::{Config as RocketConfig, LogLevel};
+use std::net::IpAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
-use tokio::net::TcpListener;
 
 use super::handlers::AdminState;
-use super::routes::admin_router;
+use super::routes::admin_rocket;
 
 /// Admin API server configuration
 #[derive(Debug, Clone)]
@@ -40,11 +42,15 @@ impl AdminApiConfig {
         }
     }
 
-    /// Get the socket address
-    pub fn socket_addr(&self) -> SocketAddr {
-        format!("{}:{}", self.host, self.port)
-            .parse()
-            .unwrap_or_else(|_| SocketAddr::from(([127, 0, 0, 1], self.port)))
+    /// Get the Rocket configuration
+    pub fn rocket_config(&self) -> RocketConfig {
+        let address: IpAddr = self.host.parse().unwrap_or_else(|_| "127.0.0.1".parse().expect("valid IP"));
+        RocketConfig {
+            address,
+            port: self.port,
+            log_level: LogLevel::Normal,
+            ..RocketConfig::default()
+        }
     }
 }
 
@@ -107,33 +113,68 @@ impl AdminApi {
     ///
     /// Returns a handle that can be used to gracefully shutdown the server.
     pub async fn start(self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let addr = self.config.socket_addr();
-        let listener = TcpListener::bind(addr).await?;
+        let rocket_config = self.config.rocket_config();
 
-        tracing::info!("Admin API server listening on {}", addr);
+        tracing::info!(
+            "Admin API server listening on {}:{}",
+            rocket_config.address,
+            rocket_config.port
+        );
 
-        let router = admin_router(self.state);
+        let rocket = admin_rocket(self.state)
+            .configure(rocket_config);
 
-        axum::serve(listener, router).await?;
+        rocket.launch().await.map_err(|e| {
+            Box::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("Rocket launch failed: {}", e),
+            )) as Box<dyn std::error::Error + Send + Sync>
+        })?;
 
         Ok(())
     }
 
     /// Start the admin API server with graceful shutdown
+    ///
+    /// Note: Rocket handles graceful shutdown internally via Ctrl+C or SIGTERM.
+    /// The shutdown_signal parameter is kept for API compatibility but Rocket
+    /// manages its own shutdown lifecycle.
     pub async fn start_with_shutdown(
         self,
         shutdown_signal: impl std::future::Future<Output = ()> + Send + 'static,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let addr = self.config.socket_addr();
-        let listener = TcpListener::bind(addr).await?;
+        let rocket_config = self.config.rocket_config();
 
-        tracing::info!("Admin API server listening on {}", addr);
+        tracing::info!(
+            "Admin API server listening on {}:{}",
+            rocket_config.address,
+            rocket_config.port
+        );
 
-        let router = admin_router(self.state);
+        let rocket = admin_rocket(self.state)
+            .configure(rocket_config)
+            .ignite()
+            .await
+            .map_err(|e| {
+                Box::new(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("Rocket ignite failed: {}", e),
+                )) as Box<dyn std::error::Error + Send + Sync>
+            })?;
 
-        axum::serve(listener, router)
-            .with_graceful_shutdown(shutdown_signal)
-            .await?;
+        // Spawn a task to handle the external shutdown signal
+        let shutdown_handle = rocket.shutdown();
+        tokio::spawn(async move {
+            shutdown_signal.await;
+            shutdown_handle.notify();
+        });
+
+        rocket.launch().await.map_err(|e| {
+            Box::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("Rocket launch failed: {}", e),
+            )) as Box<dyn std::error::Error + Send + Sync>
+        })?;
 
         Ok(())
     }

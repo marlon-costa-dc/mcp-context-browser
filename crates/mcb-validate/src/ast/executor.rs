@@ -206,15 +206,16 @@ impl AstQueryExecutor {
             "js" => Some("javascript".to_string()),
             "ts" | "tsx" => Some("typescript".to_string()),
             "go" => Some("go".to_string()),
-            // java, c, cpp not included - require additional tree-sitter crates
+            "java" => Some("java".to_string()),
+            "c" | "h" => Some("c".to_string()),
+            "cpp" | "cc" | "cxx" | "hpp" | "hxx" => Some("cpp".to_string()),
             _ => None,
         }
     }
 
     /// Get Tree-sitter language from language name
     ///
-    /// Currently supports: rust, python, javascript, typescript, go
-    /// Additional languages can be added by including the tree-sitter-* crate
+    /// Currently supports: rust, python, javascript, typescript, go, java, c, cpp
     fn get_tree_sitter_language(language: &str) -> Result<tree_sitter::Language> {
         match language {
             "rust" => Ok(tree_sitter_rust::LANGUAGE.into()),
@@ -222,9 +223,11 @@ impl AstQueryExecutor {
             "javascript" => Ok(tree_sitter_javascript::LANGUAGE.into()),
             "typescript" => Ok(tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into()),
             "go" => Ok(tree_sitter_go::LANGUAGE.into()),
-            // Note: java, c, cpp can be added by including their tree-sitter crates
+            "java" => Ok(tree_sitter_java::LANGUAGE.into()),
+            "c" => Ok(tree_sitter_c::LANGUAGE.into()),
+            "cpp" => Ok(tree_sitter_cpp::LANGUAGE.into()),
             _ => Err(ValidationError::Config(format!(
-                "Unsupported language: {}. Supported: rust, python, javascript, typescript, go",
+                "Unsupported language: {}. Supported: rust, python, javascript, typescript, go, java, c, cpp",
                 language
             ))),
         }

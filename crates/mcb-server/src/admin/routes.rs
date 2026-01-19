@@ -1,11 +1,10 @@
 //! Admin API routes
 //!
 //! Route definitions for the admin API endpoints.
+//!
+//! Migrated from Axum to Rocket in v0.1.2 (ADR-026).
 
-use axum::{
-    routing::{get, patch, post},
-    Router,
-};
+use rocket::{routes, Build, Rocket};
 
 use super::config_handlers::{get_config, reload_config, update_config_section};
 use super::handlers::{
@@ -17,7 +16,7 @@ use super::lifecycle_handlers::{
 };
 use super::sse::events_stream;
 
-/// Create the admin API router
+/// Create the admin API rocket instance
 ///
 /// Routes:
 /// - GET /health - Health check with uptime and status
@@ -37,30 +36,35 @@ use super::sse::events_stream;
 /// - POST /services/:name/stop - Stop a service
 /// - POST /services/:name/restart - Restart a service
 /// - GET /cache/stats - Cache statistics
-pub fn admin_router(state: AdminState) -> Router {
-    Router::new()
-        // Health and monitoring
-        .route("/health", get(health_check))
-        .route("/health/extended", get(extended_health_check))
-        .route("/metrics", get(get_metrics))
-        .route("/indexing", get(get_indexing_status))
-        .route("/ready", get(readiness_check))
-        .route("/live", get(liveness_check))
-        // Service control
-        .route("/shutdown", post(shutdown))
-        // Configuration management
-        .route("/config", get(get_config))
-        .route("/config/reload", post(reload_config))
-        .route("/config/{section}", patch(update_config_section))
-        // SSE event stream
-        .route("/events", get(events_stream))
-        // Service lifecycle management
-        .route("/services", get(list_services))
-        .route("/services/health", get(services_health))
-        .route("/services/{name}/start", post(start_service))
-        .route("/services/{name}/stop", post(stop_service))
-        .route("/services/{name}/restart", post(restart_service))
-        // Cache management
-        .route("/cache/stats", get(get_cache_stats))
-        .with_state(state)
+pub fn admin_rocket(state: AdminState) -> Rocket<Build> {
+    rocket::build()
+        .manage(state)
+        .mount(
+            "/",
+            routes![
+                // Health and monitoring
+                health_check,
+                extended_health_check,
+                get_metrics,
+                get_indexing_status,
+                readiness_check,
+                liveness_check,
+                // Service control
+                shutdown,
+                // Configuration management
+                get_config,
+                reload_config,
+                update_config_section,
+                // SSE event stream
+                events_stream,
+                // Service lifecycle management
+                list_services,
+                services_health,
+                start_service,
+                stop_service,
+                restart_service,
+                // Cache management
+                get_cache_stats,
+            ],
+        )
 }

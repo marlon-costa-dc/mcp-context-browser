@@ -9,7 +9,12 @@ description: "Production code should not use .unwrap()"
 rationale: "Unwrap can cause panics; use ? operator or proper error handling"
 
 # Phase 1: Uses Clippy linter integration
-# Future phases may add AST selectors for cross-language support
 lint_select: ["clippy::unwrap_used"]
+
+# Phase 2: AST selectors for Tree-sitter based detection
+selectors:
+  - language: rust
+    node_type: call_expression
+    pattern: "(call_expression function: (field_expression field: (field_identifier) @method) (#eq? @method \"unwrap\")) @match"
 
 message: "Avoid .unwrap() in production code"

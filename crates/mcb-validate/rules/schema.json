@@ -170,7 +170,7 @@
       "properties": { "schema": { "const": "rule/v2" } }
     },
     "then": {
-      "oneOf": [
+      "anyOf": [
         { "required": ["engine", "rule"] },
         { "required": ["selectors"] },
         { "required": ["lint_select"] },

@@ -12,13 +12,12 @@
 //! | `/services/{name}/start` | POST | Start a specific service |
 //! | `/services/{name}/stop` | POST | Stop a specific service |
 //! | `/services/{name}/restart` | POST | Restart a specific service |
+//!
+//! Migrated from Axum to Rocket in v0.1.2 (ADR-026).
 
-use axum::{
-    extract::{Path, State},
-    http::StatusCode,
-    response::IntoResponse,
-    Json,
-};
+use rocket::http::Status;
+use rocket::serde::json::Json;
+use rocket::{get, post, State};
 use serde::Serialize;
 use serde_json::json;
 
@@ -42,20 +41,42 @@ pub struct ServiceInfoResponse {
     pub state: String,
 }
 
+/// Service error response
+#[derive(Serialize)]
+pub struct ServiceErrorResponse {
+    pub error: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub service: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub count: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub services: Option<Vec<ServiceInfoResponse>>,
+}
+
+/// Service action response
+#[derive(Serialize)]
+pub struct ServiceActionResponse {
+    pub status: String,
+    pub service: String,
+}
+
 /// List all registered services and their states
 ///
 /// GET /admin/services
-pub async fn list_services(State(state): State<AdminState>) -> impl IntoResponse {
+#[get("/services")]
+pub fn list_services(
+    state: &State<AdminState>,
+) -> Result<Json<ServiceListResponse>, (Status, Json<ServiceErrorResponse>)> {
     let Some(service_manager) = &state.service_manager else {
-        return (
-            StatusCode::SERVICE_UNAVAILABLE,
-            Json(json!({
-                "error": "Service manager not available",
-                "count": 0,
-                "services": []
-            })),
-        )
-            .into_response();
+        return Err((
+            Status::ServiceUnavailable,
+            Json(ServiceErrorResponse {
+                error: "Service manager not available".to_string(),
+                service: None,
+                count: Some(0),
+                services: Some(vec![]),
+            }),
+        ));
     };
 
     let services: Vec<ServiceInfoResponse> = service_manager
@@ -67,133 +88,166 @@ pub async fn list_services(State(state): State<AdminState>) -> impl IntoResponse
         })
         .collect();
 
-    Json(ServiceListResponse {
+    Ok(Json(ServiceListResponse {
         count: services.len(),
         services,
-    })
-    .into_response()
+    }))
 }
 
 /// Start a specific service
 ///
 /// POST /admin/services/{name}/start
+#[post("/services/<name>/start")]
 pub async fn start_service(
-    State(state): State<AdminState>,
-    Path(name): Path<String>,
-) -> impl IntoResponse {
+    state: &State<AdminState>,
+    name: &str,
+) -> Result<(Status, Json<ServiceActionResponse>), (Status, Json<ServiceErrorResponse>)> {
     let Some(service_manager) = &state.service_manager else {
-        return (
-            StatusCode::SERVICE_UNAVAILABLE,
-            Json(json!({
-                "error": "Service manager not available"
-            })),
-        );
+        return Err((
+            Status::ServiceUnavailable,
+            Json(ServiceErrorResponse {
+                error: "Service manager not available".to_string(),
+                service: None,
+                count: None,
+                services: None,
+            }),
+        ));
     };
 
-    match service_manager.start(&name).await {
-        Ok(()) => (
-            StatusCode::OK,
-            Json(json!({
-                "status": "started",
-                "service": name
-            })),
-        ),
-        Err(e) => (
-            StatusCode::BAD_REQUEST,
-            Json(json!({
-                "error": e.to_string(),
-                "service": name
-            })),
-        ),
+    match service_manager.start(name).await {
+        Ok(()) => Ok((
+            Status::Ok,
+            Json(ServiceActionResponse {
+                status: "started".to_string(),
+                service: name.to_string(),
+            }),
+        )),
+        Err(e) => Err((
+            Status::BadRequest,
+            Json(ServiceErrorResponse {
+                error: e.to_string(),
+                service: Some(name.to_string()),
+                count: None,
+                services: None,
+            }),
+        )),
     }
 }
 
 /// Stop a specific service
 ///
 /// POST /admin/services/{name}/stop
+#[post("/services/<name>/stop")]
 pub async fn stop_service(
-    State(state): State<AdminState>,
-    Path(name): Path<String>,
-) -> impl IntoResponse {
+    state: &State<AdminState>,
+    name: &str,
+) -> Result<(Status, Json<ServiceActionResponse>), (Status, Json<ServiceErrorResponse>)> {
     let Some(service_manager) = &state.service_manager else {
-        return (
-            StatusCode::SERVICE_UNAVAILABLE,
-            Json(json!({
-                "error": "Service manager not available"
-            })),
-        );
+        return Err((
+            Status::ServiceUnavailable,
+            Json(ServiceErrorResponse {
+                error: "Service manager not available".to_string(),
+                service: None,
+                count: None,
+                services: None,
+            }),
+        ));
     };
 
-    match service_manager.stop(&name).await {
-        Ok(()) => (
-            StatusCode::OK,
-            Json(json!({
-                "status": "stopped",
-                "service": name
-            })),
-        ),
-        Err(e) => (
-            StatusCode::BAD_REQUEST,
-            Json(json!({
-                "error": e.to_string(),
-                "service": name
-            })),
-        ),
+    match service_manager.stop(name).await {
+        Ok(()) => Ok((
+            Status::Ok,
+            Json(ServiceActionResponse {
+                status: "stopped".to_string(),
+                service: name.to_string(),
+            }),
+        )),
+        Err(e) => Err((
+            Status::BadRequest,
+            Json(ServiceErrorResponse {
+                error: e.to_string(),
+                service: Some(name.to_string()),
+                count: None,
+                services: None,
+            }),
+        )),
     }
 }
 
 /// Restart a specific service
 ///
 /// POST /admin/services/{name}/restart
+#[post("/services/<name>/restart")]
 pub async fn restart_service(
-    State(state): State<AdminState>,
-    Path(name): Path<String>,
-) -> impl IntoResponse {
+    state: &State<AdminState>,
+    name: &str,
+) -> Result<(Status, Json<ServiceActionResponse>), (Status, Json<ServiceErrorResponse>)> {
     let Some(service_manager) = &state.service_manager else {
-        return (
-            StatusCode::SERVICE_UNAVAILABLE,
-            Json(json!({
-                "error": "Service manager not available"
-            })),
-        );
+        return Err((
+            Status::ServiceUnavailable,
+            Json(ServiceErrorResponse {
+                error: "Service manager not available".to_string(),
+                service: None,
+                count: None,
+                services: None,
+            }),
+        ));
     };
 
-    match service_manager.restart(&name).await {
-        Ok(()) => (
-            StatusCode::OK,
-            Json(json!({
-                "status": "restarted",
-                "service": name
-            })),
-        ),
-        Err(e) => (
-            StatusCode::BAD_REQUEST,
-            Json(json!({
-                "error": e.to_string(),
-                "service": name
-            })),
-        ),
+    match service_manager.restart(name).await {
+        Ok(()) => Ok((
+            Status::Ok,
+            Json(ServiceActionResponse {
+                status: "restarted".to_string(),
+                service: name.to_string(),
+            }),
+        )),
+        Err(e) => Err((
+            Status::BadRequest,
+            Json(ServiceErrorResponse {
+                error: e.to_string(),
+                service: Some(name.to_string()),
+                count: None,
+                services: None,
+            }),
+        )),
     }
+}
+
+/// Services health response
+#[derive(Serialize)]
+pub struct ServicesHealthResponse {
+    pub count: usize,
+    pub checks: Vec<serde_json::Value>,
 }
 
 /// Get health check for all services
 ///
 /// GET /admin/services/health
-pub async fn services_health(State(state): State<AdminState>) -> impl IntoResponse {
+#[get("/services/health")]
+pub async fn services_health(
+    state: &State<AdminState>,
+) -> Result<Json<ServicesHealthResponse>, (Status, Json<ServiceErrorResponse>)> {
     let Some(service_manager) = &state.service_manager else {
-        return (
-            StatusCode::SERVICE_UNAVAILABLE,
-            Json(json!({
-                "error": "Service manager not available"
-            })),
-        )
-            .into_response();
+        return Err((
+            Status::ServiceUnavailable,
+            Json(ServiceErrorResponse {
+                error: "Service manager not available".to_string(),
+                service: None,
+                count: None,
+                services: None,
+            }),
+        ));
     };
 
     let checks = service_manager.health_check_all().await;
-    Json(json!({
-        "count": checks.len(),
-        "checks": checks
+    let checks_json: Vec<serde_json::Value> = checks
+        .iter()
+        .map(|c| serde_json::to_value(c).unwrap_or(json!({})))
+        .collect();
+
+    Ok(Json(ServicesHealthResponse {
+        count: checks.len(),
+        checks: checks_json,
     }))
-    .into_response()
 }

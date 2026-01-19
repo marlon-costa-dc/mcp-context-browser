@@ -7,5 +7,5 @@ mod file_config;
 
 pub use file_config::{
     ArchitectureRulesConfig, FileConfig, GeneralConfig, OrganizationRulesConfig,
-    QualityRulesConfig, RulesConfig, ShakuRulesConfig, SolidRulesConfig, ValidatorsConfig,
+    QualityRulesConfig, RulesConfig, SolidRulesConfig, ValidatorsConfig,
 };

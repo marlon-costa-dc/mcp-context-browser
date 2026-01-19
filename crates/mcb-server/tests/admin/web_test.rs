@@ -1,113 +1,77 @@
 //! Tests for Admin Web UI
 //!
 //! Tests the web dashboard pages and routes.
+//!
+//! Migrated from Axum to Rocket in v0.1.2 (ADR-026).
 
-use axum::body::Body;
-use axum::http::{Request, StatusCode};
-use mcb_server::admin::web::web_router;
-use tower::ServiceExt;
+use mcb_server::admin::web::web_rocket;
+use rocket::http::Status;
+use rocket::local::asynchronous::Client;
 
-#[tokio::test]
+#[rocket::async_test]
 async fn test_dashboard_returns_html() {
-    let router = web_router();
-
-    let response = router
-        .oneshot(Request::builder().uri("/").body(Body::empty()).unwrap())
+    let client = Client::tracked(web_rocket())
         .await
-        .unwrap();
+        .expect("valid rocket instance");
 
-    assert_eq!(response.status(), StatusCode::OK);
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
-        .await
-        .unwrap();
-    let html = String::from_utf8(body.to_vec()).unwrap();
+    let response = client.get("/").dispatch().await;
+
+    assert_eq!(response.status(), Status::Ok);
+    let html = response.into_string().await.expect("response body");
     assert!(html.contains("<!DOCTYPE html>"));
     assert!(html.contains("Dashboard"));
 }
 
-#[tokio::test]
+#[rocket::async_test]
 async fn test_config_page_returns_html() {
-    let router = web_router();
-
-    let response = router
-        .oneshot(
-            Request::builder()
-                .uri("/ui/config")
-                .body(Body::empty())
-                .unwrap(),
-        )
+    let client = Client::tracked(web_rocket())
         .await
-        .unwrap();
+        .expect("valid rocket instance");
 
-    assert_eq!(response.status(), StatusCode::OK);
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
-        .await
-        .unwrap();
-    let html = String::from_utf8(body.to_vec()).unwrap();
+    let response = client.get("/ui/config").dispatch().await;
+
+    assert_eq!(response.status(), Status::Ok);
+    let html = response.into_string().await.expect("response body");
     assert!(html.contains("Configuration"));
 }
 
-#[tokio::test]
+#[rocket::async_test]
 async fn test_health_page_returns_html() {
-    let router = web_router();
-
-    let response = router
-        .oneshot(
-            Request::builder()
-                .uri("/ui/health")
-                .body(Body::empty())
-                .unwrap(),
-        )
+    let client = Client::tracked(web_rocket())
         .await
-        .unwrap();
+        .expect("valid rocket instance");
 
-    assert_eq!(response.status(), StatusCode::OK);
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
-        .await
-        .unwrap();
-    let html = String::from_utf8(body.to_vec()).unwrap();
+    let response = client.get("/ui/health").dispatch().await;
+
+    assert_eq!(response.status(), Status::Ok);
+    let html = response.into_string().await.expect("response body");
     assert!(html.contains("Health Status"));
 }
 
-#[tokio::test]
+#[rocket::async_test]
 async fn test_indexing_page_returns_html() {
-    let router = web_router();
-
-    let response = router
-        .oneshot(
-            Request::builder()
-                .uri("/ui/indexing")
-                .body(Body::empty())
-                .unwrap(),
-        )
+    let client = Client::tracked(web_rocket())
         .await
-        .unwrap();
+        .expect("valid rocket instance");
 
-    assert_eq!(response.status(), StatusCode::OK);
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
-        .await
-        .unwrap();
-    let html = String::from_utf8(body.to_vec()).unwrap();
+    let response = client.get("/ui/indexing").dispatch().await;
+
+    assert_eq!(response.status(), Status::Ok);
+    let html = response.into_string().await.expect("response body");
     assert!(html.contains("Indexing Status"));
 }
 
-#[tokio::test]
+#[rocket::async_test]
 async fn test_favicon_returns_svg() {
-    let router = web_router();
-
-    let response = router
-        .oneshot(
-            Request::builder()
-                .uri("/favicon.ico")
-                .body(Body::empty())
-                .unwrap(),
-        )
+    let client = Client::tracked(web_rocket())
         .await
-        .unwrap();
+        .expect("valid rocket instance");
 
-    assert_eq!(response.status(), StatusCode::OK);
+    let response = client.get("/favicon.ico").dispatch().await;
+
+    assert_eq!(response.status(), Status::Ok);
     assert_eq!(
-        response.headers().get("content-type").unwrap(),
-        "image/svg+xml"
+        response.content_type().map(|ct| ct.to_string()),
+        Some("image/svg+xml".to_string())
     );
 }

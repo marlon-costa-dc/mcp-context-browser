@@ -49,5 +49,5 @@ pub use config::{
 pub use handlers::AdminState;
 pub use models::{AdminActionResponse, CollectionStats, ServerInfo};
 pub use propagation::{ConfigPropagator, PropagatorHandle};
-pub use routes::admin_router;
-pub use web::web_router;
+pub use routes::admin_rocket;
+pub use web::{web_rocket, web_routes};

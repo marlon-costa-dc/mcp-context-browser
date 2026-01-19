@@ -2,8 +2,9 @@
 //!
 //! HTTP handlers for admin API endpoints including health checks,
 //! performance metrics, indexing status, and runtime configuration management.
+//!
+//! Migrated from Axum to Rocket in v0.1.2 (ADR-026).
 
-use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use mcb_application::ports::admin::{
     DependencyHealth, DependencyHealthCheck, ExtendedHealthResponse, IndexingOperation,
     IndexingOperationsInterface, PerformanceMetricsData, PerformanceMetricsInterface,
@@ -13,6 +14,9 @@ use mcb_application::ports::infrastructure::EventBusProvider;
 use mcb_application::ports::providers::CacheProvider;
 use mcb_infrastructure::config::watcher::ConfigWatcher;
 use mcb_infrastructure::infrastructure::ServiceManager;
+use rocket::http::Status;
+use rocket::serde::json::Json;
+use rocket::{get, post, State};
 use serde::Serialize;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -54,7 +58,8 @@ pub struct AdminHealthResponse {
 }
 
 /// Health check endpoint
-pub async fn health_check(State(state): State<AdminState>) -> impl IntoResponse {
+#[get("/health")]
+pub fn health_check(state: &State<AdminState>) -> Json<AdminHealthResponse> {
     let metrics = state.metrics.get_performance_metrics();
     let operations = state.indexing.get_operations();
 
@@ -66,7 +71,8 @@ pub async fn health_check(State(state): State<AdminState>) -> impl IntoResponse 
 }
 
 /// Get performance metrics endpoint
-pub async fn get_metrics(State(state): State<AdminState>) -> impl IntoResponse {
+#[get("/metrics")]
+pub fn get_metrics(state: &State<AdminState>) -> Json<PerformanceMetricsData> {
     let metrics = state.metrics.get_performance_metrics();
     Json(metrics)
 }
@@ -100,7 +106,8 @@ pub struct IndexingOperationStatus {
 }
 
 /// Get indexing status endpoint
-pub async fn get_indexing_status(State(state): State<AdminState>) -> impl IntoResponse {
+#[get("/indexing")]
+pub fn get_indexing_status(state: &State<AdminState>) -> Json<IndexingStatusResponse> {
     let operations = state.indexing.get_operations();
 
     let operation_statuses: Vec<IndexingOperationStatus> = operations
@@ -130,24 +137,38 @@ pub async fn get_indexing_status(State(state): State<AdminState>) -> impl IntoRe
     })
 }
 
+/// Readiness response
+#[derive(Serialize)]
+pub struct ReadinessResponse {
+    pub ready: bool,
+}
+
+/// Liveness response
+#[derive(Serialize)]
+pub struct LivenessResponse {
+    pub alive: bool,
+}
+
 /// Readiness check endpoint (for k8s/docker health checks)
-pub async fn readiness_check(State(state): State<AdminState>) -> impl IntoResponse {
+#[get("/ready")]
+pub fn readiness_check(state: &State<AdminState>) -> (Status, Json<ReadinessResponse>) {
     let metrics = state.metrics.get_performance_metrics();
 
     // Consider ready if server has been up for at least 1 second
     if metrics.uptime_seconds >= 1 {
-        (StatusCode::OK, Json(serde_json::json!({ "ready": true })))
+        (Status::Ok, Json(ReadinessResponse { ready: true }))
     } else {
         (
-            StatusCode::SERVICE_UNAVAILABLE,
-            Json(serde_json::json!({ "ready": false })),
+            Status::ServiceUnavailable,
+            Json(ReadinessResponse { ready: false }),
         )
     }
 }
 
 /// Liveness check endpoint (for k8s/docker health checks)
-pub async fn liveness_check() -> impl IntoResponse {
-    (StatusCode::OK, Json(serde_json::json!({ "alive": true })))
+#[get("/live")]
+pub fn liveness_check() -> (Status, Json<LivenessResponse>) {
+    (Status::Ok, Json(LivenessResponse { alive: true }))
 }
 
 // ============================================================================
@@ -203,13 +224,16 @@ impl ShutdownResponse {
 ///
 /// - `timeout_secs`: Optional custom timeout (default: 30s)
 /// - `immediate`: Skip graceful shutdown period (default: false)
-pub async fn shutdown(
-    State(state): State<AdminState>,
-    Json(request): Json<ShutdownRequest>,
-) -> impl IntoResponse {
+#[post("/shutdown", format = "json", data = "<request>")]
+pub fn shutdown(
+    state: &State<AdminState>,
+    request: Json<ShutdownRequest>,
+) -> (Status, Json<ShutdownResponse>) {
+    let request = request.into_inner();
+
     let Some(coordinator) = &state.shutdown_coordinator else {
         return (
-            StatusCode::SERVICE_UNAVAILABLE,
+            Status::ServiceUnavailable,
             Json(ShutdownResponse::error(
                 "Shutdown coordinator not available",
                 0,
@@ -219,7 +243,7 @@ pub async fn shutdown(
 
     if coordinator.is_shutting_down() {
         return (
-            StatusCode::CONFLICT,
+            Status::Conflict,
             Json(ShutdownResponse::error(
                 "Shutdown already in progress",
                 state.shutdown_timeout_secs,
@@ -233,7 +257,7 @@ pub async fn shutdown(
         info!("Immediate shutdown requested");
         coordinator.signal_shutdown();
         return (
-            StatusCode::OK,
+            Status::Ok,
             Json(ShutdownResponse::success("Immediate shutdown initiated", 0)),
         );
     }
@@ -245,10 +269,7 @@ pub async fn shutdown(
         "Graceful shutdown initiated, server will stop in {} seconds",
         timeout_secs
     );
-    (
-        StatusCode::OK,
-        Json(ShutdownResponse::success(msg, timeout_secs)),
-    )
+    (Status::Ok, Json(ShutdownResponse::success(msg, timeout_secs)))
 }
 
 fn spawn_graceful_shutdown(coord: Arc<dyn ShutdownCoordinator>, timeout: u64) {
@@ -262,7 +283,8 @@ fn spawn_graceful_shutdown(coord: Arc<dyn ShutdownCoordinator>, timeout: u64) {
 ///
 /// Returns detailed health information including the status of
 /// all service dependencies (embedding provider, vector store, cache).
-pub async fn extended_health_check(State(state): State<AdminState>) -> impl IntoResponse {
+#[get("/health/extended")]
+pub fn extended_health_check(state: &State<AdminState>) -> Json<ExtendedHealthResponse> {
     let metrics = state.metrics.get_performance_metrics();
     let operations = state.indexing.get_operations();
     let now = current_timestamp();
@@ -384,28 +406,36 @@ fn calculate_overall_health(dependencies: &[DependencyHealthCheck]) -> Dependenc
 // Cache Stats Endpoint
 // ============================================================================
 
+/// Cache error response
+#[derive(Serialize)]
+pub struct CacheErrorResponse {
+    pub error: String,
+}
+
 /// Get cache statistics
 ///
 /// Returns cache hit/miss rates, entry counts, and other metrics.
-pub async fn get_cache_stats(State(state): State<AdminState>) -> impl IntoResponse {
+#[get("/cache/stats")]
+pub async fn get_cache_stats(
+    state: &State<AdminState>,
+) -> Result<Json<mcb_application::ports::providers::cache::CacheStats>, (Status, Json<CacheErrorResponse>)>
+{
     let Some(cache) = &state.cache else {
-        return (
-            StatusCode::SERVICE_UNAVAILABLE,
-            Json(serde_json::json!({
-                "error": "Cache provider not available"
-            })),
-        )
-            .into_response();
+        return Err((
+            Status::ServiceUnavailable,
+            Json(CacheErrorResponse {
+                error: "Cache provider not available".to_string(),
+            }),
+        ));
     };
 
     match cache.stats().await {
-        Ok(stats) => Json(stats).into_response(),
-        Err(e) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({
-                "error": e.to_string()
-            })),
-        )
-            .into_response(),
+        Ok(stats) => Ok(Json(stats)),
+        Err(e) => Err((
+            Status::InternalServerError,
+            Json(CacheErrorResponse {
+                error: e.to_string(),
+            }),
+        )),
     }
 }

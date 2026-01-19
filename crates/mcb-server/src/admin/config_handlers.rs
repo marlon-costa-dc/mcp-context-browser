@@ -2,14 +2,13 @@
 //!
 //! HTTP handlers for runtime configuration management including
 //! reading, updating, and reloading configuration.
+//!
+//! Migrated from Axum to Rocket in v0.1.2 (ADR-026).
 
-use axum::{
-    extract::{Path, State},
-    http::StatusCode,
-    response::IntoResponse,
-    Json,
-};
 use mcb_infrastructure::config::watcher::ConfigWatcher;
+use rocket::http::Status;
+use rocket::serde::json::Json;
+use rocket::{get, patch, post, State};
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -40,10 +39,11 @@ enum ConfigUpdateError {
 ///
 /// Returns the current configuration with sensitive fields removed.
 /// API keys, secrets, and passwords are not exposed.
-pub async fn get_config(State(state): State<AdminState>) -> impl IntoResponse {
+#[get("/config")]
+pub async fn get_config(state: &State<AdminState>) -> (Status, Json<ConfigResponse>) {
     let Some(watcher) = &state.config_watcher else {
         return (
-            StatusCode::SERVICE_UNAVAILABLE,
+            Status::ServiceUnavailable,
             Json(ConfigResponse {
                 success: false,
                 config: SanitizedConfig::default(),
@@ -57,7 +57,7 @@ pub async fn get_config(State(state): State<AdminState>) -> impl IntoResponse {
     let sanitized = SanitizedConfig::from_app_config(&config);
 
     (
-        StatusCode::OK,
+        Status::Ok,
         Json(ConfigResponse {
             success: true,
             config: sanitized,
@@ -71,10 +71,11 @@ pub async fn get_config(State(state): State<AdminState>) -> impl IntoResponse {
 ///
 /// Triggers a manual configuration reload. The new configuration
 /// will be validated before being applied.
-pub async fn reload_config(State(state): State<AdminState>) -> impl IntoResponse {
+#[post("/config/reload")]
+pub async fn reload_config(state: &State<AdminState>) -> (Status, Json<ConfigReloadResponse>) {
     let Some(watcher) = &state.config_watcher else {
         return (
-            StatusCode::SERVICE_UNAVAILABLE,
+            Status::ServiceUnavailable,
             Json(ConfigReloadResponse::watcher_unavailable()),
         );
     };
@@ -82,13 +83,10 @@ pub async fn reload_config(State(state): State<AdminState>) -> impl IntoResponse
     match watcher.reload().await {
         Ok(new_config) => {
             let sanitized = SanitizedConfig::from_app_config(&new_config);
-            (
-                StatusCode::OK,
-                Json(ConfigReloadResponse::success(sanitized)),
-            )
+            (Status::Ok, Json(ConfigReloadResponse::success(sanitized)))
         }
         Err(e) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
+            Status::InternalServerError,
             Json(ConfigReloadResponse::failure(format!(
                 "Failed to reload configuration: {}",
                 e
@@ -104,30 +102,33 @@ pub async fn reload_config(State(state): State<AdminState>) -> impl IntoResponse
 /// and triggering a reload.
 ///
 /// Valid sections: server, logging, cache, metrics, limits, resilience
+#[patch("/config/<section>", format = "json", data = "<request>")]
 pub async fn update_config_section(
-    State(state): State<AdminState>,
-    Path(section): Path<String>,
-    Json(request): Json<ConfigSectionUpdateRequest>,
-) -> impl IntoResponse {
+    state: &State<AdminState>,
+    section: &str,
+    request: Json<ConfigSectionUpdateRequest>,
+) -> (Status, Json<ConfigSectionUpdateResponse>) {
+    let request = request.into_inner();
+
     // Validate and get required resources
-    let (watcher, config_path) = match validate_update_prerequisites(&state, &section) {
+    let (watcher, config_path) = match validate_update_prerequisites(state, section) {
         Ok(resources) => resources,
-        Err(e) => return config_update_error_response(&section, e),
+        Err(e) => return config_update_error_response(section, e),
     };
 
     // Read and update configuration
-    let updated_config = match read_update_config(&config_path, &section, &request.values) {
+    let updated_config = match read_update_config(&config_path, section, &request.values) {
         Ok(config) => config,
-        Err(e) => return config_update_error_response(&section, e),
+        Err(e) => return config_update_error_response(section, e),
     };
 
     // Write and reload
-    match write_and_reload_config(&config_path, &updated_config, &watcher, &section).await {
+    match write_and_reload_config(&config_path, &updated_config, &watcher, section).await {
         Ok(sanitized) => (
-            StatusCode::OK,
-            Json(ConfigSectionUpdateResponse::success(&section, sanitized)),
+            Status::Ok,
+            Json(ConfigSectionUpdateResponse::success(section, sanitized)),
         ),
-        Err(e) => config_update_error_response(&section, e),
+        Err(e) => config_update_error_response(section, e),
     }
 }
 
@@ -221,7 +222,7 @@ async fn write_and_reload_config(
 fn config_update_error_response(
     section: &str,
     error: ConfigUpdateError,
-) -> (StatusCode, Json<ConfigSectionUpdateResponse>) {
+) -> (Status, Json<ConfigSectionUpdateResponse>) {
     match error {
         ConfigUpdateError::InvalidSection => {
             create_bad_request_response(section, "invalid_section")
@@ -243,32 +244,32 @@ fn config_update_error_response(
 fn create_bad_request_response(
     section: &str,
     method: &str,
-) -> (StatusCode, Json<ConfigSectionUpdateResponse>) {
+) -> (Status, Json<ConfigSectionUpdateResponse>) {
     let response = match method {
         "invalid_section" => ConfigSectionUpdateResponse::invalid_section(section),
         _ => ConfigSectionUpdateResponse::failure(section, "Bad request"),
     };
-    (StatusCode::BAD_REQUEST, Json(response))
+    (Status::BadRequest, Json(response))
 }
 
 /// Create service unavailable response
 fn create_service_unavailable_response(
     section: &str,
     method: &str,
-) -> (StatusCode, Json<ConfigSectionUpdateResponse>) {
+) -> (Status, Json<ConfigSectionUpdateResponse>) {
     let response = match method {
         "watcher_unavailable" => ConfigSectionUpdateResponse::watcher_unavailable(section),
         _ => ConfigSectionUpdateResponse::failure(section, "Service unavailable"),
     };
-    (StatusCode::SERVICE_UNAVAILABLE, Json(response))
+    (Status::ServiceUnavailable, Json(response))
 }
 
 /// Create path unavailable response
 fn create_path_unavailable_response(
     section: &str,
-) -> (StatusCode, Json<ConfigSectionUpdateResponse>) {
+) -> (Status, Json<ConfigSectionUpdateResponse>) {
     (
-        StatusCode::SERVICE_UNAVAILABLE,
+        Status::ServiceUnavailable,
         Json(ConfigSectionUpdateResponse::failure(
             section,
             "Configuration file path not available",
@@ -280,9 +281,9 @@ fn create_path_unavailable_response(
 fn create_read_error_response(
     section: &str,
     error: String,
-) -> (StatusCode, Json<ConfigSectionUpdateResponse>) {
+) -> (Status, Json<ConfigSectionUpdateResponse>) {
     (
-        StatusCode::INTERNAL_SERVER_ERROR,
+        Status::InternalServerError,
         Json(ConfigSectionUpdateResponse::failure(
             section,
             format!("Failed to read configuration file: {}", error),
@@ -294,9 +295,9 @@ fn create_read_error_response(
 fn create_parse_error_response(
     section: &str,
     error: String,
-) -> (StatusCode, Json<ConfigSectionUpdateResponse>) {
+) -> (Status, Json<ConfigSectionUpdateResponse>) {
     (
-        StatusCode::INTERNAL_SERVER_ERROR,
+        Status::InternalServerError,
         Json(ConfigSectionUpdateResponse::failure(
             section,
             format!("Failed to parse configuration file: {}", error),
@@ -307,9 +308,9 @@ fn create_parse_error_response(
 /// Create invalid format response
 fn create_invalid_format_response(
     section: &str,
-) -> (StatusCode, Json<ConfigSectionUpdateResponse>) {
+) -> (Status, Json<ConfigSectionUpdateResponse>) {
     (
-        StatusCode::BAD_REQUEST,
+        Status::BadRequest,
         Json(ConfigSectionUpdateResponse::failure(
             section,
             "Invalid configuration value format",
@@ -321,9 +322,9 @@ fn create_invalid_format_response(
 fn create_serialize_error_response(
     section: &str,
     error: String,
-) -> (StatusCode, Json<ConfigSectionUpdateResponse>) {
+) -> (Status, Json<ConfigSectionUpdateResponse>) {
     (
-        StatusCode::INTERNAL_SERVER_ERROR,
+        Status::InternalServerError,
         Json(ConfigSectionUpdateResponse::failure(
             section,
             format!("Failed to serialize configuration: {}", error),
@@ -335,9 +336,9 @@ fn create_serialize_error_response(
 fn create_write_error_response(
     section: &str,
     error: String,
-) -> (StatusCode, Json<ConfigSectionUpdateResponse>) {
+) -> (Status, Json<ConfigSectionUpdateResponse>) {
     (
-        StatusCode::INTERNAL_SERVER_ERROR,
+        Status::InternalServerError,
         Json(ConfigSectionUpdateResponse::failure(
             section,
             format!("Failed to write configuration file: {}", error),
@@ -349,9 +350,9 @@ fn create_write_error_response(
 fn create_reload_error_response(
     section: &str,
     error: String,
-) -> (StatusCode, Json<ConfigSectionUpdateResponse>) {
+) -> (Status, Json<ConfigSectionUpdateResponse>) {
     (
-        StatusCode::INTERNAL_SERVER_ERROR,
+        Status::InternalServerError,
         Json(ConfigSectionUpdateResponse::failure(
             section,
             format!("Configuration updated but reload failed: {}", error),

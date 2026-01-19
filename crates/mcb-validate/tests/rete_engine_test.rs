@@ -102,17 +102,20 @@ rule "TestRule" salience 10 {
     /// End-to-end test for CA001 Domain Independence rule
     /// This test verifies the full flow: YAML rule → GRL parsing → execution → violation
     #[tokio::test]
-    #[ignore] // Phase 3 bug: rule fires 100 times instead of 1 - to be fixed in Phase 3 work
     async fn test_ca001_detects_violation_end_to_end() {
         use rust_rule_engine::{
             Facts, GRLParser, KnowledgeBase, RustRuleEngine, Value as RreValue,
         };
 
         // Load the actual CA001 GRL rule (inline here for testing)
+        // IMPORTANT: The rule must check `violation_triggered == false` to prevent re-firing.
+        // The RETE algorithm keeps firing rules until no more can fire, so without this guard
+        // the rule would fire 100 times (default max iterations).
         let grl = r#"
 rule "DomainIndependence" salience 10 {
     when
-        Facts.has_internal_dependencies == true
+        Facts.has_internal_dependencies == true &&
+        Facts.violation_triggered == false
     then
         Facts.violation_triggered = true;
         Facts.violation_message = "Domain layer cannot depend on internal mcb-* crates";

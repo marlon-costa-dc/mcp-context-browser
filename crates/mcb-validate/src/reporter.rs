@@ -157,10 +157,6 @@ impl Reporter {
             report.summary.kiss_count
         ));
         output.push_str(&format!(
-            "  DI/Shaku:       {}\n",
-            report.summary.shaku_count
-        ));
-        output.push_str(&format!(
             "  Refactoring:    {}\n",
             report.summary.refactoring_count
         ));
@@ -274,15 +270,6 @@ impl Reporter {
             output.push('\n');
         }
 
-        // DI/Shaku violations
-        if !report.shaku_violations.is_empty() {
-            output.push_str("--- DI/Shaku Violations ---\n");
-            for v in &report.shaku_violations {
-                output.push_str(&format!("  [{:?}] {}\n", v.severity(), v));
-            }
-            output.push('\n');
-        }
-
         // Refactoring violations
         if !report.refactoring_violations.is_empty() {
             output.push_str("--- Refactoring Violations ---\n");
@@ -377,7 +364,6 @@ impl Reporter {
             report.summary.organization_count
         ));
         output.push_str(&format!("| KISS | {} |\n", report.summary.kiss_count));
-        output.push_str(&format!("| DI/Shaku | {} |\n", report.summary.shaku_count));
         output.push_str(&format!(
             "| Refactoring | {} |\n",
             report.summary.refactoring_count
@@ -454,12 +440,6 @@ impl Reporter {
         }
 
         for v in &report.kiss_violations {
-            if v.severity() == Severity::Error {
-                errors.push(format!("::error ::{}", v));
-            }
-        }
-
-        for v in &report.shaku_violations {
             if v.severity() == Severity::Error {
                 errors.push(format!("::error ::{}", v));
             }
@@ -561,11 +541,6 @@ impl Reporter {
             .filter(|v| v.severity() == Severity::Error)
             .count();
         count += report
-            .shaku_violations
-            .iter()
-            .filter(|v| v.severity() == Severity::Error)
-            .count();
-        count += report
             .refactoring_violations
             .iter()
             .filter(|v| v.severity() == Severity::Error)
@@ -649,11 +624,6 @@ impl Reporter {
             .filter(|v| v.severity() == Severity::Warning)
             .count();
         count += report
-            .shaku_violations
-            .iter()
-            .filter(|v| v.severity() == Severity::Warning)
-            .count();
-        count += report
             .refactoring_violations
             .iter()
             .filter(|v| v.severity() == Severity::Warning)
@@ -707,7 +677,6 @@ mod tests {
                 solid_count: 0,
                 organization_count: 0,
                 kiss_count: 0,
-                shaku_count: 0,
                 refactoring_count: 0,
                 implementation_count: 0,
                 performance_count: 0,
@@ -725,7 +694,6 @@ mod tests {
             solid_violations: vec![],
             organization_violations: vec![],
             kiss_violations: vec![],
-            shaku_violations: vec![],
             refactoring_violations: vec![],
             implementation_violations: vec![],
             performance_violations: vec![],

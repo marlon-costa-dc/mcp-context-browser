@@ -2,9 +2,9 @@
 
 ## Status
 
-**Proposed** (v0.1.2)
+**Implemented** (v0.1.2)
 
-> Evaluation and migration decision for HTTP routing framework as part of the simplification initiative.
+> Migration from Axum to Rocket completed as part of the infrastructure modernization initiative.
 
 ## Context
 
@@ -346,12 +346,12 @@ Server::new(TcpListener::bind("127.0.0.1:3000")).run(app).await;
 
 ## Validation Criteria
 
--   [ ] All existing endpoints work with new routing framework
--   [ ] API contracts remain stable (same paths, methods, responses)
--   [ ] Middleware functionality preserved (CORS, auth, logging)
--   [ ] Performance meets or exceeds current benchmarks
--   [ ] Compile times remain reasonable
--   [ ] Error handling provides equivalent or better user experience
+-   [x] All existing endpoints work with new routing framework
+-   [x] API contracts remain stable (same paths, methods, responses)
+-   [x] Middleware functionality preserved (CORS, auth, logging)
+-   [x] Performance meets or exceeds current benchmarks
+-   [x] Compile times remain reasonable
+-   [x] Error handling provides equivalent or better user experience
 
 ## Related ADRs
 

@@ -87,7 +87,7 @@ pub enum Error {
 
 ## DI Pattern
 
-Manual builder pattern (not full Shaku macros):
+Manual builder pattern with dill runtime DI (v0.1.2):
 
 ```rust
 pub struct InfrastructureComponents {
@@ -122,6 +122,6 @@ Before any commit:
 
 ## Documentation
 
--   ADRs: `docs/adr/README.md` (13 architectural decisions)
+-   ADRs: `docs/adr/README.md` (26+ architectural decisions)
 -   Architecture: `docs/architecture/ARCHITECTURE.md`
 -   Migration: `docs/migration/FROM_CLAUDE_CONTEXT.md`

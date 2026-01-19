@@ -2,12 +2,15 @@
 //!
 //! Handles loading configuration from various sources including
 //! TOML files, environment variables, and default values.
+//!
+//! Uses Figment for configuration management (migrated from config crate in v0.1.2).
 
 use crate::config::AppConfig;
 use crate::constants::*;
 use crate::error_ext::ErrorContext;
 use crate::logging::log_config_loaded;
-use config::{Config, Environment, File};
+use figment::providers::{Env, Format, Serialized, Toml};
+use figment::Figment;
 use mcb_domain::error::{Error, Result};
 use std::env;
 use std::path::{Path, PathBuf};
@@ -44,20 +47,19 @@ impl ConfigLoader {
     }
 
     /// Load configuration from all sources
+    ///
+    /// Configuration sources are merged in this order (later sources override earlier):
+    /// 1. Default values from `AppConfig::default()`
+    /// 2. TOML configuration file (if exists)
+    /// 3. Environment variables with prefix (e.g., `MCB_SERVER_PORT`)
     pub fn load(&self) -> Result<AppConfig> {
-        let mut builder = Config::builder();
-
         // Start with default configuration
-        builder = builder.add_source(config::File::from_str(
-            &toml::to_string(&AppConfig::default())
-                .context("Failed to serialize default config")?,
-            config::FileFormat::Toml,
-        ));
+        let mut figment = Figment::new().merge(Serialized::defaults(AppConfig::default()));
 
         // Add configuration file if specified
         if let Some(config_path) = &self.config_path {
             if config_path.exists() {
-                builder = builder.add_source(File::from(config_path.as_path()));
+                figment = figment.merge(Toml::file(config_path));
                 log_config_loaded(config_path, true);
             } else {
                 log_config_loaded(config_path, false);
@@ -66,28 +68,20 @@ impl ConfigLoader {
             // Try to find default config file
             if let Some(default_path) = Self::find_default_config_path() {
                 if default_path.exists() {
-                    builder = builder.add_source(File::from(default_path.as_path()));
+                    figment = figment.merge(Toml::file(&default_path));
                     log_config_loaded(&default_path, true);
                 }
             }
         }
 
         // Add environment variables
-        builder = builder.add_source(
-            Environment::with_prefix(&self.env_prefix)
-                .prefix_separator("_")
-                .separator("_")
-                .try_parsing(true)
-                .list_separator(" ")
-                .with_list_parse_key("server.cors_origins"),
-        );
+        // Uses underscore as separator for nested keys (e.g., MCB_SERVER_PORT)
+        figment = figment.merge(Env::prefixed(&format!("{}_", self.env_prefix)).split("_"));
 
-        // Build and deserialize configuration
-        let config = builder.build().context("Failed to build configuration")?;
-
-        let app_config: AppConfig = config
-            .try_deserialize()
-            .context("Failed to deserialize configuration")?;
+        // Extract and deserialize configuration
+        let app_config: AppConfig = figment
+            .extract()
+            .context("Failed to extract configuration")?;
 
         // Validate configuration
         self.validate_config(&app_config)?;

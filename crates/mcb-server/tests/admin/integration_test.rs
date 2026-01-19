@@ -2,18 +2,19 @@
 //!
 //! Complete end-to-end test that starts the admin server, hits all endpoints,
 //! and verifies the full stack works together.
+//!
+//! Migrated from Axum to Rocket in v0.1.2 (ADR-026).
 
 use async_trait::async_trait;
-use axum::body::Body;
-use axum::http::{Request, StatusCode};
 use mcb_application::ports::admin::PerformanceMetricsInterface;
 use mcb_application::ports::infrastructure::{DomainEventStream, EventBusProvider};
 use mcb_domain::error::Result;
 use mcb_domain::events::DomainEvent;
 use mcb_providers::admin::{AtomicPerformanceMetrics, DefaultIndexingOperations};
-use mcb_server::admin::{handlers::AdminState, routes::admin_router};
+use mcb_server::admin::{handlers::AdminState, routes::admin_rocket};
+use rocket::http::Status;
+use rocket::local::asynchronous::Client;
 use std::sync::Arc;
-use tower::ServiceExt;
 
 /// Null EventBus for testing
 struct TestEventBus;
@@ -64,29 +65,20 @@ fn create_shared_test_state() -> (
 }
 
 /// Full integration test exercising all admin endpoints and functionality
-#[tokio::test]
+#[rocket::async_test]
 async fn test_full_admin_stack_integration() {
     // 1. Create shared state for metrics and indexing
     let (state, metrics, indexing) = create_shared_test_state();
-    let router = admin_router(state);
+    let client = Client::tracked(admin_rocket(state))
+        .await
+        .expect("valid rocket instance");
 
     // 2. Verify initial health status
-    let response = router
-        .clone()
-        .oneshot(
-            Request::builder()
-                .uri("/health")
-                .body(Body::empty())
-                .unwrap(),
-        )
-        .await
-        .unwrap();
+    let response = client.get("/health").dispatch().await;
 
-    assert_eq!(response.status(), StatusCode::OK);
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
-        .await
-        .unwrap();
-    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(response.status(), Status::Ok);
+    let body = response.into_string().await.expect("response body");
+    let json: serde_json::Value = serde_json::from_str(&body).unwrap();
     assert_eq!(json["status"], "healthy");
     assert_eq!(json["active_indexing_operations"], 0);
 
@@ -97,22 +89,11 @@ async fn test_full_admin_stack_integration() {
     metrics.update_active_connections(5);
 
     // 4. Verify metrics endpoint reflects recorded data
-    let response = router
-        .clone()
-        .oneshot(
-            Request::builder()
-                .uri("/metrics")
-                .body(Body::empty())
-                .unwrap(),
-        )
-        .await
-        .unwrap();
+    let response = client.get("/metrics").dispatch().await;
 
-    assert_eq!(response.status(), StatusCode::OK);
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
-        .await
-        .unwrap();
-    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(response.status(), Status::Ok);
+    let body = response.into_string().await.expect("response body");
+    let json: serde_json::Value = serde_json::from_str(&body).unwrap();
 
     assert_eq!(json["total_queries"], 3);
     assert_eq!(json["successful_queries"], 2);
@@ -132,22 +113,11 @@ async fn test_full_admin_stack_integration() {
     indexing.update_progress(&op1, Some("src/main.rs".to_string()), 25);
 
     // 6. Verify indexing endpoint shows operations
-    let response = router
-        .clone()
-        .oneshot(
-            Request::builder()
-                .uri("/indexing")
-                .body(Body::empty())
-                .unwrap(),
-        )
-        .await
-        .unwrap();
+    let response = client.get("/indexing").dispatch().await;
 
-    assert_eq!(response.status(), StatusCode::OK);
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
-        .await
-        .unwrap();
-    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(response.status(), Status::Ok);
+    let body = response.into_string().await.expect("response body");
+    let json: serde_json::Value = serde_json::from_str(&body).unwrap();
 
     assert_eq!(json["is_indexing"], true);
     assert_eq!(json["active_operations"], 2);
@@ -166,104 +136,57 @@ async fn test_full_admin_stack_integration() {
     assert_eq!(alpha_op["current_file"], "src/main.rs");
 
     // 7. Health should now show active indexing operations
-    let response = router
-        .clone()
-        .oneshot(
-            Request::builder()
-                .uri("/health")
-                .body(Body::empty())
-                .unwrap(),
-        )
-        .await
-        .unwrap();
+    let response = client.get("/health").dispatch().await;
 
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
-        .await
-        .unwrap();
-    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    let body = response.into_string().await.expect("response body");
+    let json: serde_json::Value = serde_json::from_str(&body).unwrap();
     assert_eq!(json["active_indexing_operations"], 2);
 
     // 8. Complete one operation
     indexing.complete_operation(&op1);
 
-    let response = router
-        .clone()
-        .oneshot(
-            Request::builder()
-                .uri("/indexing")
-                .body(Body::empty())
-                .unwrap(),
-        )
-        .await
-        .unwrap();
+    let response = client.get("/indexing").dispatch().await;
 
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
-        .await
-        .unwrap();
-    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    let body = response.into_string().await.expect("response body");
+    let json: serde_json::Value = serde_json::from_str(&body).unwrap();
     assert_eq!(json["active_operations"], 1);
 
     // 9. Verify liveness probe (always OK)
-    let response = router
-        .clone()
-        .oneshot(Request::builder().uri("/live").body(Body::empty()).unwrap())
-        .await
-        .unwrap();
+    let response = client.get("/live").dispatch().await;
 
-    assert_eq!(response.status(), StatusCode::OK);
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
-        .await
-        .unwrap();
-    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(response.status(), Status::Ok);
+    let body = response.into_string().await.expect("response body");
+    let json: serde_json::Value = serde_json::from_str(&body).unwrap();
     assert_eq!(json["alive"], true);
 
     // 10. Wait for readiness (needs uptime > 1s)
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
-    let response = router
-        .oneshot(
-            Request::builder()
-                .uri("/ready")
-                .body(Body::empty())
-                .unwrap(),
-        )
-        .await
-        .unwrap();
+    let response = client.get("/ready").dispatch().await;
 
-    assert_eq!(response.status(), StatusCode::OK);
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
-        .await
-        .unwrap();
-    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(response.status(), Status::Ok);
+    let body = response.into_string().await.expect("response body");
+    let json: serde_json::Value = serde_json::from_str(&body).unwrap();
     assert_eq!(json["ready"], true);
 }
 
 /// Test that metrics accumulate correctly across multiple recording batches
-#[tokio::test]
+#[rocket::async_test]
 async fn test_metrics_accumulation_integration() {
     let (state, metrics, _) = create_shared_test_state();
-    let router = admin_router(state);
+    let client = Client::tracked(admin_rocket(state))
+        .await
+        .expect("valid rocket instance");
 
     // First batch of metrics
     for _ in 0..10 {
         metrics.record_query(50, true, true);
     }
 
-    let response = router
-        .clone()
-        .oneshot(
-            Request::builder()
-                .uri("/metrics")
-                .body(Body::empty())
-                .unwrap(),
-        )
-        .await
-        .unwrap();
+    let response = client.get("/metrics").dispatch().await;
 
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
-        .await
-        .unwrap();
-    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    let body = response.into_string().await.expect("response body");
+    let json: serde_json::Value = serde_json::from_str(&body).unwrap();
     assert_eq!(json["total_queries"], 10);
     assert_eq!(json["cache_hit_rate"], 1.0);
 
@@ -272,20 +195,10 @@ async fn test_metrics_accumulation_integration() {
         metrics.record_query(100, false, false);
     }
 
-    let response = router
-        .oneshot(
-            Request::builder()
-                .uri("/metrics")
-                .body(Body::empty())
-                .unwrap(),
-        )
-        .await
-        .unwrap();
+    let response = client.get("/metrics").dispatch().await;
 
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
-        .await
-        .unwrap();
-    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    let body = response.into_string().await.expect("response body");
+    let json: serde_json::Value = serde_json::from_str(&body).unwrap();
 
     assert_eq!(json["total_queries"], 15);
     assert_eq!(json["successful_queries"], 10);
@@ -299,10 +212,12 @@ async fn test_metrics_accumulation_integration() {
 }
 
 /// Test concurrent indexing operations lifecycle
-#[tokio::test]
+#[rocket::async_test]
 async fn test_indexing_lifecycle_integration() {
     let (state, _, indexing) = create_shared_test_state();
-    let router = admin_router(state);
+    let client = Client::tracked(admin_rocket(state))
+        .await
+        .expect("valid rocket instance");
 
     // Start 3 concurrent operations
     let op1 = indexing.start_operation("repo-1", 50);
@@ -310,21 +225,10 @@ async fn test_indexing_lifecycle_integration() {
     let op3 = indexing.start_operation("repo-3", 150);
 
     // Verify all 3 are tracked
-    let response = router
-        .clone()
-        .oneshot(
-            Request::builder()
-                .uri("/indexing")
-                .body(Body::empty())
-                .unwrap(),
-        )
-        .await
-        .unwrap();
+    let response = client.get("/indexing").dispatch().await;
 
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
-        .await
-        .unwrap();
-    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    let body = response.into_string().await.expect("response body");
+    let json: serde_json::Value = serde_json::from_str(&body).unwrap();
     assert_eq!(json["active_operations"], 3);
 
     // Progress updates
@@ -335,41 +239,20 @@ async fn test_indexing_lifecycle_integration() {
     // Complete op1
     indexing.complete_operation(&op1);
 
-    let response = router
-        .clone()
-        .oneshot(
-            Request::builder()
-                .uri("/indexing")
-                .body(Body::empty())
-                .unwrap(),
-        )
-        .await
-        .unwrap();
+    let response = client.get("/indexing").dispatch().await;
 
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
-        .await
-        .unwrap();
-    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    let body = response.into_string().await.expect("response body");
+    let json: serde_json::Value = serde_json::from_str(&body).unwrap();
     assert_eq!(json["active_operations"], 2);
 
     // Complete remaining
     indexing.complete_operation(&op2);
     indexing.complete_operation(&op3);
 
-    let response = router
-        .oneshot(
-            Request::builder()
-                .uri("/indexing")
-                .body(Body::empty())
-                .unwrap(),
-        )
-        .await
-        .unwrap();
+    let response = client.get("/indexing").dispatch().await;
 
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
-        .await
-        .unwrap();
-    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    let body = response.into_string().await.expect("response body");
+    let json: serde_json::Value = serde_json::from_str(&body).unwrap();
     assert_eq!(json["active_operations"], 0);
     assert_eq!(json["is_indexing"], false);
 }

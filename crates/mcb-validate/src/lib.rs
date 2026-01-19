@@ -46,6 +46,9 @@ pub mod linters;
 // === AST Analysis (Phase 2 - Pure Rust Pipeline) ===
 pub mod ast;
 
+// === Metrics Analysis (Phase 4 - Complexity Metrics) ===
+pub mod metrics;
+
 // === New Validators (using new system) ===
 pub mod clean_architecture;
 pub mod layer_flow;
@@ -110,6 +113,9 @@ pub use ast::{
     UnwrapDetector,
 };
 
+// Re-export Metrics module types (Phase 4)
+pub use metrics::{MetricsAnalyzer, MetricThreshold, MetricThresholds, MetricType, MetricViolation};
+
 // Re-export new validators
 pub use clean_architecture::{CleanArchitectureValidator, CleanArchitectureViolation};
 pub use layer_flow::{LayerFlowValidator, LayerFlowViolation};
@@ -134,7 +140,6 @@ pub use quality::{QualityValidator, QualityViolation};
 pub use reporter::{Reporter, ValidationReport, ValidationSummary};
 
 // Re-export ComponentType for strict directory validation
-// Used by organization and shaku validators
 pub use refactoring::{RefactoringValidator, RefactoringViolation};
 pub use solid::{SolidValidator, SolidViolation};
 pub use tests_org::{TestValidator, TestViolation};

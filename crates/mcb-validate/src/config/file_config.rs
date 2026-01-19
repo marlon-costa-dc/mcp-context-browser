@@ -107,7 +107,6 @@ impl FileConfig {
             "organization" => self.validators.organization,
             "quality" => self.validators.quality,
             "solid" => self.validators.solid,
-            "shaku" => self.validators.shaku,
             "architecture" => self.validators.architecture,
             "refactoring" => self.validators.refactoring,
             "naming" => self.validators.naming,
@@ -167,10 +166,6 @@ pub struct RulesConfig {
     /// SOLID principle rules
     #[serde(default)]
     pub solid: SolidRulesConfig,
-
-    /// Shaku/DI rules
-    #[serde(default)]
-    pub shaku: ShakuRulesConfig,
 }
 
 /// Architecture validation rules configuration
@@ -394,37 +389,6 @@ impl Default for SolidRulesConfig {
     }
 }
 
-/// Shaku/DI rules configuration
-#[derive(Debug, Clone, Deserialize)]
-pub struct ShakuRulesConfig {
-    /// Whether Shaku validation is enabled
-    #[serde(default = "default_true")]
-    pub enabled: bool,
-
-    /// Require Component derive for port implementations
-    #[serde(default = "default_true")]
-    pub require_component_derive: bool,
-
-    /// Require interface annotation
-    #[serde(default = "default_true")]
-    pub require_interface_annotation: bool,
-
-    /// Allow direct service construction in tests
-    #[serde(default = "default_true")]
-    pub allow_direct_construction_in_tests: bool,
-}
-
-impl Default for ShakuRulesConfig {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            require_component_derive: true,
-            require_interface_annotation: true,
-            allow_direct_construction_in_tests: true,
-        }
-    }
-}
-
 /// Validator enable/disable flags
 #[derive(Debug, Clone, Deserialize)]
 pub struct ValidatorsConfig {
@@ -436,8 +400,6 @@ pub struct ValidatorsConfig {
     pub quality: bool,
     #[serde(default = "default_true")]
     pub solid: bool,
-    #[serde(default = "default_true")]
-    pub shaku: bool,
     #[serde(default = "default_true")]
     pub architecture: bool,
     #[serde(default = "default_true")]
@@ -473,7 +435,6 @@ impl Default for ValidatorsConfig {
             organization: true,
             quality: true,
             solid: true,
-            shaku: true,
             architecture: true,
             refactoring: true,
             naming: true,

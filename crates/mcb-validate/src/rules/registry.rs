@@ -119,10 +119,6 @@ impl RuleRegistry {
             registry.register(rule);
         }
 
-        for rule in shaku_rules() {
-            registry.register(rule);
-        }
-
         for rule in linkme_rules() {
             registry.register(rule);
         }
@@ -361,42 +357,6 @@ pub fn solid_rules() -> Vec<Rule> {
             rationale: "Consider using polymorphism or strategy pattern".into(),
             enabled: true,
             config: HashMap::from([("max_arms".into(), RuleConfigValue::from(10i64))]),
-        },
-    ]
-}
-
-/// Shaku DI rules
-pub fn shaku_rules() -> Vec<Rule> {
-    vec![
-        Rule {
-            id: "SHAKU001".into(),
-            name: "Component Derive Required".into(),
-            category: ViolationCategory::DependencyInjection,
-            default_severity: Severity::Error,
-            description: "Port implementation missing #[derive(Component)]".into(),
-            rationale: "All port implementations must be Shaku components for DI".into(),
-            enabled: true,
-            config: HashMap::new(),
-        },
-        Rule {
-            id: "SHAKU002".into(),
-            name: "Interface Annotation Required".into(),
-            category: ViolationCategory::DependencyInjection,
-            default_severity: Severity::Error,
-            description: "Shaku component missing #[shaku(interface = ...)]".into(),
-            rationale: "Interface annotation connects component to its port trait".into(),
-            enabled: true,
-            config: HashMap::new(),
-        },
-        Rule {
-            id: "SHAKU003".into(),
-            name: "Concrete Type in Handler".into(),
-            category: ViolationCategory::DependencyInjection,
-            default_severity: Severity::Error,
-            description: "Handler uses concrete type instead of Arc<dyn Trait>".into(),
-            rationale: "Handlers should depend on abstractions, not concretions".into(),
-            enabled: true,
-            config: HashMap::new(),
         },
     ]
 }

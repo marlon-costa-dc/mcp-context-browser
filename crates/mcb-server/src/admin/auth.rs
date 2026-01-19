@@ -14,15 +14,13 @@
 //! The following routes are exempt from authentication:
 //! - `/live` - Kubernetes liveness probe
 //! - `/ready` - Kubernetes readiness probe
+//!
+//! Migrated from Axum to Rocket in v0.1.2 (ADR-026).
 
-use axum::{
-    body::Body,
-    extract::State,
-    http::{header::HeaderValue, Request, StatusCode},
-    middleware::Next,
-    response::{IntoResponse, Response},
-    Json,
-};
+use rocket::http::Status;
+use rocket::outcome::Outcome;
+use rocket::request::{self, FromRequest, Request};
+use rocket::serde::json::Json;
 use serde::Serialize;
 use std::sync::Arc;
 
@@ -90,9 +88,10 @@ pub struct AuthErrorResponse {
 }
 
 impl AuthErrorResponse {
-    fn not_configured() -> Response {
+    /// Create error for not configured auth
+    pub fn not_configured() -> (Status, Json<Self>) {
         (
-            StatusCode::SERVICE_UNAVAILABLE,
+            Status::ServiceUnavailable,
             Json(Self {
                 error: "auth_not_configured",
                 message: "Admin authentication is enabled but no API key is configured. \
@@ -100,27 +99,23 @@ impl AuthErrorResponse {
                     .to_string(),
             }),
         )
-            .into_response()
     }
 
-    fn invalid_key() -> Response {
+    /// Create error for invalid key
+    pub fn invalid_key() -> (Status, Json<Self>) {
         (
-            StatusCode::UNAUTHORIZED,
+            Status::Unauthorized,
             Json(Self {
                 error: "invalid_api_key",
                 message: "Invalid admin API key".to_string(),
             }),
         )
-            .into_response()
     }
 
-    fn missing_key(header_name: &str) -> Response {
+    /// Create error for missing key
+    pub fn missing_key(header_name: &str) -> (Status, Json<Self>) {
         (
-            StatusCode::UNAUTHORIZED,
-            [(
-                "WWW-Authenticate",
-                HeaderValue::from_static("ApiKey realm=\"admin\""),
-            )],
+            Status::Unauthorized,
             Json(Self {
                 error: "missing_api_key",
                 message: format!(
@@ -129,38 +124,70 @@ impl AuthErrorResponse {
                 ),
             }),
         )
-            .into_response()
     }
 }
 
-/// Admin authentication middleware
+/// Request guard for admin authentication
 ///
-/// Verifies the API key in the configured header.
-/// Returns 401 Unauthorized if authentication fails.
-/// Returns 503 Service Unavailable if auth is enabled but not properly configured.
-pub async fn admin_auth_middleware(
-    State(auth_config): State<Arc<AdminAuthConfig>>,
-    request: Request<Body>,
-    next: Next,
-) -> Response {
-    let path = request.uri().path();
-    if is_unauthenticated_route(path) || !auth_config.enabled {
-        return next.run(request).await;
-    }
+/// Add this guard to route handlers that require authentication:
+///
+/// ```rust,ignore
+/// #[get("/protected")]
+/// fn protected(_auth: AdminAuth) -> &'static str {
+///     "Protected content"
+/// }
+/// ```
+///
+/// Routes that should bypass authentication (like health checks)
+/// should not include this guard.
+pub struct AdminAuth;
 
-    if !auth_config.is_configured() {
-        return AuthErrorResponse::not_configured();
-    }
+/// Error type for admin authentication failures
+#[derive(Debug)]
+pub enum AdminAuthError {
+    /// Authentication not configured
+    NotConfigured,
+    /// Invalid API key
+    InvalidKey,
+    /// Missing API key
+    MissingKey(String),
+}
 
-    let api_key = request
-        .headers()
-        .get(&auth_config.header_name)
-        .and_then(|v| v.to_str().ok());
+#[rocket::async_trait]
+impl<'r> FromRequest<'r> for AdminAuth {
+    type Error = AdminAuthError;
 
-    match api_key {
-        Some(key) if auth_config.validate_key(key) => next.run(request).await,
-        Some(_) => AuthErrorResponse::invalid_key(),
-        None => AuthErrorResponse::missing_key(&auth_config.header_name),
+    async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
+        // Get auth config from managed state
+        let auth_config = match request.rocket().state::<Arc<AdminAuthConfig>>() {
+            Some(config) => config,
+            None => {
+                // No auth config means auth is disabled
+                return Outcome::Success(AdminAuth);
+            }
+        };
+
+        // If authentication is disabled, allow all requests
+        if !auth_config.enabled {
+            return Outcome::Success(AdminAuth);
+        }
+
+        // Check if auth is properly configured
+        if !auth_config.is_configured() {
+            return Outcome::Error((Status::ServiceUnavailable, AdminAuthError::NotConfigured));
+        }
+
+        // Get the API key from headers
+        let api_key = request.headers().get_one(&auth_config.header_name);
+
+        match api_key {
+            Some(key) if auth_config.validate_key(key) => Outcome::Success(AdminAuth),
+            Some(_) => Outcome::Error((Status::Unauthorized, AdminAuthError::InvalidKey)),
+            None => Outcome::Error((
+                Status::Unauthorized,
+                AdminAuthError::MissingKey(auth_config.header_name.clone()),
+            )),
+        }
     }
 }
 
@@ -169,12 +196,26 @@ pub fn is_unauthenticated_route(path: &str) -> bool {
     matches!(path, "/live" | "/ready")
 }
 
-/// Create a router with authentication middleware applied
+/// Wrapper function for backwards compatibility
 ///
-/// Returns a function that wraps a router with the authentication layer.
-pub fn with_admin_auth(auth_config: AdminAuthConfig, router: axum::Router) -> axum::Router {
-    router.layer(axum::middleware::from_fn_with_state(
-        Arc::new(auth_config),
-        admin_auth_middleware,
-    ))
+/// In Rocket, authentication is handled via Request Guards rather than
+/// middleware. This function is kept for API compatibility but is a no-op.
+/// Use the `AdminAuth` request guard directly in route handlers.
+///
+/// # Migration
+///
+/// Instead of:
+/// ```rust,ignore
+/// let router = with_admin_auth(auth_config, router);
+/// ```
+///
+/// Use request guards:
+/// ```rust,ignore
+/// #[get("/protected")]
+/// fn protected(_auth: AdminAuth) -> &'static str {
+///     "Protected"
+/// }
+/// ```
+pub fn with_admin_auth(auth_config: AdminAuthConfig, rocket: rocket::Rocket<rocket::Build>) -> rocket::Rocket<rocket::Build> {
+    rocket.manage(Arc::new(auth_config))
 }

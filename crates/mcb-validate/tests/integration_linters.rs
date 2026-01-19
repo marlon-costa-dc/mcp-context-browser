@@ -503,6 +503,8 @@ fn create_test_rule(
         fixes: Vec::new(),
         lint_select,
         message: None,
+        selectors: Vec::new(),
+        ast_query: None,
     }
 }
 

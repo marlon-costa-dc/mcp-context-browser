@@ -119,9 +119,8 @@ impl std::fmt::Display for CleanArchitectureViolation {
             } => {
                 write!(
                     f,
-                    "{} implements {} but missing #[shaku(interface = {})] at {}:{}",
+                    "{} implements {} but missing proper DI interface registration at {}:{}",
                     struct_name,
-                    trait_name,
                     trait_name,
                     file.display(),
                     line
@@ -230,10 +229,10 @@ impl Violation for CleanArchitectureViolation {
                 Some("Move implementation logic to mcb-providers or mcb-infrastructure".to_string())
             }
             Self::HandlerCreatesService { .. } => Some(
-                "Inject service via constructor/Shaku instead of creating directly".to_string(),
+                "Inject service via constructor injection instead of creating directly".to_string(),
             ),
             Self::PortMissingComponentDerive { trait_name, .. } => Some(format!(
-                "Add #[derive(Component)] and #[shaku(interface = {})]",
+                "Add proper DI component registration for {}",
                 trait_name
             )),
             Self::EntityMissingIdentity { .. } => {

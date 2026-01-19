@@ -1,11 +1,12 @@
 //! Web Handlers Module
 //!
 //! HTTP handlers for the admin web interface.
+//!
+//! Migrated from Axum to Rocket in v0.1.2 (ADR-026).
 
-use axum::{
-    http::{header, StatusCode},
-    response::{Html, IntoResponse},
-};
+use rocket::get;
+use rocket::http::ContentType;
+use rocket::response::content::RawHtml;
 
 // Embed templates at compile time
 const INDEX_HTML: &str = include_str!("templates/index.html");
@@ -14,30 +15,40 @@ const HEALTH_HTML: &str = include_str!("templates/health.html");
 const INDEXING_HTML: &str = include_str!("templates/indexing.html");
 
 /// Dashboard page handler
-pub async fn dashboard() -> Html<&'static str> {
-    Html(INDEX_HTML)
+#[get("/")]
+pub fn dashboard() -> RawHtml<&'static str> {
+    RawHtml(INDEX_HTML)
+}
+
+/// Dashboard page handler (alias)
+#[get("/ui")]
+pub fn dashboard_ui() -> RawHtml<&'static str> {
+    RawHtml(INDEX_HTML)
 }
 
 /// Configuration page handler
-pub async fn config_page() -> Html<&'static str> {
-    Html(CONFIG_HTML)
+#[get("/ui/config")]
+pub fn config_page() -> RawHtml<&'static str> {
+    RawHtml(CONFIG_HTML)
 }
 
 /// Health status page handler
-pub async fn health_page() -> Html<&'static str> {
-    Html(HEALTH_HTML)
+#[get("/ui/health")]
+pub fn health_page() -> RawHtml<&'static str> {
+    RawHtml(HEALTH_HTML)
 }
 
 /// Indexing status page handler
-pub async fn indexing_page() -> Html<&'static str> {
-    Html(INDEXING_HTML)
+#[get("/ui/indexing")]
+pub fn indexing_page() -> RawHtml<&'static str> {
+    RawHtml(INDEXING_HTML)
 }
 
 /// Favicon handler - returns a simple SVG icon
-pub async fn favicon() -> impl IntoResponse {
+#[get("/favicon.ico")]
+pub fn favicon() -> (ContentType, &'static str) {
     (
-        StatusCode::OK,
-        [(header::CONTENT_TYPE, "image/svg+xml")],
+        ContentType::SVG,
         r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">📊</text></svg>"#,
     )
 }

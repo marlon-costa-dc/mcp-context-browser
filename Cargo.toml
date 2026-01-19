@@ -50,8 +50,9 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 
 # Configuration
-config = "0.15"
+figment = { version = "0.10", features = ["toml", "env"] }
 toml = "0.9"
+# NOTE: config crate removed in v0.1.2 - migrated to figment (ADR-025)
 
 # Dependency injection
 dill = "0.15"
@@ -109,17 +110,16 @@ hex = "0.4"
 uuid = { version = "1.0", features = ["v4"] }
 dirs = "6.0"
 
-# HTTP server
-axum = "0.8"
-axum-extra = { version = "0.12", features = ["cookie"] }
-tower = { version = "0.5", features = ["load-shed", "limit", "load", "retry", "timeout", "util"] }
-tower-http = { version = "0.6", features = ["cors", "catch-panic", "request-id", "trace", "timeout", "limit", "compression-gzip"] }
+# HTTP server - Rocket (migrated from Axum in v0.1.2 - ADR-026)
+rocket = { version = "0.5", features = ["json"] }
+# NOTE: axum, axum-extra, tower, tower-http removed in v0.1.2 - migrated to Rocket (ADR-026)
 
 # System metrics
 sysinfo = "0.37.2"
 nix = { version = "0.30", features = ["fs"] }
 
 # Code analysis and AST parsing
+complexity = "0.2"  # Cognitive complexity for Rust (syn-based)
 tree-sitter = "0.26"
 tree-sitter-c = "0.24"
 tree-sitter-cpp = "0.23"
