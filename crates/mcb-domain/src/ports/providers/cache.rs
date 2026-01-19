@@ -10,7 +10,7 @@
 //! and factory-based creation.
 
 use async_trait::async_trait;
-use mcb_domain::error::Result;
+use crate::error::Result;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
@@ -230,7 +230,7 @@ pub trait CacheProviderFactoryInterface: Send + Sync {
     /// Create a cache provider from configuration
     async fn create_from_config(
         &self,
-        config: &mcb_domain::value_objects::config::CacheConfig,
+        config: &crate::value_objects::config::CacheConfig,
     ) -> Result<std::sync::Arc<dyn CacheProvider>>;
 
     /// Create a null cache provider for testing

@@ -8,16 +8,21 @@
 //! - **Cyclomatic Complexity**: Number of linearly independent paths
 //! - **Function Length**: Lines of code in a function
 //! - **Nesting Depth**: Maximum nesting level
+//! - **Halstead metrics**: Volume, Difficulty, Effort (via rust-code-analysis)
+//! - **Maintainability Index**: Overall maintainability score (via rust-code-analysis)
+//! - **LOC metrics**: SLOC, PLOC, LLOC, CLOC, BLANK (via rust-code-analysis)
 //!
 //! ## Supported Languages
 //!
 //! - Rust, Python, JavaScript, TypeScript, Go, Java, C, C++ (via Tree-sitter)
-//! - Rust (also via syn for backward compatibility)
+//! - Kotlin, Mozjs (via rust-code-analysis)
 
 mod analyzer;
+mod rca_analyzer;
 mod thresholds;
 
 pub use analyzer::{FunctionMetrics, MetricsLanguage, TreeSitterAnalyzer};
+pub use rca_analyzer::{RcaAnalyzer, RcaFunctionMetrics, RcaMetrics};
 pub use thresholds::{MetricThreshold, MetricThresholds, MetricType};
 
 use crate::violation_trait::{Severity, Violation, ViolationCategory};

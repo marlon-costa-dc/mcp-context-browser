@@ -4,7 +4,7 @@
 //! This provider passes through semantic results without any BM25 enhancement.
 
 use async_trait::async_trait;
-use mcb_application::ports::providers::HybridSearchProvider;
+use mcb_domain::ports::providers::HybridSearchProvider;
 use mcb_domain::{entities::CodeChunk, error::Result, value_objects::SearchResult};
 use serde_json::Value;
 use std::collections::HashMap;

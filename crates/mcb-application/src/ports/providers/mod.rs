@@ -4,6 +4,11 @@
 //! These interfaces define contracts for embedding providers, vector stores,
 //! language chunking, caching, cryptography, and other external services.
 //!
+//! ## Note
+//!
+//! Provider port traits are now defined in `mcb-domain` following Clean Architecture
+//! principles. This module re-exports them for backward compatibility.
+//!
 //! ## Provider Ports
 //!
 //! | Port | Description |
@@ -15,26 +20,29 @@
 //! | [`CacheProvider`] | Caching backend services |
 //! | [`CryptoProvider`] | Encryption/decryption services |
 
-/// Cache provider port
-pub mod cache;
-/// Config provider port
-pub mod config;
-/// Crypto provider port
-pub mod crypto;
-/// Embedding provider port
-pub mod embedding;
-/// Hybrid search provider port
-pub mod hybrid_search;
-/// Language chunking provider port
-pub mod language_chunking;
-/// Vector store provider port
-pub mod vector_store;
+// Re-export submodules from domain for backward compatibility with paths like `cache::CacheProvider`
+pub use mcb_domain::ports::providers::cache;
+pub use mcb_domain::ports::providers::config;
+pub use mcb_domain::ports::providers::crypto;
+pub use mcb_domain::ports::providers::embedding;
+pub use mcb_domain::ports::providers::hybrid_search;
+pub use mcb_domain::ports::providers::language_chunking;
+pub use mcb_domain::ports::providers::vector_store;
 
-// Re-export provider ports
-pub use cache::CacheProvider;
-pub use config::ProviderConfigManagerInterface;
-pub use crypto::{CryptoProvider, EncryptedData};
-pub use embedding::EmbeddingProvider;
-pub use hybrid_search::HybridSearchProvider;
-pub use language_chunking::LanguageChunkingProvider;
-pub use vector_store::{VectorStoreAdmin, VectorStoreProvider};
+// Re-export commonly used traits directly for convenience
+pub use mcb_domain::ports::providers::{
+    // Cache
+    CacheEntryConfig, CacheProvider, CacheProviderFactoryInterface, CacheStats,
+    // Crypto
+    CryptoProvider, EncryptedData,
+    // Embedding
+    EmbeddingProvider,
+    // Hybrid Search
+    HybridSearchProvider, HybridSearchResult,
+    // Language Chunking
+    LanguageChunkingProvider,
+    // Config
+    ProviderConfigManagerInterface,
+    // Vector Store
+    VectorStoreAdmin, VectorStoreProvider,
+};

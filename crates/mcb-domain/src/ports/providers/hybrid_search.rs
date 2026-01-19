@@ -4,9 +4,9 @@
 //! lexical (BM25) and semantic (vector) search.
 
 use async_trait::async_trait;
-use mcb_domain::entities::CodeChunk;
-use mcb_domain::error::Result;
-use mcb_domain::value_objects::SearchResult;
+use crate::entities::CodeChunk;
+use crate::error::Result;
+use crate::value_objects::SearchResult;
 use std::collections::HashMap;
 
 /// Result of a hybrid search operation

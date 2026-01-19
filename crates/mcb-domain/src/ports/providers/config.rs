@@ -2,8 +2,8 @@
 //!
 //! Port for configuration management of providers.
 
-use mcb_domain::error::Result;
-use mcb_domain::value_objects::{EmbeddingConfig, VectorStoreConfig};
+use crate::error::Result;
+use crate::value_objects::{EmbeddingConfig, VectorStoreConfig};
 
 /// Provider configuration manager interface
 ///
@@ -27,6 +27,7 @@ use mcb_domain::value_objects::{EmbeddingConfig, VectorStoreConfig};
 /// if config_manager.has_embedding_provider("openai") {
 ///     let config = config_manager.get_embedding_config("openai")?;
 ///     // Use config...
+/// 
 /// }
 /// ```
 #[async_trait::async_trait]

@@ -9,6 +9,7 @@
 //! |-----------|-------------|
 //! | [`entities`] | Core business entities with identity |
 //! | [`value_objects`] | Immutable value objects |
+//! | [`ports`] | External provider port interfaces |
 //! | [`constants`] | Domain constants |
 //! | [`error`] | Domain error types |
 //!
@@ -39,6 +40,8 @@ pub mod entities;
 pub mod error;
 /// Domain event interfaces
 pub mod events;
+/// External provider port interfaces
+pub mod ports;
 /// Repository interfaces
 pub mod repositories;
 /// Immutable value objects

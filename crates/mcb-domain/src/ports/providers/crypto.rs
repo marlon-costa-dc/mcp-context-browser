@@ -11,7 +11,7 @@
 //! - Providers depend on the abstraction, not the concrete implementation
 
 use async_trait::async_trait;
-use mcb_domain::error::Result;
+use crate::error::Result;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 

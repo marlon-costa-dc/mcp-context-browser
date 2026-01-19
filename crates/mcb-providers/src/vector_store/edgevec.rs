@@ -15,7 +15,7 @@ use crate::constants::{
 };
 use crate::utils::JsonExt;
 use edgevec::hnsw::VectorId;
-use mcb_application::ports::providers::{VectorStoreAdmin, VectorStoreProvider};
+use mcb_domain::ports::providers::{VectorStoreAdmin, VectorStoreProvider};
 use mcb_domain::error::{Error, Result};
 use mcb_domain::value_objects::{Embedding, SearchResult};
 

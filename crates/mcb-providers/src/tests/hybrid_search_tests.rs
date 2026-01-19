@@ -2,7 +2,7 @@
 
 use crate::constants::{HYBRID_SEARCH_BM25_WEIGHT, HYBRID_SEARCH_SEMANTIC_WEIGHT};
 use crate::hybrid_search::{BM25Params, BM25Scorer, HybridSearchEngine, NullHybridSearchProvider};
-use mcb_application::ports::providers::HybridSearchProvider;
+use mcb_domain::ports::providers::HybridSearchProvider;
 use mcb_domain::entities::CodeChunk;
 use mcb_domain::value_objects::SearchResult;
 

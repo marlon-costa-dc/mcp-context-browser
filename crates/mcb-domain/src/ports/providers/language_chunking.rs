@@ -10,8 +10,8 @@
 //! [`VectorStoreProvider`], enabling consistent provider registration,
 //! factory creation, and feature-flag based compilation.
 
-use mcb_domain::entities::CodeChunk;
-use mcb_domain::value_objects::Language;
+use crate::entities::CodeChunk;
+use crate::value_objects::Language;
 
 /// Language-Specific Code Chunking Provider
 ///
@@ -30,7 +30,7 @@ use mcb_domain::value_objects::Language;
 ///
 /// ```ignore
 /// use mcb_domain::ports::providers::LanguageChunkingProvider;
-/// use mcb_domain::value_objects::Language;
+/// use crate::value_objects::Language;
 ///
 /// // Get provider from registry
 /// let provider: Arc<dyn LanguageChunkingProvider> = registry.get_by_extension("rs")?;

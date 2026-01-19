@@ -7,7 +7,7 @@ use std::time::Duration;
 use async_trait::async_trait;
 use reqwest::Client;
 
-use mcb_application::ports::EmbeddingProvider;
+use mcb_domain::ports::providers::EmbeddingProvider;
 use mcb_domain::error::{Error, Result};
 use mcb_domain::value_objects::Embedding;
 
@@ -210,7 +210,7 @@ use std::sync::Arc;
 use mcb_application::ports::registry::{
     EmbeddingProviderConfig, EmbeddingProviderEntry, EMBEDDING_PROVIDERS,
 };
-use mcb_application::ports::EmbeddingProvider as EmbeddingProviderPort;
+use mcb_domain::ports::providers::EmbeddingProvider as EmbeddingProviderPort;
 
 /// Factory function for creating Gemini embedding provider instances.
 fn gemini_factory(

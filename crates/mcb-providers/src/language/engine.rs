@@ -270,7 +270,7 @@ impl Default for UniversalLanguageChunkingProvider {
     }
 }
 
-impl mcb_application::ports::providers::LanguageChunkingProvider
+impl mcb_domain::ports::providers::LanguageChunkingProvider
     for UniversalLanguageChunkingProvider
 {
     fn language(&self) -> mcb_domain::value_objects::Language {
@@ -301,7 +301,7 @@ impl mcb_application::ports::providers::LanguageChunkingProvider
 
 use std::sync::Arc;
 
-use mcb_application::ports::providers::LanguageChunkingProvider as LanguageProviderPort;
+use mcb_domain::ports::providers::LanguageChunkingProvider as LanguageProviderPort;
 use mcb_application::ports::registry::{
     LanguageProviderConfig, LanguageProviderEntry, LANGUAGE_PROVIDERS,
 };

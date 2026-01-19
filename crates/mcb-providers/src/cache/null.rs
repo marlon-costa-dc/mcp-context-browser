@@ -4,7 +4,7 @@
 //! Useful for testing and disabling caching.
 
 use async_trait::async_trait;
-use mcb_application::ports::providers::cache::{CacheEntryConfig, CacheProvider, CacheStats};
+use mcb_domain::ports::providers::cache::{CacheEntryConfig, CacheProvider, CacheStats};
 use mcb_domain::error::Result;
 
 /// Null cache provider that doesn't store anything

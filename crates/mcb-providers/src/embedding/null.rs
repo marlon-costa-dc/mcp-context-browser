@@ -5,7 +5,7 @@
 
 use async_trait::async_trait;
 
-use mcb_application::ports::EmbeddingProvider;
+use mcb_domain::ports::providers::EmbeddingProvider;
 use mcb_domain::error::Result;
 use mcb_domain::value_objects::Embedding;
 
@@ -21,7 +21,7 @@ use crate::constants::EMBEDDING_DIMENSION_NULL;
 ///
 /// ```rust
 /// use mcb_providers::embedding::NullEmbeddingProvider;
-/// use mcb_application::ports::EmbeddingProvider;
+/// use mcb_domain::ports::providers::EmbeddingProvider;
 ///
 /// let provider = NullEmbeddingProvider::new();
 /// assert_eq!(provider.dimensions(), 384);
@@ -103,7 +103,7 @@ use std::sync::Arc;
 use mcb_application::ports::registry::{
     EmbeddingProviderConfig, EmbeddingProviderEntry, EMBEDDING_PROVIDERS,
 };
-use mcb_application::ports::EmbeddingProvider as EmbeddingProviderPort;
+use mcb_domain::ports::providers::EmbeddingProvider as EmbeddingProviderPort;
 
 /// Factory function for creating null embedding provider instances.
 fn null_embedding_factory(

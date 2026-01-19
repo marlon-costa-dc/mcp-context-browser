@@ -68,9 +68,12 @@ minimal = ["embedding-ollama", "vectorstore-memory", "cache-moka", "hybrid-searc
 full = ["embedding-all", "vectorstore-all", "cache-all", "hybrid-search", "lang-all"]
 
 [dependencies]
-# Domain layer
+# Domain layer - contains provider port traits (Clean Architecture)
 mcb-domain = { path = "../mcb-domain" }
-# Application layer - for port interfaces
+
+# Application layer - for registry and admin/infrastructure ports
+# NOTE: Provider traits (EmbeddingProvider, VectorStoreProvider, etc.) are now in mcb-domain.
+# This dependency is kept for: registry auto-registration, admin ports, infrastructure ports.
 mcb-application = { path = "../mcb-application" }
 
 # Core async runtime

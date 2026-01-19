@@ -1,6 +1,6 @@
 use async_trait::async_trait;
-use mcb_domain::error::Result;
-use mcb_domain::value_objects::{Embedding, SearchResult};
+use crate::error::Result;
+use crate::value_objects::{Embedding, SearchResult};
 use serde_json::Value;
 use std::collections::HashMap;
 

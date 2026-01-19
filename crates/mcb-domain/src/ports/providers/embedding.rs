@@ -1,6 +1,6 @@
 use async_trait::async_trait;
-use mcb_domain::error::Result;
-use mcb_domain::value_objects::Embedding;
+use crate::error::Result;
+use crate::value_objects::Embedding;
 
 /// AI Semantic Understanding Interface
 ///
@@ -40,7 +40,7 @@ pub trait EmbeddingProvider: Send + Sync {
         embeddings
             .into_iter()
             .next()
-            .ok_or_else(|| mcb_domain::error::Error::embedding("No embedding returned"))
+            .ok_or_else(|| crate::error::Error::embedding("No embedding returned"))
     }
 
     /// Get embeddings for multiple texts (must be implemented by provider)
