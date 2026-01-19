@@ -3,13 +3,15 @@
 //! Null implementation of the authentication port for testing.
 
 use async_trait::async_trait;
-use dill::{component, interface};
 use mcb_application::ports::infrastructure::AuthServiceInterface;
 use mcb_domain::error::Result;
 
 /// Null implementation for testing
-#[component]
-#[interface(dyn AuthServiceInterface)]
+///
+/// Registered with dill Catalog via `add_value` in bootstrap.rs.
+/// Note: dill's `#[component]` macro is incompatible with our architecture
+/// because it requires `InjectionError` error type and generates a conflicting
+/// `new()` method. We use `add_value` pattern instead.
 pub struct NullAuthService;
 
 impl NullAuthService {

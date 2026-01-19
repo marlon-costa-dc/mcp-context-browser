@@ -9,8 +9,13 @@ engine: "rusty-rules"
 description: "Application crate only depends on domain"
 rationale: "Application orchestrates domain logic without infrastructure details"
 
+crate_name: "mcb-application"
+forbidden_prefixes: []
+allowed_dependencies: ["mcb-domain"]
+
 config:
   crate_name: "mcb-application"
+  forbidden_prefixes: []
   allowed_dependencies: ["mcb-domain"]
 
 rule: |

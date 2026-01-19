@@ -95,12 +95,14 @@ pub use config::{
 // Re-export rule registry and YAML system
 pub use engines::{HybridRuleEngine, RuleEngineType};
 pub use rules::templates::TemplateEngine;
-pub use rules::yaml_loader::YamlRuleLoader;
+pub use rules::yaml_loader::{ValidatedRule, YamlRuleLoader};
 pub use rules::yaml_validator::YamlRuleValidator;
 pub use rules::{Rule, RuleRegistry};
 
 // Re-export linter integration
-pub use linters::{ClippyLinter, LintViolation, LinterEngine, LinterType, RuffLinter};
+pub use linters::{
+    ClippyLinter, LintViolation, LinterEngine, LinterType, RuffLinter, YamlRuleExecutor,
+};
 
 // Re-export AST module types
 pub use ast::{

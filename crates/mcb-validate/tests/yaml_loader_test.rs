@@ -1,0 +1,102 @@
+//! Tests for YAML rule loader
+
+#[cfg(test)]
+mod yaml_loader_tests {
+    use mcb_validate::rules::yaml_loader::YamlRuleLoader;
+    use tempfile::TempDir;
+
+    #[tokio::test]
+    async fn test_load_valid_rule() {
+        let temp_dir = TempDir::new().unwrap();
+        let rules_dir = temp_dir.path().join("rules");
+        std::fs::create_dir(&rules_dir).unwrap();
+
+        // Create a valid rule file
+        let rule_content = r#"
+schema: "rule/v1"
+id: "TEST001"
+name: "Test Rule"
+category: "architecture"
+severity: "error"
+description: "This is a test rule with enough description to pass validation"
+rationale: "This rule exists for testing purposes and has enough rationale"
+engine: "rust-rule-engine"
+config:
+  crate_name: "test-crate"
+rule:
+  type: "cargo_dependencies"
+  condition: "not_exists"
+  pattern: "forbidden-*"
+"#;
+
+        let rule_file = rules_dir.join("test-rule.yml");
+        std::fs::write(&rule_file, rule_content).unwrap();
+
+        let mut loader = YamlRuleLoader::new(rules_dir).unwrap();
+        let rules = loader.load_all_rules().await.unwrap();
+
+        assert_eq!(rules.len(), 1);
+        assert_eq!(rules[0].id, "TEST001");
+        assert_eq!(rules[0].name, "Test Rule");
+    }
+
+    #[tokio::test]
+    async fn test_load_rule_with_template() {
+        let temp_dir = TempDir::new().unwrap();
+        let rules_dir = temp_dir.path().join("rules");
+        let templates_dir = rules_dir.join("templates");
+        std::fs::create_dir_all(&templates_dir).unwrap();
+
+        // Create a template
+        let template_content = r#"
+schema: "template/v1"
+_base: true
+name: "cargo_dependency_check"
+category: "architecture"
+severity: "error"
+enabled: true
+description: "Template for checking Cargo.toml dependencies"
+rationale: "Dependencies should follow architectural boundaries"
+
+config:
+  crate_name: "{{crate_name}}"
+  forbidden_prefixes: {{forbidden_prefixes}}
+
+rule:
+  type: "cargo_dependencies"
+  condition: "not_exists"
+  pattern: "{{forbidden_prefixes}}"
+"#;
+
+        std::fs::write(
+            templates_dir.join("cargo-dependency-check.yml"),
+            template_content,
+        )
+        .unwrap();
+
+        // Create a rule using the template (template name is from YAML 'name' field)
+        // Variables for substitution must be at root level; config section overrides template's config
+        let rule_content = r#"
+_template: "cargo_dependency_check"
+id: "TEST002"
+name: "Domain Dependencies"
+description: "Domain must not depend on other layers"
+rationale: "Domain should be independent"
+crate_name: "mcb-domain"
+forbidden_prefixes: ["mcb-"]
+
+config:
+  crate_name: "mcb-domain"
+  forbidden_prefixes: ["mcb-"]
+"#;
+
+        std::fs::write(rules_dir.join("domain-deps.yml"), rule_content).unwrap();
+
+        let mut loader = YamlRuleLoader::new(rules_dir).unwrap();
+        let rules = loader.load_all_rules().await.unwrap();
+
+        assert_eq!(rules.len(), 1);
+        assert_eq!(rules[0].id, "TEST002");
+        assert!(rules[0].description.contains("Domain must not depend"));
+    }
+}

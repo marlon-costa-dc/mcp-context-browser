@@ -198,38 +198,47 @@ impl EmbeddingProvider for OpenAIEmbeddingProvider {
 }
 
 // ============================================================================
-// Auto-registration via inventory
+// Auto-registration via linkme distributed slice
 // ============================================================================
 
-use mcb_application::ports::registry::EMBEDDING_PROVIDERS;
+use std::sync::Arc;
+
+use mcb_application::ports::registry::{
+    EmbeddingProviderConfig, EmbeddingProviderEntry, EMBEDDING_PROVIDERS,
+};
+use mcb_application::ports::EmbeddingProvider as EmbeddingProviderPort;
+
+/// Factory function for creating OpenAI embedding provider instances.
+fn openai_factory(
+    config: &EmbeddingProviderConfig,
+) -> std::result::Result<Arc<dyn EmbeddingProviderPort>, String> {
+    let api_key = config
+        .api_key
+        .clone()
+        .ok_or_else(|| "OpenAI requires api_key".to_string())?;
+    let base_url = config.base_url.clone();
+    let model = config
+        .model
+        .clone()
+        .unwrap_or_else(|| "text-embedding-3-small".to_string());
+    let timeout = Duration::from_secs(30);
+    let http_client = Client::builder()
+        .timeout(timeout)
+        .build()
+        .map_err(|e| format!("Failed to create HTTP client: {e}"))?;
+
+    Ok(Arc::new(OpenAIEmbeddingProvider::new(
+        api_key,
+        base_url,
+        model,
+        timeout,
+        http_client,
+    )))
+}
 
 #[linkme::distributed_slice(EMBEDDING_PROVIDERS)]
-static OPENAI_PROVIDER: mcb_application::ports::registry::EmbeddingProviderEntry =
-    mcb_application::ports::registry::EmbeddingProviderEntry {
-        name: "openai",
-        description: "OpenAI embedding provider (text-embedding-3-small/large, ada-002)",
-        factory: |config: &mcb_application::ports::EmbeddingProviderConfig| {
-            let api_key = config
-                .api_key
-                .clone()
-                .ok_or_else(|| "OpenAI requires api_key".to_string())?;
-            let base_url = config.base_url.clone();
-            let model = config
-                .model
-                .clone()
-                .unwrap_or_else(|| "text-embedding-3-small".to_string());
-            let timeout = std::time::Duration::from_secs(30);
-            let http_client = reqwest::Client::builder()
-                .timeout(timeout)
-                .build()
-                .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
-
-            Ok(std::sync::Arc::new(OpenAIEmbeddingProvider::new(
-                api_key,
-                base_url,
-                model,
-                timeout,
-                http_client,
-            )))
-        },
-    };
+static OPENAI_PROVIDER: EmbeddingProviderEntry = EmbeddingProviderEntry {
+    name: "openai",
+    description: "OpenAI embedding provider (text-embedding-3-small/large, ada-002)",
+    factory: openai_factory,
+};

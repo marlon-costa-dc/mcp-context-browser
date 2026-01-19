@@ -704,31 +704,38 @@ impl VectorStoreProvider for MilvusVectorStoreProvider {
 }
 
 // ============================================================================
-// Auto-registration via linkme
+// Auto-registration via linkme distributed slice
 // ============================================================================
+
+use std::sync::Arc;
 
 use mcb_application::ports::registry::{
     VectorStoreProviderConfig, VectorStoreProviderEntry, VECTOR_STORE_PROVIDERS,
 };
 
+/// Factory function for creating Milvus vector store provider instances.
+fn milvus_factory(
+    config: &VectorStoreProviderConfig,
+) -> std::result::Result<Arc<dyn VectorStoreProvider>, String> {
+    let uri = config
+        .uri
+        .clone()
+        .unwrap_or_else(|| "http://localhost:19530".to_string());
+    let token = config.api_key.clone();
+
+    // Create Milvus client synchronously using block_on
+    let provider = tokio::task::block_in_place(|| {
+        tokio::runtime::Handle::current()
+            .block_on(async { MilvusVectorStoreProvider::new(uri, token, None).await })
+    })
+    .map_err(|e| format!("Failed to create Milvus provider: {e}"))?;
+
+    Ok(Arc::new(provider))
+}
+
 #[linkme::distributed_slice(VECTOR_STORE_PROVIDERS)]
 static MILVUS_PROVIDER: VectorStoreProviderEntry = VectorStoreProviderEntry {
     name: "milvus",
     description: "Milvus distributed vector database",
-    factory: |config: &VectorStoreProviderConfig| {
-        let uri = config
-            .uri
-            .clone()
-            .unwrap_or_else(|| "http://localhost:19530".to_string());
-        let token = config.api_key.clone();
-
-        // Create Milvus client synchronously using block_on
-        let provider = tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current()
-                .block_on(async { MilvusVectorStoreProvider::new(uri, token, None).await })
-        })
-        .map_err(|e| format!("Failed to create Milvus provider: {}", e))?;
-
-        Ok(std::sync::Arc::new(provider))
-    },
+    factory: milvus_factory,
 };

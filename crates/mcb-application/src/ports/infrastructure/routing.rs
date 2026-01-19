@@ -11,20 +11,15 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Health status for a provider
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum ProviderHealthStatus {
     /// Provider is functioning normally
+    #[default]
     Healthy,
     /// Provider is experiencing issues but still usable
     Degraded,
     /// Provider is not available
     Unhealthy,
-}
-
-impl Default for ProviderHealthStatus {
-    fn default() -> Self {
-        Self::Healthy
-    }
 }
 
 /// Context for provider selection decisions

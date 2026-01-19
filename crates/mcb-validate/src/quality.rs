@@ -280,7 +280,9 @@ impl QualityValidator {
                     let lines: Vec<&str> = content.lines().collect();
                     if detection.line > 0 && detection.line <= lines.len() {
                         let line_content = lines[detection.line - 1];
-                        if line_content.contains("// SAFETY:") || line_content.contains("// safety:") {
+                        if line_content.contains("// SAFETY:")
+                            || line_content.contains("// safety:")
+                        {
                             continue;
                         }
                     }

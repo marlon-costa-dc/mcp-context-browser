@@ -8,16 +8,8 @@ enabled: true
 description: "Production code should not use .unwrap()"
 rationale: "Unwrap can cause panics; use ? operator or proper error handling"
 
-selectors:
-  - language: "rust"
-    node_type: "call_expression"
-    pattern: "(call_expression function: (identifier) @func (#eq? @func \"unwrap\"))"
-  - language: "python"
-    node_type: "call"
-    pattern: "(call function: (identifier) @func (#eq? @func \"unwrap\"))"
-
-ast_query: "(call_expression function: (identifier) @func) (#eq? @func \"unwrap\")"
-condition: "not_in_test_function and not_in_example"
-message: "Avoid .unwrap() in production code"
-
+# Phase 1: Uses Clippy linter integration
+# Future phases may add AST selectors for cross-language support
 lint_select: ["clippy::unwrap_used"]
+
+message: "Avoid .unwrap() in production code"

@@ -156,21 +156,28 @@ impl std::fmt::Debug for MokaCacheProvider {
 }
 
 // ============================================================================
-// Auto-registration via linkme
+// Auto-registration via linkme distributed slice
 // ============================================================================
 
+use std::sync::Arc;
+
 use mcb_application::ports::registry::{CacheProviderConfig, CacheProviderEntry, CACHE_PROVIDERS};
+
+/// Factory function for creating Moka cache provider instances.
+fn moka_cache_factory(
+    config: &CacheProviderConfig,
+) -> std::result::Result<Arc<dyn CacheProvider>, String> {
+    let provider = if let Some(max_size) = config.max_size {
+        MokaCacheProvider::with_capacity(max_size)
+    } else {
+        MokaCacheProvider::new()
+    };
+    Ok(Arc::new(provider))
+}
 
 #[linkme::distributed_slice(CACHE_PROVIDERS)]
 static MOKA_PROVIDER: CacheProviderEntry = CacheProviderEntry {
     name: "moka",
     description: "Moka high-performance in-memory cache",
-    factory: |config: &CacheProviderConfig| {
-        let provider = if let Some(max_size) = config.max_size {
-            MokaCacheProvider::with_capacity(max_size)
-        } else {
-            MokaCacheProvider::new()
-        };
-        Ok(std::sync::Arc::new(provider))
-    },
+    factory: moka_cache_factory,
 };

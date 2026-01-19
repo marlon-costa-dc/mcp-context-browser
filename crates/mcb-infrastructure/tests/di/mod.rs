@@ -5,6 +5,8 @@
 //! - Component registration and resolution (via Shaku)
 //! - Container bootstrap
 //! - Module composition
+//! - Provider resolution
 
 mod dispatch_test;
 mod modules_test;
+mod resolver_tests;

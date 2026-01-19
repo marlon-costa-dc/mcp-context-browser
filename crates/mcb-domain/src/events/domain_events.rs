@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 /// Service lifecycle state for managed services
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Default)]
 pub enum ServiceState {
     /// Service is starting up
     Starting,
@@ -20,18 +20,13 @@ pub enum ServiceState {
     /// Service is stopping
     Stopping,
     /// Service is stopped
+    #[default]
     Stopped,
     /// Service failed with error
     Failed {
         /// Reason for failure
         reason: String,
     },
-}
-
-impl Default for ServiceState {
-    fn default() -> Self {
-        Self::Stopped
-    }
 }
 
 /// System-wide event types for decoupled service communication

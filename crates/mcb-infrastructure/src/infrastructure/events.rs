@@ -4,7 +4,6 @@
 //! For testing, use NullEventBusProvider from mcb-providers.
 
 use async_trait::async_trait;
-use dill::{component, interface};
 use futures::stream;
 use mcb_application::ports::infrastructure::{DomainEventStream, EventBusProvider};
 use mcb_domain::error::Result;
@@ -21,8 +20,6 @@ const DEFAULT_CAPACITY: usize = 1024;
 /// Provides in-process event distribution with multiple subscribers.
 /// Events are broadcast to all active subscribers without persistence.
 #[derive(Clone)]
-#[component]
-#[interface(dyn EventBusProvider)]
 pub struct TokioBroadcastEventBus {
     sender: Arc<broadcast::Sender<DomainEvent>>,
 }

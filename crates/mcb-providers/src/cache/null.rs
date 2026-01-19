@@ -79,14 +79,23 @@ impl CacheProvider for NullCacheProvider {
 }
 
 // ============================================================================
-// Auto-registration via linkme
+// Auto-registration via linkme distributed slice
 // ============================================================================
 
+use std::sync::Arc;
+
 use mcb_application::ports::registry::{CacheProviderConfig, CacheProviderEntry, CACHE_PROVIDERS};
+
+/// Factory function for creating null cache provider instances.
+fn null_cache_factory(
+    _config: &CacheProviderConfig,
+) -> std::result::Result<Arc<dyn CacheProvider>, String> {
+    Ok(Arc::new(NullCacheProvider::new()))
+}
 
 #[linkme::distributed_slice(CACHE_PROVIDERS)]
 static NULL_CACHE_PROVIDER: CacheProviderEntry = CacheProviderEntry {
     name: "null",
     description: "Null cache provider for testing (no-op operations)",
-    factory: |_config: &CacheProviderConfig| Ok(std::sync::Arc::new(NullCacheProvider::new())),
+    factory: null_cache_factory,
 };

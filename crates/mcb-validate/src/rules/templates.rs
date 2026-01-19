@@ -67,7 +67,13 @@ impl TemplateEngine {
                     .and_then(|v| v.as_bool())
                     .unwrap_or(false)
                 {
-                    self.templates.insert(template_name.to_string(), template);
+                    // Use the 'name' field from template YAML if present, otherwise use filename
+                    let registry_name = template
+                        .get("name")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string())
+                        .unwrap_or_else(|| template_name.to_string());
+                    self.templates.insert(registry_name, template);
                 }
             }
         }
@@ -236,7 +242,8 @@ config:
         let mut engine = TemplateEngine::new();
         engine.load_templates(&rules_dir).await.unwrap();
 
-        assert!(engine.has_template("test-template"));
+        // Template is registered using the 'name' field from YAML, not filename
+        assert!(engine.has_template("test_template"));
     }
 
     #[test]

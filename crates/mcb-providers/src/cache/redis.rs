@@ -240,24 +240,29 @@ impl std::fmt::Debug for RedisCacheProvider {
 }
 
 // ============================================================================
-// Auto-registration via linkme
+// Auto-registration via linkme distributed slice
 // ============================================================================
 
 use mcb_application::ports::registry::{CacheProviderConfig, CacheProviderEntry, CACHE_PROVIDERS};
+
+/// Factory function for creating Redis cache provider instances.
+fn redis_cache_factory(
+    config: &CacheProviderConfig,
+) -> std::result::Result<Arc<dyn CacheProvider>, String> {
+    let uri = config
+        .uri
+        .clone()
+        .unwrap_or_else(|| "redis://localhost:6379".to_string());
+
+    let provider = RedisCacheProvider::new(&uri)
+        .map_err(|e| format!("Failed to create Redis provider: {e}"))?;
+
+    Ok(Arc::new(provider))
+}
 
 #[linkme::distributed_slice(CACHE_PROVIDERS)]
 static REDIS_PROVIDER: CacheProviderEntry = CacheProviderEntry {
     name: "redis",
     description: "Redis distributed cache",
-    factory: |config: &CacheProviderConfig| {
-        let uri = config
-            .uri
-            .clone()
-            .unwrap_or_else(|| "redis://localhost:6379".to_string());
-
-        let provider = RedisCacheProvider::new(&uri)
-            .map_err(|e| format!("Failed to create Redis provider: {}", e))?;
-
-        Ok(std::sync::Arc::new(provider))
-    },
+    factory: redis_cache_factory,
 };

@@ -12,6 +12,7 @@ Thank you for your interest in contributing! This guide helps you get started wi
 ### Setup Development Environment
 
 ```bash
+
 # Clone the repository
 git clone https://github.com/marlonsc/mcp-context-browser.git
 cd mcp-context-browser
@@ -81,6 +82,7 @@ docs: update API documentation
 ### Running Tests
 
 ```bash
+
 # Run all tests (790+)
 make test
 
@@ -196,6 +198,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Running Examples
 
 ```bash
+
 # Run a specific example
 cargo run --example config_demo
 

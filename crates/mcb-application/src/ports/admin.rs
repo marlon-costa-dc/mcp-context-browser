@@ -123,7 +123,7 @@ pub trait IndexingOperationsInterface: Send + Sync {
 // ============================================================================
 
 /// Health status for a service dependency
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 pub enum DependencyHealth {
     /// Service is healthy and responsive
     Healthy,
@@ -132,13 +132,8 @@ pub enum DependencyHealth {
     /// Service is unhealthy or unresponsive
     Unhealthy,
     /// Health status is unknown (not checked)
+    #[default]
     Unknown,
-}
-
-impl Default for DependencyHealth {
-    fn default() -> Self {
-        Self::Unknown
-    }
 }
 
 /// Detailed health check result for a service dependency
@@ -157,7 +152,7 @@ pub struct DependencyHealthCheck {
 }
 
 /// Service lifecycle state
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
 pub enum ServiceState {
     /// Service is starting up
     Starting,
@@ -166,13 +161,8 @@ pub enum ServiceState {
     /// Service is shutting down
     Stopping,
     /// Service is stopped
+    #[default]
     Stopped,
-}
-
-impl Default for ServiceState {
-    fn default() -> Self {
-        Self::Stopped
-    }
 }
 
 /// Lifecycle management interface for services

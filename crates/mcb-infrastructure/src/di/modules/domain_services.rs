@@ -58,24 +58,20 @@ impl DomainServicesFactory {
     /// Create domain services using infrastructure components
     pub async fn create_services(deps: ServiceDependencies) -> Result<DomainServicesContainer> {
         // Create context service with dependencies
-        let context_service: Arc<dyn ContextServiceInterface> =
-            Arc::new(ContextServiceImpl::new(
-                deps.cache.into(),
-                deps.embedding_provider,
-                deps.vector_store_provider,
-            ));
+        let context_service: Arc<dyn ContextServiceInterface> = Arc::new(ContextServiceImpl::new(
+            deps.cache.into(),
+            deps.embedding_provider,
+            deps.vector_store_provider,
+        ));
 
         // Create search service with context service dependency
-        let search_service: Arc<dyn SearchServiceInterface> = Arc::new(
-            SearchServiceImpl::new(Arc::clone(&context_service)),
-        );
+        let search_service: Arc<dyn SearchServiceInterface> =
+            Arc::new(SearchServiceImpl::new(Arc::clone(&context_service)));
 
         // Create indexing service with context service and language chunker dependency
-        let indexing_service: Arc<dyn IndexingServiceInterface> =
-            Arc::new(IndexingServiceImpl::new(
-                Arc::clone(&context_service),
-                deps.language_chunker,
-            ));
+        let indexing_service: Arc<dyn IndexingServiceInterface> = Arc::new(
+            IndexingServiceImpl::new(Arc::clone(&context_service), deps.language_chunker),
+        );
 
         Ok(DomainServicesContainer {
             context_service,

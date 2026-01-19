@@ -291,23 +291,31 @@ impl mcb_application::ports::providers::LanguageChunkingProvider
     }
 
     fn provider_name(&self) -> &str {
-        "universal-intelligent-chunker"
+        "universal"
     }
 }
 
 // ============================================================================
-// Auto-registration via linkme
+// Auto-registration via linkme distributed slice
 // ============================================================================
 
+use std::sync::Arc;
+
+use mcb_application::ports::providers::LanguageChunkingProvider as LanguageProviderPort;
 use mcb_application::ports::registry::{
     LanguageProviderConfig, LanguageProviderEntry, LANGUAGE_PROVIDERS,
 };
+
+/// Factory function for creating universal language chunking provider instances.
+fn universal_language_factory(
+    _config: &LanguageProviderConfig,
+) -> std::result::Result<Arc<dyn LanguageProviderPort>, String> {
+    Ok(Arc::new(UniversalLanguageChunkingProvider::new()))
+}
 
 #[linkme::distributed_slice(LANGUAGE_PROVIDERS)]
 static UNIVERSAL_LANGUAGE_PROVIDER: LanguageProviderEntry = LanguageProviderEntry {
     name: "universal",
     description: "Universal language chunker supporting all languages via tree-sitter",
-    factory: |_config: &LanguageProviderConfig| {
-        Ok(std::sync::Arc::new(UniversalLanguageChunkingProvider::new()))
-    },
+    factory: universal_language_factory,
 };

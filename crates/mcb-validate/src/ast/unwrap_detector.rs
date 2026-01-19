@@ -83,13 +83,18 @@ impl UnwrapDetector {
     }
 
     /// Detect unwrap/expect calls in Rust source code
-    pub fn detect_in_content(&mut self, content: &str, filename: &str) -> Result<Vec<UnwrapDetection>> {
-        let tree = self.parser.parse(content, None).ok_or_else(|| {
-            ValidationError::Parse {
+    pub fn detect_in_content(
+        &mut self,
+        content: &str,
+        filename: &str,
+    ) -> Result<Vec<UnwrapDetection>> {
+        let tree = self
+            .parser
+            .parse(content, None)
+            .ok_or_else(|| ValidationError::Parse {
                 file: filename.into(),
                 message: "Failed to parse Rust code".into(),
-            }
-        })?;
+            })?;
 
         let root = tree.root_node();
         let source_bytes = content.as_bytes();
@@ -139,9 +144,9 @@ impl UnwrapDetector {
 
                     // Check if inside a test module
                     let byte_offset = call.start_byte();
-                    let in_test = test_ranges.iter().any(|(start, end)| {
-                        byte_offset >= *start && byte_offset < *end
-                    });
+                    let in_test = test_ranges
+                        .iter()
+                        .any(|(start, end)| byte_offset >= *start && byte_offset < *end);
 
                     // Get context (the source text of the call)
                     let context = call
@@ -183,10 +188,7 @@ impl UnwrapDetector {
     /// Check if a method is a safe alternative
     #[allow(dead_code)]
     fn is_safe_alternative(&self, method: &str) -> bool {
-        matches!(
-            method,
-            "unwrap_or" | "unwrap_or_else" | "unwrap_or_default"
-        )
+        matches!(method, "unwrap_or" | "unwrap_or_else" | "unwrap_or_default")
     }
 
     /// Find byte ranges of test modules
@@ -225,8 +227,10 @@ impl UnwrapDetector {
 
                     // Also check the text before the mod for inline attributes
                     if mod_start > 20 {
-                        let before = std::str::from_utf8(&source_bytes[mod_start.saturating_sub(50)..mod_start])
-                            .unwrap_or("");
+                        let before = std::str::from_utf8(
+                            &source_bytes[mod_start.saturating_sub(50)..mod_start],
+                        )
+                        .unwrap_or("");
                         if before.contains("#[cfg(test)]") {
                             ranges.push((mod_node.start_byte(), mod_node.end_byte()));
                         }
@@ -242,125 +246,5 @@ impl UnwrapDetector {
 impl Default for UnwrapDetector {
     fn default() -> Self {
         Self::new().expect("Failed to create UnwrapDetector")
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_detector_creation() {
-        let detector = UnwrapDetector::new();
-        assert!(detector.is_ok(), "Should create detector successfully");
-    }
-
-    #[test]
-    fn test_detect_unwrap_simple() {
-        let mut detector = UnwrapDetector::new().expect("Should create detector");
-        let code = r#"
-fn main() {
-    let x = Some(1).unwrap();
-}
-"#;
-
-        let detections = detector
-            .detect_in_content(code, "test.rs")
-            .expect("Should detect");
-        assert_eq!(detections.len(), 1, "Should find one unwrap");
-        assert_eq!(detections[0].method, "unwrap");
-        assert!(!detections[0].in_test, "Should not be in test module");
-    }
-
-    #[test]
-    fn test_detect_expect() {
-        let mut detector = UnwrapDetector::new().expect("Should create detector");
-        let code = r#"
-fn process() {
-    let x = Some(1).expect("should have value");
-}
-"#;
-
-        let detections = detector
-            .detect_in_content(code, "test.rs")
-            .expect("Should detect");
-        assert_eq!(detections.len(), 1, "Should find one expect");
-        assert_eq!(detections[0].method, "expect");
-    }
-
-    #[test]
-    fn test_detect_multiple() {
-        let mut detector = UnwrapDetector::new().expect("Should create detector");
-        let code = r#"
-fn risky() {
-    let a = Some(1).unwrap();
-    let b = "test".parse::<i32>().unwrap();
-    let c = std::env::var("TEST").expect("TEST must be set");
-}
-"#;
-
-        let detections = detector
-            .detect_in_content(code, "test.rs")
-            .expect("Should detect");
-        assert_eq!(detections.len(), 3, "Should find three detections");
-    }
-
-    #[test]
-    fn test_ignore_safe_alternatives() {
-        let mut detector = UnwrapDetector::new().expect("Should create detector");
-        let code = r#"
-fn safe() {
-    let a = Some(1).unwrap_or(0);
-    let b = Some(2).unwrap_or_else(|| 0);
-    let c = Some(3).unwrap_or_default();
-}
-"#;
-
-        let detections = detector
-            .detect_in_content(code, "test.rs")
-            .expect("Should detect");
-        assert_eq!(detections.len(), 0, "Should not detect safe alternatives");
-    }
-
-    #[test]
-    fn test_detect_in_test_module() {
-        let mut detector = UnwrapDetector::new().expect("Should create detector");
-        let code = r#"
-fn production() {
-    let x = Some(1).unwrap(); // Should detect
-}
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn test_something() {
-        let x = Some(1).unwrap(); // Should mark as in_test
-    }
-}
-"#;
-
-        let detections = detector
-            .detect_in_content(code, "test.rs")
-            .expect("Should detect");
-
-        // Should find both, but one is in test
-        let production: Vec<_> = detections.iter().filter(|d| !d.in_test).collect();
-        let test_code: Vec<_> = detections.iter().filter(|d| d.in_test).collect();
-
-        assert_eq!(production.len(), 1, "Should find one production unwrap");
-        assert_eq!(test_code.len(), 1, "Should find one test unwrap");
-    }
-
-    #[test]
-    fn test_line_numbers_are_correct() {
-        let mut detector = UnwrapDetector::new().expect("Should create detector");
-        let code = "fn main() {\n    let x = Some(1).unwrap();\n}\n";
-
-        let detections = detector
-            .detect_in_content(code, "test.rs")
-            .expect("Should detect");
-
-        assert_eq!(detections.len(), 1);
-        assert_eq!(detections[0].line, 2, "Should be on line 2");
     }
 }

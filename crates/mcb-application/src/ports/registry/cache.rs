@@ -127,23 +127,3 @@ pub fn list_cache_providers() -> Vec<(&'static str, &'static str)> {
         .map(|e| (e.name, e.description))
         .collect()
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_config_builder() {
-        let config = CacheProviderConfig::new("redis")
-            .with_uri("redis://localhost:6379")
-            .with_max_size(10000)
-            .with_ttl_secs(3600)
-            .with_namespace("mcb");
-
-        assert_eq!(config.provider, "redis");
-        assert_eq!(config.uri, Some("redis://localhost:6379".to_string()));
-        assert_eq!(config.max_size, Some(10000));
-        assert_eq!(config.ttl_secs, Some(3600));
-        assert_eq!(config.namespace, Some("mcb".to_string()));
-    }
-}

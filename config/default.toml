@@ -75,11 +75,25 @@ jwt_expiration = 3600     # Token expiration in seconds (1 hour)
 # ============================================================================
 # DEFAULT: fastembed (lightweight, works offline, no external service needed)
 # FastEmbed is the default because it's self-contained and always available
+#
+# Available providers: openai, ollama, gemini, voyageai, fastembed, null
+# Provider selection is runtime-configurable via this setting
 [providers.embedding]
 provider = "fastembed"    # Use FastEmbed by default (lightweight, local)
 model = "BAAI/bge-small-en-v1.5"  # FastEmbed default model
 # Optional parameters:
 # dimensions = 384                   # FastEmbed default dimensions (defaults to 384)
+
+# Example configurations for other providers:
+# [providers.embedding]
+# provider = "openai"
+# model = "text-embedding-3-small"
+# api_key = "sk-your-openai-key-here"
+#
+# [providers.embedding]
+# provider = "ollama"
+# model = "nomic-embed-text"
+# base_url = "http://localhost:11434"
 
 # ============================================================================
 # VECTOR STORE - Where Embeddings are Stored

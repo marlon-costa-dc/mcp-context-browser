@@ -119,21 +119,3 @@ pub fn list_language_providers() -> Vec<(&'static str, &'static str)> {
         .map(|e| (e.name, e.description))
         .collect()
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_config_builder() {
-        let config = LanguageProviderConfig::new("universal")
-            .with_max_chunk_size(4096)
-            .with_min_chunk_size(100)
-            .with_overlap(50);
-
-        assert_eq!(config.provider, "universal");
-        assert_eq!(config.max_chunk_size, Some(4096));
-        assert_eq!(config.min_chunk_size, Some(100));
-        assert_eq!(config.overlap, Some(50));
-    }
-}

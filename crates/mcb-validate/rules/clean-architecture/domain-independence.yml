@@ -9,6 +9,10 @@ engine: "rust-rule-engine"
 description: "Domain crate must have zero internal mcb-* dependencies"
 rationale: "Domain layer contains pure business logic independent of frameworks"
 
+crate_name: "mcb-domain"
+forbidden_prefixes: ["mcb-"]
+allowed_dependencies: ["std", "serde", "thiserror", "uuid", "chrono"]
+
 config:
   crate_name: "mcb-domain"
   forbidden_prefixes: ["mcb-"]

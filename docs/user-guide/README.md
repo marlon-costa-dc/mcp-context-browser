@@ -36,6 +36,7 @@
 See the [**QUICKSTART.md**](./QUICKSTART.md) guide for detailed setup instructions.
 
 ```bash
+
 # Install Rust 1.89+ and clone
 git clone https://github.com/marlonsc/mcp-context-browser.git
 cd mcp-context-browser
@@ -50,6 +51,7 @@ make test
 The project has 790+ tests with comprehensive coverage:
 
 ```bash
+
 # Run all tests
 make test
 

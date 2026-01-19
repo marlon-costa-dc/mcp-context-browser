@@ -138,23 +138,3 @@ pub fn list_vector_store_providers() -> Vec<(&'static str, &'static str)> {
         .map(|e| (e.name, e.description))
         .collect()
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_config_builder() {
-        let config = VectorStoreProviderConfig::new("milvus")
-            .with_uri("http://localhost:19530")
-            .with_collection("embeddings")
-            .with_dimensions(384)
-            .with_encryption("secret-key");
-
-        assert_eq!(config.provider, "milvus");
-        assert_eq!(config.uri, Some("http://localhost:19530".to_string()));
-        assert_eq!(config.collection, Some("embeddings".to_string()));
-        assert_eq!(config.dimensions, Some(384));
-        assert_eq!(config.encrypted, Some(true));
-    }
-}

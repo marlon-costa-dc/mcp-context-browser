@@ -749,37 +749,42 @@ impl VectorStoreProvider for FilesystemVectorStore {
 }
 
 // ============================================================================
-// Auto-registration via linkme
+// Auto-registration via linkme distributed slice
 // ============================================================================
 
 use mcb_application::ports::registry::{
     VectorStoreProviderConfig, VectorStoreProviderEntry, VECTOR_STORE_PROVIDERS,
 };
 
+/// Factory function for creating filesystem vector store provider instances.
+fn filesystem_factory(
+    config: &VectorStoreProviderConfig,
+) -> std::result::Result<Arc<dyn VectorStoreProvider>, String> {
+    let base_path = config
+        .uri
+        .clone()
+        .unwrap_or_else(|| "./data/vectors".to_string());
+    let dimensions = config.dimensions.unwrap_or(1536);
+
+    let fs_config = FilesystemVectorStoreConfig {
+        base_path: std::path::PathBuf::from(base_path),
+        dimensions,
+        ..Default::default()
+    };
+
+    // Create store synchronously using block_in_place for the async constructor
+    let store = tokio::task::block_in_place(|| {
+        tokio::runtime::Handle::current()
+            .block_on(async { FilesystemVectorStore::new(fs_config).await })
+    })
+    .map_err(|e| format!("Failed to create filesystem store: {e}"))?;
+
+    Ok(Arc::new(store))
+}
+
 #[linkme::distributed_slice(VECTOR_STORE_PROVIDERS)]
 static FILESYSTEM_PROVIDER: VectorStoreProviderEntry = VectorStoreProviderEntry {
     name: "filesystem",
     description: "Filesystem-based vector store (persistent, sharded)",
-    factory: |config: &VectorStoreProviderConfig| {
-        let base_path = config
-            .uri
-            .clone()
-            .unwrap_or_else(|| "./data/vectors".to_string());
-        let dimensions = config.dimensions.unwrap_or(1536);
-
-        let fs_config = FilesystemVectorStoreConfig {
-            base_path: std::path::PathBuf::from(base_path),
-            dimensions,
-            ..Default::default()
-        };
-
-        // Create store synchronously using block_in_place for the async constructor
-        let store = tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current()
-                .block_on(async { FilesystemVectorStore::new(fs_config).await })
-        })
-        .map_err(|e| format!("Failed to create filesystem store: {}", e))?;
-
-        Ok(std::sync::Arc::new(store))
-    },
+    factory: filesystem_factory,
 };

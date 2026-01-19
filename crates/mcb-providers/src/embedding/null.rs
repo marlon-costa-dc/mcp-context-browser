@@ -95,18 +95,26 @@ impl NullEmbeddingProvider {
 }
 
 // ============================================================================
-// Auto-registration via linkme
+// Auto-registration via linkme distributed slice
 // ============================================================================
+
+use std::sync::Arc;
 
 use mcb_application::ports::registry::{
     EmbeddingProviderConfig, EmbeddingProviderEntry, EMBEDDING_PROVIDERS,
 };
+use mcb_application::ports::EmbeddingProvider as EmbeddingProviderPort;
+
+/// Factory function for creating null embedding provider instances.
+fn null_embedding_factory(
+    _config: &EmbeddingProviderConfig,
+) -> std::result::Result<Arc<dyn EmbeddingProviderPort>, String> {
+    Ok(Arc::new(NullEmbeddingProvider::new()))
+}
 
 #[linkme::distributed_slice(EMBEDDING_PROVIDERS)]
 static NULL_PROVIDER: EmbeddingProviderEntry = EmbeddingProviderEntry {
     name: "null",
     description: "Null provider for testing (deterministic hash-based embeddings)",
-    factory: |_config: &EmbeddingProviderConfig| {
-        Ok(std::sync::Arc::new(NullEmbeddingProvider::new()))
-    },
+    factory: null_embedding_factory,
 };

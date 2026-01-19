@@ -173,36 +173,45 @@ impl EmbeddingProvider for OllamaEmbeddingProvider {
 }
 
 // ============================================================================
-// Auto-registration via inventory
+// Auto-registration via linkme distributed slice
 // ============================================================================
 
-use mcb_application::ports::registry::EMBEDDING_PROVIDERS;
+use std::sync::Arc;
+
+use mcb_application::ports::registry::{
+    EmbeddingProviderConfig, EmbeddingProviderEntry, EMBEDDING_PROVIDERS,
+};
+use mcb_application::ports::EmbeddingProvider as EmbeddingProviderPort;
+
+/// Factory function for creating Ollama embedding provider instances.
+fn ollama_factory(
+    config: &EmbeddingProviderConfig,
+) -> std::result::Result<Arc<dyn EmbeddingProviderPort>, String> {
+    let base_url = config
+        .base_url
+        .clone()
+        .unwrap_or_else(|| "http://localhost:11434".to_string());
+    let model = config
+        .model
+        .clone()
+        .unwrap_or_else(|| "nomic-embed-text".to_string());
+    let timeout = Duration::from_secs(30);
+    let http_client = Client::builder()
+        .timeout(timeout)
+        .build()
+        .map_err(|e| format!("Failed to create HTTP client: {e}"))?;
+
+    Ok(Arc::new(OllamaEmbeddingProvider::new(
+        base_url,
+        model,
+        timeout,
+        http_client,
+    )))
+}
 
 #[linkme::distributed_slice(EMBEDDING_PROVIDERS)]
-static OLLAMA_PROVIDER: mcb_application::ports::registry::EmbeddingProviderEntry =
-    mcb_application::ports::registry::EmbeddingProviderEntry {
-        name: "ollama",
-        description: "Ollama local embedding provider (nomic-embed-text, all-minilm, etc.)",
-        factory: |config: &mcb_application::ports::EmbeddingProviderConfig| {
-            let base_url = config
-                .base_url
-                .clone()
-                .unwrap_or_else(|| "http://localhost:11434".to_string());
-            let model = config
-                .model
-                .clone()
-                .unwrap_or_else(|| "nomic-embed-text".to_string());
-            let timeout = std::time::Duration::from_secs(30);
-            let http_client = reqwest::Client::builder()
-                .timeout(timeout)
-                .build()
-                .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
-
-            Ok(std::sync::Arc::new(OllamaEmbeddingProvider::new(
-                base_url,
-                model,
-                timeout,
-                http_client,
-            )))
-        },
-    };
+static OLLAMA_PROVIDER: EmbeddingProviderEntry = EmbeddingProviderEntry {
+    name: "ollama",
+    description: "Ollama local embedding provider (nomic-embed-text, all-minilm, etc.)",
+    factory: ollama_factory,
+};

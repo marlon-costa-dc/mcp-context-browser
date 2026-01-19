@@ -12,7 +12,7 @@
     },
     "id": {
       "type": "string",
-      "pattern": "^[A-Z]{2,4}\\d{3,4}$",
+      "pattern": "^[A-Z]{2,8}\\d{3,4}$",
       "description": "Unique rule identifier (e.g., CA001, QUAL001)"
     },
     "name": {

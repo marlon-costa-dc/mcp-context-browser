@@ -600,25 +600,32 @@ impl EdgeVecActor {
 }
 
 // ============================================================================
-// Auto-registration via linkme
+// Auto-registration via linkme distributed slice
 // ============================================================================
+
+use std::sync::Arc;
 
 use mcb_application::ports::registry::{
     VectorStoreProviderConfig, VectorStoreProviderEntry, VECTOR_STORE_PROVIDERS,
 };
 
+/// Factory function for creating EdgeVec vector store provider instances.
+fn edgevec_factory(
+    config: &VectorStoreProviderConfig,
+) -> std::result::Result<Arc<dyn VectorStoreProvider>, String> {
+    let dimensions = config.dimensions.unwrap_or(384);
+    let edgevec_config = EdgeVecConfig {
+        dimensions,
+        ..Default::default()
+    };
+    let provider = EdgeVecVectorStoreProvider::new(edgevec_config)
+        .map_err(|e| format!("Failed to create EdgeVec provider: {e}"))?;
+    Ok(Arc::new(provider))
+}
+
 #[linkme::distributed_slice(VECTOR_STORE_PROVIDERS)]
 static EDGEVEC_PROVIDER: VectorStoreProviderEntry = VectorStoreProviderEntry {
     name: "edgevec",
     description: "EdgeVec in-memory HNSW vector store (high-performance)",
-    factory: |config: &VectorStoreProviderConfig| {
-        let dimensions = config.dimensions.unwrap_or(384);
-        let edgevec_config = EdgeVecConfig {
-            dimensions,
-            ..Default::default()
-        };
-        let provider = EdgeVecVectorStoreProvider::new(edgevec_config)
-            .map_err(|e| format!("Failed to create EdgeVec provider: {}", e))?;
-        Ok(std::sync::Arc::new(provider))
-    },
+    factory: edgevec_factory,
 };
